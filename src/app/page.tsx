@@ -114,11 +114,17 @@ export default function Home() {
   };
 
   return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <div className="siteWrapper font-sans flex flex-col min-h-screen p-2 md:p-8 pb-20 gap-16 max-w-5xl mx-auto">
-          <WorksheetForm state={state} onStateUpdate={handleUpdate} />
-          <Calculations perf={state.perf} />
-      </div>
-    </Suspense>
+    <div className="siteWrapper font-sans flex flex-col min-h-screen p-2 md:p-8 pb-20 gap-16 max-w-5xl mx-auto">
+      <Suspense
+        fallback={
+          <div className="h-screen w-full flex items-center justify-center">
+            Loading...
+          </div>
+        }
+      >
+        <WorksheetForm state={state} onStateUpdate={handleUpdate} />
+        <Calculations perf={state.perf} />
+      </Suspense>
+    </div>
   );
 }
