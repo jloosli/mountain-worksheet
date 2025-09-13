@@ -26,7 +26,7 @@ export function useUrlState<TBase, T extends URLSerializable<TBase>>(
     (newState: T) => {
       const stateStr = serializeState(newState as JsonValue);
       const query = stateStr ? `?${STATE_PARAM}=${stateStr}` : "";
-      router.push(`${pathname}${query}`);
+      router.push(`${pathname}${query}`, { scroll: false });
       pendingStateRef.current = null;
     },
     [pathname, router]
