@@ -1,6 +1,6 @@
 # CAP Mountain Flying Worksheet
 
-[![Vercel](https://vercelbadge.vercel.app/api/mountain-worksheet?style=flat&logo=vercel)](https://vercel.com/mountain-worksheet)
+[![Vercel](https://vercelbadge.vercel.app/api/jloosli/mountain-worksheet)](https://vercel.com/jlooslis-projects/mountain-worksheet)
 
 ## Description
 
