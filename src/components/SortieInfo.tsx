@@ -4,13 +4,14 @@ import { ChangeEvent, useEffect, useState } from "react";
 
 import type { JsonValue } from "@/utils/urlState";
 
-export interface SortieData {
+export type SortieData = {
   pilotName: string;
   sortieDate: string;
   sortieTime: string;
   aircraftModel: string;
   tailNumber: string;
-}
+  [key: string]: JsonValue;
+};
 
 // Ensure SortieData conforms to JsonValue type for URL state
 type ValidateSortieData = SortieData extends JsonValue ? true : false;

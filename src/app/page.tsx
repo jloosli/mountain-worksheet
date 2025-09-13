@@ -2,10 +2,18 @@
 
 import Image from "next/image";
 import SortieInfo, { SortieData } from "@/components/SortieInfo";
+import WeatherInfo, { WeatherData } from "@/components/WeatherInfo";
 import { useUrlState } from "@/utils/useUrlState";
+import type { JsonValue } from "@/utils/urlState";
 
 export default function Home() {
-  const [state, setState] = useUrlState({
+  interface State {
+    sortie: SortieData;
+    weather: WeatherData;
+    [key: string]: JsonValue;
+  }
+
+  const [state, setState] = useUrlState<State>({
     sortie: {
       pilotName: "",
       sortieDate: new Date().toISOString().split("T")[0],
@@ -16,11 +24,41 @@ export default function Home() {
       }),
       aircraftModel: "",
       tailNumber: "",
-    },
+    } as SortieData,
+    weather: {
+      windDirection: {
+        "3000": null,
+        "6000": null,
+        "9000": null,
+        "12000": null,
+        "15000": null,
+      },
+      windVelocity: {
+        "3000": null,
+        "6000": null,
+        "9000": null,
+        "12000": null,
+        "15000": null,
+      },
+      temperature: {
+        "3000": null,
+        "6000": null,
+        "9000": null,
+        "12000": null,
+        "15000": null,
+      },
+      hasTurbulence: false,
+      hasCeilingVisibility: false,
+      hasMountainObscuration: false,
+    } as WeatherData,
   });
 
   const handleSortieUpdate = (data: SortieData) => {
     setState({ ...state, sortie: data });
+  };
+
+  const handleWeatherUpdate = (data: WeatherData) => {
+    setState({ ...state, weather: data });
   };
 
   return (
@@ -28,6 +66,10 @@ export default function Home() {
       <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
         <h1>Mountain Flight Worksheet</h1>
         <SortieInfo onUpdate={handleSortieUpdate} initialData={state.sortie} />
+        <WeatherInfo
+          onUpdate={handleWeatherUpdate}
+          initialData={state.weather}
+        />
 
         <Image
           className="dark:invert"

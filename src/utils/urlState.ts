@@ -18,7 +18,11 @@ const removeEmpty = (obj: JsonValue): JsonValue | undefined => {
       .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {});
     return Object.keys(cleaned).length ? cleaned : undefined;
   }
-  return obj === "" ? undefined : obj;
+  // Remove empty strings, null values, and false values
+  if (obj === "" || obj === null || obj === false) {
+    return undefined;
+  }
+  return obj;
 };
 
 // Only encode characters that absolutely must be encoded in URLs
