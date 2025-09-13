@@ -1,9 +1,32 @@
+"use client";
+
 import Image from "next/image";
+import SortieInfo, { SortieData } from "@/components/SortieInfo";
 
 export default function Home() {
+  const handleSortieUpdate = (data: SortieData) => {
+    console.log("Sortie data updated:", data);
+  };
+
   return (
     <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
       <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
+        <h1>Mountain Flight Worksheet</h1>
+        <SortieInfo
+          onUpdate={handleSortieUpdate}
+          initialData={{
+            pilotName: "",
+            sortieDate: new Date().toISOString().split("T")[0],
+            sortieTime: new Date().toLocaleTimeString("en-US", {
+              hour12: false,
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
+            aircraftModel: "",
+            tailNumber: "",
+          }}
+        />
+
         <Image
           className="dark:invert"
           src="/next.svg"
