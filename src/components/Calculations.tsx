@@ -51,9 +51,9 @@ export default function Calculations({ perf }: CalculationsProps) {
           )
         : null;
     const departureDensityAltitude =
-      perf?.temp?.dep !== undefined && perf?.alttd?.dep !== undefined
+      departurePressureAltitude !== undefined && perf?.alttd?.dep !== undefined
         ? pressureAltitudeToDensityAltitude(
-            Number(perf.alttd.dep),
+            Number(departurePressureAltitude),
             Number(perf?.temp?.dep)
           )
         : null;
@@ -65,9 +65,9 @@ export default function Calculations({ perf }: CalculationsProps) {
           )
         : null;
     const operatingDensityAltitude =
-      perf?.temp?.op !== undefined && perf?.alttd?.op !== undefined
+      operatingPressureAltitude !== undefined && perf?.alttd?.op !== undefined
         ? pressureAltitudeToDensityAltitude(
-            Number(perf.alttd.op),
+            Number(operatingPressureAltitude),
             Number(perf?.temp?.op)
           )
         : null;
@@ -79,9 +79,9 @@ export default function Calculations({ perf }: CalculationsProps) {
           )
         : null;
     const arrivalDensityAltitude =
-      perf?.temp?.arr !== undefined && perf?.alttd?.arr !== undefined
+      arrivalPressureAltitude !== undefined && perf?.alttd?.arr !== undefined
         ? pressureAltitudeToDensityAltitude(
-            Number(perf.alttd.arr),
+            Number(arrivalPressureAltitude),
             Number(perf?.temp?.arr)
           )
         : null;
