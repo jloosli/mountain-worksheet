@@ -13,9 +13,15 @@ const removeEmpty = (obj: JsonValue): JsonValue | undefined => {
   }
   if (obj !== null && typeof obj === "object") {
     const cleaned = Object.entries(obj)
-      .map(([key, value]) => [key, removeEmpty(value)])
-      .filter(([, value]) => value !== undefined)
-      .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {});
+      .map(([key, value]): [string, JsonValue | undefined] => [
+        key,
+        removeEmpty(value),
+      ])
+      .filter((entry): entry is [string, JsonValue] => entry[1] !== undefined)
+      .reduce<Record<string, JsonValue>>((acc, [key, value]) => {
+        acc[key] = value;
+        return acc;
+      }, {} as Record<string, JsonValue>);
     return Object.keys(cleaned).length ? cleaned : undefined;
   }
   // Remove empty strings, null values, and false values

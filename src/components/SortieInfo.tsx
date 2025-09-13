@@ -13,11 +13,6 @@ export type SortieData = {
   [key: string]: JsonValue;
 };
 
-// Ensure SortieData conforms to JsonValue type for URL state
-type ValidateSortieData = SortieData extends JsonValue ? true : false;
-// @ts-expect-error This type assertion is used to validate at compile time
-const _validation: ValidateSortieData = true;
-
 interface SortieInfoProps {
   initialData?: SortieData;
   onUpdate: (data: SortieData) => void;

@@ -10,6 +10,12 @@ interface WeatherData {
   hasMountainObscuration: boolean;
 }
 
+// Define a type to ensure default data matches the schema
+type EnsureMatchesWeatherData =
+  typeof DEFAULT_WEATHER_DATA extends URLSerializable<WeatherData>
+    ? true
+    : false;
+
 interface WeatherInfoProps {
   initialData?: URLSerializable<WeatherData>;
   onUpdate: (data: URLSerializable<WeatherData>) => void;
@@ -30,7 +36,10 @@ export default function WeatherInfo({
   initialData = DEFAULT_WEATHER_DATA,
   onUpdate,
 }: WeatherInfoProps) {
-  const [data, setData] = useState<WeatherData>(initialData);
+  const [data, setData] = useState<URLSerializable<WeatherData>>(() => ({
+    ...DEFAULT_WEATHER_DATA,
+    ...initialData,
+  }));
 
   const handleNumericChange = (
     category: keyof Pick<
@@ -61,15 +70,17 @@ export default function WeatherInfo({
     }
 
     if (isValid) {
-      const newData = {
-        ...data,
-        [category]: {
-          ...data[category],
-          [altitude]: numValue,
-        },
-      };
-      setData(newData);
-      onUpdate(newData);
+      setData((prevData) => {
+        const newData = {
+          ...prevData,
+          [category]: {
+            ...(prevData[category] || {}),
+            [altitude]: numValue,
+          },
+        };
+        onUpdate(newData);
+        return newData;
+      });
     }
   };
 

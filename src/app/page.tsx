@@ -20,10 +20,16 @@ type BaseState = {
   mountainQuals: MountainQualsData;
 };
 
-type State = URLSerializable<BaseState>;
+type State = {
+  sortie: URLSerializable<SortieData>;
+  weather: URLSerializable<WeatherData>;
+  performance: URLSerializable<AircraftPerformanceData>;
+  weight: URLSerializable<AircraftWeightData>;
+  mountainQuals: URLSerializable<MountainQualsData>;
+};
 
 export default function Home() {
-  const [state, setState] = useUrlState<State>({
+  const [state, setState] = useUrlState<BaseState, State>({
     sortie: {
       pilotName: "",
       sortieDate: new Date().toISOString().split("T")[0],
@@ -34,7 +40,7 @@ export default function Home() {
       }),
       aircraftModel: "",
       tailNumber: "",
-    } as SortieData,
+    } as URLSerializable<SortieData>,
     weather: {
       windDirection: {
         "3000": null,
@@ -60,7 +66,7 @@ export default function Home() {
       hasTurbulence: false,
       hasCeilingVisibility: false,
       hasMountainObscuration: false,
-    } as WeatherData,
+    } as URLSerializable<WeatherData>,
     performance: {
       airport: {
         departure: "",
@@ -85,38 +91,38 @@ export default function Home() {
         departure: null,
         arrival: null,
       },
-    } as AircraftPerformanceData,
+    } as URLSerializable<AircraftPerformanceData>,
     weight: {
       weight: null,
-    } as AircraftWeightData,
+    } as URLSerializable<AircraftWeightData>,
     mountainQuals: {
       hasMountainEndorsement: false,
       hasMountainCertification: false,
-    } as MountainQualsData,
+    } as URLSerializable<MountainQualsData>,
   });
 
   const handleSortieUpdate = (data: URLSerializable<SortieData>) => {
-    setState({ ...state, sortie: data });
+    setState((prev) => ({ ...prev, sortie: data }));
   };
 
   const handleWeatherUpdate = (data: URLSerializable<WeatherData>) => {
-    setState({ ...state, weather: data });
+    setState((prev) => ({ ...prev, weather: data }));
   };
 
   const handlePerformanceUpdate = (
     data: URLSerializable<AircraftPerformanceData>
   ) => {
-    setState({ ...state, performance: data });
+    setState((prev) => ({ ...prev, performance: data }));
   };
 
   const handleWeightUpdate = (data: URLSerializable<AircraftWeightData>) => {
-    setState({ ...state, weight: data });
+    setState((prev) => ({ ...prev, weight: data }));
   };
 
   const handleMountainQualsUpdate = (
     data: URLSerializable<MountainQualsData>
   ) => {
-    setState({ ...state, mountainQuals: data });
+    setState((prev) => ({ ...prev, mountainQuals: data }));
   };
 
   return (
