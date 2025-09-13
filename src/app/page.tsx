@@ -117,7 +117,7 @@ export default function Home() {
     <Suspense fallback={<div>Loading...</div>}>
       <div className="siteWrapper font-sans flex flex-col min-h-screen p-2 md:p-8 pb-20 gap-16 max-w-5xl mx-auto">
           <WorksheetForm state={state} onStateUpdate={handleUpdate} />
-          <Calculations state={state} />
+          <Calculations perf={state.perf} />
       </div>
     </Suspense>
   );

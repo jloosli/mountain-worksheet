@@ -6,6 +6,12 @@ import type { WeatherData } from "@/components/WeatherInfo";
 import type { AircraftPerformanceData } from "@/components/AircraftPerformance";
 import type { AircraftWeightData } from "@/components/AircraftWeight";
 import type { MountainQualsData } from "@/components/MountainQuals";
+import Altitudes from "@/components/Altitudes";
+import {
+  altitudeToPressureAltitude,
+  pressureAltitudeToDensityAltitude,
+} from "@/utils/formulas";
+import { useEffect, useState } from "react";
 
 type State = {
   sortie: URLSerializable<SortieData>;
@@ -16,67 +22,105 @@ type State = {
 };
 
 interface CalculationsProps {
-  state: State;
+  perf: State["perf"];
 }
 
-export default function Calculations({ state }: CalculationsProps) {
-  // Calculate density altitude for departure
-  const getDensityAltitude = (
-    temp: number | null,
-    altimeter: number | null
-  ) => {
-    if (!temp || !altimeter) return null;
-    // This is a simplified formula - you might want to use a more accurate one
-    return Math.round(altimeter + 120 * (temp - 15));
-  };
+export default function Calculations({ perf }: CalculationsProps) {
+  const [pressures, setPressures] = useState<{
+    departurePA: number | null;
+    departureDA: number | null;
+    altitudePA: number | null;
+    altitudeDA: number | null;
+    arrivalPA: number | null;
+    arrivalDA: number | null;
+  }>({
+    departurePA: null,
+    departureDA: null,
+    altitudePA: null,
+    altitudeDA: null,
+    arrivalPA: null,
+    arrivalDA: null,
+  });
 
-  const depDA =
-    state.perf?.temp?.dep !== undefined && state.perf?.alttd?.dep !== undefined
-      ? getDensityAltitude(
-          Number(state.perf.temp.dep),
-          Number(state.perf.alttd.dep)
-        )
-      : null;
-  const opDA =
-    state.perf?.temp?.op !== undefined && state.perf?.alttd?.op !== undefined
-      ? getDensityAltitude(
-          Number(state.perf.temp.op),
-          Number(state.perf.alttd.op)
-        )
-      : null;
-  const arrDA =
-    state.perf?.temp?.arr !== undefined && state.perf?.alttd?.arr !== undefined
-      ? getDensityAltitude(
-          Number(state.perf.temp.arr),
-          Number(state.perf.alttd.arr)
-        )
-      : null;
+  useEffect(() => {
+    const departurePressureAltitude =
+      perf?.temp?.dep !== undefined && perf?.alttd?.dep !== undefined
+        ? altitudeToPressureAltitude(
+            Number(perf.alttd.dep),
+            Number(perf?.altr?.dep)
+          )
+        : null;
+    const departureDensityAltitude =
+      perf?.temp?.dep !== undefined && perf?.alttd?.dep !== undefined
+        ? pressureAltitudeToDensityAltitude(
+            Number(perf.alttd.dep),
+            Number(perf?.temp?.dep)
+          )
+        : null;
+    const operatingPressureAltitude =
+      perf?.temp?.op !== undefined && perf?.alttd?.op !== undefined
+        ? altitudeToPressureAltitude(
+            Number(perf.alttd.op),
+            Number(perf?.altr?.op)
+          )
+        : null;
+    const operatingDensityAltitude =
+      perf?.temp?.op !== undefined && perf?.alttd?.op !== undefined
+        ? pressureAltitudeToDensityAltitude(
+            Number(perf.alttd.op),
+            Number(perf?.temp?.op)
+          )
+        : null;
+    const arrivalPressureAltitude =
+      perf?.temp?.arr !== undefined && perf?.alttd?.arr !== undefined
+        ? pressureAltitudeToDensityAltitude(
+            Number(perf.alttd.arr),
+            Number(perf?.altr?.arr)
+          )
+        : null;
+    const arrivalDensityAltitude =
+      perf?.temp?.arr !== undefined && perf?.alttd?.arr !== undefined
+        ? pressureAltitudeToDensityAltitude(
+            Number(perf.alttd.arr),
+            Number(perf?.temp?.arr)
+          )
+        : null;
+    setPressures({
+      departurePA: departurePressureAltitude,
+      departureDA: departureDensityAltitude,
+      altitudePA: operatingPressureAltitude,
+      altitudeDA: operatingDensityAltitude,
+      arrivalPA: arrivalPressureAltitude,
+      arrivalDA: arrivalDensityAltitude,
+    });
+  }, [
+    perf?.temp?.dep,
+    perf?.temp?.op,
+    perf?.temp?.arr,
+    perf?.alttd?.dep,
+    perf?.alttd?.op,
+    perf?.alttd?.arr,
+    perf?.altr?.dep,
+    perf?.altr?.op,
+    perf?.altr?.arr,
+  ]);
 
   return (
     <div className="w-full bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
       <h2 className="text-2xl font-bold mb-4">Calculations</h2>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded">
-          <h3 className="font-semibold mb-2">Departure Airport</h3>
-          <p>
-            Density Altitude: {depDA ? `${depDA.toLocaleString()} ft` : "N/A"}
-          </p>
-        </div>
-
-        <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded">
-          <h3 className="font-semibold mb-2">Operating Area</h3>
-          <p>
-            Density Altitude: {opDA ? `${opDA.toLocaleString()} ft` : "N/A"}
-          </p>
-        </div>
-
-        <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded">
-          <h3 className="font-semibold mb-2">Arrival Airport</h3>
-          <p>
-            Density Altitude: {arrDA ? `${arrDA.toLocaleString()} ft` : "N/A"}
-          </p>
-        </div>
+      <div className="space-y-4">
+        <Altitudes
+          departureActual={Number(perf?.alttd?.dep) ?? null}
+          departurePA={pressures.departurePA}
+          departureDA={pressures.departureDA}
+          altitudeActual={Number(perf?.alttd?.op) ?? null}
+          altitudePA={pressures.altitudePA}
+          altitudeDA={pressures.altitudeDA}
+          arrivalActual={Number(perf?.alttd?.arr) ?? null}
+          arrivalPA={pressures.arrivalPA}
+          arrivalDA={pressures.arrivalDA}
+        />
       </div>
 
       {/* Add more calculations as needed */}

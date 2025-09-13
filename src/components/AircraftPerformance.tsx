@@ -145,6 +145,9 @@ export default function AircraftPerformance({
               <td className="p-2">
                 <input
                   type="number"
+                  step="0.01"
+                  min="28.00"
+                  max="31.99"
                   value={getValue("altr", "dep")}
                   onChange={(e) =>
                     handleInputChange("altr", "dep", e.target.value)
@@ -155,6 +158,9 @@ export default function AircraftPerformance({
               <td className="p-2">
                 <input
                   type="number"
+                  step="0.01"
+                  min="28.00"
+                  max="31.99"
                   value={getOperatingValue("altr")}
                   onChange={(e) =>
                     handleInputChange("altr", "op", e.target.value)
@@ -165,6 +171,9 @@ export default function AircraftPerformance({
               <td className="p-2">
                 <input
                   type="number"
+                  step="0.01"
+                  min="28.00"
+                  max="31.99"
                   value={getValue("altr", "arr")}
                   onChange={(e) =>
                     handleInputChange("altr", "arr", e.target.value)
