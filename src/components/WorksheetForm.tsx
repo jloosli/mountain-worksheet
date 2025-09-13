@@ -11,7 +11,8 @@ import AircraftWeight, {
 import MountainQuals, { MountainQualsData } from "@/components/MountainQuals";
 import { useUrlState } from "@/utils/useUrlState";
 import type { URLSerializable } from "@/utils/types";
-import { ShareIcon } from "@heroicons/react/24/solid";
+import { LinkIcon } from "@heroicons/react/24/solid";
+
 
 type BaseState = {
   sortie: SortieData;
@@ -132,24 +133,17 @@ export default function WorksheetForm() {
   };
 
   const handleShare = async () => {
+    const shareLink = window.location.href.replace(/%22/g, '"');
     try {
-      if (navigator.share) {
-        await navigator.share({
-          title: "Mountain Flying Worksheet",
-          url: window.location.href,
-        });
-      } else {
-        await navigator.clipboard.writeText(window.location.href);
-        alert("URL copied to clipboard!");
-      }
+      await navigator.clipboard.writeText(shareLink);
+      alert("URL copied to clipboard!");
     } catch (error) {
       console.error("Error sharing:", error);
     }
   };
 
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-2 md:p-8 pb-20 gap-16">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
+      <div className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
         <div className="flex flex-col gap-4 items-center sm:items-start">
           <h1 className="text-4xl font-bold">Mountain Flying Worksheet</h1>
           <div className="flex gap-2">
@@ -163,8 +157,8 @@ export default function WorksheetForm() {
               onClick={handleShare}
               className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors flex items-center gap-2"
             >
-              <ShareIcon className="h-5 w-5" />
-              Share
+              <LinkIcon className="h-5 w-5" />
+              Copy Link
             </button>
           </div>
         </div>
@@ -179,7 +173,6 @@ export default function WorksheetForm() {
           onUpdate={handleMountainQualsUpdate}
           initialData={state.mtnQuals}
         />
-      </main>
-    </div>
+      </div>
   );
 }

@@ -47,6 +47,7 @@ const decodeReadable = (str: string): string => {
     .replace(/%2B/g, "+") // Special case: decode %2B back to +
     .replace(/%26/g, "&") // Decode & back
     .replace(/%3D/g, "=") // Decode = back
+    .replace(/%22/g, '"') // Decode " back
     .replace(/\+/g, " "); // Finally, convert + to spaces
   return decoded;
 };
