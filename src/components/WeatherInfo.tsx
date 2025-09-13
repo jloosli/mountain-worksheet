@@ -118,7 +118,6 @@ export default function WeatherInfo({
                     handleNumericChange("wDir", alt, e.target.value)
                   }
                   className="w-full p-1 text-center border rounded"
-                  placeholder="?"
                 />
               </td>
             ))}
@@ -137,7 +136,6 @@ export default function WeatherInfo({
                     handleNumericChange("wVel", alt, e.target.value)
                   }
                   className="w-full p-1 text-center border rounded"
-                  placeholder="?"
                 />
               </td>
             ))}
@@ -156,7 +154,6 @@ export default function WeatherInfo({
                     handleNumericChange("temp", alt, e.target.value)
                   }
                   className="w-full p-1 text-center border rounded"
-                  placeholder="?"
                 />
               </td>
             ))}

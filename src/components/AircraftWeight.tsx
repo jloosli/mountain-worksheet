@@ -29,7 +29,6 @@ export default function AircraftWeight({
             type="number"
             value={initialData.wgt ?? ""}
             onChange={handleWeightChange}
-            placeholder="Enter wgt"
             className="p-2 border rounded"
             min={2200}
             max={3600}
