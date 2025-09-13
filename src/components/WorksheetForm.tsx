@@ -11,6 +11,7 @@ import AircraftWeight, {
 import MountainQuals, { MountainQualsData } from "@/components/MountainQuals";
 import { useUrlState } from "@/utils/useUrlState";
 import type { URLSerializable } from "@/utils/types";
+import { ShareIcon } from "@heroicons/react/24/solid";
 
 type BaseState = {
   sortie: SortieData;
@@ -130,15 +131,38 @@ export default function WorksheetForm() {
       <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
         <div className="flex flex-col gap-4 items-center sm:items-start">
           <h1 className="text-4xl font-bold">Mountain Flying Worksheet</h1>
-          <button
-            onClick={() => {
-              window.history.replaceState({}, "", window.location.pathname);
-              window.location.reload();
-            }}
-            className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
-          >
-            Reset Worksheet
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => {
+                window.history.replaceState({}, "", window.location.pathname);
+                window.location.reload();
+              }}
+              className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+            >
+              Reset Worksheet
+            </button>
+            <button
+              onClick={async () => {
+                try {
+                  if (navigator.share) {
+                    await navigator.share({
+                      title: "Mountain Flying Worksheet",
+                      url: window.location.href,
+                    });
+                  } else {
+                    await navigator.clipboard.writeText(window.location.href);
+                    alert("URL copied to clipboard!");
+                  }
+                } catch (error) {
+                  console.error("Error sharing:", error);
+                }
+              }}
+              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors flex items-center gap-2"
+            >
+              <ShareIcon className="h-5 w-5" />
+              Share
+            </button>
+          </div>
         </div>
         <SortieInfo onUpdate={handleSortieUpdate} initialData={state.sortie} />
         <WeatherInfo onUpdate={handleWeatherUpdate} initialData={state.wx} />
