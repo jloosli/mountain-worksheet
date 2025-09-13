@@ -115,6 +115,8 @@ export default function AircraftPerformance({
                   onChange={(e) =>
                     handleInputChange("temp", "dep", e.target.value)
                   }
+                  min="0"
+                  max="55"
                   className="w-full border rounded p-1"
                 />
               </td>
@@ -125,6 +127,8 @@ export default function AircraftPerformance({
                   onChange={(e) =>
                     handleInputChange("temp", "op", e.target.value)
                   }
+                  min="0"
+                  max="55"
                   className="w-full border rounded p-1"
                 />
               </td>
@@ -135,6 +139,8 @@ export default function AircraftPerformance({
                   onChange={(e) =>
                     handleInputChange("temp", "arr", e.target.value)
                   }
+                  min="0"
+                  max="55"
                   className="w-full border rounded p-1"
                 />
               </td>
