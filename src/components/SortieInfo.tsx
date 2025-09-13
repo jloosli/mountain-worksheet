@@ -5,11 +5,11 @@ import { ChangeEvent, useEffect, useState } from "react";
 import type { JsonValue } from "@/utils/urlState";
 
 export type SortieData = {
-  pilotName: string;
-  sortieDate: string;
-  sortieTime: string;
-  aircraftModel: string;
-  tailNumber: string;
+  pilot: string;
+  sDate: string;
+  sTime: string;
+  acft: string;
+  tailN: string;
   [key: string]: JsonValue;
 };
 
@@ -20,11 +20,11 @@ interface SortieInfoProps {
 
 export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
   const [formData, setFormData] = useState<SortieData>({
-    pilotName: "",
-    sortieDate: "",
-    sortieTime: "",
-    aircraftModel: "",
-    tailNumber: "",
+    pilot: "",
+    sDate: "",
+    sTime: "",
+    acft: "",
+    tailN: "",
   });
 
   useEffect(() => {
@@ -44,70 +44,70 @@ export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
     <div className="w-full max-w-2xl space-y-4 bg-white dark:bg-black/[.15] p-6 rounded-lg shadow-sm">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
-          <label htmlFor="pilotName" className="block text-sm font-medium">
+          <label htmlFor="pilot" className="block text-sm font-medium">
             Pilot Name
           </label>
           <input
             type="text"
-            id="pilotName"
-            name="pilotName"
-            value={formData.pilotName}
+            id="pilot"
+            name="pilot"
+            value={formData.pilot}
             onChange={handleInputChange}
             className="w-full px-3 py-2 border rounded-md dark:bg-black/[.15] dark:border-white/[.145]"
           />
         </div>
 
         <div className="space-y-2">
-          <label htmlFor="sortieDate" className="block text-sm font-medium">
+          <label htmlFor="sDate" className="block text-sm font-medium">
             Date of Sortie
           </label>
           <input
             type="date"
-            id="sortieDate"
-            name="sortieDate"
-            value={formData.sortieDate}
+            id="sDate"
+            name="sDate"
+            value={formData.sDate}
             onChange={handleInputChange}
             className="w-full px-3 py-2 border rounded-md dark:bg-black/[.15] dark:border-white/[.145]"
           />
         </div>
 
         <div className="space-y-2">
-          <label htmlFor="sortieTime" className="block text-sm font-medium">
+          <label htmlFor="sTime" className="block text-sm font-medium">
             Time of Sortie
           </label>
           <input
             type="time"
-            id="sortieTime"
-            name="sortieTime"
-            value={formData.sortieTime}
+            id="sTime"
+            name="sTime"
+            value={formData.sTime}
             onChange={handleInputChange}
             className="w-full px-3 py-2 border rounded-md dark:bg-black/[.15] dark:border-white/[.145]"
           />
         </div>
 
         <div className="space-y-2">
-          <label htmlFor="aircraftModel" className="block text-sm font-medium">
+          <label htmlFor="acft" className="block text-sm font-medium">
             Aircraft Model
           </label>
           <input
             type="text"
-            id="aircraftModel"
-            name="aircraftModel"
-            value={formData.aircraftModel}
+            id="acft"
+            name="acft"
+            value={formData.acft}
             onChange={handleInputChange}
             className="w-full px-3 py-2 border rounded-md dark:bg-black/[.15] dark:border-white/[.145]"
           />
         </div>
 
         <div className="space-y-2">
-          <label htmlFor="tailNumber" className="block text-sm font-medium">
+          <label htmlFor="tailN" className="block text-sm font-medium">
             Aircraft Tail Number
           </label>
           <input
             type="text"
-            id="tailNumber"
-            name="tailNumber"
-            value={formData.tailNumber}
+            id="tailN"
+            name="tailN"
+            value={formData.tailN}
             onChange={handleInputChange}
             className="w-full px-3 py-2 border rounded-md dark:bg-black/[.15] dark:border-white/[.145]"
           />

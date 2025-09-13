@@ -1,12 +1,12 @@
 "use client";
 
 type BaseFieldType = {
-  departure: string | number | null;
-  arrival: string | number | null;
+  dep: string | number | null;
+  arr: string | number | null;
 };
 
 type FieldType = BaseFieldType & {
-  operating?: string | number | null;
+  op?: string | number | null;
 };
 
 type RunwayFieldType = BaseFieldType;
@@ -14,11 +14,11 @@ type RunwayFieldType = BaseFieldType;
 import type { URLSerializable } from "@/utils/types";
 
 export interface AircraftPerformanceData {
-  airport?: FieldType;
-  temperature?: FieldType;
-  altimeter?: FieldType;
-  altitude?: FieldType;
-  runwayLength?: RunwayFieldType;
+  apt?: FieldType;
+  temp?: FieldType;
+  altr?: FieldType;
+  alttd?: FieldType;
+  rwy?: RunwayFieldType;
 }
 
 interface AircraftPerformanceProps {
@@ -44,15 +44,15 @@ export default function AircraftPerformance({
   const getOperatingValue = (
     category: keyof AircraftPerformanceData
   ): string => {
-    if (category === "runwayLength") return "";
-    const value = (initialData[category] as FieldType)?.operating;
+    if (category === "rwy") return "";
+    const value = (initialData[category] as FieldType)?.op;
     if (value === null || value === undefined) return "";
     return value.toString();
   };
 
   const handleInputChange = (
     category: keyof AircraftPerformanceData,
-    field: keyof BaseFieldType | "operating",
+    field: keyof BaseFieldType | "op",
     value: string
   ) => {
     const numValue = value === "" ? null : Number(value);
@@ -60,7 +60,7 @@ export default function AircraftPerformance({
       ...initialData,
       [category]: {
         ...(initialData[category] || {}),
-        [field]: category === "airport" ? value : numValue,
+        [field]: category === "apt" ? value : numValue,
       },
     };
     onUpdate(newData);
@@ -86,9 +86,9 @@ export default function AircraftPerformance({
               <td className="p-2">
                 <input
                   type="text"
-                  value={getValue("airport", "departure")}
+                  value={getValue("apt", "dep")}
                   onChange={(e) =>
-                    handleInputChange("airport", "departure", e.target.value)
+                    handleInputChange("apt", "dep", e.target.value)
                   }
                   className="w-full border rounded p-1"
                 />
@@ -97,9 +97,9 @@ export default function AircraftPerformance({
               <td className="p-2">
                 <input
                   type="text"
-                  value={getValue("airport", "arrival")}
+                  value={getValue("apt", "arr")}
                   onChange={(e) =>
-                    handleInputChange("airport", "arrival", e.target.value)
+                    handleInputChange("apt", "arr", e.target.value)
                   }
                   className="w-full border rounded p-1"
                 />
@@ -111,13 +111,9 @@ export default function AircraftPerformance({
               <td className="p-2">
                 <input
                   type="number"
-                  value={getValue("temperature", "departure")}
+                  value={getValue("temp", "dep")}
                   onChange={(e) =>
-                    handleInputChange(
-                      "temperature",
-                      "departure",
-                      e.target.value
-                    )
+                    handleInputChange("temp", "dep", e.target.value)
                   }
                   className="w-full border rounded p-1"
                 />
@@ -125,13 +121,9 @@ export default function AircraftPerformance({
               <td className="p-2">
                 <input
                   type="number"
-                  value={getOperatingValue("temperature")}
+                  value={getOperatingValue("temp")}
                   onChange={(e) =>
-                    handleInputChange(
-                      "temperature",
-                      "operating",
-                      e.target.value
-                    )
+                    handleInputChange("temp", "op", e.target.value)
                   }
                   className="w-full border rounded p-1"
                 />
@@ -139,9 +131,9 @@ export default function AircraftPerformance({
               <td className="p-2">
                 <input
                   type="number"
-                  value={getValue("temperature", "arrival")}
+                  value={getValue("temp", "arr")}
                   onChange={(e) =>
-                    handleInputChange("temperature", "arrival", e.target.value)
+                    handleInputChange("temp", "arr", e.target.value)
                   }
                   className="w-full border rounded p-1"
                 />
@@ -153,9 +145,9 @@ export default function AircraftPerformance({
               <td className="p-2">
                 <input
                   type="number"
-                  value={getValue("altimeter", "departure")}
+                  value={getValue("altr", "dep")}
                   onChange={(e) =>
-                    handleInputChange("altimeter", "departure", e.target.value)
+                    handleInputChange("altr", "dep", e.target.value)
                   }
                   className="w-full border rounded p-1"
                 />
@@ -163,9 +155,9 @@ export default function AircraftPerformance({
               <td className="p-2">
                 <input
                   type="number"
-                  value={getOperatingValue("altimeter")}
+                  value={getOperatingValue("altr")}
                   onChange={(e) =>
-                    handleInputChange("altimeter", "operating", e.target.value)
+                    handleInputChange("altr", "op", e.target.value)
                   }
                   className="w-full border rounded p-1"
                 />
@@ -173,9 +165,9 @@ export default function AircraftPerformance({
               <td className="p-2">
                 <input
                   type="number"
-                  value={getValue("altimeter", "arrival")}
+                  value={getValue("altr", "arr")}
                   onChange={(e) =>
-                    handleInputChange("altimeter", "arrival", e.target.value)
+                    handleInputChange("altr", "arr", e.target.value)
                   }
                   className="w-full border rounded p-1"
                 />
@@ -187,9 +179,9 @@ export default function AircraftPerformance({
               <td className="p-2">
                 <input
                   type="number"
-                  value={getValue("altitude", "departure")}
+                  value={getValue("alttd", "dep")}
                   onChange={(e) =>
-                    handleInputChange("altitude", "departure", e.target.value)
+                    handleInputChange("alttd", "dep", e.target.value)
                   }
                   className="w-full border rounded p-1"
                 />
@@ -197,9 +189,9 @@ export default function AircraftPerformance({
               <td className="p-2">
                 <input
                   type="number"
-                  value={getOperatingValue("altitude")}
+                  value={getOperatingValue("alttd")}
                   onChange={(e) =>
-                    handleInputChange("altitude", "operating", e.target.value)
+                    handleInputChange("alttd", "op", e.target.value)
                   }
                   className="w-full border rounded p-1"
                 />
@@ -207,9 +199,9 @@ export default function AircraftPerformance({
               <td className="p-2">
                 <input
                   type="number"
-                  value={getValue("altitude", "arrival")}
+                  value={getValue("alttd", "arr")}
                   onChange={(e) =>
-                    handleInputChange("altitude", "arrival", e.target.value)
+                    handleInputChange("alttd", "arr", e.target.value)
                   }
                   className="w-full border rounded p-1"
                 />
@@ -221,13 +213,9 @@ export default function AircraftPerformance({
               <td className="p-2">
                 <input
                   type="number"
-                  value={getValue("runwayLength", "departure")}
+                  value={getValue("rwy", "dep")}
                   onChange={(e) =>
-                    handleInputChange(
-                      "runwayLength",
-                      "departure",
-                      e.target.value
-                    )
+                    handleInputChange("rwy", "dep", e.target.value)
                   }
                   className="w-full border rounded p-1"
                 />
@@ -236,9 +224,9 @@ export default function AircraftPerformance({
               <td className="p-2">
                 <input
                   type="number"
-                  value={getValue("runwayLength", "arrival")}
+                  value={getValue("rwy", "arr")}
                   onChange={(e) =>
-                    handleInputChange("runwayLength", "arrival", e.target.value)
+                    handleInputChange("rwy", "arr", e.target.value)
                   }
                   className="w-full border rounded p-1"
                 />

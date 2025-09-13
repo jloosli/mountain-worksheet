@@ -1,7 +1,7 @@
 import type { URLSerializable } from "@/utils/types";
 
 interface AircraftWeightData {
-  weight: number | null;
+  wgt: number | null;
 }
 
 interface Props {
@@ -12,12 +12,12 @@ interface Props {
 export type { AircraftWeightData };
 
 export default function AircraftWeight({
-  initialData = { weight: null },
+  initialData = { wgt: null },
   onUpdate,
 }: Props) {
   const handleWeightChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const value = event.target.value === "" ? null : Number(event.target.value);
-    onUpdate({ weight: value });
+    onUpdate({ wgt: value });
   };
 
   return (
@@ -27,9 +27,9 @@ export default function AircraftWeight({
         <div className="flex gap-2 items-center">
           <input
             type="number"
-            value={initialData.weight ?? ""}
+            value={initialData.wgt ?? ""}
             onChange={handleWeightChange}
-            placeholder="Enter weight"
+            placeholder="Enter wgt"
             className="p-2 border rounded"
             min={2200}
             max={3600}
@@ -39,7 +39,7 @@ export default function AircraftWeight({
         <p className="text-sm text-gray-600 dark:text-gray-400">
           Obtain from ForeFlight W&B; must be between 2200 and 3600 pounds
           <br />
-          See aircraft POH for weights outside this range (Note 5)
+          See aircraft POH for wgts outside this range (Note 5)
         </p>
       </div>
     </div>

@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "CAP Mountain Flying Worksheet",
-  description: "Used to calculate aircraft performance for mountain flying.",
+  description: "Used to calculate aircraft perf for mountain flying.",
 };
 
 export default function RootLayout({

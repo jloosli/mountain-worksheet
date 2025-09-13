@@ -2,8 +2,8 @@ import { useState, useEffect } from "react";
 import type { URLSerializable } from "@/utils/types";
 
 export interface MountainQualsData {
-  hasMountainEndorsement: boolean;
-  hasMountainCertification: boolean;
+  mtnEndorse: boolean;
+  mtnCert: boolean;
 }
 
 interface MountainQualsProps {
@@ -12,8 +12,8 @@ interface MountainQualsProps {
 }
 
 const DEFAULT_DATA: URLSerializable<MountainQualsData> = {
-  hasMountainEndorsement: false,
-  hasMountainCertification: false,
+  mtnEndorse: false,
+  mtnCert: false,
 };
 
 export default function MountainQuals({
@@ -35,11 +35,11 @@ export default function MountainQuals({
         <label className="flex items-center gap-2">
           <input
             type="checkbox"
-            checked={data.hasMountainEndorsement}
+            checked={data.mtnEndorse}
             onChange={(e) => {
               const newData = {
                 ...data,
-                hasMountainEndorsement: e.target.checked,
+                mtnEndorse: e.target.checked,
               };
               setData(newData);
               onUpdate(newData);
@@ -50,11 +50,11 @@ export default function MountainQuals({
         <label className="flex items-center gap-2">
           <input
             type="checkbox"
-            checked={data.hasMountainCertification}
+            checked={data.mtnCert}
             onChange={(e) => {
               const newData = {
                 ...data,
-                hasMountainCertification: e.target.checked,
+                mtnCert: e.target.checked,
               };
               setData(newData);
               onUpdate(newData);

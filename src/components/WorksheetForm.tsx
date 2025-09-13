@@ -14,90 +14,90 @@ import type { URLSerializable } from "@/utils/types";
 
 type BaseState = {
   sortie: SortieData;
-  weather: WeatherData;
-  performance: AircraftPerformanceData;
-  weight: AircraftWeightData;
-  mountainQuals: MountainQualsData;
+  wx: WeatherData;
+  perf: AircraftPerformanceData;
+  wgt: AircraftWeightData;
+  mtnQuals: MountainQualsData;
 };
 
 type State = {
   sortie: URLSerializable<SortieData>;
-  weather: URLSerializable<WeatherData>;
-  performance: URLSerializable<AircraftPerformanceData>;
-  weight: URLSerializable<AircraftWeightData>;
-  mountainQuals: URLSerializable<MountainQualsData>;
+  wx: URLSerializable<WeatherData>;
+  perf: URLSerializable<AircraftPerformanceData>;
+  wgt: URLSerializable<AircraftWeightData>;
+  mtnQuals: URLSerializable<MountainQualsData>;
 };
 
 export default function WorksheetForm() {
   const [state, setState] = useUrlState<BaseState, State>({
     sortie: {
-      pilotName: "",
-      sortieDate: new Date().toISOString().split("T")[0],
-      sortieTime: new Date().toLocaleTimeString("en-US", {
+      pilot: "",
+      sDate: new Date().toISOString().split("T")[0],
+      sTime: new Date().toLocaleTimeString("en-US", {
         hour12: false,
         hour: "2-digit",
         minute: "2-digit",
       }),
-      aircraftModel: "",
-      tailNumber: "",
+      acft: "",
+      tailN: "",
     } as URLSerializable<SortieData>,
-    weather: {
-      windDirection: {
+    wx: {
+      wDir: {
         "3000": null,
         "6000": null,
         "9000": null,
         "12000": null,
         "15000": null,
       },
-      windVelocity: {
+      wVel: {
         "3000": null,
         "6000": null,
         "9000": null,
         "12000": null,
         "15000": null,
       },
-      temperature: {
+      temp: {
         "3000": null,
         "6000": null,
         "9000": null,
         "12000": null,
         "15000": null,
       },
-      hasTurbulence: false,
-      hasCeilingVisibility: false,
-      hasMountainObscuration: false,
+      turb: false,
+      cielVis: false,
+      mtnObsc: false,
     } as URLSerializable<WeatherData>,
-    performance: {
-      airport: {
-        departure: "",
-        arrival: "",
+    perf: {
+      apt: {
+        dep: "",
+        arr: "",
       },
-      temperature: {
-        departure: null,
-        operating: null,
-        arrival: null,
+      temp: {
+        dep: null,
+        op: null,
+        arr: null,
       },
-      altimeter: {
-        departure: null,
-        operating: null,
-        arrival: null,
+      altr: {
+        dep: null,
+        op: null,
+        arr: null,
       },
-      altitude: {
-        departure: null,
-        operating: null,
-        arrival: null,
+      alttd: {
+        dep: null,
+        op: null,
+        arr: null,
       },
-      runwayLength: {
-        departure: null,
-        arrival: null,
+      rwy: {
+        dep: null,
+        arr: null,
       },
     } as URLSerializable<AircraftPerformanceData>,
-    weight: {
-      weight: null,
+    wgt: {
+      wgt: null,
     } as URLSerializable<AircraftWeightData>,
-    mountainQuals: {
-      hasMountainEndorsement: false,
-      hasMountainCertification: false,
+    mtnQuals: {
+      mtnEndorse: false,
+      mtnCert: false,
     } as URLSerializable<MountainQualsData>,
   });
 
@@ -106,23 +106,23 @@ export default function WorksheetForm() {
   };
 
   const handleWeatherUpdate = (data: URLSerializable<WeatherData>) => {
-    setState((prev) => ({ ...prev, weather: data }));
+    setState((prev) => ({ ...prev, wx: data }));
   };
 
   const handlePerformanceUpdate = (
     data: URLSerializable<AircraftPerformanceData>
   ) => {
-    setState((prev) => ({ ...prev, performance: data }));
+    setState((prev) => ({ ...prev, perf: data }));
   };
 
   const handleWeightUpdate = (data: URLSerializable<AircraftWeightData>) => {
-    setState((prev) => ({ ...prev, weight: data }));
+    setState((prev) => ({ ...prev, wgt: data }));
   };
 
   const handleMountainQualsUpdate = (
     data: URLSerializable<MountainQualsData>
   ) => {
-    setState((prev) => ({ ...prev, mountainQuals: data }));
+    setState((prev) => ({ ...prev, mtnQuals: data }));
   };
 
   return (
@@ -130,21 +130,15 @@ export default function WorksheetForm() {
       <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
         <h1 className="text-4xl font-bold">Mountain Flying Worksheet</h1>
         <SortieInfo onUpdate={handleSortieUpdate} initialData={state.sortie} />
-        <WeatherInfo
-          onUpdate={handleWeatherUpdate}
-          initialData={state.weather}
-        />
+        <WeatherInfo onUpdate={handleWeatherUpdate} initialData={state.wx} />
         <AircraftPerformance
           onUpdate={handlePerformanceUpdate}
-          initialData={state.performance}
+          initialData={state.perf}
         />
-        <AircraftWeight
-          onUpdate={handleWeightUpdate}
-          initialData={state.weight}
-        />
+        <AircraftWeight onUpdate={handleWeightUpdate} initialData={state.wgt} />
         <MountainQuals
           onUpdate={handleMountainQualsUpdate}
-          initialData={state.mountainQuals}
+          initialData={state.mtnQuals}
         />
       </main>
     </div>

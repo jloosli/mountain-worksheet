@@ -2,12 +2,12 @@ import { useState } from "react";
 import type { URLSerializable, IndexedURLSerializable } from "@/utils/types";
 
 interface WeatherData {
-  windDirection: IndexedURLSerializable<number | null>;
-  windVelocity: IndexedURLSerializable<number | null>;
-  temperature: IndexedURLSerializable<number | null>;
-  hasTurbulence: boolean;
-  hasCeilingVisibility: boolean;
-  hasMountainObscuration: boolean;
+  wDir: IndexedURLSerializable<number | null>;
+  wVel: IndexedURLSerializable<number | null>;
+  temp: IndexedURLSerializable<number | null>;
+  turb: boolean;
+  cielVis: boolean;
+  mtnObsc: boolean;
 }
 
 // Define a type to ensure default data matches the schema
@@ -24,12 +24,12 @@ interface WeatherInfoProps {
 const altitudes = ["3000", "6000", "9000", "12000", "15000"];
 
 const DEFAULT_WEATHER_DATA: URLSerializable<WeatherData> = {
-  windDirection: Object.fromEntries(altitudes.map((alt) => [alt, null])),
-  windVelocity: Object.fromEntries(altitudes.map((alt) => [alt, null])),
-  temperature: Object.fromEntries(altitudes.map((alt) => [alt, null])),
-  hasTurbulence: false,
-  hasCeilingVisibility: false,
-  hasMountainObscuration: false,
+  wDir: Object.fromEntries(altitudes.map((alt) => [alt, null])),
+  wVel: Object.fromEntries(altitudes.map((alt) => [alt, null])),
+  temp: Object.fromEntries(altitudes.map((alt) => [alt, null])),
+  turb: false,
+  cielVis: false,
+  mtnObsc: false,
 };
 
 export default function WeatherInfo({
@@ -42,11 +42,8 @@ export default function WeatherInfo({
   }));
 
   const handleNumericChange = (
-    category: keyof Pick<
-      WeatherData,
-      "windDirection" | "windVelocity" | "temperature"
-    >,
-    altitude: string,
+    category: keyof Pick<WeatherData, "wDir" | "wVel" | "temp">,
+    alttd: string,
     value: string
   ) => {
     const numValue = value === "" ? null : Number(value);
@@ -54,15 +51,15 @@ export default function WeatherInfo({
 
     if (numValue !== null) {
       switch (category) {
-        case "windDirection":
+        case "wDir":
           isValid =
             numValue >= 0 && numValue <= 359 && Number.isInteger(numValue);
           break;
-        case "windVelocity":
+        case "wVel":
           isValid =
             numValue >= 0 && numValue <= 150 && Number.isInteger(numValue);
           break;
-        case "temperature":
+        case "temp":
           isValid =
             numValue >= -50 && numValue <= 50 && Number.isInteger(numValue);
           break;
@@ -70,25 +67,20 @@ export default function WeatherInfo({
     }
 
     if (isValid) {
-      setData((prevData) => {
-        const newData = {
-          ...prevData,
-          [category]: {
-            ...(prevData[category] || {}),
-            [altitude]: numValue,
-          },
-        };
-        onUpdate(newData);
-        return newData;
-      });
+      const newData = {
+        ...data,
+        [category]: {
+          ...(data[category] || {}),
+          [alttd]: numValue,
+        },
+      };
+      setData(newData);
+      onUpdate(newData);
     }
   };
 
   const handleCheckboxChange = (
-    field: keyof Pick<
-      WeatherData,
-      "hasTurbulence" | "hasCeilingVisibility" | "hasMountainObscuration"
-    >
+    field: keyof Pick<WeatherData, "turb" | "cielVis" | "mtnObsc">
   ) => {
     const newData = {
       ...data,
@@ -121,9 +113,9 @@ export default function WeatherInfo({
                   type="number"
                   min={0}
                   max={359}
-                  value={data.windDirection[alt] ?? ""}
+                  value={data.wDir[alt] ?? ""}
                   onChange={(e) =>
-                    handleNumericChange("windDirection", alt, e.target.value)
+                    handleNumericChange("wDir", alt, e.target.value)
                   }
                   className="w-full p-1 text-center border rounded"
                   placeholder="?"
@@ -140,9 +132,9 @@ export default function WeatherInfo({
                   type="number"
                   min={0}
                   max={150}
-                  value={data.windVelocity[alt] ?? ""}
+                  value={data.wVel[alt] ?? ""}
                   onChange={(e) =>
-                    handleNumericChange("windVelocity", alt, e.target.value)
+                    handleNumericChange("wVel", alt, e.target.value)
                   }
                   className="w-full p-1 text-center border rounded"
                   placeholder="?"
@@ -159,9 +151,9 @@ export default function WeatherInfo({
                   type="number"
                   min={-50}
                   max={50}
-                  value={data.temperature[alt] ?? ""}
+                  value={data.temp[alt] ?? ""}
                   onChange={(e) =>
-                    handleNumericChange("temperature", alt, e.target.value)
+                    handleNumericChange("temp", alt, e.target.value)
                   }
                   className="w-full p-1 text-center border rounded"
                   placeholder="?"
@@ -178,8 +170,8 @@ export default function WeatherInfo({
           <input
             type="checkbox"
             id="turbulence"
-            checked={data.hasTurbulence}
-            onChange={() => handleCheckboxChange("hasTurbulence")}
+            checked={data.turb}
+            onChange={() => handleCheckboxChange("turb")}
             className="rounded border-gray-300"
           />
           <label htmlFor="turbulence">
@@ -191,8 +183,8 @@ export default function WeatherInfo({
           <input
             type="checkbox"
             id="ceilingVisibility"
-            checked={data.hasCeilingVisibility}
-            onChange={() => handleCheckboxChange("hasCeilingVisibility")}
+            checked={data.cielVis}
+            onChange={() => handleCheckboxChange("cielVis")}
             className="rounded border-gray-300"
           />
           <label htmlFor="ceilingVisibility">
@@ -205,8 +197,8 @@ export default function WeatherInfo({
           <input
             type="checkbox"
             id="mountainObscuration"
-            checked={data.hasMountainObscuration}
-            onChange={() => handleCheckboxChange("hasMountainObscuration")}
+            checked={data.mtnObsc}
+            onChange={() => handleCheckboxChange("mtnObsc")}
             className="rounded border-gray-300"
           />
           <label htmlFor="mountainObscuration">
