@@ -2,6 +2,8 @@
 
 import { ChangeEvent, useEffect, useState } from "react";
 
+import type { JsonValue } from "@/utils/urlState";
+
 export interface SortieData {
   pilotName: string;
   sortieDate: string;
@@ -9,6 +11,11 @@ export interface SortieData {
   aircraftModel: string;
   tailNumber: string;
 }
+
+// Ensure SortieData conforms to JsonValue type for URL state
+type ValidateSortieData = SortieData extends JsonValue ? true : false;
+// @ts-expect-error This type assertion is used to validate at compile time
+const _validation: ValidateSortieData = true;
 
 interface SortieInfoProps {
   initialData?: SortieData;
