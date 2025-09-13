@@ -5,15 +5,20 @@ import WeatherInfo, { WeatherData } from "@/components/WeatherInfo";
 import AircraftPerformance, {
   AircraftPerformanceData,
 } from "@/components/AircraftPerformance";
+import AircraftWeight, {
+  AircraftWeightData,
+} from "@/components/AircraftWeight";
 import { useUrlState } from "@/utils/useUrlState";
 import type { JsonValue } from "@/utils/urlState";
 
-interface State {
+type State = {
   sortie: SortieData;
   weather: WeatherData;
   performance: AircraftPerformanceData;
+  weight: AircraftWeightData;
+} & {
   [key: string]: JsonValue;
-}
+};
 
 export default function Home() {
   const [state, setState] = useUrlState<State>({
@@ -79,6 +84,9 @@ export default function Home() {
         arrival: null,
       },
     } as AircraftPerformanceData,
+    weight: {
+      weight: null,
+    } as AircraftWeightData,
   });
 
   const handleSortieUpdate = (data: SortieData) => {
@@ -93,6 +101,10 @@ export default function Home() {
     setState({ ...state, performance: data });
   };
 
+  const handleWeightUpdate = (data: AircraftWeightData) => {
+    setState({ ...state, weight: data });
+  };
+
   return (
     <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
       <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
@@ -105,6 +117,10 @@ export default function Home() {
         <AircraftPerformance
           onUpdate={handlePerformanceUpdate}
           initialData={state.performance}
+        />
+        <AircraftWeight
+          onUpdate={handleWeightUpdate}
+          initialData={state.weight ?? { weight: null }}
         />
       </main>
     </div>
