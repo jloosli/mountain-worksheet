@@ -93,7 +93,7 @@ export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
             type="text"
             id="acft"
             name="acft"
-            value={formData.acft}
+            value={formData.acft || ""}
             onChange={handleInputChange}
             className="w-full px-3 py-2 border rounded-md dark:bg-black/[.15] dark:border-white/[.145]"
           />
@@ -107,7 +107,7 @@ export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
             type="text"
             id="tailN"
             name="tailN"
-            value={formData.tailN}
+            value={formData.tailN || ""}
             onChange={handleInputChange}
             className="w-full px-3 py-2 border rounded-md dark:bg-black/[.15] dark:border-white/[.145]"
           />
