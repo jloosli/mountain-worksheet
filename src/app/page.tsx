@@ -1,18 +1,21 @@
 "use client";
 
-import Image from "next/image";
 import SortieInfo, { SortieData } from "@/components/SortieInfo";
 import WeatherInfo, { WeatherData } from "@/components/WeatherInfo";
+import AircraftPerformance, {
+  AircraftPerformanceData,
+} from "@/components/AircraftPerformance";
 import { useUrlState } from "@/utils/useUrlState";
 import type { JsonValue } from "@/utils/urlState";
 
-export default function Home() {
-  interface State {
-    sortie: SortieData;
-    weather: WeatherData;
-    [key: string]: JsonValue;
-  }
+interface State {
+  sortie: SortieData;
+  weather: WeatherData;
+  performance: AircraftPerformanceData;
+  [key: string]: JsonValue;
+}
 
+export default function Home() {
   const [state, setState] = useUrlState<State>({
     sortie: {
       pilotName: "",
@@ -51,6 +54,31 @@ export default function Home() {
       hasCeilingVisibility: false,
       hasMountainObscuration: false,
     } as WeatherData,
+    performance: {
+      airport: {
+        departure: "",
+        arrival: "",
+      },
+      temperature: {
+        departure: null,
+        operating: null,
+        arrival: null,
+      },
+      altimeter: {
+        departure: null,
+        operating: null,
+        arrival: null,
+      },
+      altitude: {
+        departure: null,
+        operating: null,
+        arrival: null,
+      },
+      runwayLength: {
+        departure: null,
+        arrival: null,
+      },
+    } as AircraftPerformanceData,
   });
 
   const handleSortieUpdate = (data: SortieData) => {
@@ -61,6 +89,10 @@ export default function Home() {
     setState({ ...state, weather: data });
   };
 
+  const handlePerformanceUpdate = (data: AircraftPerformanceData) => {
+    setState({ ...state, performance: data });
+  };
+
   return (
     <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
       <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
@@ -69,6 +101,10 @@ export default function Home() {
         <WeatherInfo
           onUpdate={handleWeatherUpdate}
           initialData={state.weather}
+        />
+        <AircraftPerformance
+          onUpdate={handlePerformanceUpdate}
+          initialData={state.performance}
         />
       </main>
     </div>
