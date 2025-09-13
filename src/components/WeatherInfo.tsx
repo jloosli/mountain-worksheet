@@ -21,7 +21,7 @@ interface WeatherInfoProps {
   onUpdate: (data: URLSerializable<WeatherData>) => void;
 }
 
-const altitudes = ["3000", "6000", "9000", "12000", "15000"];
+const altitudes = ["3k", "6k", "9k", "12k", "15k"];
 
 const DEFAULT_WEATHER_DATA: URLSerializable<WeatherData> = {
   wDir: Object.fromEntries(altitudes.map((alt) => [alt, null])),
