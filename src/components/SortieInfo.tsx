@@ -51,7 +51,7 @@ export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
             type="text"
             id="pilot"
             name="pilot"
-            value={formData.pilot}
+            value={formData.pilot || ""}
             onChange={handleInputChange}
             className="w-full px-3 py-2 border rounded-md dark:bg-black/[.15] dark:border-white/[.145]"
           />

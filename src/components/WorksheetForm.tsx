@@ -126,6 +126,27 @@ export default function WorksheetForm() {
     setState((prev) => ({ ...prev, mtnQuals: data }));
   };
 
+  const handleReset = () => {
+    window.history.replaceState({}, "", window.location.pathname);
+    window.location.reload();
+  };
+
+  const handleShare = async () => {
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: "Mountain Flying Worksheet",
+          url: window.location.href,
+        });
+      } else {
+        await navigator.clipboard.writeText(window.location.href);
+        alert("URL copied to clipboard!");
+      }
+    } catch (error) {
+      console.error("Error sharing:", error);
+    }
+  };
+
   return (
     <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-2 md:p-8 pb-20 gap-16">
       <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
@@ -133,30 +154,13 @@ export default function WorksheetForm() {
           <h1 className="text-4xl font-bold">Mountain Flying Worksheet</h1>
           <div className="flex gap-2">
             <button
-              onClick={() => {
-                window.history.replaceState({}, "", window.location.pathname);
-                window.location.reload();
-              }}
+              onClick={handleReset}
               className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
             >
               Reset Worksheet
             </button>
             <button
-              onClick={async () => {
-                try {
-                  if (navigator.share) {
-                    await navigator.share({
-                      title: "Mountain Flying Worksheet",
-                      url: window.location.href,
-                    });
-                  } else {
-                    await navigator.clipboard.writeText(window.location.href);
-                    alert("URL copied to clipboard!");
-                  }
-                } catch (error) {
-                  console.error("Error sharing:", error);
-                }
-              }}
+              onClick={handleShare}
               className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors flex items-center gap-2"
             >
               <ShareIcon className="h-5 w-5" />
