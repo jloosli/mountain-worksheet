@@ -128,7 +128,18 @@ export default function WorksheetForm() {
   return (
     <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
       <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <h1 className="text-4xl font-bold">Mountain Flying Worksheet</h1>
+        <div className="flex flex-col gap-4 items-center sm:items-start">
+          <h1 className="text-4xl font-bold">Mountain Flying Worksheet</h1>
+          <button
+            onClick={() => {
+              window.history.replaceState({}, "", window.location.pathname);
+              window.location.reload();
+            }}
+            className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+          >
+            Reset Form
+          </button>
+        </div>
         <SortieInfo onUpdate={handleSortieUpdate} initialData={state.sortie} />
         <WeatherInfo onUpdate={handleWeatherUpdate} initialData={state.wx} />
         <AircraftPerformance
