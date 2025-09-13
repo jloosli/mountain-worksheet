@@ -11,6 +11,8 @@ type FieldType = BaseFieldType & {
 
 type RunwayFieldType = BaseFieldType;
 
+import type { URLSerializable } from "@/utils/types";
+
 export interface AircraftPerformanceData {
   airport?: FieldType;
   temperature?: FieldType;
@@ -20,8 +22,8 @@ export interface AircraftPerformanceData {
 }
 
 interface AircraftPerformanceProps {
-  initialData?: AircraftPerformanceData;
-  onUpdate: (data: AircraftPerformanceData) => void;
+  initialData?: URLSerializable<AircraftPerformanceData>;
+  onUpdate: (data: URLSerializable<AircraftPerformanceData>) => void;
 }
 
 export default function AircraftPerformance({

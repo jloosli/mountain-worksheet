@@ -8,17 +8,19 @@ import AircraftPerformance, {
 import AircraftWeight, {
   AircraftWeightData,
 } from "@/components/AircraftWeight";
+import MountainQuals, { MountainQualsData } from "@/components/MountainQuals";
 import { useUrlState } from "@/utils/useUrlState";
-import type { JsonValue } from "@/utils/urlState";
+import type { URLSerializable } from "@/utils/types";
 
-type State = {
+type BaseState = {
   sortie: SortieData;
   weather: WeatherData;
   performance: AircraftPerformanceData;
   weight: AircraftWeightData;
-} & {
-  [key: string]: JsonValue;
+  mountainQuals: MountainQualsData;
 };
+
+type State = URLSerializable<BaseState>;
 
 export default function Home() {
   const [state, setState] = useUrlState<State>({
@@ -87,22 +89,34 @@ export default function Home() {
     weight: {
       weight: null,
     } as AircraftWeightData,
+    mountainQuals: {
+      hasMountainEndorsement: false,
+      hasMountainCertification: false,
+    } as MountainQualsData,
   });
 
-  const handleSortieUpdate = (data: SortieData) => {
+  const handleSortieUpdate = (data: URLSerializable<SortieData>) => {
     setState({ ...state, sortie: data });
   };
 
-  const handleWeatherUpdate = (data: WeatherData) => {
+  const handleWeatherUpdate = (data: URLSerializable<WeatherData>) => {
     setState({ ...state, weather: data });
   };
 
-  const handlePerformanceUpdate = (data: AircraftPerformanceData) => {
+  const handlePerformanceUpdate = (
+    data: URLSerializable<AircraftPerformanceData>
+  ) => {
     setState({ ...state, performance: data });
   };
 
-  const handleWeightUpdate = (data: AircraftWeightData) => {
+  const handleWeightUpdate = (data: URLSerializable<AircraftWeightData>) => {
     setState({ ...state, weight: data });
+  };
+
+  const handleMountainQualsUpdate = (
+    data: URLSerializable<MountainQualsData>
+  ) => {
+    setState({ ...state, mountainQuals: data });
   };
 
   return (
@@ -121,6 +135,10 @@ export default function Home() {
         <AircraftWeight
           onUpdate={handleWeightUpdate}
           initialData={state.weight ?? { weight: null }}
+        />
+        <MountainQuals
+          onUpdate={handleMountainQualsUpdate}
+          initialData={state.mountainQuals}
         />
       </main>
     </div>

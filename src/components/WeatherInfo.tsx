@@ -1,31 +1,23 @@
 import { useState } from "react";
+import type { URLSerializable, IndexedURLSerializable } from "@/utils/types";
 
-import type { JsonValue } from "@/utils/urlState";
-
-type WeatherData = {
-  windDirection: {
-    [key: string]: number | null;
-  };
-  windVelocity: {
-    [key: string]: number | null;
-  };
-  temperature: {
-    [key: string]: number | null;
-  };
+interface WeatherData {
+  windDirection: IndexedURLSerializable<number | null>;
+  windVelocity: IndexedURLSerializable<number | null>;
+  temperature: IndexedURLSerializable<number | null>;
   hasTurbulence: boolean;
   hasCeilingVisibility: boolean;
   hasMountainObscuration: boolean;
-  [key: string]: JsonValue;
-};
+}
 
 interface WeatherInfoProps {
-  initialData?: WeatherData;
-  onUpdate: (data: WeatherData) => void;
+  initialData?: URLSerializable<WeatherData>;
+  onUpdate: (data: URLSerializable<WeatherData>) => void;
 }
 
 const altitudes = ["3000", "6000", "9000", "12000", "15000"];
 
-const DEFAULT_WEATHER_DATA: WeatherData = {
+const DEFAULT_WEATHER_DATA: URLSerializable<WeatherData> = {
   windDirection: Object.fromEntries(altitudes.map((alt) => [alt, null])),
   windVelocity: Object.fromEntries(altitudes.map((alt) => [alt, null])),
   temperature: Object.fromEntries(altitudes.map((alt) => [alt, null])),

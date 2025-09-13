@@ -1,11 +1,12 @@
+import type { URLSerializable } from "@/utils/types";
+
 interface AircraftWeightData {
   weight: number | null;
-  [key: string]: number | null | string | boolean | { [key: string]: any };
 }
 
 interface Props {
-  initialData: AircraftWeightData;
-  onUpdate: (data: AircraftWeightData) => void;
+  initialData: URLSerializable<AircraftWeightData>;
+  onUpdate: (data: URLSerializable<AircraftWeightData>) => void;
 }
 
 export type { AircraftWeightData };

@@ -2,13 +2,14 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useRouter, usePathname } from "next/navigation";
 import type { JsonValue } from "./urlState";
+import type { URLSerializable } from "./types";
 import { serializeState, deserializeState } from "./urlState";
 
 const STATE_PARAM = "data";
 
 export type ValidJsonObject = { [key: string]: JsonValue };
 
-export function useUrlState<T extends ValidJsonObject>(
+export function useUrlState<TBase, T extends URLSerializable<TBase>>(
   initialState: T
 ): readonly [T, (newState: T | ((prev: T) => T)) => void] {
   const router = useRouter();
