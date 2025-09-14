@@ -1,15 +1,11 @@
-import type { URLSerializable } from "@/utils/types";
+import type { URLSerializable, WorksheetData } from "@/utils/types";
 
-interface AircraftWeightData {
-  wgt: number | null;
-}
+type WeightFields = Pick<WorksheetData, "wgt">;
 
 interface Props {
-  initialData: URLSerializable<AircraftWeightData>;
-  onUpdate: (data: URLSerializable<AircraftWeightData>) => void;
+  initialData?: WeightFields;
+  onUpdate: (data: Partial<URLSerializable<WorksheetData>>) => void;
 }
-
-export type { AircraftWeightData };
 
 export default function AircraftWeight({
   initialData = { wgt: null },

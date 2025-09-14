@@ -1,21 +1,19 @@
 import { useState } from "react";
-import type { URLSerializable } from "@/utils/types";
+import type { URLSerializable, WorksheetData } from "@/utils/types";
 
-interface WeatherData {
-  wind: [number[], number[], number[]]; // [wDir, wVel, temp] arrays
-  turb: boolean;
-  cielVis: boolean;
-  mtnObsc: boolean;
-}
+type WeatherFields = Pick<
+  WorksheetData,
+  "wind" | "turb" | "cielVis" | "mtnObsc"
+>;
 
 interface WeatherInfoProps {
-  initialData?: URLSerializable<WeatherData>;
-  onUpdate: (data: URLSerializable<WeatherData>) => void;
+  initialData?: WeatherFields;
+  onUpdate: (data: Partial<URLSerializable<WorksheetData>>) => void;
 }
 
 const altitudes = ["3,000", "6,000", "9,000", "12,000", "15,000"];
 
-const DEFAULT_WEATHER_DATA: URLSerializable<WeatherData> = {
+const DEFAULT_WEATHER_DATA: WeatherFields = {
   wind: [
     Array(5).fill(0), // wDir values for 3k,6k,9k,12k,15k
     Array(5).fill(0), // wVel values for 3k,6k,9k,12k,15k
@@ -30,7 +28,7 @@ export default function WeatherInfo({
   initialData = DEFAULT_WEATHER_DATA,
   onUpdate,
 }: WeatherInfoProps) {
-  const [data, setData] = useState<URLSerializable<WeatherData>>(() => ({
+  const [data, setData] = useState<WeatherFields>(() => ({
     ...DEFAULT_WEATHER_DATA,
     ...initialData,
   }));
@@ -72,7 +70,7 @@ export default function WeatherInfo({
   };
 
   const handleCheckboxChange = (
-    field: keyof Pick<WeatherData, "turb" | "cielVis" | "mtnObsc">
+    field: keyof Pick<WeatherFields, "turb" | "cielVis" | "mtnObsc">
   ) => {
     const newData = {
       ...data,
@@ -210,5 +208,3 @@ export default function WeatherInfo({
     </div>
   );
 }
-
-export type { WeatherData };

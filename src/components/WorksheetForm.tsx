@@ -1,66 +1,51 @@
 "use client";
 
 import { type ReactNode } from "react";
-import SortieInfo, { SortieData } from "@/components/SortieInfo";
-import WeatherInfo, { WeatherData } from "@/components/WeatherInfo";
-import AircraftPerformance, {
-  AircraftPerformanceData,
-} from "@/components/AircraftPerformance";
-import AircraftWeight, {
-  AircraftWeightData,
-} from "@/components/AircraftWeight";
-import MountainQuals, { MountainQualsData } from "@/components/MountainQuals";
-import type { URLSerializable } from "@/utils/types";
+import SortieInfo from "@/components/SortieInfo";
+import WeatherInfo from "@/components/WeatherInfo";
+import AircraftPerformance from "@/components/AircraftPerformance";
+import AircraftWeight from "@/components/AircraftWeight";
+import MountainQuals from "@/components/MountainQuals";
+import type { URLSerializable, WorksheetData } from "@/utils/types";
 import { LinkIcon } from "@heroicons/react/24/solid";
 
-type State = {
-  sortie: URLSerializable<SortieData>;
-  wx: URLSerializable<WeatherData>;
-  perf: URLSerializable<AircraftPerformanceData>;
-  wgt: URLSerializable<AircraftWeightData>;
-  mtnQuals: URLSerializable<MountainQualsData>;
-};
-
 interface WorksheetFormProps {
-  state: State;
-  onStateUpdate: (
-    key: keyof State,
-    data: URLSerializable<
-      | SortieData
-      | WeatherData
-      | AircraftPerformanceData
-      | AircraftWeightData
-      | MountainQualsData
-    >
-  ) => void;
+  state: URLSerializable<WorksheetData>;
+  onStateUpdate: (updates: Partial<URLSerializable<WorksheetData>>) => void;
 }
 
 export default function WorksheetForm({
   state,
   onStateUpdate,
 }: WorksheetFormProps): ReactNode {
-  const handleSortieUpdate = (data: URLSerializable<SortieData>) => {
-    onStateUpdate("sortie", data);
+  const handleSortieUpdate = (
+    data: Partial<URLSerializable<WorksheetData>>
+  ) => {
+    onStateUpdate(data);
   };
 
-  const handleWeatherUpdate = (data: URLSerializable<WeatherData>) => {
-    onStateUpdate("wx", data);
+  const handleWeatherUpdate = (
+    data: Partial<URLSerializable<WorksheetData>>
+  ) => {
+    onStateUpdate(data);
   };
 
   const handlePerformanceUpdate = (
-    data: URLSerializable<AircraftPerformanceData>
+    data: Partial<URLSerializable<WorksheetData>>
   ) => {
-    onStateUpdate("perf", data);
+    onStateUpdate(data);
   };
 
-  const handleWeightUpdate = (data: URLSerializable<AircraftWeightData>) => {
-    onStateUpdate("wgt", data);
+  const handleWeightUpdate = (
+    data: Partial<URLSerializable<WorksheetData>>
+  ) => {
+    onStateUpdate(data);
   };
 
   const handleMountainQualsUpdate = (
-    data: URLSerializable<MountainQualsData>
+    data: Partial<URLSerializable<WorksheetData>>
   ) => {
-    onStateUpdate("mtnQuals", data);
+    onStateUpdate(data);
   };
 
   const handleReset = () => {
@@ -76,6 +61,39 @@ export default function WorksheetForm({
     } catch (error) {
       console.error("Error sharing:", error);
     }
+  };
+
+  // Extract data for each component
+  const sortieData = {
+    pilot: state.pilot || "",
+    sDate: state.sDate || "",
+    sTime: state.sTime || "",
+    acft: state.acft || "",
+    tailN: state.tailN || "",
+  };
+
+  const weatherData = {
+    wind: state.wind || [Array(5).fill(0), Array(5).fill(0), Array(5).fill(0)],
+    turb: state.turb || false,
+    cielVis: state.cielVis || false,
+    mtnObsc: state.mtnObsc || false,
+  };
+
+  const perfData = {
+    apt: state.apt || ["", ""],
+    temp: state.temp || [21, 21, 21],
+    altr: state.altr || [29.92, 29.92, 29.92],
+    alttd: state.alttd || [8000, 8000, 8000],
+    rwy: state.rwy || [1000, 1000],
+  };
+
+  const weightData = {
+    wgt: state.wgt || null,
+  };
+
+  const mtnQualsData = {
+    mtnEndorse: state.mtnEndorse || false,
+    mtnCert: state.mtnCert || false,
   };
 
   return (
@@ -98,16 +116,16 @@ export default function WorksheetForm({
           </button>
         </div>
       </div>
-      <SortieInfo onUpdate={handleSortieUpdate} initialData={state.sortie} />
-      <WeatherInfo onUpdate={handleWeatherUpdate} initialData={state.wx} />
+      <SortieInfo onUpdate={handleSortieUpdate} initialData={sortieData} />
+      <WeatherInfo onUpdate={handleWeatherUpdate} initialData={weatherData} />
       <AircraftPerformance
         onUpdate={handlePerformanceUpdate}
-        initialData={state.perf}
+        initialData={perfData}
       />
-      <AircraftWeight onUpdate={handleWeightUpdate} initialData={state.wgt} />
+      <AircraftWeight onUpdate={handleWeightUpdate} initialData={weightData} />
       <MountainQuals
         onUpdate={handleMountainQualsUpdate}
-        initialData={state.mtnQuals}
+        initialData={mtnQualsData}
       />
     </div>
   );

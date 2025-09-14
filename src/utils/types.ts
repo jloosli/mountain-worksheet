@@ -12,3 +12,35 @@ export type URLSerializable<T> = T & { [key: string]: JsonValue };
 export type IndexedURLSerializable<T extends JsonValue> = {
   [key: string]: T;
 };
+
+/**
+ * Consolidated worksheet data type that combines all form fields
+ */
+export interface WorksheetData {
+  // Sortie Information
+  pilot: string;
+  sDate: string;
+  sTime: string;
+  acft: string;
+  tailN: string;
+
+  // Weather Information
+  wind: [number[], number[], number[]]; // [wDir, wVel, temp] arrays for each altitude
+  turb: boolean;
+  cielVis: boolean;
+  mtnObsc: boolean;
+
+  // Aircraft Performance
+  apt: [string, string]; // [departure, arrival]
+  temp: [number, number, number]; // [departure, operating, arrival]
+  altr: [number, number, number]; // [departure, operating, arrival]
+  alttd: [number, number, number]; // [departure, operating, arrival]
+  rwy: [number, number]; // [departure, arrival]
+
+  // Aircraft Weight
+  wgt: number | null;
+
+  // Mountain Qualifications
+  mtnEndorse: boolean;
+  mtnCert: boolean;
+}

@@ -1,17 +1,14 @@
 import { useState, useEffect } from "react";
-import type { URLSerializable } from "@/utils/types";
+import type { URLSerializable, WorksheetData } from "@/utils/types";
 
-export interface MountainQualsData {
-  mtnEndorse: boolean;
-  mtnCert: boolean;
-}
+type QualFields = Pick<WorksheetData, "mtnEndorse" | "mtnCert">;
 
 interface MountainQualsProps {
-  onUpdate: (data: URLSerializable<MountainQualsData>) => void;
-  initialData: URLSerializable<MountainQualsData>;
+  onUpdate: (data: Partial<URLSerializable<WorksheetData>>) => void;
+  initialData?: QualFields;
 }
 
-const DEFAULT_DATA: URLSerializable<MountainQualsData> = {
+const DEFAULT_DATA: QualFields = {
   mtnEndorse: false,
   mtnCert: false,
 };
@@ -20,8 +17,7 @@ export default function MountainQuals({
   onUpdate,
   initialData = DEFAULT_DATA,
 }: MountainQualsProps) {
-  const [data, setData] =
-    useState<URLSerializable<MountainQualsData>>(initialData);
+  const [data, setData] = useState<QualFields>(initialData);
 
   // Sync with parent state
   useEffect(() => {

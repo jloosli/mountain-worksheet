@@ -2,24 +2,20 @@
 
 import { ChangeEvent, useEffect, useState } from "react";
 import aircraftData from "@/data/aircraft.json";
-import type { JsonValue } from "@/utils/urlState";
+import type { URLSerializable, WorksheetData } from "@/utils/types";
 
-export type SortieData = {
-  pilot: string;
-  sDate: string;
-  sTime: string;
-  acft: string;
-  tailN: string;
-  [key: string]: JsonValue;
-};
+type SortieFields = Pick<
+  WorksheetData,
+  "pilot" | "sDate" | "sTime" | "acft" | "tailN"
+>;
 
 interface SortieInfoProps {
-  initialData?: SortieData;
-  onUpdate: (data: SortieData) => void;
+  initialData?: SortieFields;
+  onUpdate: (data: Partial<URLSerializable<WorksheetData>>) => void;
 }
 
 export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
-  const [formData, setFormData] = useState<SortieData>({
+  const [formData, setFormData] = useState<SortieFields>({
     pilot: "",
     sDate: "",
     sTime: "",

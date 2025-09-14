@@ -1,11 +1,6 @@
 "use client";
 
-import type { URLSerializable } from "@/utils/types";
-import type { SortieData } from "@/components/SortieInfo";
-import type { WeatherData } from "@/components/WeatherInfo";
-import type { AircraftPerformanceData } from "@/components/AircraftPerformance";
-import type { AircraftWeightData } from "@/components/AircraftWeight";
-import type { MountainQualsData } from "@/components/MountainQuals";
+import type { WorksheetData } from "@/utils/types";
 import Altitudes from "@/components/Altitudes";
 import {
   altitudeToPressureAltitude,
@@ -13,16 +8,8 @@ import {
 } from "@/utils/formulas";
 import { useEffect, useState } from "react";
 
-type State = {
-  sortie: URLSerializable<SortieData>;
-  wx: URLSerializable<WeatherData>;
-  perf: URLSerializable<AircraftPerformanceData>;
-  wgt: URLSerializable<AircraftWeightData>;
-  mtnQuals: URLSerializable<MountainQualsData>;
-};
-
 interface CalculationsProps {
-  perf: State["perf"];
+  perf: Pick<WorksheetData, "temp" | "alttd" | "altr">;
 }
 
 export default function Calculations({ perf }: CalculationsProps) {
@@ -44,45 +31,45 @@ export default function Calculations({ perf }: CalculationsProps) {
 
   useEffect(() => {
     const departurePressureAltitude =
-      perf?.temp?.dep !== undefined && perf?.alttd?.dep !== undefined
+      perf?.temp?.[0] !== undefined && perf?.alttd?.[0] !== undefined
         ? altitudeToPressureAltitude(
-            Number(perf.alttd.dep),
-            Number(perf?.altr?.dep)
+            Number(perf.alttd[0]),
+            Number(perf?.altr?.[0])
           )
         : null;
     const departureDensityAltitude =
-      departurePressureAltitude !== undefined && perf?.alttd?.dep !== undefined
+      departurePressureAltitude !== undefined && perf?.alttd?.[0] !== undefined
         ? pressureAltitudeToDensityAltitude(
             Number(departurePressureAltitude),
-            Number(perf?.temp?.dep)
+            Number(perf?.temp?.[0])
           )
         : null;
     const operatingPressureAltitude =
-      perf?.temp?.op !== undefined && perf?.alttd?.op !== undefined
+      perf?.temp?.[1] !== undefined && perf?.alttd?.[1] !== undefined
         ? altitudeToPressureAltitude(
-            Number(perf.alttd.op),
-            Number(perf?.altr?.op)
+            Number(perf.alttd[1]),
+            Number(perf?.altr?.[1])
           )
         : null;
     const operatingDensityAltitude =
-      operatingPressureAltitude !== undefined && perf?.alttd?.op !== undefined
+      operatingPressureAltitude !== undefined && perf?.alttd?.[1] !== undefined
         ? pressureAltitudeToDensityAltitude(
             Number(operatingPressureAltitude),
-            Number(perf?.temp?.op)
+            Number(perf?.temp?.[1])
           )
         : null;
     const arrivalPressureAltitude =
-      perf?.temp?.arr !== undefined && perf?.alttd?.arr !== undefined
+      perf?.temp?.[2] !== undefined && perf?.alttd?.[2] !== undefined
         ? pressureAltitudeToDensityAltitude(
-            Number(perf.alttd.arr),
-            Number(perf?.altr?.arr)
+            Number(perf.alttd[2]),
+            Number(perf?.altr?.[2])
           )
         : null;
     const arrivalDensityAltitude =
-      arrivalPressureAltitude !== undefined && perf?.alttd?.arr !== undefined
+      arrivalPressureAltitude !== undefined && perf?.alttd?.[2] !== undefined
         ? pressureAltitudeToDensityAltitude(
             Number(arrivalPressureAltitude),
-            Number(perf?.temp?.arr)
+            Number(perf?.temp?.[2])
           )
         : null;
     setPressures({
@@ -93,17 +80,7 @@ export default function Calculations({ perf }: CalculationsProps) {
       arrivalPA: arrivalPressureAltitude,
       arrivalDA: arrivalDensityAltitude,
     });
-  }, [
-    perf?.temp?.dep,
-    perf?.temp?.op,
-    perf?.temp?.arr,
-    perf?.alttd?.dep,
-    perf?.alttd?.op,
-    perf?.alttd?.arr,
-    perf?.altr?.dep,
-    perf?.altr?.op,
-    perf?.altr?.arr,
-  ]);
+  }, [perf?.temp, perf?.alttd, perf?.altr]);
 
   return (
     <div className="w-full bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
@@ -111,13 +88,13 @@ export default function Calculations({ perf }: CalculationsProps) {
 
       <div className="space-y-4">
         <Altitudes
-          departureActual={Number(perf?.alttd?.dep) ?? null}
+          departureActual={Number(perf?.alttd?.[0]) ?? null}
           departurePA={pressures.departurePA}
           departureDA={pressures.departureDA}
-          altitudeActual={Number(perf?.alttd?.op) ?? null}
+          altitudeActual={Number(perf?.alttd?.[1]) ?? null}
           altitudePA={pressures.altitudePA}
           altitudeDA={pressures.altitudeDA}
-          arrivalActual={Number(perf?.alttd?.arr) ?? null}
+          arrivalActual={Number(perf?.alttd?.[2]) ?? null}
           arrivalPA={pressures.arrivalPA}
           arrivalDA={pressures.arrivalDA}
         />
