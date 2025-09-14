@@ -59,6 +59,8 @@ export default function AppContainer() {
     altr: state.altr,
     alttd: state.alttd,
     rwy: state.rwy,
+    acft: state.acft,
+    wgt: state.wgt,
   };
 
   return (

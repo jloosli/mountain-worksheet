@@ -2,6 +2,7 @@
 
 import type { WorksheetData } from "@/utils/types";
 import Altitudes from "@/components/Altitudes";
+import ClimbPerformance from "@/components/ClimbPerformance";
 import {
   altitudeToPressureAltitude,
   pressureAltitudeToDensityAltitude,
@@ -9,7 +10,7 @@ import {
 import { useEffect, useState } from "react";
 
 interface CalculationsProps {
-  perf: Pick<WorksheetData, "temp" | "alttd" | "altr">;
+  perf: Pick<WorksheetData, "temp" | "alttd" | "altr" | "acft" | "wgt">;
 }
 
 export default function Calculations({ perf }: CalculationsProps) {
@@ -98,9 +99,8 @@ export default function Calculations({ perf }: CalculationsProps) {
           arrivalPA={pressures.arrivalPA}
           arrivalDA={pressures.arrivalDA}
         />
+        <ClimbPerformance aircraftModel={perf.acft} weight={perf.wgt} />
       </div>
-
-      {/* Add more calculations as needed */}
     </div>
   );
 }
