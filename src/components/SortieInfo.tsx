@@ -1,7 +1,7 @@
 "use client";
 
 import { ChangeEvent, useEffect, useState } from "react";
-
+import aircraftData from "@/data/aircraft.json";
 import type { JsonValue } from "@/utils/urlState";
 
 export type SortieData = {
@@ -33,7 +33,9 @@ export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
     }
   }, [initialData]);
 
-  const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (
+    e: ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
     const { name, value } = e.target;
     const updatedData = { ...formData, [name]: value };
     setFormData(updatedData);
@@ -89,14 +91,20 @@ export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
           <label htmlFor="acft" className="block text-sm font-medium">
             Aircraft Model
           </label>
-          <input
-            type="text"
+          <select
             id="acft"
             name="acft"
             value={formData.acft || ""}
             onChange={handleInputChange}
             className="w-full px-3 py-2 border rounded-md dark:bg-black/[.15] dark:border-white/[.145]"
-          />
+          >
+            <option value="">Select Aircraft</option>
+            {aircraftData.map((aircraft) => (
+              <option key={aircraft.id} value={aircraft.id}>
+                {aircraft.name}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className="space-y-2">

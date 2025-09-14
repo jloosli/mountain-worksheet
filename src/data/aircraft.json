@@ -1,41 +1,42 @@
-{
-    "C182T": {
-        "name": "Cessna 182T",
-        "emptyWeight": 2300,
-        "maxGrossWeight": 3100,
-        "fuelCapacity": 88,
-        "fuelWeightPerGallon": 6,
-        "performance": {
-            "seaLevel": {
-                "standardDay": {
-                    "takeoffDistance": 960,
-                    "landingDistance": 575
-                },
-                "highTempDay": {
-                    "takeoffDistance": 1160,
-                    "landingDistance": 700
-                }
-            },
-            "5000ft": {
-                "standardDay": {
-                    "takeoffDistance": 1340,
-                    "landingDistance": 800
-                },
-                "highTempDay": {
-                    "takeoffDistance": 1660,
-                    "landingDistance": 975
-                }
-            },
-            "10000ft": {
-                "standardDay": {
-                    "takeoffDistance": 1760,
-                    "landingDistance": 1050
-                },
-                "highTempDay": {
-                    "takeoffDistance": 2200,
-                    "landingDistance": 1300
-                }
-            }
+[
+  {
+    "id": "C182T",
+    "name": "Cessna 182T",
+    "emptyWeight": 2300,
+    "maxGrossWeight": 3100,
+    "fuelCapacity": 88,
+    "fuelWeightPerGallon": 6,
+    "performance": {
+      "seaLevel": {
+        "standardDay": {
+          "takeoffDistance": 960,
+          "landingDistance": 575
+        },
+        "highTempDay": {
+          "takeoffDistance": 1160,
+          "landingDistance": 700
         }
+      },
+      "5000ft": {
+        "standardDay": {
+          "takeoffDistance": 1340,
+          "landingDistance": 800
+        },
+        "highTempDay": {
+          "takeoffDistance": 1660,
+          "landingDistance": 975
+        }
+      },
+      "10000ft": {
+        "standardDay": {
+          "takeoffDistance": 1760,
+          "landingDistance": 1050
+        },
+        "highTempDay": {
+          "takeoffDistance": 2200,
+          "landingDistance": 1300
+        }
+      }
     }
-}
+  }
+]
