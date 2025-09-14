@@ -40,27 +40,11 @@ export default function AppContainer() {
       tailN: "",
     } as URLSerializable<SortieData>,
     wx: {
-      wDir: {
-        "3k": null,
-        "6k": null,
-        "9k": null,
-        "12k": null,
-        "15k": null,
-      },
-      wVel: {
-        "3k": null,
-        "6k": null,
-        "9k": null,
-        "12k": null,
-        "15k": null,
-      },
-      temp: {
-        "3k": null,
-        "6k": null,
-        "9k": null,
-        "12k": null,
-        "15k": null,
-      },
+      wind: [
+        Array(5).fill(0), // wDir values for 3k,6k,9k,12k,15k
+        Array(5).fill(0), // wVel values for 3k,6k,9k,12k,15k
+        Array(5).fill(0), // temp values for 3k,6k,9k,12k,15k
+      ],
       turb: false,
       cielVis: false,
       mtnObsc: false,

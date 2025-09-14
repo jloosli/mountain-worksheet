@@ -1,32 +1,26 @@
 import { useState } from "react";
-import type { URLSerializable, IndexedURLSerializable } from "@/utils/types";
+import type { URLSerializable } from "@/utils/types";
 
 interface WeatherData {
-  wDir: IndexedURLSerializable<number | null>;
-  wVel: IndexedURLSerializable<number | null>;
-  temp: IndexedURLSerializable<number | null>;
+  wind: [number[], number[], number[]]; // [wDir, wVel, temp] arrays
   turb: boolean;
   cielVis: boolean;
   mtnObsc: boolean;
 }
-
-// Define a type to ensure default data matches the schema
-type EnsureMatchesWeatherData =
-  typeof DEFAULT_WEATHER_DATA extends URLSerializable<WeatherData>
-    ? true
-    : false;
 
 interface WeatherInfoProps {
   initialData?: URLSerializable<WeatherData>;
   onUpdate: (data: URLSerializable<WeatherData>) => void;
 }
 
-const altitudes = ["3k", "6k", "9k", "12k", "15k"];
+const altitudes = ["3,000", "6,000", "9,000", "12,000", "15,000"];
 
 const DEFAULT_WEATHER_DATA: URLSerializable<WeatherData> = {
-  wDir: Object.fromEntries(altitudes.map((alt) => [alt, null])),
-  wVel: Object.fromEntries(altitudes.map((alt) => [alt, null])),
-  temp: Object.fromEntries(altitudes.map((alt) => [alt, null])),
+  wind: [
+    Array(5).fill(0), // wDir values for 3k,6k,9k,12k,15k
+    Array(5).fill(0), // wVel values for 3k,6k,9k,12k,15k
+    Array(5).fill(0), // temp values for 3k,6k,9k,12k,15k
+  ],
   turb: false,
   cielVis: false,
   mtnObsc: false,
@@ -42,37 +36,35 @@ export default function WeatherInfo({
   }));
 
   const handleNumericChange = (
-    category: keyof Pick<WeatherData, "wDir" | "wVel" | "temp">,
-    alttd: string,
+    type: number, // 0 for wDir, 1 for wVel, 2 for temp
+    index: number, // 0 for 3k, 1 for 6k, etc.
     value: string
   ) => {
-    const numValue = value === "" ? null : Number(value);
+    const numValue = value === "" ? 0 : Number(value);
     let isValid = true;
 
-    if (numValue !== null) {
-      switch (category) {
-        case "wDir":
-          isValid =
-            numValue >= 0 && numValue <= 359 && Number.isInteger(numValue);
-          break;
-        case "wVel":
-          isValid =
-            numValue >= 0 && numValue <= 150 && Number.isInteger(numValue);
-          break;
-        case "temp":
-          isValid =
-            numValue >= -50 && numValue <= 50 && Number.isInteger(numValue);
-          break;
-      }
+    switch (type) {
+      case 0: // wDir
+        isValid =
+          numValue >= 0 && numValue <= 359 && Number.isInteger(numValue);
+        break;
+      case 1: // wVel
+        isValid =
+          numValue >= 0 && numValue <= 150 && Number.isInteger(numValue);
+        break;
+      case 2: // temp
+        isValid =
+          numValue >= -50 && numValue <= 50 && Number.isInteger(numValue);
+        break;
     }
 
     if (isValid) {
+      const newWind = [...data.wind] as [number[], number[], number[]];
+      newWind[type] = [...newWind[type]];
+      newWind[type][index] = numValue;
       const newData = {
         ...data,
-        [category]: {
-          ...(data[category] || {}),
-          [alttd]: numValue,
-        },
+        wind: newWind,
       };
       setData(newData);
       onUpdate(newData);
@@ -113,9 +105,13 @@ export default function WeatherInfo({
                   type="number"
                   min={0}
                   max={359}
-                  value={data.wDir[alt] ?? ""}
+                  value={data.wind[0][altitudes.indexOf(alt)] || ""}
                   onChange={(e) =>
-                    handleNumericChange("wDir", alt, e.target.value)
+                    handleNumericChange(
+                      0,
+                      altitudes.indexOf(alt),
+                      e.target.value
+                    )
                   }
                   className="w-full p-1 text-center border rounded"
                 />
@@ -131,9 +127,13 @@ export default function WeatherInfo({
                   type="number"
                   min={0}
                   max={150}
-                  value={data.wVel[alt] ?? ""}
+                  value={data.wind[1][altitudes.indexOf(alt)] || ""}
                   onChange={(e) =>
-                    handleNumericChange("wVel", alt, e.target.value)
+                    handleNumericChange(
+                      1,
+                      altitudes.indexOf(alt),
+                      e.target.value
+                    )
                   }
                   className="w-full p-1 text-center border rounded"
                 />
@@ -149,9 +149,13 @@ export default function WeatherInfo({
                   type="number"
                   min={-50}
                   max={50}
-                  value={data.temp[alt] ?? ""}
+                  value={data.wind[2][altitudes.indexOf(alt)] || ""}
                   onChange={(e) =>
-                    handleNumericChange("temp", alt, e.target.value)
+                    handleNumericChange(
+                      2,
+                      altitudes.indexOf(alt),
+                      e.target.value
+                    )
                   }
                   className="w-full p-1 text-center border rounded"
                 />
