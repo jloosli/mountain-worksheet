@@ -39,32 +39,14 @@ export default function AircraftPerformance({
     if (category === "apt") {
       newValue = value || "";
     } else {
-      const num =
-        value === ""
-          ? category === "temp"
-            ? 21
-            : category === "altr"
-            ? 29.92
-            : category === "alttd"
-            ? 8000
-            : 1000
-          : Number(value);
-
-      if (isNaN(num)) return;
-
-      // Validate number ranges
-      if (category === "temp" && (num < 0 || num > 55)) return;
-      if (category === "altr" && (num < 28.0 || num > 31.99)) return;
-
-      newValue = num;
+      newValue = Number(value);
     }
-
     const newData = { ...initialData };
 
     switch (category) {
       case "apt":
         const aptArray = [...initialData.apt] as [string, string];
-        aptArray[index] = newValue as string;
+        aptArray[index] = newValue as unknown as string;
         newData.apt = aptArray;
         break;
       case "temp":
@@ -91,7 +73,7 @@ export default function AircraftPerformance({
 
     onUpdate(newData);
   };
-
+  
   return (
     <div className="w-full max-w-4xl">
       <h2 className="text-xl font-bold mb-4">Aircraft Performance</h2>
