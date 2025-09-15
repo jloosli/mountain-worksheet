@@ -3,6 +3,8 @@
 import type { WorksheetData } from "@/utils/types";
 import Altitudes from "@/components/Altitudes";
 import ClimbPerformance from "@/components/ClimbPerformance";
+import TakeoffPerformance from "@/components/TakeoffPerformance";
+import ManeuveringPerformance from "@/components/ManeuveringPerformance";
 
 interface CalculationsProps {
   state: WorksheetData;
@@ -20,6 +22,8 @@ export default function Calculations({ state }: CalculationsProps) {
           temperatures={state.temp}
         />
         <ClimbPerformance aircraftModel={state.acft} weight={state.wgt} />
+        <TakeoffPerformance aircraftModel={state.acft} airports={state.apt} />
+        <ManeuveringPerformance aircraftModel={state.acft} />
       </div>
     </div>
   );
