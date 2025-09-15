@@ -59,37 +59,37 @@ export default function ClimbPerformance({
           <tbody>
             <tr className="border-b dark:border-gray-700">
               <td className="py-2 px-4">Rate of Climb (MGW)</td>
-              <td className="py-2 px-4 text-right">100</td>
-              <td className="py-2 px-4 text-right">100</td>
-              <td className="py-2 px-4 text-right">100</td>
+              <td className="py-2 px-4 text-right">TBD</td>
+              <td className="py-2 px-4 text-right">TBD</td>
+              <td className="py-2 px-4 text-right">TBD</td>
             </tr>
             <tr className="border-b dark:border-gray-700">
               <td className="py-2 px-4">Rate of Climb (Actual Wt, note 11)</td>
-              <td className="py-2 px-4 text-right">100</td>
-              <td className="py-2 px-4 text-right">100</td>
-              <td className="py-2 px-4 text-right">100</td>
+              <td className="py-2 px-4 text-right">TBD</td>
+              <td className="py-2 px-4 text-right">TBD</td>
+              <td className="py-2 px-4 text-right">TBD</td>
             </tr>
             <tr className="border-b dark:border-gray-700">
               <td className="py-2 px-4">Vx (Best Angle)</td>
-              <td className="py-2 px-4 text-right">100</td>
-              <td className="py-2 px-4 text-right">100</td>
-              <td className="py-2 px-4 text-right">100</td>
+              <td className="py-2 px-4 text-right">TBD</td>
+              <td className="py-2 px-4 text-right">TBD</td>
+              <td className="py-2 px-4 text-right">TBD</td>
             </tr>
             <tr className="border-b dark:border-gray-700">
               <td className="py-2 px-4">Vy (Best Rate)</td>
-              <td className="py-2 px-4 text-right">100</td>
-              <td className="py-2 px-4 text-right">100</td>
-              <td className="py-2 px-4 text-right">100</td>
+              <td className="py-2 px-4 text-right">TBD</td>
+              <td className="py-2 px-4 text-right">TBD</td>
+              <td className="py-2 px-4 text-right">TBD</td>
             </tr>
             <tr className="border-b dark:border-gray-700">
               <td className="py-2 px-4">Va at Actual Weight</td>
-              <td className="py-2 px-4 text-right">100</td>
+              <td className="py-2 px-4 text-right">TBD</td>
               <td className="py-2 px-4 text-right"></td>
               <td className="py-2 px-4 text-right"></td>
             </tr>
             <tr className="border-b dark:border-gray-700">
               <td className="py-2 px-4">Vra (Rough Air Speed)</td>
-              <td className="py-2 px-4 text-right">100</td>
+              <td className="py-2 px-4 text-right">TBD</td>
               <td className="py-2 px-4 text-right"></td>
               <td className="py-2 px-4 text-right"></td>
             </tr>
@@ -107,7 +107,7 @@ export default function ClimbPerformance({
             </tr>
             <tr className="border-b dark:border-gray-700">
               <td className="py-2 px-4">Service Ceiling (300 ft/min ROC)</td>
-              <td className="py-2 px-4 text-right">15000</td>
+              <td className="py-2 px-4 text-right">TBD</td>
               <td className="py-2 px-4 text-right"></td>
               <td className="py-2 px-4 text-right"></td>
             </tr>
