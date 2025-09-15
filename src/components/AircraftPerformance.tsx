@@ -117,7 +117,7 @@ export default function AircraftPerformance({
                   type="number"
                   value={getValue("temp", 0)}
                   onChange={(e) => handleInputChange("temp", 0, e.target.value)}
-                  min="0"
+                  min="-30"
                   max="55"
                   className="w-full border rounded p-1"
                 />
@@ -127,7 +127,7 @@ export default function AircraftPerformance({
                   type="number"
                   value={getValue("temp", 1)}
                   onChange={(e) => handleInputChange("temp", 1, e.target.value)}
-                  min="0"
+                  min="-30"
                   max="55"
                   className="w-full border rounded p-1"
                 />
@@ -137,7 +137,7 @@ export default function AircraftPerformance({
                   type="number"
                   value={getValue("temp", 2)}
                   onChange={(e) => handleInputChange("temp", 2, e.target.value)}
-                  min="0"
+                  min="-30"
                   max="55"
                   className="w-full border rounded p-1"
                 />
@@ -151,7 +151,7 @@ export default function AircraftPerformance({
                   type="number"
                   step="0.01"
                   min="28.00"
-                  max="31.99"
+                  max="31.00"
                   value={getValue("altr", 0)}
                   onChange={(e) => handleInputChange("altr", 0, e.target.value)}
                   className="w-full border rounded p-1"
