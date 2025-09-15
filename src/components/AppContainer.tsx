@@ -53,20 +53,10 @@ export default function AppContainer() {
     });
   };
 
-  const perfData = {
-    apt: state.apt,
-    temp: state.temp,
-    altr: state.altr,
-    alttd: state.alttd,
-    rwy: state.rwy,
-    acft: state.acft,
-    wgt: state.wgt,
-  };
-
   return (
     <>
       <WorksheetForm state={state} onStateUpdate={handleUpdate} />
-      <Calculations perf={perfData} />
+      <Calculations state={state} />
     </>
   );
 }
