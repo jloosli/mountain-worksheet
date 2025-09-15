@@ -25,10 +25,10 @@ export default function TakeoffPerformance({
                 className="py-2 px-4 text-center border-r dark:border-gray-700"
                 colSpan={2}
               >
-                Normal Takeoff
+                Short Field Takeoff
               </th>
               <th className="py-2 px-4 text-center" colSpan={2}>
-                Short Field Takeoff (over 50&apos; obstacle)
+                Over 50&apos; Obstacle
               </th>
             </tr>
             <tr className="border-b dark:border-gray-700">
