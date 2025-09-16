@@ -3,8 +3,9 @@ import aircraftData from "@/data/aircraft.json";
 import {
   bilinearInterpolate,
   bilinearInterpolateFlexible,
+  findInverseXgivenY,
   FlexibleInterpolationTable,
-} from "@/utils/bilinearInterpolation";
+} from "@/utils/interpolation";
 import { Aircraft } from "@/utils/types";
 
 interface ClimbPerformanceProps {
@@ -102,7 +103,31 @@ export default function ClimbPerformance({
 
   const Va = () => {
     if (!weight || !aircraft) return 0;
-    return Math.round(bilinearInterpolate({ xAxis: [1], yAxis: aircraft.maneuvering.weights, data: [aircraft.maneuvering.Va] }, 1, weight));
+    return Math.round(
+      bilinearInterpolate(
+        {
+          xAxis: [1],
+          yAxis: aircraft.maneuvering.weights,
+          data: [aircraft.maneuvering.Va],
+        },
+        1,
+        weight
+      )
+    );
+  };
+
+  const serviceCeiling = () => {
+    if (!aircraft) return 0;
+    // Find the altitude where rate of climb is 300 ft/min
+    const targetROC = 300;
+    const altitude = findInverseXgivenY(
+      aircraft.climbPerformance.data,
+      aircraft.climbPerformance.pressureAltitudes,
+      aircraft.climbPerformance.temperatures,
+      targetROC,
+      OATs![0]!
+    );
+    return altitude;
   };
 
   return (
@@ -183,7 +208,7 @@ export default function ClimbPerformance({
             </tr>
             <tr className="border-b dark:border-gray-700">
               <td className="py-2 px-4">Service Ceiling (300 ft/min ROC)</td>
-              <td className="py-2 px-4 text-right">TBD</td>
+              <td className="py-2 px-4 text-right">{serviceCeiling()}***</td>
               <td className="py-2 px-4 text-right"></td>
               <td className="py-2 px-4 text-right"></td>
             </tr>

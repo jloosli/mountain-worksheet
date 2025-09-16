@@ -1,23 +1,23 @@
 // Type definitions
-interface InterpolationTable {
+export interface InterpolationTable {
   xAxis: number[];
   yAxis: number[];
   data: number[][];
 }
 
-interface FlexibleInterpolationTable {
+export interface FlexibleInterpolationTable {
   [key: string]: number[] | number[][];
   data: number[][];
 }
 
-interface InterpolationOptions {
+export interface InterpolationOptions {
   allowExtrapolation?: boolean;
   warnOnExtrapolation?: boolean;
   xAxisName?: string;
   yAxisName?: string;
 }
 
-interface InterpolationResult {
+export interface InterpolationResult {
   value: number;
   wasExtrapolated: boolean;
   bounds: {
@@ -263,16 +263,6 @@ function linearInterpolate(
   return d1 + t * (d2 - d1);
 }
 
-// Convenience function for rate of climb
-function getRateOfClimb(
-  table: InterpolationTable,
-  pressureAltitude: number,
-  outsideAirTemp: number,
-  options: InterpolationOptions = {}
-): number {
-  return Math.round(bilinearInterpolate(table, pressureAltitude, outsideAirTemp, options));
-}
-
 // Generic table creator function
 function createInterpolationTable<T extends string>(
   xAxisValues: number[],
@@ -298,11 +288,70 @@ function createInterpolationTable<T extends string>(
   return baseTable;
 }
 
+function findInverseXgivenY(
+  data: number[][],
+  xAxis: number[],
+  yAxis: number[],
+  targetX: number,
+  yVal: number
+): number {
+    // Find or interpolate the rates at the given temperature
+  let valsAtY: number[] = [];
+  
+  // Check if temperature is exactly in the table
+  const yIndex = yAxis.indexOf(yVal);
+  if (yIndex !== -1) {
+    // Exact match - extract the column
+    valsAtY = data.map((row: number[]) => row[yIndex]);
+  } else {
+    // Interpolate rates for each altitude at the given temperature
+    valsAtY = xAxis.map((x: number) => 
+      bilinearInterpolate({data, xAxis, yAxis}, x, yVal)
+    );
+  }
+  
+  // Now do inverse linear interpolation on the rates
+  const result = linearInterpolateInverse(valsAtY, valsAtY, targetX);
+  
+  return result;
+}
+
+// Helper function for inverse linear interpolation
+function linearInterpolateInverse(
+  yValues: number[],
+  xValues: number[],
+  targetY: number
+): number {
+  for (let i = 0; i < yValues.length - 1; i++) {
+    const y1 = yValues[i];
+    const y2 = yValues[i + 1];
+    
+    // Check if target is between these two points
+    if ((targetY >= y1 && targetY <= y2) || (targetY >= y2 && targetY <= y1)) {
+      const x1 = xValues[i];
+      const x2 = xValues[i + 1];
+      
+      // Linear interpolation: solve for x given y
+      const t = (targetY - y1) / (y2 - y1);
+      return x1 + t * (x2 - x1);
+    }
+  }
+  
+  // Extrapolation
+  if (targetY < Math.min(...yValues)) {
+    const t = (targetY - yValues[0]) / (yValues[1] - yValues[0]);
+    return xValues[0] + t * (xValues[1] - xValues[0]);
+  } else {
+    const lastIdx = yValues.length - 1;
+    const t = (targetY - yValues[lastIdx - 1]) / (yValues[lastIdx] - yValues[lastIdx - 1]);
+    return xValues[lastIdx - 1] + t * (xValues[lastIdx] - xValues[lastIdx - 1]);
+  }
+}
+
 export {
     bilinearInterpolate,
     bilinearInterpolateFlexible,
     bilinearInterpolateDetailed,
-    getRateOfClimb,
-    createInterpolationTable
+    createInterpolationTable,
+    findInverseXgivenY
 };
-export type { FlexibleInterpolationTable };
