@@ -7,6 +7,9 @@
 The CAP Mountain Flying Worksheet is a web application designed to help pilots plan and execute mountain flying operations safely and effectively. It provides tools and resources for flight planning, risk assessment, and decision-making in mountainous terrain.
 Built with [Next.js](https://nextjs.org/) and [Tailwind CSS](https://tailwindcss.com/).
 
+## Chart Calculations
+
+Most calculations are based on the POH for the aircraft in use. Tables are interplated using [bilinear interpolation](https://en.wikipedia.org/wiki/Bilinear_interpolation).
 
 ## Development
 
@@ -34,5 +37,3 @@ To get started with development, follow these steps:
 ### Deployment
 
 Deploys automatically to [Vercel](https://vercel.com/) on push to the `main` branch [Mountain Worksheet](https://mountain-worksheet.vercel.app/).
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.

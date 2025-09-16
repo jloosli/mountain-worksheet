@@ -6,6 +6,22 @@
     "maxGrossWeight": 3100,
     "fuelCapacity": 88,
     "fuelWeightPerGallon": 6,
+    "serviceCeiling": 14000,
+    "climbPerformance": {
+      "pressureAltitudes": [0, 2000, 4000, 6000, 8000, 10000, 12000, 14000],
+      "temperatures": [-20, 0, 20, 40],
+      "data": [
+        [1055, 980, 905, 835],
+        [945, 875, 805, 735],
+        [840, 770, 705, 635],
+        [735, 670, 605, 535],
+        [625, 560, 495, 430],
+        [520, 455, 390, 330],
+        [410, 350, 285, 225],
+        [310, 250, 190, 130]
+      ]
+    },
+
     "performance": {
       "seaLevel": {
         "standardDay": {
