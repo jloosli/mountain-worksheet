@@ -1,5 +1,5 @@
 // Import types for interpolation
-import { type InterpolationTable, type InterpolationOptions, bilinearInterpolate } from './interpolation.ts';
+import { type InterpolationTable, type InterpolationOptions, bilinearInterpolate } from './interpolation';
 
 const farenheitToCelcius = (f: number) => ((f - 32) * 5) / 9;
 const celciusToFarenheit = (c: number) => (c * 9) / 5 + 32;
