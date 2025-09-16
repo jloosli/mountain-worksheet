@@ -7,8 +7,13 @@
     "fuelCapacity": 88,
     "fuelWeightPerGallon": 6,
     "serviceCeiling": 14000,
+    "maneuvering": {
+      "weights": [2100, 2600, 3100], 
+      "Va": [108, 100, 91]
+    },
     "climbPerformance": {
       "pressureAltitudes": [0, 2000, 4000, 6000, 8000, 10000, 12000, 14000],
+      "climbSpeeds": [80, 79, 78, 77, 75, 74, 73, 72],
       "temperatures": [-20, 0, 20, 40],
       "data": [
         [1055, 980, 905, 835],
@@ -20,39 +25,6 @@
         [410, 350, 285, 225],
         [310, 250, 190, 130]
       ]
-    },
-
-    "performance": {
-      "seaLevel": {
-        "standardDay": {
-          "takeoffDistance": 960,
-          "landingDistance": 575
-        },
-        "highTempDay": {
-          "takeoffDistance": 1160,
-          "landingDistance": 700
-        }
-      },
-      "5000ft": {
-        "standardDay": {
-          "takeoffDistance": 1340,
-          "landingDistance": 800
-        },
-        "highTempDay": {
-          "takeoffDistance": 1660,
-          "landingDistance": 975
-        }
-      },
-      "10000ft": {
-        "standardDay": {
-          "takeoffDistance": 1760,
-          "landingDistance": 1050
-        },
-        "highTempDay": {
-          "takeoffDistance": 2200,
-          "landingDistance": 1300
-        }
-      }
     }
   }
 ]

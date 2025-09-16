@@ -44,3 +44,20 @@ export interface WorksheetData {
   mtnEndorse: boolean;
   mtnCert: boolean;
 }
+
+export interface Aircraft {
+  id: string;
+  name: string;
+  emptyWeight: number;
+  maxGrossWeight:  number;
+  fuelCapacity: number;
+  fuelWeightPerGallon: number;
+  serviceCeiling: number;
+  maneuvering:  { weights: number[]; Va: number[] },
+  climbPerformance: {
+    pressureAltitudes: number[];
+    climbSpeeds: number[];
+    temperatures: number[];
+    data: number[][];
+  };
+}

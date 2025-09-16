@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import aircraftData from "@/data/aircraft.json";
 import {
+  bilinearInterpolate,
   bilinearInterpolateFlexible,
   FlexibleInterpolationTable,
 } from "@/utils/bilinearInterpolation";
+import { Aircraft } from "@/utils/types";
 
 interface ClimbPerformanceProps {
   aircraftModel?: string;
@@ -22,13 +24,13 @@ export default function ClimbPerformance({
     0, 0, 0,
   ]);
   const [percentMGW, setPercentMGW] = useState<number | null>(null);
-  const [maxGrossWeight, setMaxGrossWeight] = useState<number | null>(null);
+  const [aircraft, setAircraft] = useState<Aircraft | null>(null);
 
   useEffect(() => {
     if (aircraftModel) {
-      const aircraft = aircraftData.find((a) => a.id === aircraftModel);
-      if (aircraft) {
-        setMaxGrossWeight(aircraft.maxGrossWeight);
+      const airplane = aircraftData.find((a) => a.id === aircraftModel);
+      if (airplane) {
+        setAircraft(airplane);
       }
     }
   }, [aircraftModel]);
@@ -50,25 +52,30 @@ export default function ClimbPerformance({
       if (aircraft) {
         const climbPerformance: FlexibleInterpolationTable =
           aircraft.climbPerformance;
-        setRatesOfClimb(PAs.map((pa, idx) =>Math.round(bilinearInterpolateFlexible(
-          climbPerformance,
-          pa as number,
-          OATs[idx] as number,
-          options
-        ))) as [number, number, number]);
-
+        setRatesOfClimb(
+          PAs.map((pa, idx) =>
+            Math.round(
+              bilinearInterpolateFlexible(
+                climbPerformance,
+                pa as number,
+                OATs[idx] as number,
+                options
+              )
+            )
+          ) as [number, number, number]
+        );
       }
     }
   }, [OATs, PAs, aircraftModel]);
 
   useEffect(() => {
-    if (weight && maxGrossWeight) {
-      const percent = Math.round((weight / maxGrossWeight) * 100);
+    if (weight && aircraft?.maxGrossWeight) {
+      const percent = Math.round((weight / aircraft.maxGrossWeight) * 100);
       setPercentMGW(percent);
     } else {
       setPercentMGW(null);
     }
-  }, [weight, maxGrossWeight]);
+  }, [weight, aircraft]);
 
   if (!aircraftModel) return null;
 
@@ -82,7 +89,21 @@ export default function ClimbPerformance({
 
   // @todo Determine actual rate of climb based on weight
 
-  const actROC = (roc:number )=> Math.round(roc * (1+ (1-percentMGW!/100)));
+  const actROC = (roc: number) =>
+    Math.round(roc * (1 + (1 - percentMGW! / 100)));
+
+  const Vy = (pa: number): number => {
+    let idx = aircraft?.climbPerformance.pressureAltitudes.findIndex(
+      (p) => p >= pa
+    );
+    if (idx === -1) idx = 0;
+    return aircraft?.climbPerformance.climbSpeeds[idx!] ?? 0;
+  };
+
+  const Va = () => {
+    if (!weight || !aircraft) return 0;
+    return Math.round(bilinearInterpolate({ xAxis: [1], yAxis: aircraft.maneuvering.weights, data: [aircraft.maneuvering.Va] }, 1, weight));
+  };
 
   return (
     <div className="mt-6">
@@ -108,25 +129,37 @@ export default function ClimbPerformance({
             </tr>
             <tr className="border-b dark:border-gray-700">
               <td className="py-2 px-4">Rate of Climb (Actual Wt, note 11)</td>
-              <td className="py-2 px-4 text-right">{actROC(ratesOfClimb[0])}</td>
-              <td className="py-2 px-4 text-right">{actROC(ratesOfClimb[1])}</td>
-              <td className="py-2 px-4 text-right">{actROC(ratesOfClimb[2])}</td>
+              <td className="py-2 px-4 text-right">
+                {actROC(ratesOfClimb[0])}*
+              </td>
+              <td className="py-2 px-4 text-right">
+                {actROC(ratesOfClimb[1])}*
+              </td>
+              <td className="py-2 px-4 text-right">
+                {actROC(ratesOfClimb[2])}*
+              </td>
             </tr>
             <tr className="border-b dark:border-gray-700">
               <td className="py-2 px-4">Vx (Best Angle)</td>
-              <td className="py-2 px-4 text-right">TBD</td>
-              <td className="py-2 px-4 text-right">TBD</td>
-              <td className="py-2 px-4 text-right">TBD</td>
+              <td className="py-2 px-4 text-right">
+                {Math.round(Vy(PAs![0]!) * 0.9)}*
+              </td>
+              <td className="py-2 px-4 text-right">
+                {Math.round(Vy(PAs![1]!) * 0.9)}*
+              </td>
+              <td className="py-2 px-4 text-right">
+                {Math.round(Vy(PAs![2]!) * 0.9)}*
+              </td>
             </tr>
             <tr className="border-b dark:border-gray-700">
               <td className="py-2 px-4">Vy (Best Rate)</td>
-              <td className="py-2 px-4 text-right">TBD</td>
-              <td className="py-2 px-4 text-right">TBD</td>
-              <td className="py-2 px-4 text-right">TBD</td>
+              <td className="py-2 px-4 text-right">{Vy(PAs![0]!)}*</td>
+              <td className="py-2 px-4 text-right">{Vy(PAs![1]!)}*</td>
+              <td className="py-2 px-4 text-right">{Vy(PAs![2]!)}*</td>
             </tr>
             <tr className="border-b dark:border-gray-700">
               <td className="py-2 px-4">Va at Actual Weight</td>
-              <td className="py-2 px-4 text-right">TBD</td>
+              <td className="py-2 px-4 text-right">{Va()}</td>
               <td className="py-2 px-4 text-right"></td>
               <td className="py-2 px-4 text-right"></td>
             </tr>

@@ -113,7 +113,7 @@ function performInterpolation(
 ): number {
   const { allowExtrapolation = true, warnOnExtrapolation = true } = options;
   
-  // Validation
+// Validation
   if (xAxis.length === 0 || yAxis.length === 0) {
     throw new Error('Axis arrays cannot be empty');
   }
@@ -126,6 +126,29 @@ function performInterpolation(
     throw new Error(`All data rows must have ${yAxis.length} columns to match yAxis`);
   }
   
+  // Handle special cases first
+  if (xAxis.length === 1 && yAxis.length === 1) {
+    return data[0][0];
+  }
+  
+  if (xAxis.length === 1) {
+    // Linear interpolation along y-axis only
+    if (yAxis.length < 2) {
+      throw new Error('Need at least 2 y-axis values for interpolation');
+    }
+    return linearInterpolate(yAxis, data[0], yValue, { allowExtrapolation, warnOnExtrapolation, axisName: 'y' });
+  }
+  
+  if (yAxis.length === 1) {
+    // Linear interpolation along x-axis only
+    if (xAxis.length < 2) {
+      throw new Error('Need at least 2 x-axis values for interpolation');
+    }
+    const xData = data.map(row => row[0]);
+    return linearInterpolate(xAxis, xData, xValue, { allowExtrapolation, warnOnExtrapolation, axisName: 'x' });
+  }
+  
+  // Full bilinear interpolation (both axes have multiple values)
   // Check bounds
   const xMin = Math.min(...xAxis);
   const xMax = Math.max(...xAxis);
@@ -178,6 +201,17 @@ function performInterpolation(
 
 // Helper function to find surrounding index
 function findSurroundingIndex(axis: number[], value: number): number {
+  // Handle single-value axis (no interpolation needed)
+  if (axis.length === 1) {
+    return 0;
+  }
+  
+  // Handle two-value axis
+  if (axis.length === 2) {
+    return 0; // Always use indices 0 and 1
+  }
+  
+  // Find surrounding indices for multi-value axis
   for (let i = 0; i < axis.length - 1; i++) {
     if (value >= axis[i] && value <= axis[i + 1]) {
       return i;
@@ -190,6 +224,43 @@ function findSurroundingIndex(axis: number[], value: number): number {
   } else {
     return axis.length - 2;
   }
+}
+
+// Helper function for linear interpolation
+function linearInterpolate(
+  axis: number[], 
+  data: number[], 
+  value: number, 
+  options: { allowExtrapolation: boolean; warnOnExtrapolation: boolean; axisName: string }
+): number {
+  const { allowExtrapolation, warnOnExtrapolation, axisName } = options;
+  
+  // Check bounds
+  const min = Math.min(...axis);
+  const max = Math.max(...axis);
+  const isExtrapolating = value < min || value > max;
+  
+  if (isExtrapolating) {
+    if (!allowExtrapolation) {
+      throw new Error(`${axisName}-value ${value} outside range: ${min}-${max}`);
+    }
+    
+    if (warnOnExtrapolation) {
+      console.warn(`Warning: Extrapolating ${axisName}-value ${value} outside range ${min}-${max}`);
+    }
+  }
+  
+  // Find surrounding indices
+  const index = findSurroundingIndex(axis, value);
+  
+  // Linear interpolation
+  const v1 = axis[index];
+  const v2 = axis[index + 1];
+  const d1 = data[index];
+  const d2 = data[index + 1];
+  
+  const t = (value - v1) / (v2 - v1);
+  return d1 + t * (d2 - d1);
 }
 
 // Convenience function for rate of climb
