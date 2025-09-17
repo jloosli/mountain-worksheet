@@ -4,7 +4,7 @@ This document provides essential context for AI agents working with this codebas
 
 ## Project Overview
 
-A Next.js web application designed to help Civil Air Patrol (CAP) pilots plan and execute mountain flying operations safely. Built with:
+A Next.js web application designed to help Civil Air Patrol (CAP) pilots plan and execute mountain flying operations safely. It takes information about the aircraft being flown and the weather conditions for the flight to give insights on the conditions to expect and whether or not the mission should proceed. It is built with:
 
 - Next.js 15.5+ (App Router)
 - TypeScript
@@ -55,7 +55,7 @@ npm run dev     # Start development server with Turbopack
 - Implement proper type definitions for props
 - Follow Next.js App Router patterns for layouts and pages
 
-### Styling
+### Styles
 
 - Use Tailwind utility classes directly in components
 - Dark mode classes prefixed with `dark:`
@@ -69,11 +69,9 @@ npm run dev     # Start development server with Turbopack
 
 ## Common Tasks
 
-### Adding a New Page
+### Adding an aircraft
 
-1. Create new directory in `src/app/`
-2. Add `page.tsx` for the route
-3. Include in parent `layout.tsx` if needed
+- Update the aircraft data from aircraft POH information in `src/data/aircraft.json`
 
 ### Styling Updates
 
