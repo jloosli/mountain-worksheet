@@ -1,6 +1,6 @@
 "use client";
 
-import WorksheetForm from "@/components/WorksheetForm";
+import AppInputs from "@/components/AppInputs";
 import Calculations from "@/components/Calculations";
 import { useUrlState } from "@/utils/useUrlState";
 import type { URLSerializable, WorksheetData } from "@/utils/types";
@@ -55,7 +55,7 @@ export default function AppContainer() {
 
   return (
     <>
-      <WorksheetForm state={state} onStateUpdate={handleUpdate} />
+      <AppInputs state={state} onStateUpdate={handleUpdate} />
       <Calculations state={state} />
     </>
   );
