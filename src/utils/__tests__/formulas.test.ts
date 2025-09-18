@@ -134,7 +134,7 @@ describe("Rate of Climb Function", () => {
   });
 
   test("handles custom options", () => {
-    const options = { extrapolate: true };
+    const options = { allowExtrapolation: true };
     getRateOfClimb(mockTable, 3000, 15, options);
     expect(bilinearInterpolate).toHaveBeenCalledWith(
       mockTable,

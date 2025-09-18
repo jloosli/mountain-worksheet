@@ -14,7 +14,7 @@ interface WorksheetFormProps {
   onStateUpdate: (updates: Partial<URLSerializable<WorksheetData>>) => void;
 }
 
-export default function WorksheetForm({
+export default function AppInputs({
   state,
   onStateUpdate,
 }: WorksheetFormProps): ReactNode {
