@@ -116,7 +116,7 @@ export default function ClimbPerformance({
     );
   };
 
-  const serviceCeiling = () => {
+  const serviceCeiling = (oat: number) => {
     if (!aircraft) return 0;
     // Find the altitude where rate of climb is 300 ft/min
     const targetROC = 300;
@@ -125,7 +125,7 @@ export default function ClimbPerformance({
       aircraft.climbPerformance.pressureAltitudes,
       aircraft.climbPerformance.temperatures,
       targetROC,
-      OATs![0]!
+      oat
     );
     return altitude;
   };
@@ -208,9 +208,9 @@ export default function ClimbPerformance({
             </tr>
             <tr className="border-b dark:border-gray-700">
               <td className="py-2 px-4">Service Ceiling (300 ft/min ROC)</td>
-              <td className="py-2 px-4 text-right">{serviceCeiling()}***</td>
-              <td className="py-2 px-4 text-right"></td>
-              <td className="py-2 px-4 text-right"></td>
+              <td className="py-2 px-4 text-right">{Math.round(serviceCeiling(OATs![0]!)).toLocaleString()} ft</td>
+              <td className="py-2 px-4 text-right">{Math.round(serviceCeiling(OATs![1]!)).toLocaleString()} ft</td>
+              <td className="py-2 px-4 text-right">{Math.round(serviceCeiling(OATs![2]!)).toLocaleString()} ft</td>
             </tr>
           </tbody>
         </table>
