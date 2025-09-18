@@ -3,7 +3,7 @@ import aircraftData from "@/data/aircraft.json";
 import {
   bilinearInterpolate,
   bilinearInterpolateFlexible,
-  findInverseXgivenY,
+  findInverseXgivenYandZ,
   FlexibleInterpolationTable,
 } from "@/utils/interpolation";
 import { Aircraft } from "@/utils/types";
@@ -120,7 +120,7 @@ export default function ClimbPerformance({
     if (!aircraft) return 0;
     // Find the altitude where rate of climb is 300 ft/min
     const targetROC = 300;
-    const altitude = findInverseXgivenY(
+    const altitude = findInverseXgivenYandZ(
       aircraft.climbPerformance.data,
       aircraft.climbPerformance.pressureAltitudes,
       aircraft.climbPerformance.temperatures,
