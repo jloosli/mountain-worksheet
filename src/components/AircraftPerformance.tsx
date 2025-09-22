@@ -4,7 +4,7 @@ import type { URLSerializable, WorksheetData } from "@/utils/types";
 
 type PerfFields = Pick<
   WorksheetData,
-  "apt" | "temp" | "altr" | "alttd" | "rwy"
+  "airport" | "temp" | "altimeter" | "altitude" | "rwy"
 >;
 
 interface AircraftPerformanceProps {
@@ -13,10 +13,10 @@ interface AircraftPerformanceProps {
 }
 
 const DEFAULT_DATA: PerfFields = {
-  apt: ["", ""],
+  airport: ["", ""],
   temp: [21, 21, 21],
-  altr: [29.92, 29.92, 29.92],
-  alttd: [8000, 8000, 8000],
+  altimeter: [29.92, 29.92, 29.92],
+  altitude: [8000, 8000, 8000],
   rwy: [1000, 1000],
 };
 
@@ -36,7 +36,7 @@ export default function AircraftPerformance({
   ) => {
     let newValue: string | number;
 
-    if (category === "apt") {
+    if (category === "airport") {
       newValue = value || "";
     } else {
       newValue = Number(value);
@@ -44,25 +44,33 @@ export default function AircraftPerformance({
     const newData = { ...initialData };
 
     switch (category) {
-      case "apt":
-        const aptArray = [...initialData.apt] as [string, string];
-        aptArray[index] = newValue as unknown as string;
-        newData.apt = aptArray;
+      case "airport":
+        const airportArray = [...initialData.airport] as [string, string];
+        airportArray[index] = newValue as unknown as string;
+        newData.airport = airportArray;
         break;
       case "temp":
         const tempArray = [...initialData.temp] as [number, number, number];
         tempArray[index] = newValue as number;
         newData.temp = tempArray;
         break;
-      case "altr":
-        const altrArray = [...initialData.altr] as [number, number, number];
-        altrArray[index] = newValue as number;
-        newData.altr = altrArray;
+      case "altimeter":
+        const altimeterArray = [...initialData.altimeter] as [
+          number,
+          number,
+          number
+        ];
+        altimeterArray[index] = newValue as number;
+        newData.altimeter = altimeterArray;
         break;
-      case "alttd":
-        const alttdArray = [...initialData.alttd] as [number, number, number];
-        alttdArray[index] = newValue as number;
-        newData.alttd = alttdArray;
+      case "altitude":
+        const altitudeArray = [...initialData.altitude] as [
+          number,
+          number,
+          number
+        ];
+        altitudeArray[index] = newValue as number;
+        newData.altitude = altitudeArray;
         break;
       case "rwy":
         const rwyArray = [...initialData.rwy] as [number, number];
@@ -73,7 +81,7 @@ export default function AircraftPerformance({
 
     onUpdate(newData);
   };
-  
+
   return (
     <div className="w-full max-w-4xl">
       <h2 className="text-xl font-bold mb-4">Aircraft Performance</h2>
@@ -94,8 +102,10 @@ export default function AircraftPerformance({
               <td className="p-2">
                 <input
                   type="text"
-                  value={getValue("apt", 0)}
-                  onChange={(e) => handleInputChange("apt", 0, e.target.value)}
+                  value={getValue("airport", 0)}
+                  onChange={(e) =>
+                    handleInputChange("airport", 0, e.target.value)
+                  }
                   className="w-full border rounded p-1"
                 />
               </td>
@@ -103,8 +113,10 @@ export default function AircraftPerformance({
               <td className="p-2">
                 <input
                   type="text"
-                  value={getValue("apt", 1)}
-                  onChange={(e) => handleInputChange("apt", 1, e.target.value)}
+                  value={getValue("airport", 1)}
+                  onChange={(e) =>
+                    handleInputChange("airport", 1, e.target.value)
+                  }
                   className="w-full border rounded p-1"
                 />
               </td>
@@ -152,8 +164,10 @@ export default function AircraftPerformance({
                   step="0.01"
                   min="28.00"
                   max="31.00"
-                  value={getValue("altr", 0)}
-                  onChange={(e) => handleInputChange("altr", 0, e.target.value)}
+                  value={getValue("altimeter", 0)}
+                  onChange={(e) =>
+                    handleInputChange("altimeter", 0, e.target.value)
+                  }
                   className="w-full border rounded p-1"
                 />
               </td>
@@ -163,8 +177,10 @@ export default function AircraftPerformance({
                   step="0.01"
                   min="28.00"
                   max="31.99"
-                  value={getValue("altr", 1)}
-                  onChange={(e) => handleInputChange("altr", 1, e.target.value)}
+                  value={getValue("altimeter", 1)}
+                  onChange={(e) =>
+                    handleInputChange("altimeter", 1, e.target.value)
+                  }
                   className="w-full border rounded p-1"
                 />
               </td>
@@ -174,8 +190,10 @@ export default function AircraftPerformance({
                   step="0.01"
                   min="28.00"
                   max="31.99"
-                  value={getValue("altr", 2)}
-                  onChange={(e) => handleInputChange("altr", 2, e.target.value)}
+                  value={getValue("altimeter", 2)}
+                  onChange={(e) =>
+                    handleInputChange("altimeter", 2, e.target.value)
+                  }
                   className="w-full border rounded p-1"
                 />
               </td>
@@ -186,9 +204,9 @@ export default function AircraftPerformance({
               <td className="p-2">
                 <input
                   type="number"
-                  value={getValue("alttd", 0)}
+                  value={getValue("altitude", 0)}
                   onChange={(e) =>
-                    handleInputChange("alttd", 0, e.target.value)
+                    handleInputChange("altitude", 0, e.target.value)
                   }
                   className="w-full border rounded p-1"
                 />
@@ -196,9 +214,9 @@ export default function AircraftPerformance({
               <td className="p-2">
                 <input
                   type="number"
-                  value={getValue("alttd", 1)}
+                  value={getValue("altitude", 1)}
                   onChange={(e) =>
-                    handleInputChange("alttd", 1, e.target.value)
+                    handleInputChange("altitude", 1, e.target.value)
                   }
                   className="w-full border rounded p-1"
                 />
@@ -206,9 +224,9 @@ export default function AircraftPerformance({
               <td className="p-2">
                 <input
                   type="number"
-                  value={getValue("alttd", 2)}
+                  value={getValue("altitude", 2)}
                   onChange={(e) =>
-                    handleInputChange("alttd", 2, e.target.value)
+                    handleInputChange("altitude", 2, e.target.value)
                   }
                   className="w-full border rounded p-1"
                 />

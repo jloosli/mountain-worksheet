@@ -18,9 +18,7 @@ export default function AppInputs({
   state,
   onStateUpdate,
 }: WorksheetFormProps): ReactNode {
-  const handleUpdate = (
-    data: Partial<URLSerializable<WorksheetData>>
-  ) => {
+  const handleUpdate = (data: Partial<URLSerializable<WorksheetData>>) => {
     onStateUpdate(data);
   };
 
@@ -42,9 +40,9 @@ export default function AppInputs({
   // Extract data for each component
   const sortieData = {
     pilot: state.pilot || "",
-    sDate: state.sDate || "",
-    sTime: state.sTime || "",
-    acft: state.acft || "",
+    date: state.date || "",
+    time: state.time || "",
+    acType: state.acType || "",
     tailN: state.tailN || "",
   };
 
@@ -56,15 +54,15 @@ export default function AppInputs({
   };
 
   const perfData = {
-    apt: state.apt || ["", ""],
+    airport: state.airport || ["", ""],
     temp: state.temp || [21, 21, 21],
-    altr: state.altr || [29.92, 29.92, 29.92],
-    alttd: state.alttd || [8000, 8000, 8000],
+    altimeter: state.altimeter || [29.92, 29.92, 29.92],
+    altitude: state.altitude || [8000, 8000, 8000],
     rwy: state.rwy || [1000, 1000],
   };
 
   const weightData = {
-    wgt: state.wgt || null,
+    weight: state.weight || null,
   };
 
   const mtnQualsData = {
@@ -94,15 +92,9 @@ export default function AppInputs({
       </div>
       <SortieInfo onUpdate={handleUpdate} initialData={sortieData} />
       <WeatherInfo onUpdate={handleUpdate} initialData={weatherData} />
-      <AircraftPerformance
-        onUpdate={handleUpdate}
-        initialData={perfData}
-      />
+      <AircraftPerformance onUpdate={handleUpdate} initialData={perfData} />
       <AircraftWeight onUpdate={handleUpdate} initialData={weightData} />
-      <MountainQuals
-        onUpdate={handleUpdate}
-        initialData={mtnQualsData}
-      />
+      <MountainQuals onUpdate={handleUpdate} initialData={mtnQualsData} />
     </div>
   );
 }

@@ -8,14 +8,16 @@ interface AltitudesProps {
   altitudes: number[];
   altimeters: number[];
   temperatures: number[];
-  onPressureUpdate: (pressureAltitudes: [number | null, number | null, number | null]) => void;
+  onPressureUpdate: (
+    pressureAltitudes: [number | null, number | null, number | null]
+  ) => void;
 }
 
 export default function Altitudes({
   altitudes,
   altimeters,
   temperatures,
-  onPressureUpdate
+  onPressureUpdate,
 }: AltitudesProps) {
   const [pressures, setPressures] = useState<{
     departurePA: number | null;
@@ -84,8 +86,12 @@ export default function Altitudes({
       arrivalPA: arrivalPressureAltitude,
       arrivalDA: arrivalDensityAltitude,
     });
-    onPressureUpdate([departurePressureAltitude, operatingPressureAltitude, arrivalPressureAltitude]);
-  }, [altitudes, altimeters, temperatures]);
+    onPressureUpdate([
+      departurePressureAltitude,
+      operatingPressureAltitude,
+      arrivalPressureAltitude,
+    ]);
+  }, [altitudes, altimeters, temperatures, onPressureUpdate]);
   return (
     <table className="min-w-full border-collapse border border-gray-300 dark:border-gray-700">
       <thead>

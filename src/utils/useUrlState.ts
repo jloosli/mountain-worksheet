@@ -1,13 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useRouter, usePathname } from "next/navigation";
-import type { JsonValue } from "./urlState";
 import type { URLSerializable } from "./types";
 import { serializeState, deserializeState } from "./urlState";
-
-const STATE_PARAM = "data";
-
-export type ValidJsonObject = { [key: string]: JsonValue };
 
 export function useUrlState<TBase, T extends URLSerializable<TBase>>(
   initialState: T
@@ -16,17 +11,17 @@ export function useUrlState<TBase, T extends URLSerializable<TBase>>(
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [state, setState] = useState<T>(() => {
-    const urlState = deserializeState(searchParams.get(STATE_PARAM));
-    return (urlState as T) || initialState;
+    return deserializeState(searchParams, initialState);
   });
 
   const pendingStateRef = useRef<T | null>(null);
 
   const updateUrl = useCallback(
     (newState: T) => {
-      const stateStr = serializeState(newState as JsonValue);
-      const query = stateStr ? `?${STATE_PARAM}=${stateStr}` : "";
-      router.push(`${pathname}${query}`, { scroll: false });
+      const params = serializeState(newState as Record<string, unknown>);
+      const query = params.toString() ? `?${params.toString()}` : "";
+      const url = `${pathname}${query}`;
+      router.push(url, { scroll: false });
       pendingStateRef.current = null;
     },
     [pathname, router]
