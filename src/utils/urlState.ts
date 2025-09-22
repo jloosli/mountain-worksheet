@@ -1,73 +1,80 @@
-export type JsonValue =
-  | string
-  | number
-  | boolean
-  | null
-  | JsonValue[]
-  | { [key: string]: JsonValue };
-
-// Remove empty values from an object recursively
-const removeEmpty = (obj: JsonValue): JsonValue | undefined => {
-  if (Array.isArray(obj)) {
-    return obj.map(removeEmpty).filter((v) => v !== undefined);
-  }
-  if (obj !== null && typeof obj === "object") {
-    const cleaned = Object.entries(obj)
-      .map(([key, value]): [string, JsonValue | undefined] => [
-        key,
-        removeEmpty(value),
-      ])
-      .filter((entry): entry is [string, JsonValue] => entry[1] !== undefined)
-      .reduce<Record<string, JsonValue>>((acc, [key, value]) => {
-        acc[key] = value;
-        return acc;
-      }, {} as Record<string, JsonValue>);
-    return Object.keys(cleaned).length ? cleaned : undefined;
-  }
-  // Remove empty strings, null values, and false values
-  if (obj === "" || obj === null || obj === false) {
-    return undefined;
-  }
-  return obj;
-};
-
-// Only encode characters that absolutely must be encoded in URLs
-const encodeReadable = (str: string): string => {
-  return str
-    .replace(/\s/g, "+") // Replace spaces with +
-    .replace(/[+]/g, "%2B") // Encode + signs that were originally in the text
-    .replace(/[&]/g, "%26") // Encode & to avoid breaking query params
-    .replace(/[=]/g, "%3D"); // Encode = to avoid breaking query params
-};
-
-// Custom decoder that handles our readable format
-const decodeReadable = (str: string): string => {
-  // First decode any percent-encoded characters
-  const decoded = str
-    .replace(/%2B/g, "+") // Special case: decode %2B back to +
-    .replace(/%26/g, "&") // Decode & back
-    .replace(/%3D/g, "=") // Decode = back
-    .replace(/%22/g, '"') // Decode " back
-    .replace(/\+/g, " "); // Finally, convert + to spaces
-  return decoded;
-};
-
-// Serialize state to URL-safe string
-export const serializeState = (state: JsonValue): string => {
-  const cleaned = removeEmpty(state);
-  if (!cleaned) return "";
-  return encodeReadable(JSON.stringify(cleaned));
-};
-
-// Deserialize state from URL string with validation
-export const deserializeState = (stateStr: string | null): JsonValue | null => {
-  if (!stateStr) return null;
-
-  try {
-    const decoded = decodeReadable(stateStr);
-    return JSON.parse(decoded);
-  } catch (e) {
-    console.error("Failed to parse state from URL:", e);
+// Helper function to serialize a value to string
+const serializeValue = (value: unknown): string | null => {
+  if (value === null || value === undefined || value === "") {
     return null;
   }
+  if (typeof value === "boolean") {
+    return value ? "1" : "0";
+  }
+  if (Array.isArray(value)) {
+    // Filter out empty values from arrays
+    const filtered = value.filter(
+      (v) => v !== null && v !== undefined && v !== ""
+    );
+    return filtered.length ? filtered.join(",") : null;
+  }
+  return String(value);
+};
+
+// Helper function to deserialize a string value to its proper type
+const deserializeValue = (value: string | null, hint?: unknown): unknown => {
+  if (value === null) return null;
+
+  // If we have a hint that this should be an array, split by comma
+  if (Array.isArray(hint)) {
+    return value.split(",").map((v) => {
+      // Use the first non-null value in the hint array as type hint
+      const typeHint = hint.find((h) => h !== null);
+      if (typeof typeHint === "number") return Number(v);
+      return v;
+    });
+  }
+
+  // Use the hint to determine the type
+  if (typeof hint === "boolean") {
+    return value === "1";
+  }
+  if (typeof hint === "number") {
+    return Number(value);
+  }
+
+  return value;
+};
+
+// Convert state object to URLSearchParams
+export const serializeState = (
+  state: Record<string, unknown>
+): URLSearchParams => {
+  const params = new URLSearchParams();
+
+  for (const [key, value] of Object.entries(state)) {
+    const serialized = serializeValue(value);
+    if (serialized !== null) {
+      params.set(key, serialized);
+    }
+  }
+
+  return params;
+};
+
+// Convert URLSearchParams to state object, using initialState as type hint
+export const deserializeState = <T>(
+  params: URLSearchParams | null,
+  initialState: T
+): T => {
+  if (!params) return initialState;
+
+  const result = { ...initialState } as T;
+
+  for (const [key, value] of params.entries()) {
+    const initial = initialState as Record<string, unknown>;
+    if (key in initial) {
+      (result as Record<string, unknown>)[key] = deserializeValue(
+        value,
+        initial[key]
+      );
+    }
+  }
+
+  return result;
 };
