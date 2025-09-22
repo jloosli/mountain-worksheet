@@ -18,31 +18,7 @@ export default function AppInputs({
   state,
   onStateUpdate,
 }: WorksheetFormProps): ReactNode {
-  const handleSortieUpdate = (
-    data: Partial<URLSerializable<WorksheetData>>
-  ) => {
-    onStateUpdate(data);
-  };
-
-  const handleWeatherUpdate = (
-    data: Partial<URLSerializable<WorksheetData>>
-  ) => {
-    onStateUpdate(data);
-  };
-
-  const handlePerformanceUpdate = (
-    data: Partial<URLSerializable<WorksheetData>>
-  ) => {
-    onStateUpdate(data);
-  };
-
-  const handleWeightUpdate = (
-    data: Partial<URLSerializable<WorksheetData>>
-  ) => {
-    onStateUpdate(data);
-  };
-
-  const handleMountainQualsUpdate = (
+  const handleUpdate = (
     data: Partial<URLSerializable<WorksheetData>>
   ) => {
     onStateUpdate(data);
@@ -116,15 +92,15 @@ export default function AppInputs({
           </button>
         </div>
       </div>
-      <SortieInfo onUpdate={handleSortieUpdate} initialData={sortieData} />
-      <WeatherInfo onUpdate={handleWeatherUpdate} initialData={weatherData} />
+      <SortieInfo onUpdate={handleUpdate} initialData={sortieData} />
+      <WeatherInfo onUpdate={handleUpdate} initialData={weatherData} />
       <AircraftPerformance
-        onUpdate={handlePerformanceUpdate}
+        onUpdate={handleUpdate}
         initialData={perfData}
       />
-      <AircraftWeight onUpdate={handleWeightUpdate} initialData={weightData} />
+      <AircraftWeight onUpdate={handleUpdate} initialData={weightData} />
       <MountainQuals
-        onUpdate={handleMountainQualsUpdate}
+        onUpdate={handleUpdate}
         initialData={mtnQualsData}
       />
     </div>
