@@ -383,25 +383,21 @@ function findInverseXgivenYandZ(
   const lastZ = zValuesAtY[zValuesAtY.length - 1];
 
   if (
-    (targetZ > firstZ && targetZ > lastZ) ||
-    (targetZ < firstZ && targetZ < lastZ)
+    (targetZ < Math.min(firstZ, lastZ))
   ) {
-    // Target is outside our range, extrapolate using first two or last two points
-    if (
-      targetZ > Math.max(firstZ, lastZ) ||
-      targetZ < Math.min(firstZ, lastZ)
-    ) {
-      // Use first two points for extrapolation below
-      const t = (targetZ - zValuesAtY[0]) / (zValuesAtY[1] - zValuesAtY[0]);
-      return xAxis[0] + t * (xAxis[1] - xAxis[0]);
-    } else {
-      // Use last two points for extrapolation above
-      const last = xAxis.length - 1;
-      const t =
-        (targetZ - zValuesAtY[last - 1]) /
-        (zValuesAtY[last] - zValuesAtY[last - 1]);
-      return xAxis[last - 1] + t * (xAxis[last] - xAxis[last - 1]);
-    }
+    // Target is below the data range, extrapolate using first two points
+    const t = (targetZ - zValuesAtY[0]) / (zValuesAtY[1] - zValuesAtY[0]);
+    return xAxis[0] + t * (xAxis[1] - xAxis[0]);
+  } else if (
+    (targetZ > Math.max(firstZ, lastZ))
+  ) {
+    // Target is above the data range, extrapolate using last two points
+    const last = xAxis.length - 1;
+    const t =
+      (targetZ - zValuesAtY[last - 1]) /
+      (zValuesAtY[last] - zValuesAtY[last - 1]);
+    return xAxis[last - 1] + t * (xAxis[last] - xAxis[last - 1]);
+  }
   }
 
   // This should never happen if the data is properly sorted
