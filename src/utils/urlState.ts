@@ -36,7 +36,12 @@ const deserializeValue = (value: string | null, hint?: unknown): unknown => {
       if (typeof typeHint === "string") return v;
       if (typeof typeHint === "boolean") return v === "1";
       // Default to number if hinted that way or if string looks numeric
-      if (typeof typeHint === "number" || !isNaN(Number(v))) return Number(v);
+      if (
+        typeof typeHint === "number" ||
+        (typeof v === "string" && v.trim() !== "" && /^[+-]?\d+(\.\d+)?$/.test(v))
+      ) {
+        return Number(v);
+      }
       return v;
     });
   }
