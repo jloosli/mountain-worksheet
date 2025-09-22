@@ -3,7 +3,7 @@
 import { Suspense } from "react";
 import AppContainer from "./AppContainer";
 
-export default function WorksheetWrapper() {
+export default function AppWrapper() {
   return (
     <Suspense
       fallback={
