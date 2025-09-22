@@ -19,9 +19,9 @@ export type IndexedURLSerializable<T extends JsonValue> = {
 export interface WorksheetData {
   // Sortie Information
   pilot: string;
-  sDate: string;
-  sTime: string;
-  acft: string;
+  date: string;
+  time: string;
+  acType: string;
   tailN: string;
 
   // Weather Information
@@ -31,14 +31,14 @@ export interface WorksheetData {
   mtnObsc: boolean;
 
   // Aircraft Performance
-  apt: [string, string]; // [departure, arrival]
+  airport: [string, string]; // [departure, arrival]
   temp: [number, number, number]; // [departure, operating, arrival]
-  altr: [number, number, number]; // [departure, operating, arrival]
-  alttd: [number, number, number]; // [departure, operating, arrival]
+  altimeter: [number, number, number]; // [departure, operating, arrival]
+  altitude: [number, number, number]; // [departure, operating, arrival]
   rwy: [number, number]; // [departure, arrival]
 
   // Aircraft Weight
-  wgt: number | null;
+  weight: number | null;
 
   // Mountain Qualifications
   mtnEndorse: boolean;
@@ -49,11 +49,11 @@ export interface Aircraft {
   id: string;
   name: string;
   emptyWeight: number;
-  maxGrossWeight:  number;
+  maxGrossWeight: number;
   fuelCapacity: number;
   fuelWeightPerGallon: number;
   serviceCeiling: number;
-  maneuvering:  { weights: number[]; Va: number[] },
+  maneuvering: { weights: number[]; Va: number[] };
   climbPerformance: {
     pressureAltitudes: number[];
     climbSpeeds: number[];

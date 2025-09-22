@@ -11,7 +11,12 @@ const serializeValue = (value: unknown): string | null => {
     const filtered = value.filter(
       (v) => v !== null && v !== undefined && v !== ""
     );
-    return filtered.length ? filtered.join(",") : null;
+    // Convert each value to string, handling booleans specially
+    const mapped = filtered.map((v) => {
+      if (typeof v === "boolean") return v ? "1" : "0";
+      return String(v);
+    });
+    return mapped.length ? mapped.join(",") : null;
   }
   return String(value);
 };
@@ -22,10 +27,16 @@ const deserializeValue = (value: string | null, hint?: unknown): unknown => {
 
   // If we have a hint that this should be an array, split by comma
   if (Array.isArray(hint)) {
-    return value.split(",").map((v) => {
-      // Use the first non-null value in the hint array as type hint
-      const typeHint = hint.find((h) => h !== null);
-      if (typeof typeHint === "number") return Number(v);
+    return value.split(",").map((v, i) => {
+      // Try to get hint from corresponding index or first valid hint
+      const typeHint =
+        hint[i] ?? hint.find((h) => h !== null && h !== undefined);
+
+      // For "mixed" type arrays, preserve the original type if possible
+      if (typeof typeHint === "string") return v;
+      if (typeof typeHint === "boolean") return v === "1";
+      // Default to number if hinted that way or if string looks numeric
+      if (typeof typeHint === "number" || !isNaN(Number(v))) return Number(v);
       return v;
     });
   }

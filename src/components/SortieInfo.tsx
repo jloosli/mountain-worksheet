@@ -6,7 +6,7 @@ import type { URLSerializable, WorksheetData } from "@/utils/types";
 
 type SortieFields = Pick<
   WorksheetData,
-  "pilot" | "sDate" | "sTime" | "acft" | "tailN"
+  "pilot" | "date" | "time" | "acType" | "tailN"
 >;
 
 interface SortieInfoProps {
@@ -17,9 +17,9 @@ interface SortieInfoProps {
 export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
   const [formData, setFormData] = useState<SortieFields>({
     pilot: "",
-    sDate: "",
-    sTime: "",
-    acft: "",
+    date: "",
+    time: "",
+    acType: "",
     tailN: "",
   });
 
@@ -56,41 +56,41 @@ export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
         </div>
 
         <div className="space-y-2">
-          <label htmlFor="sDate" className="block text-sm font-medium">
+          <label htmlFor="date" className="block text-sm font-medium">
             Date of Sortie
           </label>
           <input
             type="date"
-            id="sDate"
-            name="sDate"
-            value={formData.sDate}
+            id="date"
+            name="date"
+            value={formData.date}
             onChange={handleInputChange}
             className="w-full px-3 py-2 border rounded-md dark:bg-black/[.15] dark:border-white/[.145]"
           />
         </div>
 
         <div className="space-y-2">
-          <label htmlFor="sTime" className="block text-sm font-medium">
+          <label htmlFor="time" className="block text-sm font-medium">
             Time of Sortie
           </label>
           <input
             type="time"
-            id="sTime"
-            name="sTime"
-            value={formData.sTime}
+            id="time"
+            name="time"
+            value={formData.time}
             onChange={handleInputChange}
             className="w-full px-3 py-2 border rounded-md dark:bg-black/[.15] dark:border-white/[.145]"
           />
         </div>
 
         <div className="space-y-2">
-          <label htmlFor="acft" className="block text-sm font-medium">
+          <label htmlFor="acType" className="block text-sm font-medium">
             Aircraft Model
           </label>
           <select
-            id="acft"
-            name="acft"
-            value={formData.acft || ""}
+            id="acType"
+            name="acType"
+            value={formData.acType || ""}
             onChange={handleInputChange}
             className="w-full px-3 py-2 border rounded-md dark:bg-black/[.15] dark:border-white/[.145]"
           >

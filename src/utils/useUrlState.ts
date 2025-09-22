@@ -20,7 +20,8 @@ export function useUrlState<TBase, T extends URLSerializable<TBase>>(
     (newState: T) => {
       const params = serializeState(newState as Record<string, unknown>);
       const query = params.toString() ? `?${params.toString()}` : "";
-      router.push(`${pathname}${query}`, { scroll: false });
+      const url = `${pathname}${query}`;
+      router.push(url, { scroll: false });
       pendingStateRef.current = null;
     },
     [pathname, router]

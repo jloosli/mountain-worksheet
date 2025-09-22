@@ -12,13 +12,13 @@ export default function AppContainer() {
   >({
     // Sortie Information
     pilot: "",
-    sDate: new Date().toISOString().split("T")[0],
-    sTime: new Date().toLocaleTimeString("en-US", {
+    date: new Date().toISOString().split("T")[0],
+    time: new Date().toLocaleTimeString("en-US", {
       hour12: false,
       hour: "2-digit",
       minute: "2-digit",
     }),
-    acft: "",
+    acType: "",
     tailN: "",
 
     // Weather Information
@@ -32,14 +32,14 @@ export default function AppContainer() {
     mtnObsc: false,
 
     // Aircraft Performance
-    apt: ["", ""],
+    airport: ["", ""],
     temp: [21, 21, 21],
-    altr: [29.92, 29.92, 29.92],
-    alttd: [8000, 8000, 8000],
+    altimeter: [29.92, 29.92, 29.92],
+    altitude: [8000, 8000, 8000],
     rwy: [1000, 1000],
 
     // Aircraft Weight
-    wgt: null,
+    weight: null,
 
     // Mountain Qualifications
     mtnEndorse: false,

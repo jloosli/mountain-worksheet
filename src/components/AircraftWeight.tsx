@@ -1,6 +1,6 @@
 import type { URLSerializable, WorksheetData } from "@/utils/types";
 
-type WeightFields = Pick<WorksheetData, "wgt">;
+type WeightFields = Pick<WorksheetData, "weight">;
 
 interface Props {
   initialData?: WeightFields;
@@ -8,12 +8,12 @@ interface Props {
 }
 
 export default function AircraftWeight({
-  initialData = { wgt: null },
+  initialData = { weight: null },
   onUpdate,
 }: Props) {
   const handleWeightChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const value = event.target.value === "" ? null : Number(event.target.value);
-    onUpdate({ wgt: value });
+    onUpdate({ weight: value });
   };
 
   return (
@@ -23,7 +23,7 @@ export default function AircraftWeight({
         <div className="flex gap-2 items-center">
           <input
             type="number"
-            value={initialData.wgt ?? ""}
+            value={initialData.weight ?? ""}
             onChange={handleWeightChange}
             className="p-2 border rounded"
             min={2200}
