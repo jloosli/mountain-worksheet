@@ -336,6 +336,27 @@ function findInverseXgivenYandZ(
   targetZ: number,
   yVal: number
 ): number {
+  // Upfront validation
+  if (data.length !== xAxis.length) {
+    throw new Error(`Data row count (${data.length}) does not match xAxis length (${xAxis.length}).`);
+  }
+  for (let i = 0; i < data.length; i++) {
+    if (data[i].length !== yAxis.length) {
+      throw new Error(`Data row ${i} length (${data[i].length}) does not match yAxis length (${yAxis.length}).`);
+    }
+  }
+  // Check monotonicity of xAxis
+  for (let i = 1; i < xAxis.length; i++) {
+    if (xAxis[i] <= xAxis[i - 1]) {
+      throw new Error(`xAxis must be strictly increasing. Found xAxis[${i - 1}] = ${xAxis[i - 1]}, xAxis[${i}] = ${xAxis[i]}.`);
+    }
+  }
+  // Check monotonicity of yAxis
+  for (let i = 1; i < yAxis.length; i++) {
+    if (yAxis[i] <= yAxis[i - 1]) {
+      throw new Error(`yAxis must be strictly increasing. Found yAxis[${i - 1}] = ${yAxis[i - 1]}, yAxis[${i}] = ${yAxis[i]}.`);
+    }
+  }
   // First interpolate values at our y-value (temperature) for each x (altitude)
   const zValuesAtY: number[] = [];
 
