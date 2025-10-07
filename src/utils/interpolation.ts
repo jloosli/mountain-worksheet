@@ -501,8 +501,9 @@ export function trilinearInterpolate(
     return null;
   }
 
-  // Use the first non-null value as fallback for any null values
-  const fallbackValue = nonNullValues[0];
+  // Use the average of non-null values as fallback for any null values
+  const fallbackValue =
+    nonNullValues.reduce((sum, v) => sum + v, 0) / nonNullValues.length;
   const safeC000 = c000 ?? fallbackValue;
   const safeC001 = c001 ?? fallbackValue;
   const safeC010 = c010 ?? fallbackValue;
