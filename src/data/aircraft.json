@@ -9,7 +9,11 @@
     "serviceCeiling": 14000,
     "maneuvering": {
       "weights": [2100, 2600, 3100],
-      "Va": [108, 100, 91]
+      "Va": [91, 101, 110]
+    },
+    "stallSpeeds": {
+      "flaps": [0,30],
+      "Vso": [51, 41]
     },
     "climbPerformance": {
       "pressureAltitudes": [0, 2000, 4000, 6000, 8000, 10000, 12000, 14000],

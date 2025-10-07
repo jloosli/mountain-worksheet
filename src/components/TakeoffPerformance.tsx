@@ -171,10 +171,10 @@ export default function TakeoffPerformance({
                 className="py-2 px-4 text-center border-r dark:border-gray-700"
                 colSpan={2}
               >
-                Short Field Takeoff
+                Short Field
               </th>
               <th className="py-2 px-4 text-center" colSpan={2}>
-                Over 50&apos; Obstacle
+                Short Field Over 50&apos; Obstacle
               </th>
             </tr>
             <tr className="border-b dark:border-gray-700">
@@ -193,7 +193,7 @@ export default function TakeoffPerformance({
           </thead>
           <tbody>
             <tr className="border-b dark:border-gray-700">
-              <td className="py-2 px-4">Take Off Grnd Roll</td>
+              <td className="py-2 px-4">Take Off Ground Roll</td>
               <td
                 className={
                   getCellClasses(
@@ -254,7 +254,7 @@ export default function TakeoffPerformance({
               </td>
             </tr>
             <tr className="border-b dark:border-gray-700">
-              <td className="py-2 px-4">Landing Grnd Roll</td>
+              <td className="py-2 px-4">Landing Ground Roll</td>
               <td
                 className={
                   getCellClasses(

@@ -173,3 +173,21 @@ export interface TOLDValidationResult {
   errors: TOLDError[];
   warnings: TOLDError[];
 }
+
+/**
+ * Individual maneuvering speed data for a specific flap setting and bank angle
+ */
+export interface ManeuveringSpeedData {
+  flapSetting: number;
+  bankAngle: number;
+  speed: number;
+}
+
+/**
+ * Complete maneuvering speeds data for an aircraft
+ * Contains speeds for all flap settings and bank angles
+ */
+export interface ManeuveringSpeeds {
+  flapSettings: number[];
+  speeds: ManeuveringSpeedData[];
+}
