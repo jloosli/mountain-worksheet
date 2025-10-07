@@ -33,7 +33,7 @@ export interface WorksheetData {
   temp: [number, number, number]; // [departure, operating, arrival]
   altimeter: [number, number, number]; // [departure, operating, arrival]
   altitude: [number, number, number]; // [departure, operating, arrival]
-  rwy: [number, number]; // [departure, arrival]
+  rwy: [number | null, number | null]; // [departure, arrival] runway lengths in feet
 
   // Aircraft Weight
   weight: number | null;
@@ -58,4 +58,118 @@ export interface Aircraft {
     temperatures: number[];
     data: number[][];
   };
+  shortFieldTakeoff: {
+    weights: number[];
+    pressureAltitudes: number[];
+    temperatures: number[];
+    data: Array<{
+      groundRoll: (number | null)[][];
+      groundRoll50ft: (number | null)[][];
+    }>;
+  };
+  shortFieldLanding?: {
+    weights: number[];
+    pressureAltitudes: number[];
+    temperatures: number[];
+    data: Array<{
+      groundRoll: (number | null)[][];
+      groundRoll50ft: (number | null)[][];
+    }>;
+  };
+}
+
+/**
+ * TOLD (Takeoff and Landing Distance) calculation results
+ */
+export interface TOLDResults {
+  takeoffGroundRoll: {
+    departure: number | null;
+    arrival: number | null;
+  };
+  takeoff50ftObstacle: {
+    departure: number | null;
+    arrival: number | null;
+  };
+  landingGroundRoll: {
+    departure: number | null;
+    arrival: number | null;
+  };
+  landing50ftObstacle: {
+    departure: number | null;
+    arrival: number | null;
+  };
+  availableRunwayRemainingTakeoffGroundRoll: {
+    departure: number | null;
+    arrival: number | null;
+  };
+  availableRunwayRemainingTakeoff50ft: {
+    departure: number | null;
+    arrival: number | null;
+  };
+}
+
+/**
+ * TOLD calculation input parameters
+ */
+export interface TOLDInputs {
+  weight: number | null;
+  pressureAltitudes: [number | null, number | null, number | null];
+  temperatures: [number | null, number | null, number | null];
+  runwayLengths: [number | null, number | null];
+}
+
+/**
+ * TOLD calculation parameters for a specific airport/condition
+ */
+export interface TOLDCalculationParams {
+  weight: number | null;
+  pressureAltitude: number | null;
+  temperature: number | null;
+  runwayLength: number | null;
+}
+
+/**
+ * TOLD calculation context - includes aircraft model and all calculation parameters
+ */
+export interface TOLDCalculationContext {
+  aircraftModel: string;
+  inputs: TOLDInputs;
+}
+
+/**
+ * TOLD calculation error states
+ */
+export interface TOLDError {
+  type:
+    | "invalid_input"
+    | "missing_data"
+    | "extrapolation_warning"
+    | "calculation_failed"
+    | "aircraft_not_found"
+    | "runway_length_missing"
+    | "weight_out_of_range"
+    | "altitude_out_of_range"
+    | "temperature_out_of_range";
+  message: string;
+  field?: string;
+  severity?: "warning" | "error" | "info";
+}
+
+/**
+ * TOLD calculation result with error handling
+ */
+export interface TOLDCalculationResult {
+  success: boolean;
+  results?: TOLDResults;
+  errors?: TOLDError[];
+  warnings?: TOLDError[];
+}
+
+/**
+ * TOLD validation result for input parameters
+ */
+export interface TOLDValidationResult {
+  isValid: boolean;
+  errors: TOLDError[];
+  warnings: TOLDError[];
 }

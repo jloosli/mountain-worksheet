@@ -19,6 +19,9 @@ A Next.js web application designed to help Civil Air Patrol (CAP) pilots plan an
 - Page components in `page.tsx` files
 - Layout components in `layout.tsx` files
 - Shared components in `src/components/` (when added)
+- Most components are stateless and use props to update the state
+- Calculations are done in the `Calculations` component
+- Inputs are done in the `AppInputs` component
 
 ### Styling
 
