@@ -5,6 +5,7 @@
 - `src/components/Calculations.tsx` - Main calculations component that will perform TOLD calculations and pass results to TakeoffPerformance
 - `src/components/TakeoffPerformance.tsx` - Component that displays the TOLD table and will receive calculated distances as props
 - `src/utils/interpolation.ts` - Existing interpolation utilities for bilinear calculations
+- `src/utils/toldCalculations.ts` - TOLD calculation functions for takeoff/landing distances
 - `src/utils/types.ts` - Type definitions that need to be extended for TOLD calculations
 - `src/data/aircraft.json` - Aircraft performance data containing shortFieldTakeoff data structure
 - `src/components/Calculations.test.tsx` - Unit tests for the Calculations component
@@ -26,16 +27,16 @@
   - [x] 1.4 Update WorksheetData interface to ensure runway length data (rwy field) is properly typed
   - [x] 1.5 Add error state types for TOLD calculation failures
 
-- [ ] 2.0 Implement TOLD Calculation Functions
+- [x] 2.0 Implement TOLD Calculation Functions
 
-  - [ ] 2.1 Create trilinear interpolation function for weight/pressure altitude/temperature in `src/utils/interpolation.ts`
-  - [ ] 2.2 Implement takeoff ground roll calculation function using shortFieldTakeoff.groundRoll data
-  - [ ] 2.3 Implement takeoff 50ft obstacle clearance calculation using shortFieldTakeoff.groundRoll50ft data
-  - [ ] 2.4 Implement landing ground roll calculation function (placeholder for future shortFieldLanding data)
-  - [ ] 2.5 Implement landing 50ft obstacle clearance calculation (placeholder for future shortFieldLanding data)
-  - [ ] 2.6 Create available runway remaining calculation function (runway length - required distance)
-  - [ ] 2.7 Add input validation functions for weight, altitude, and temperature ranges
-  - [ ] 2.8 Implement extrapolation handling for values outside interpolation table ranges
+  - [x] 2.1 Create trilinear interpolation function for weight/pressure altitude/temperature in `src/utils/interpolation.ts`
+  - [x] 2.2 Implement takeoff ground roll calculation function using shortFieldTakeoff.groundRoll data
+  - [x] 2.3 Implement takeoff 50ft obstacle clearance calculation using shortFieldTakeoff.groundRoll50ft data
+  - [x] 2.4 Implement landing ground roll calculation function (placeholder for future shortFieldLanding data)
+  - [x] 2.5 Implement landing 50ft obstacle clearance calculation (placeholder for future shortFieldLanding data)
+  - [x] 2.6 Create available runway remaining calculation function (runway length - required distance)
+  - [x] 2.7 Add input validation functions for weight, altitude, and temperature ranges
+  - [x] 2.8 Implement extrapolation handling for values outside interpolation table ranges
 
 - [ ] 3.0 Update Calculations Component with TOLD Logic
 

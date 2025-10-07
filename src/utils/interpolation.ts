@@ -28,6 +28,18 @@ export interface InterpolationResult {
   };
 }
 
+export interface TrilinearInterpolationTable {
+  weights: number[];
+  pressureAltitudes: number[];
+  temperatures: number[];
+  data: number[][][]; // [weight][pressureAltitude][temperature]
+}
+
+export interface TrilinearInterpolationOptions {
+  allowExtrapolation?: boolean;
+  warnOnExtrapolation?: boolean;
+}
+
 // Helper function to find surrounding index for interpolation
 function findSurroundingIndex(array: number[], value: number): number {
   for (let i = 0; i < array.length - 1; i++) {
@@ -341,4 +353,126 @@ export function findInverseXgivenYandZ(
 
   // This should never happen if the data is properly sorted
   throw new Error("Could not find matching climb rate");
+}
+
+/**
+ * Trilinear interpolation function for weight/pressure altitude/temperature
+ * Interpolates across three dimensions to find a value
+ * @param table The trilinear interpolation table
+ * @param weight The weight value to interpolate for
+ * @param pressureAltitude The pressure altitude value to interpolate for
+ * @param temperature The temperature value to interpolate for
+ * @param options Interpolation options
+ * @returns The interpolated value
+ */
+export function trilinearInterpolate(
+  table: TrilinearInterpolationTable,
+  weight: number,
+  pressureAltitude: number,
+  temperature: number,
+  options: TrilinearInterpolationOptions = {}
+): number {
+  const { allowExtrapolation = true, warnOnExtrapolation = true } = options;
+  const { weights, pressureAltitudes, temperatures, data } = table;
+
+  // Validate input dimensions
+  if (
+    weights.length === 0 ||
+    pressureAltitudes.length === 0 ||
+    temperatures.length === 0
+  ) {
+    throw new Error("Axis arrays cannot be empty");
+  }
+
+  // Validate data dimensions
+  if (data.length !== weights.length) {
+    throw new Error(
+      `Data length (${data.length}) must match weights length (${weights.length})`
+    );
+  }
+
+  for (let w = 0; w < data.length; w++) {
+    if (data[w].length !== pressureAltitudes.length) {
+      throw new Error(
+        `Data[${w}] length (${data[w].length}) must match pressureAltitudes length (${pressureAltitudes.length})`
+      );
+    }
+    for (let p = 0; p < data[w].length; p++) {
+      if (data[w][p].length !== temperatures.length) {
+        throw new Error(
+          `Data[${w}][${p}] length (${data[w][p].length}) must match temperatures length (${temperatures.length})`
+        );
+      }
+    }
+  }
+
+  // Check for extrapolation
+  const isExtrapolatingWeight =
+    weight < weights[0] || weight > weights[weights.length - 1];
+  const isExtrapolatingAltitude =
+    pressureAltitude < pressureAltitudes[0] ||
+    pressureAltitude > pressureAltitudes[pressureAltitudes.length - 1];
+  const isExtrapolatingTemperature =
+    temperature < temperatures[0] ||
+    temperature > temperatures[temperatures.length - 1];
+
+  if (
+    (isExtrapolatingWeight ||
+      isExtrapolatingAltitude ||
+      isExtrapolatingTemperature) &&
+    !allowExtrapolation
+  ) {
+    throw new Error("Values outside table range and extrapolation is disabled");
+  }
+
+  if (
+    (isExtrapolatingWeight ||
+      isExtrapolatingAltitude ||
+      isExtrapolatingTemperature) &&
+    warnOnExtrapolation
+  ) {
+    console.warn("Trilinear extrapolation outside table bounds");
+  }
+
+  // Find surrounding indices
+  const weightIndex = findSurroundingIndex(weights, weight);
+  const altitudeIndex = findSurroundingIndex(
+    pressureAltitudes,
+    pressureAltitude
+  );
+  const temperatureIndex = findSurroundingIndex(temperatures, temperature);
+
+  // Get surrounding points
+  const w1 = weights[weightIndex];
+  const w2 = weights[weightIndex + 1];
+  const p1 = pressureAltitudes[altitudeIndex];
+  const p2 = pressureAltitudes[altitudeIndex + 1];
+  const t1 = temperatures[temperatureIndex];
+  const t2 = temperatures[temperatureIndex + 1];
+
+  // Get the 8 corner values
+  const c000 = data[weightIndex][altitudeIndex][temperatureIndex];
+  const c001 = data[weightIndex][altitudeIndex][temperatureIndex + 1];
+  const c010 = data[weightIndex][altitudeIndex + 1][temperatureIndex];
+  const c011 = data[weightIndex][altitudeIndex + 1][temperatureIndex + 1];
+  const c100 = data[weightIndex + 1][altitudeIndex][temperatureIndex];
+  const c101 = data[weightIndex + 1][altitudeIndex][temperatureIndex + 1];
+  const c110 = data[weightIndex + 1][altitudeIndex + 1][temperatureIndex];
+  const c111 = data[weightIndex + 1][altitudeIndex + 1][temperatureIndex + 1];
+
+  // Calculate interpolation factors
+  const fw = (weight - w1) / (w2 - w1);
+  const fp = (pressureAltitude - p1) / (p2 - p1);
+  const ft = (temperature - t1) / (t2 - t1);
+
+  // Trilinear interpolation
+  const c00 = c000 * (1 - ft) + c001 * ft;
+  const c01 = c010 * (1 - ft) + c011 * ft;
+  const c10 = c100 * (1 - ft) + c101 * ft;
+  const c11 = c110 * (1 - ft) + c111 * ft;
+
+  const c0 = c00 * (1 - fp) + c01 * fp;
+  const c1 = c10 * (1 - fp) + c11 * fp;
+
+  return c0 * (1 - fw) + c1 * fw;
 }
