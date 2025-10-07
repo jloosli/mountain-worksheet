@@ -1,6 +1,11 @@
 "use client";
 
-import type { WorksheetData, TOLDResults, TOLDError } from "@/utils/types";
+import type {
+  WorksheetData,
+  TOLDResults,
+  TOLDError,
+  ManeuveringSpeeds,
+} from "@/utils/types";
 import Altitudes from "@/components/Altitudes";
 import ClimbPerformance from "@/components/ClimbPerformance";
 import TakeoffPerformance from "@/components/TakeoffPerformance";
@@ -8,6 +13,7 @@ import ManeuveringPerformance from "@/components/ManeuveringPerformance";
 import TOLDErrorBoundary from "@/components/TOLDErrorBoundary";
 import { useState, useCallback, useEffect } from "react";
 import { calculateTOLDForMultipleAirports } from "@/utils/toldCalculations";
+import { calculateManeuveringSpeeds } from "@/utils/maneuveringCalculations";
 
 interface CalculationsProps {
   state: WorksheetData;
@@ -24,6 +30,10 @@ export default function Calculations({ state }: CalculationsProps) {
     TOLDError[]
   >([]);
   const [isCalculatingTOLD, setIsCalculatingTOLD] = useState(false);
+
+  // Maneuvering speeds state management
+  const [maneuveringSpeeds, setManeuveringSpeeds] =
+    useState<ManeuveringSpeeds | null>(null);
 
   const handlePressureUpdate = useCallback(
     (PAs: [number | null, number | null, number | null]) => {
@@ -126,6 +136,16 @@ export default function Calculations({ state }: CalculationsProps) {
   useEffect(() => {
     performTOLDCalculation();
   }, [performTOLDCalculation]);
+
+  // Trigger maneuvering speeds calculation when aircraft model changes
+  useEffect(() => {
+    if (state.acType) {
+      const speeds = calculateManeuveringSpeeds(state.acType);
+      setManeuveringSpeeds(speeds);
+    } else {
+      setManeuveringSpeeds(null);
+    }
+  }, [state.acType]);
 
   // Helper function to check if TOLD calculations are valid
   const isTOLDCalculationValid = useCallback(() => {
@@ -269,6 +289,11 @@ export default function Calculations({ state }: CalculationsProps) {
     clearTOLDErrors,
   ]);
 
+  // Callback function to pass maneuvering speeds to ManeuveringPerformance component
+  const handleManeuveringSpeedsUpdate = useCallback(() => {
+    return maneuveringSpeeds || undefined;
+  }, [maneuveringSpeeds]);
+
   return (
     <div className="w-full bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
       <h2 className="text-2xl font-bold mb-4">Calculations</h2>
@@ -306,7 +331,10 @@ export default function Calculations({ state }: CalculationsProps) {
             toldData={handleTOLDResultsUpdate()}
           />
         </TOLDErrorBoundary>
-        <ManeuveringPerformance aircraftModel={state.acType} />
+        <ManeuveringPerformance
+          aircraftModel={state.acType}
+          maneuveringSpeeds={handleManeuveringSpeedsUpdate()}
+        />
       </div>
     </div>
   );

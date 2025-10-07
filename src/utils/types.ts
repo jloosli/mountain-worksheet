@@ -43,6 +43,11 @@ export interface WorksheetData {
   mtnCert: boolean;
 }
 
+export interface StallSpeeds {
+  flaps: number[];
+  Vso: number[];
+}
+
 export interface Aircraft {
   id: string;
   name: string;
@@ -52,6 +57,7 @@ export interface Aircraft {
   fuelWeightPerGallon: number;
   serviceCeiling: number;
   maneuvering: { weights: number[]; Va: number[] };
+  stallSpeeds: StallSpeeds;
   climbPerformance: {
     pressureAltitudes: number[];
     climbSpeeds: number[];
@@ -172,4 +178,22 @@ export interface TOLDValidationResult {
   isValid: boolean;
   errors: TOLDError[];
   warnings: TOLDError[];
+}
+
+/**
+ * Individual maneuvering speed data for a specific flap setting and bank angle
+ */
+export interface ManeuveringSpeedData {
+  flapSetting: number;
+  bankAngle: number;
+  speed: number;
+}
+
+/**
+ * Complete maneuvering speeds data for an aircraft
+ * Contains speeds for all flap settings and bank angles
+ */
+export interface ManeuveringSpeeds {
+  flapSettings: number[];
+  speeds: ManeuveringSpeedData[];
 }
