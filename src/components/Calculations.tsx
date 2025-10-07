@@ -5,7 +5,6 @@ import type {
   TOLDResults,
   TOLDError,
   ManeuveringSpeeds,
-  ManeuveringSpeedData,
 } from "@/utils/types";
 import Altitudes from "@/components/Altitudes";
 import ClimbPerformance from "@/components/ClimbPerformance";
@@ -14,7 +13,7 @@ import ManeuveringPerformance from "@/components/ManeuveringPerformance";
 import TOLDErrorBoundary from "@/components/TOLDErrorBoundary";
 import { useState, useCallback, useEffect } from "react";
 import { calculateTOLDForMultipleAirports } from "@/utils/toldCalculations";
-import aircraftData from "@/data/aircraft.json";
+import { calculateManeuveringSpeeds } from "@/utils/maneuveringCalculations";
 
 interface CalculationsProps {
   state: WorksheetData;
@@ -47,48 +46,6 @@ export default function Calculations({ state }: CalculationsProps) {
     []
   );
 
-  // Calculate maneuvering speeds based on aircraft stall speeds
-  const calculateManeuveringSpeeds = useCallback(
-    (aircraftModel: string): ManeuveringSpeeds | null => {
-      if (!aircraftModel) return null;
-
-      const aircraft = aircraftData.find((a) => a.id === aircraftModel);
-      if (!aircraft || !aircraft.stallSpeeds) return null;
-
-      const { flaps, Vso } = aircraft.stallSpeeds;
-      const bankAngles = [0, 45, 60]; // Standard bank angles for maneuvering speeds
-      const speeds: ManeuveringSpeedData[] = [];
-
-      // Calculate speeds for each flap setting and bank angle combination
-      flaps.forEach((flapSetting, index) => {
-        const vso = Vso[index];
-        bankAngles.forEach((bankAngle) => {
-          let speed: number;
-          if (bankAngle === 0) {
-            speed = vso; // 0° bank = Vso directly
-          } else if (bankAngle === 45) {
-            speed = vso * 1.2; // 45° bank = 1.2 × Vso
-          } else if (bankAngle === 60) {
-            speed = vso * 1.4; // 60° bank = 1.4 × Vso
-          } else {
-            speed = vso; // Fallback to Vso for any other bank angle
-          }
-
-          speeds.push({
-            flapSetting,
-            bankAngle,
-            speed: Math.round(speed),
-          });
-        });
-      });
-
-      return {
-        flapSettings: flaps,
-        speeds,
-      };
-    },
-    []
-  );
 
   // Enhanced TOLD calculation function with pressure altitude integration
   const performTOLDCalculation = useCallback(async () => {
@@ -188,7 +145,7 @@ export default function Calculations({ state }: CalculationsProps) {
     } else {
       setManeuveringSpeeds(null);
     }
-  }, [state.acType, calculateManeuveringSpeeds]);
+  }, [state.acType]);
 
   // Helper function to check if TOLD calculations are valid
   const isTOLDCalculationValid = useCallback(() => {
