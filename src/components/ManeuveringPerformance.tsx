@@ -30,7 +30,6 @@ export default function ManeuveringPerformance({
               </th>
             </tr>
             <tr>
-
               <th className="border border-gray-300 dark:border-gray-700 p-2 text-left"></th>
               <th className="border border-gray-300 dark:border-gray-700 p-2 text-left"></th>
               <th className="border border-gray-300 dark:border-gray-700 p-2 text-right">
@@ -46,7 +45,7 @@ export default function ManeuveringPerformance({
           </thead>
           <tbody>
             <tr>
-            <th
+              <th
                 className="border border-gray-300 dark:border-gray-700 p-2 text-center"
                 rowSpan={2}
               >
@@ -79,7 +78,6 @@ export default function ManeuveringPerformance({
                 TBD
               </td>
             </tr>
-
           </tbody>
         </table>
       </div>

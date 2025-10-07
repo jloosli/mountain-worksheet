@@ -24,14 +24,14 @@
   - [x] 1.3 Add `ManeuveringPerformanceProps` interface update to include calculated speeds parameter
   - [x] 1.4 Export new types from `src/utils/types.ts`
 
-- [ ] 2.0 Implement Maneuvering Speed Calculation Logic in Calculations Component
+- [x] 2.0 Implement Maneuvering Speed Calculation Logic in Calculations Component
 
-  - [ ] 2.1 Create `calculateManeuveringSpeeds` function that takes aircraft model and returns calculated speeds
-  - [ ] 2.2 Implement calculation formulas: 0° bank = Vso, 45° bank = 1.2×Vso, 60° bank = 1.4×Vso
-  - [ ] 2.3 Add state management for maneuvering speeds in Calculations component
-  - [ ] 2.4 Add useEffect to recalculate speeds when aircraft model changes
-  - [ ] 2.5 Create callback function to pass calculated speeds to ManeuveringPerformance component
-  - [ ] 2.6 Update ManeuveringPerformance component call to pass calculated speeds
+  - [x] 2.1 Create `calculateManeuveringSpeeds` function that takes aircraft model and returns calculated speeds
+  - [x] 2.2 Implement calculation formulas: 0° bank = Vso, 45° bank = 1.2×Vso, 60° bank = 1.4×Vso
+  - [x] 2.3 Add state management for maneuvering speeds in Calculations component
+  - [x] 2.4 Add useEffect to recalculate speeds when aircraft model changes
+  - [x] 2.5 Create callback function to pass calculated speeds to ManeuveringPerformance component
+  - [x] 2.6 Update ManeuveringPerformance component call to pass calculated speeds
 
 - [ ] 3.0 Update ManeuveringPerformance Component to Accept and Display Calculated Speeds
 

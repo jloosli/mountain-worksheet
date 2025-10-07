@@ -1,6 +1,12 @@
 "use client";
 
-import type { WorksheetData, TOLDResults, TOLDError } from "@/utils/types";
+import type {
+  WorksheetData,
+  TOLDResults,
+  TOLDError,
+  ManeuveringSpeeds,
+  ManeuveringSpeedData,
+} from "@/utils/types";
 import Altitudes from "@/components/Altitudes";
 import ClimbPerformance from "@/components/ClimbPerformance";
 import TakeoffPerformance from "@/components/TakeoffPerformance";
@@ -8,6 +14,7 @@ import ManeuveringPerformance from "@/components/ManeuveringPerformance";
 import TOLDErrorBoundary from "@/components/TOLDErrorBoundary";
 import { useState, useCallback, useEffect } from "react";
 import { calculateTOLDForMultipleAirports } from "@/utils/toldCalculations";
+import aircraftData from "@/data/aircraft.json";
 
 interface CalculationsProps {
   state: WorksheetData;
@@ -25,6 +32,9 @@ export default function Calculations({ state }: CalculationsProps) {
   >([]);
   const [isCalculatingTOLD, setIsCalculatingTOLD] = useState(false);
 
+  // Maneuvering speeds state management
+  const [maneuveringSpeeds, setManeuveringSpeeds] = useState<ManeuveringSpeeds | null>(null);
+
   const handlePressureUpdate = useCallback(
     (PAs: [number | null, number | null, number | null]) => {
       const normalizedPAs = PAs.map((pa) => pa ?? 0) as [
@@ -33,6 +43,49 @@ export default function Calculations({ state }: CalculationsProps) {
         number
       ];
       setPAs(normalizedPAs);
+    },
+    []
+  );
+
+  // Calculate maneuvering speeds based on aircraft stall speeds
+  const calculateManeuveringSpeeds = useCallback(
+    (aircraftModel: string): ManeuveringSpeeds | null => {
+      if (!aircraftModel) return null;
+
+      const aircraft = aircraftData.find((a) => a.id === aircraftModel);
+      if (!aircraft || !aircraft.stallSpeeds) return null;
+
+      const { flaps, Vso } = aircraft.stallSpeeds;
+      const bankAngles = [0, 45, 60]; // Standard bank angles for maneuvering speeds
+      const speeds: ManeuveringSpeedData[] = [];
+
+      // Calculate speeds for each flap setting and bank angle combination
+      flaps.forEach((flapSetting, index) => {
+        const vso = Vso[index];
+        bankAngles.forEach((bankAngle) => {
+          let speed: number;
+          if (bankAngle === 0) {
+            speed = vso; // 0° bank = Vso directly
+          } else if (bankAngle === 45) {
+            speed = vso * 1.2; // 45° bank = 1.2 × Vso
+          } else if (bankAngle === 60) {
+            speed = vso * 1.4; // 60° bank = 1.4 × Vso
+          } else {
+            speed = vso; // Fallback to Vso for any other bank angle
+          }
+
+          speeds.push({
+            flapSetting,
+            bankAngle,
+            speed: Math.round(speed),
+          });
+        });
+      });
+
+      return {
+        flapSettings: flaps,
+        speeds,
+      };
     },
     []
   );
@@ -126,6 +179,16 @@ export default function Calculations({ state }: CalculationsProps) {
   useEffect(() => {
     performTOLDCalculation();
   }, [performTOLDCalculation]);
+
+  // Trigger maneuvering speeds calculation when aircraft model changes
+  useEffect(() => {
+    if (state.acType) {
+      const speeds = calculateManeuveringSpeeds(state.acType);
+      setManeuveringSpeeds(speeds);
+    } else {
+      setManeuveringSpeeds(null);
+    }
+  }, [state.acType, calculateManeuveringSpeeds]);
 
   // Helper function to check if TOLD calculations are valid
   const isTOLDCalculationValid = useCallback(() => {
@@ -269,6 +332,11 @@ export default function Calculations({ state }: CalculationsProps) {
     clearTOLDErrors,
   ]);
 
+  // Callback function to pass maneuvering speeds to ManeuveringPerformance component
+  const handleManeuveringSpeedsUpdate = useCallback(() => {
+    return maneuveringSpeeds;
+  }, [maneuveringSpeeds]);
+
   return (
     <div className="w-full bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
       <h2 className="text-2xl font-bold mb-4">Calculations</h2>
@@ -306,7 +374,10 @@ export default function Calculations({ state }: CalculationsProps) {
             toldData={handleTOLDResultsUpdate()}
           />
         </TOLDErrorBoundary>
-        <ManeuveringPerformance aircraftModel={state.acType} />
+        <ManeuveringPerformance 
+          aircraftModel={state.acType} 
+          maneuveringSpeeds={handleManeuveringSpeedsUpdate()} 
+        />
       </div>
     </div>
   );
