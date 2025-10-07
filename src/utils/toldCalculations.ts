@@ -20,34 +20,24 @@ export function calculateTakeoffGroundRoll(
   aircraftModel: string,
   params: TOLDCalculationParams
 ): number | null {
-  console.log("calculateTakeoffGroundRoll called with:", {
-    aircraftModel,
-    params,
-  });
-
   try {
     // Check for null/undefined inputs
     if (params.weight === null || params.weight === undefined) {
-      console.log("Weight is null/undefined");
       return null;
     }
     if (
       params.pressureAltitude === null ||
       params.pressureAltitude === undefined
     ) {
-      console.log("Pressure altitude is null/undefined");
       return null;
     }
     if (params.temperature === null || params.temperature === undefined) {
-      console.log("Temperature is null/undefined");
       return null;
     }
 
     const aircraft = aircraftData.find((a) => a.id === aircraftModel);
-    console.log("Found aircraft:", aircraft ? aircraft.id : "null");
 
     if (!aircraft || !aircraft.shortFieldTakeoff) {
-      console.log("Aircraft or shortFieldTakeoff data not found");
       return null;
     }
 
@@ -55,50 +45,14 @@ export function calculateTakeoffGroundRoll(
     const { weights, pressureAltitudes, temperatures, data } =
       aircraft.shortFieldTakeoff;
 
-    console.log("Aircraft data:", {
-      weights,
-      pressureAltitudes,
-      temperatures,
-      dataLength: data.length,
-    });
-
-    console.log("Takeoff calculation params:", {
-      weight,
-      pressureAltitude,
-      temperature,
-      weights,
-      pressureAltitudes,
-      temperatures,
-    });
-
-    // Manual verification for debugging - check exact values
-    const paIndex = pressureAltitudes.findIndex((pa) => pa === 6000);
-    const tempIndex = temperatures.findIndex((temp) => temp === 30);
-    const weightIndex = findWeightIndex(weights, weight);
-    console.log("Manual verification - Takeoff:", {
-      paIndex,
-      tempIndex,
-      weightIndex,
-      valueAt6000ft30C3100lbs:
-        paIndex >= 0 && tempIndex >= 0 && weightIndex >= 0
-          ? data[weightIndex].groundRoll[paIndex][tempIndex]
-          : "not found",
-    });
-
     // Find the weight index for the data array
-    console.log("Weight index:", weightIndex);
+    const weightIndex = findWeightIndex(weights, weight);
 
     if (weightIndex === -1) {
-      console.log("Weight index not found");
       return null;
     }
 
     // Create trilinear interpolation table for ground roll data
-    console.log("About to access data[weightIndex]:", {
-      weightIndex,
-      dataAtWeightIndex: data[weightIndex],
-      groundRollAtWeightIndex: data[weightIndex]?.groundRoll,
-    });
 
     const groundRollTable: TrilinearInterpolationTable = {
       weights: [
@@ -145,18 +99,15 @@ export function calculateTakeoff50ftObstacle(
   try {
     // Check for null/undefined inputs
     if (params.weight === null || params.weight === undefined) {
-      console.log("Weight is null/undefined");
       return null;
     }
     if (
       params.pressureAltitude === null ||
       params.pressureAltitude === undefined
     ) {
-      console.log("Pressure altitude is null/undefined");
       return null;
     }
     if (params.temperature === null || params.temperature === undefined) {
-      console.log("Temperature is null/undefined");
       return null;
     }
 
@@ -219,30 +170,21 @@ export function calculateLandingGroundRoll(
   aircraftModel: string,
   params: TOLDCalculationParams
 ): number | null {
-  console.log("calculateLandingGroundRoll called with:", {
-    aircraftModel,
-    params,
-  });
-
   try {
     // Check for null/undefined inputs
     if (
       params.pressureAltitude === null ||
       params.pressureAltitude === undefined
     ) {
-      console.log("Pressure altitude is null/undefined");
       return null;
     }
     if (params.temperature === null || params.temperature === undefined) {
-      console.log("Temperature is null/undefined");
       return null;
     }
 
     const aircraft = aircraftData.find((a) => a.id === aircraftModel);
-    console.log("Found aircraft:", aircraft ? aircraft.id : "null");
 
     if (!aircraft) {
-      console.log("Aircraft not found");
       return null;
     }
 
@@ -254,27 +196,12 @@ export function calculateLandingGroundRoll(
       return null;
     }
 
-    console.log("Using landing data for landing calculation:", {
-      weights: aircraft.shortFieldLanding.weights,
-      pressureAltitudes: aircraft.shortFieldLanding.pressureAltitudes,
-      temperatures: aircraft.shortFieldLanding.temperatures,
-      dataLength: aircraft.shortFieldLanding.data.length,
-      targetWeight: params.weight,
-    });
-
     const { pressureAltitude, temperature } = params;
     const { pressureAltitudes, temperatures, data } =
       aircraft.shortFieldLanding;
 
     // For landing data, use bilinear interpolation (pressure altitude × temperature)
     // since there's only one weight (2950 lbs)
-    console.log("Using bilinear interpolation for landing ground roll:", {
-      pressureAltitude,
-      temperature,
-      groundRollData: data[0].groundRoll,
-      pressureAltitudes,
-      temperatures,
-    });
 
     const distance = bilinearInterpolate(
       {
@@ -286,8 +213,6 @@ export function calculateLandingGroundRoll(
       temperature,
       { allowExtrapolation: true, warnOnExtrapolation: true }
     );
-
-    console.log("Landing ground roll distance:", distance);
 
     if (distance === null) {
       return null;
@@ -310,33 +235,21 @@ export function calculateLanding50ftObstacle(
   aircraftModel: string,
   params: TOLDCalculationParams
 ): number | null {
-  console.log("calculateLanding50ftObstacle called with:", {
-    aircraftModel,
-    params,
-  });
-
   try {
     // Check for null/undefined inputs
     if (
       params.pressureAltitude === null ||
       params.pressureAltitude === undefined
     ) {
-      console.log("Pressure altitude is null/undefined");
       return null;
     }
     if (params.temperature === null || params.temperature === undefined) {
-      console.log("Temperature is null/undefined");
       return null;
     }
 
     const aircraft = aircraftData.find((a) => a.id === aircraftModel);
-    console.log(
-      "Found aircraft for landing 50ft:",
-      aircraft ? aircraft.id : "null"
-    );
 
     if (!aircraft) {
-      console.log("Aircraft not found for landing 50ft");
       return null;
     }
 
@@ -348,25 +261,12 @@ export function calculateLanding50ftObstacle(
       return null;
     }
 
-    console.log("Using landing data for landing 50ft calculation:", {
-      weights: aircraft.shortFieldLanding.weights,
-      pressureAltitudes: aircraft.shortFieldLanding.pressureAltitudes,
-      temperatures: aircraft.shortFieldLanding.temperatures,
-      dataLength: aircraft.shortFieldLanding.data.length,
-      targetWeight: params.weight,
-    });
-
     const { pressureAltitude, temperature } = params;
     const { pressureAltitudes, temperatures, data } =
       aircraft.shortFieldLanding;
 
     // For landing data, use bilinear interpolation (pressure altitude × temperature)
     // since there's only one weight (2950 lbs)
-    console.log("Using bilinear interpolation for landing 50ft obstacle:", {
-      pressureAltitude,
-      temperature,
-      groundRoll50ftData: data[0].groundRoll50ft,
-    });
 
     const distance = bilinearInterpolate(
       {
@@ -378,8 +278,6 @@ export function calculateLanding50ftObstacle(
       temperature,
       { allowExtrapolation: true, warnOnExtrapolation: true }
     );
-
-    console.log("Landing 50ft distance:", distance);
 
     if (distance === null) {
       return null;
@@ -443,11 +341,6 @@ export function calculateAllTOLDDistances(
   aircraftModel: string,
   params: TOLDCalculationParams
 ) {
-  console.log("calculateAllTOLDDistances called with:", {
-    aircraftModel,
-    params,
-  });
-
   const takeoffGroundRoll = calculateTakeoffGroundRoll(aircraftModel, params);
   const takeoff50ftObstacle = calculateTakeoff50ftObstacle(
     aircraftModel,
@@ -458,13 +351,6 @@ export function calculateAllTOLDDistances(
     aircraftModel,
     params
   );
-
-  console.log("Individual calculation results:", {
-    takeoffGroundRoll,
-    takeoff50ftObstacle,
-    landingGroundRoll,
-    landing50ftObstacle,
-  });
 
   return {
     takeoffGroundRoll,
@@ -694,34 +580,24 @@ export function calculateTOLDSafe(
  * @returns The index of the weight bracket, or -1 if not found
  */
 function findWeightIndex(weights: number[], targetWeight: number): number {
-  console.log("findWeightIndex called with:", { weights, targetWeight });
-
   // Handle single weight case
   if (weights.length === 1) {
-    console.log("Single weight case, returning index 0");
     return 0;
   }
 
   for (let i = 0; i < weights.length - 1; i++) {
     if (targetWeight >= weights[i] && targetWeight <= weights[i + 1]) {
-      console.log("Found weight bracket at index:", i);
       return i;
     }
   }
 
   // Handle extrapolation cases
   if (targetWeight < weights[0]) {
-    console.log("Target weight below range, returning index 0");
     return 0;
   } else if (targetWeight > weights[weights.length - 1]) {
-    console.log(
-      "Target weight above range, returning index",
-      weights.length - 2
-    );
     return weights.length - 2;
   }
 
-  console.log("No weight bracket found, returning -1");
   return -1;
 }
 
@@ -1101,16 +977,8 @@ export function calculateTOLDForMultipleAirports(
 
     const departureResult = calculateTOLDSafe(aircraftModel, departureParams);
 
-    console.log("Departure calculation result:", {
-      success: departureResult.success,
-      hasResults: !!departureResult.results,
-      errors: departureResult.errors,
-      validationErrors: departureResult.validationErrors,
-    });
-
     if (departureResult.success && departureResult.results) {
       departureResults = departureResult.results;
-      console.log("Departure results:", departureResults);
     }
 
     allValidationErrors.push(...departureResult.validationErrors);
@@ -1130,16 +998,7 @@ export function calculateTOLDForMultipleAirports(
       runwayLength: inputs.runwayLengths[1],
     };
 
-    console.log("Arrival calculation params:", arrivalParams);
-
     const arrivalResult = calculateTOLDSafe(aircraftModel, arrivalParams);
-
-    console.log("Arrival calculation result:", {
-      success: arrivalResult.success,
-      hasResults: !!arrivalResult.results,
-      takeoffGroundRoll: arrivalResult.results?.takeoffGroundRoll,
-      errors: arrivalResult.errors,
-    });
 
     if (arrivalResult.success && arrivalResult.results) {
       arrivalResults = arrivalResult.results;

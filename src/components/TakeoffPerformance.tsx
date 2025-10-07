@@ -140,21 +140,6 @@ export default function TakeoffPerformance({
     return baseClasses;
   };
 
-  // Debug information
-  const debugInfo = toldData
-    ? {
-        hasResults: !!toldData.results,
-        isCalculating: toldData.isCalculating,
-        hasErrors: toldData.hasErrors,
-        status: toldData.status,
-      }
-    : {
-        hasResults: false,
-        isCalculating: false,
-        hasErrors: false,
-        status: "no-data",
-      };
-
   // Extract TOLD data
   const results = toldData?.results;
   const isCalculating = toldData?.isCalculating || false;
@@ -165,11 +150,6 @@ export default function TakeoffPerformance({
       <h3 className="text-xl font-semibold mb-4">
         Take Off and Landing Distances (TOLD) ({aircraftModel})
       </h3>
-
-      {/* Debug information */}
-      <div className="mb-4 p-2 bg-gray-100 dark:bg-gray-700 rounded text-sm">
-        <strong>Debug Info:</strong> {JSON.stringify(debugInfo)}
-      </div>
 
       {/* Error and Warning Display */}
       {toldData && (

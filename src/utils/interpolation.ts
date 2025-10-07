@@ -377,14 +377,6 @@ export function trilinearInterpolate(
   temperature: number,
   options: TrilinearInterpolationOptions = {}
 ): number | null {
-  console.log("trilinearInterpolate called with:", {
-    table,
-    weight,
-    pressureAltitude,
-    temperature,
-    options,
-  });
-
   const { allowExtrapolation = true, warnOnExtrapolation = true } = options;
   const { weights, pressureAltitudes, temperatures, data } = table;
 
@@ -501,23 +493,11 @@ export function trilinearInterpolate(
       : data[weightIndex + 1][altitudeIndex + 1][temperatureIndex + 1];
 
   // Check for null values - if any corner is null, return null
-  console.log("Corner values:", {
-    c000,
-    c001,
-    c010,
-    c011,
-    c100,
-    c101,
-    c110,
-    c111,
-  });
-
   // Handle null values by using nearest available data points
   const allValues = [c000, c001, c010, c011, c100, c101, c110, c111];
   const nonNullValues = allValues.filter((v) => v !== null) as number[];
 
   if (nonNullValues.length === 0) {
-    console.log("All corner values are null, returning null");
     return null;
   }
 
@@ -531,17 +511,6 @@ export function trilinearInterpolate(
   const safeC101 = c101 ?? fallbackValue;
   const safeC110 = c110 ?? fallbackValue;
   const safeC111 = c111 ?? fallbackValue;
-
-  console.log("Safe corner values:", {
-    safeC000,
-    safeC001,
-    safeC010,
-    safeC011,
-    safeC100,
-    safeC101,
-    safeC110,
-    safeC111,
-  });
 
   // Calculate interpolation factors
   const fw = isSingleWeight ? 0 : (weight - w1) / (w2 - w1);
@@ -558,6 +527,5 @@ export function trilinearInterpolate(
   const c1 = c10 * (1 - fp) + c11 * fp;
 
   const result = c0 * (1 - fw) + c1 * fw;
-  console.log("Interpolation result:", result);
   return result;
 }

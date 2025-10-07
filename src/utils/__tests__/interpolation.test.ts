@@ -394,7 +394,6 @@ describe("Interpolation Functions", () => {
   });
 });
 
-// Mock console.log for trilinear interpolation tests
 const mockLog = jest.spyOn(console, "log").mockImplementation(() => {});
 
 describe("Trilinear Interpolation", () => {

@@ -33,22 +33,12 @@ export default function Calculations({ state }: CalculationsProps) {
         number
       ];
       setPAs(normalizedPAs);
-
-      // Log pressure altitude updates for debugging
-      console.log("Pressure altitudes updated:", normalizedPAs);
     },
     []
   );
 
   // Enhanced TOLD calculation function with pressure altitude integration
   const performTOLDCalculation = useCallback(async () => {
-    console.log("TOLD calculation check - Current state:", {
-      acType: state.acType,
-      weight: state.weight,
-      rwy: state.rwy,
-      PAs: PAs,
-    });
-
     // Temporary test data for debugging
     const testParams = {
       acType: state.acType || "C182T",
@@ -57,20 +47,12 @@ export default function Calculations({ state }: CalculationsProps) {
       PAs: PAs || [8000, 8000, 8000],
     };
 
-    console.log("Using test params:", testParams);
-
     if (
       !testParams.acType ||
       !testParams.weight ||
       !testParams.rwy[0] ||
       !testParams.rwy[1]
     ) {
-      console.log("TOLD calculation skipped - missing required inputs:", {
-        acType: !!testParams.acType,
-        weight: !!testParams.weight,
-        rwy0: !!testParams.rwy[0],
-        rwy1: !!testParams.rwy[1],
-      });
       setToldResults(null);
       setToldErrors([]);
       setToldWarnings([]);
@@ -104,20 +86,6 @@ export default function Calculations({ state }: CalculationsProps) {
         runwayLengths: testParams.rwy,
       };
 
-      console.log("Performing TOLD calculation with params:", params);
-      console.log("Pressure altitude mapping:", {
-        departure: params.pressureAltitudes[0],
-        arrival: params.pressureAltitudes[1],
-        operating: params.pressureAltitudes[2],
-        originalPAs: testParams.PAs,
-      });
-      console.log("Temperature mapping:", {
-        departure: params.temperatures[0],
-        arrival: params.temperatures[1],
-        operating: params.temperatures[2],
-        originalTemps: state.temp,
-      });
-
       const result = calculateTOLDForMultipleAirports(
         testParams.acType,
         params
@@ -128,7 +96,6 @@ export default function Calculations({ state }: CalculationsProps) {
         setToldErrors(result.validationErrors);
         setToldWarnings(result.validationWarnings);
         setToldExtrapolationWarnings(result.extrapolationWarnings);
-        console.log("TOLD calculation successful:", result.results);
       } else {
         setToldResults(null);
         setToldErrors(result.errors);
@@ -267,7 +234,6 @@ export default function Calculations({ state }: CalculationsProps) {
 
   // Error recovery function
   const retryTOLDCalculation = useCallback(() => {
-    console.log("Retrying TOLD calculation...");
     clearTOLDErrors();
     performTOLDCalculation();
   }, [clearTOLDErrors, performTOLDCalculation]);

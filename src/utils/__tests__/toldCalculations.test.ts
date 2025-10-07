@@ -12,7 +12,6 @@ import {
   type TOLDCalculationParams,
 } from "../toldCalculations";
 
-// Mock console.log and console.warn for testing
 const mockLog = jest.spyOn(console, "log").mockImplementation(() => {});
 const mockWarn = jest.spyOn(console, "warn").mockImplementation(() => {});
 const mockError = jest.spyOn(console, "error").mockImplementation(() => {});
