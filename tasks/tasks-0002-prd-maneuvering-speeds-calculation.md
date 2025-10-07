@@ -33,14 +33,14 @@
   - [x] 2.5 Create callback function to pass calculated speeds to ManeuveringPerformance component
   - [x] 2.6 Update ManeuveringPerformance component call to pass calculated speeds
 
-- [ ] 3.0 Update ManeuveringPerformance Component to Accept and Display Calculated Speeds
+- [x] 3.0 Update ManeuveringPerformance Component to Accept and Display Calculated Speeds
 
-  - [ ] 3.1 Update `ManeuveringPerformanceProps` interface to accept `maneuveringSpeeds` parameter
-  - [ ] 3.2 Replace hardcoded flap settings (0°, 30°) with dynamic values from aircraft data
-  - [ ] 3.3 Update table structure to dynamically generate rows based on available flap settings
-  - [ ] 3.4 Replace "TBD" values with calculated speeds from props
-  - [ ] 3.5 Update "Flaps" header rowSpan to match number of flap settings dynamically
-  - [ ] 3.6 Add proper TypeScript typing for the new props
+  - [x] 3.1 Update `ManeuveringPerformanceProps` interface to accept `maneuveringSpeeds` parameter
+  - [x] 3.2 Replace hardcoded flap settings (0°, 30°) with dynamic values from aircraft data
+  - [x] 3.3 Update table structure to dynamically generate rows based on available flap settings
+  - [x] 3.4 Replace "TBD" values with calculated speeds from props
+  - [x] 3.5 Update "Flaps" header rowSpan to match number of flap settings dynamically
+  - [x] 3.6 Add proper TypeScript typing for the new props
 
 - [ ] 4.0 Update Aircraft Type Definition to Include Stall Speeds
 

@@ -11,6 +11,19 @@ export default function ManeuveringPerformance({
 }: ManeuveringPerformanceProps) {
   if (!aircraftModel) return null;
 
+  // Helper function to get speed for a specific flap setting and bank angle
+  const getSpeed = (flapSetting: number, bankAngle: number): number | null => {
+    if (!maneuveringSpeeds) return null;
+    const speedData = maneuveringSpeeds.speeds.find(
+      (s) => s.flapSetting === flapSetting && s.bankAngle === bankAngle
+    );
+    return speedData ? speedData.speed : null;
+  };
+
+  // Get flap settings from maneuvering speeds or fallback to default
+  const flapSettings = maneuveringSpeeds?.flapSettings || [0, 30];
+  const bankAngles = [0, 45, 60];
+
   return (
     <div className="mt-6">
       <h3 className="text-xl font-semibold mb-4">
@@ -44,40 +57,32 @@ export default function ManeuveringPerformance({
             </tr>
           </thead>
           <tbody>
-            <tr>
-              <th
-                className="border border-gray-300 dark:border-gray-700 p-2 text-center"
-                rowSpan={2}
-              >
-                <div className="transform rotate-270">Flaps</div>
-              </th>
-              <td className="border border-gray-300 dark:border-gray-700 p-2">
-                0&deg;
-              </td>
-              <td className="border border-gray-300 dark:border-gray-700 p-2 text-right">
-                TBD
-              </td>
-              <td className="border border-gray-300 dark:border-gray-700 p-2 text-right">
-                TBD
-              </td>
-              <td className="border border-gray-300 dark:border-gray-700 p-2 text-right">
-                TBD
-              </td>
-            </tr>
-            <tr>
-              <td className="border border-gray-300 dark:border-gray-700 p-2">
-                30°
-              </td>
-              <td className="border border-gray-300 dark:border-gray-700 p-2 text-right">
-                TBD
-              </td>
-              <td className="border border-gray-300 dark:border-gray-700 p-2 text-right">
-                TBD
-              </td>
-              <td className="border border-gray-300 dark:border-gray-700 p-2 text-right">
-                TBD
-              </td>
-            </tr>
+            {flapSettings.map((flapSetting, index) => (
+              <tr key={flapSetting}>
+                {index === 0 && (
+                  <th
+                    className="border border-gray-300 dark:border-gray-700 p-2 text-center"
+                    rowSpan={flapSettings.length}
+                  >
+                    <div className="transform rotate-270">Flaps</div>
+                  </th>
+                )}
+                <td className="border border-gray-300 dark:border-gray-700 p-2">
+                  {flapSetting}&deg;
+                </td>
+                {bankAngles.map((bankAngle) => {
+                  const speed = getSpeed(flapSetting, bankAngle);
+                  return (
+                    <td
+                      key={bankAngle}
+                      className="border border-gray-300 dark:border-gray-700 p-2 text-right"
+                    >
+                      {speed !== null ? speed : "TBD"}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
