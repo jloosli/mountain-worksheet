@@ -334,7 +334,7 @@ export default function Calculations({ state }: CalculationsProps) {
 
   // Callback function to pass maneuvering speeds to ManeuveringPerformance component
   const handleManeuveringSpeedsUpdate = useCallback(() => {
-    return maneuveringSpeeds;
+    return maneuveringSpeeds || undefined;
   }, [maneuveringSpeeds]);
 
   return (

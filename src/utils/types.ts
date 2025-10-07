@@ -43,6 +43,11 @@ export interface WorksheetData {
   mtnCert: boolean;
 }
 
+export interface StallSpeeds {
+  flaps: number[];
+  Vso: number[];
+}
+
 export interface Aircraft {
   id: string;
   name: string;
@@ -52,6 +57,7 @@ export interface Aircraft {
   fuelWeightPerGallon: number;
   serviceCeiling: number;
   maneuvering: { weights: number[]; Va: number[] };
+  stallSpeeds: StallSpeeds;
   climbPerformance: {
     pressureAltitudes: number[];
     climbSpeeds: number[];

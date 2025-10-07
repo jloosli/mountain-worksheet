@@ -42,12 +42,12 @@
   - [x] 3.5 Update "Flaps" header rowSpan to match number of flap settings dynamically
   - [x] 3.6 Add proper TypeScript typing for the new props
 
-- [ ] 4.0 Update Aircraft Type Definition to Include Stall Speeds
+- [x] 4.0 Update Aircraft Type Definition to Include Stall Speeds
 
-  - [ ] 4.1 Add `stallSpeeds` property to existing `Aircraft` interface in `types.ts`
-  - [ ] 4.2 Define `StallSpeeds` interface with `flaps: number[]` and `Vso: number[]` properties
-  - [ ] 4.3 Ensure type compatibility with existing aircraft.json data structure
-  - [ ] 4.4 Update any existing type references that might be affected
+  - [x] 4.1 Add `stallSpeeds` property to existing `Aircraft` interface in `types.ts`
+  - [x] 4.2 Define `StallSpeeds` interface with `flaps: number[]` and `Vso: number[]` properties
+  - [x] 4.3 Ensure type compatibility with existing aircraft.json data structure
+  - [x] 4.4 Update any existing type references that might be affected
 
 - [ ] 5.0 Add Unit Tests for Maneuvering Speed Calculations
   - [ ] 5.1 Create `ManeuveringPerformance.test.tsx` with tests for component rendering and prop handling
