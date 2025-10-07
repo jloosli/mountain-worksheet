@@ -42,6 +42,11 @@ export interface TrilinearInterpolationOptions {
 
 // Helper function to find surrounding index for interpolation
 function findSurroundingIndex(array: number[], value: number): number {
+  // Handle single-point arrays
+  if (array.length === 1) {
+    return 0;
+  }
+
   for (let i = 0; i < array.length - 1; i++) {
     if (value >= array[i] && value <= array[i + 1]) {
       return i;
@@ -450,23 +455,50 @@ export function trilinearInterpolate(
   );
   const temperatureIndex = findSurroundingIndex(temperatures, temperature);
 
+  // Handle single-point tables
+  const isSingleWeight = weights.length === 1;
+  const isSingleAltitude = pressureAltitudes.length === 1;
+  const isSingleTemperature = temperatures.length === 1;
+
   // Get surrounding points
   const w1 = weights[weightIndex];
-  const w2 = weights[weightIndex + 1];
+  const w2 = isSingleWeight ? weights[weightIndex] : weights[weightIndex + 1];
   const p1 = pressureAltitudes[altitudeIndex];
-  const p2 = pressureAltitudes[altitudeIndex + 1];
+  const p2 = isSingleAltitude
+    ? pressureAltitudes[altitudeIndex]
+    : pressureAltitudes[altitudeIndex + 1];
   const t1 = temperatures[temperatureIndex];
-  const t2 = temperatures[temperatureIndex + 1];
+  const t2 = isSingleTemperature
+    ? temperatures[temperatureIndex]
+    : temperatures[temperatureIndex + 1];
 
   // Get the 8 corner values
   const c000 = data[weightIndex][altitudeIndex][temperatureIndex];
-  const c001 = data[weightIndex][altitudeIndex][temperatureIndex + 1];
-  const c010 = data[weightIndex][altitudeIndex + 1][temperatureIndex];
-  const c011 = data[weightIndex][altitudeIndex + 1][temperatureIndex + 1];
-  const c100 = data[weightIndex + 1][altitudeIndex][temperatureIndex];
-  const c101 = data[weightIndex + 1][altitudeIndex][temperatureIndex + 1];
-  const c110 = data[weightIndex + 1][altitudeIndex + 1][temperatureIndex];
-  const c111 = data[weightIndex + 1][altitudeIndex + 1][temperatureIndex + 1];
+  const c001 = isSingleTemperature
+    ? c000
+    : data[weightIndex][altitudeIndex][temperatureIndex + 1];
+  const c010 = isSingleAltitude
+    ? c000
+    : data[weightIndex][altitudeIndex + 1][temperatureIndex];
+  const c011 =
+    isSingleAltitude || isSingleTemperature
+      ? c000
+      : data[weightIndex][altitudeIndex + 1][temperatureIndex + 1];
+  const c100 = isSingleWeight
+    ? c000
+    : data[weightIndex + 1][altitudeIndex][temperatureIndex];
+  const c101 =
+    isSingleWeight || isSingleTemperature
+      ? c000
+      : data[weightIndex + 1][altitudeIndex][temperatureIndex + 1];
+  const c110 =
+    isSingleWeight || isSingleAltitude
+      ? c000
+      : data[weightIndex + 1][altitudeIndex + 1][temperatureIndex];
+  const c111 =
+    isSingleWeight || isSingleAltitude || isSingleTemperature
+      ? c000
+      : data[weightIndex + 1][altitudeIndex + 1][temperatureIndex + 1];
 
   // Check for null values - if any corner is null, return null
   console.log("Corner values:", {
@@ -512,9 +544,9 @@ export function trilinearInterpolate(
   });
 
   // Calculate interpolation factors
-  const fw = (weight - w1) / (w2 - w1);
-  const fp = (pressureAltitude - p1) / (p2 - p1);
-  const ft = (temperature - t1) / (t2 - t1);
+  const fw = isSingleWeight ? 0 : (weight - w1) / (w2 - w1);
+  const fp = isSingleAltitude ? 0 : (pressureAltitude - p1) / (p2 - p1);
+  const ft = isSingleTemperature ? 0 : (temperature - t1) / (t2 - t1);
 
   // Trilinear interpolation using safe values
   const c00 = safeC000 * (1 - ft) + safeC001 * ft;

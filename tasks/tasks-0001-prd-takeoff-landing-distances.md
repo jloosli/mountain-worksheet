@@ -68,14 +68,14 @@
   - [x] 5.6 Add console warnings for extrapolation scenarios
   - [x] 5.7 Create user-friendly error messages for invalid input combinations
 
-- [ ] 6.0 Implement Unit Tests for TOLD Calculations
-  - [ ] 6.1 Write unit tests for trilinear interpolation function
-  - [ ] 6.2 Write unit tests for takeoff ground roll calculation function
-  - [ ] 6.3 Write unit tests for takeoff 50ft obstacle clearance calculation function
-  - [ ] 6.4 Write unit tests for landing distance calculation functions (when implemented)
-  - [ ] 6.5 Write unit tests for available runway remaining calculation function
-  - [ ] 6.6 Write unit tests for input validation functions
-  - [ ] 6.7 Write unit tests for extrapolation handling
-  - [ ] 6.8 Write integration tests for Calculations component TOLD functionality
-  - [ ] 6.9 Write integration tests for TakeoffPerformance component with calculated values
-  - [ ] 6.10 Write tests for error handling scenarios and edge cases
+- [x] 6.0 Implement Unit Tests for TOLD Calculations
+  - [x] 6.1 Write unit tests for trilinear interpolation function
+  - [x] 6.2 Write unit tests for takeoff ground roll calculation function
+  - [x] 6.3 Write unit tests for takeoff 50ft obstacle clearance calculation function
+  - [x] 6.4 Write unit tests for landing distance calculation functions (when implemented)
+  - [x] 6.5 Write unit tests for available runway remaining calculation function
+  - [x] 6.6 Write unit tests for input validation functions
+  - [x] 6.7 Write unit tests for extrapolation handling
+  - [x] 6.8 Write integration tests for Calculations component TOLD functionality
+  - [x] 6.9 Write integration tests for TakeoffPerformance component with calculated values
+  - [x] 6.10 Write tests for error handling scenarios and edge cases
