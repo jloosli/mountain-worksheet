@@ -49,11 +49,11 @@
   - [x] 4.3 Ensure type compatibility with existing aircraft.json data structure
   - [x] 4.4 Update any existing type references that might be affected
 
-- [ ] 5.0 Add Unit Tests for Maneuvering Speed Calculations
-  - [ ] 5.1 Create `ManeuveringPerformance.test.tsx` with tests for component rendering and prop handling
-  - [ ] 5.2 Create `Calculations.test.tsx` with tests for maneuvering speed calculation logic
-  - [ ] 5.3 Create `maneuveringCalculations.test.ts` for utility function tests
-  - [ ] 5.4 Test calculation formulas with known aircraft data (C182T: flaps [0,30], Vso [51,41])
-  - [ ] 5.5 Test dynamic table generation with different flap settings
-  - [ ] 5.6 Test component behavior when no aircraft model is selected
-  - [ ] 5.7 Test component behavior when maneuvering speeds are not available
+- [x] 5.0 Add Unit Tests for Maneuvering Speed Calculations
+  - [x] 5.1 Create `ManeuveringPerformance.test.tsx` with tests for component rendering and prop handling
+  - [x] 5.2 Create `Calculations.test.tsx` with tests for maneuvering speed calculation logic
+  - [x] 5.3 Create `maneuveringCalculations.test.ts` for utility function tests
+  - [x] 5.4 Test calculation formulas with known aircraft data (C182T: flaps [0,30], Vso [51,41])
+  - [x] 5.5 Test dynamic table generation with different flap settings
+  - [x] 5.6 Test component behavior when no aircraft model is selected
+  - [x] 5.7 Test component behavior when maneuvering speeds are not available
