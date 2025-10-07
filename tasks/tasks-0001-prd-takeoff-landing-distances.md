@@ -38,25 +38,25 @@
   - [x] 2.7 Add input validation functions for weight, altitude, and temperature ranges
   - [x] 2.8 Implement extrapolation handling for values outside interpolation table ranges
 
-- [ ] 3.0 Update Calculations Component with TOLD Logic
+- [x] 3.0 Update Calculations Component with TOLD Logic
 
-  - [ ] 3.1 Add TOLD calculation state management to Calculations component
-  - [ ] 3.2 Implement useEffect hooks to trigger TOLD calculations when inputs change
-  - [ ] 3.3 Add TOLD calculation functions to Calculations component
-  - [ ] 3.4 Create callback function to pass TOLD results to TakeoffPerformance component
-  - [ ] 3.5 Integrate TOLD calculations with existing pressure altitude updates from Altitudes component
-  - [ ] 3.6 Add error handling for TOLD calculation failures in Calculations component
+  - [x] 3.1 Add TOLD calculation state management to Calculations component
+  - [x] 3.2 Implement useEffect hooks to trigger TOLD calculations when inputs change
+  - [x] 3.3 Add TOLD calculation functions to Calculations component
+  - [x] 3.4 Create callback function to pass TOLD results to TakeoffPerformance component
+  - [x] 3.5 Integrate TOLD calculations with existing pressure altitude updates from Altitudes component
+  - [x] 3.6 Add error handling for TOLD calculation failures in Calculations component
 
-- [ ] 4.0 Modify TakeoffPerformance Component to Display Calculated Values
+- [x] 4.0 Modify TakeoffPerformance Component to Display Calculated Values
 
-  - [ ] 4.1 Update TakeoffPerformanceProps interface to accept TOLD calculation results
-  - [ ] 4.2 Replace "TBD" values with calculated takeoff ground roll distances
-  - [ ] 4.3 Replace "TBD" values with calculated takeoff 50ft obstacle clearance distances
-  - [ ] 4.4 Replace "TBD" values with calculated landing ground roll distances
-  - [ ] 4.5 Replace "TBD" values with calculated landing 50ft obstacle clearance distances
-  - [ ] 4.6 Replace "TBD" values with calculated available runway remaining distances
-  - [ ] 4.7 Add number formatting for distance display (comma separators for large numbers)
-  - [ ] 4.8 Add conditional styling for error states when calculations fail
+  - [x] 4.1 Update TakeoffPerformanceProps interface to accept TOLD calculation results
+  - [x] 4.2 Replace "TBD" values with calculated takeoff ground roll distances
+  - [x] 4.3 Replace "TBD" values with calculated takeoff 50ft obstacle clearance distances
+  - [x] 4.4 Replace "TBD" values with calculated landing ground roll distances
+  - [x] 4.5 Replace "TBD" values with calculated landing 50ft obstacle clearance distances
+  - [x] 4.6 Replace "TBD" values with calculated available runway remaining distances
+  - [x] 4.7 Add number formatting for distance display (comma separators for large numbers)
+  - [x] 4.8 Add conditional styling for error states when calculations fail
 
 - [ ] 5.0 Add Error Handling and Edge Case Management
 

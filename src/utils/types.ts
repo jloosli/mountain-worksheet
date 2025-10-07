@@ -63,8 +63,8 @@ export interface Aircraft {
     pressureAltitudes: number[];
     temperatures: number[];
     data: Array<{
-      groundRoll: number[][];
-      groundRoll50ft: number[][];
+      groundRoll: (number | null)[][];
+      groundRoll50ft: (number | null)[][];
     }>;
   };
   shortFieldLanding?: {
@@ -72,8 +72,8 @@ export interface Aircraft {
     pressureAltitudes: number[];
     temperatures: number[];
     data: Array<{
-      groundRoll: number[][];
-      groundRoll50ft: number[][];
+      groundRoll: (number | null)[][];
+      groundRoll50ft: (number | null)[][];
     }>;
   };
 }
@@ -98,7 +98,11 @@ export interface TOLDResults {
     departure: number | null;
     arrival: number | null;
   };
-  availableRunwayRemaining: {
+  availableRunwayRemainingTakeoffGroundRoll: {
+    departure: number | null;
+    arrival: number | null;
+  };
+  availableRunwayRemainingTakeoff50ft: {
     departure: number | null;
     arrival: number | null;
   };
@@ -118,10 +122,10 @@ export interface TOLDInputs {
  * TOLD calculation parameters for a specific airport/condition
  */
 export interface TOLDCalculationParams {
-  weight: number;
-  pressureAltitude: number;
-  temperature: number;
-  runwayLength: number;
+  weight: number | null;
+  pressureAltitude: number | null;
+  temperature: number | null;
+  runwayLength: number | null;
 }
 
 /**

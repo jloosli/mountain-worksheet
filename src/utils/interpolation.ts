@@ -32,7 +32,7 @@ export interface TrilinearInterpolationTable {
   weights: number[];
   pressureAltitudes: number[];
   temperatures: number[];
-  data: number[][][]; // [weight][pressureAltitude][temperature]
+  data: (number | null)[][][]; // [weight][pressureAltitude][temperature]
 }
 
 export interface TrilinearInterpolationOptions {
@@ -371,7 +371,15 @@ export function trilinearInterpolate(
   pressureAltitude: number,
   temperature: number,
   options: TrilinearInterpolationOptions = {}
-): number {
+): number | null {
+  console.log("trilinearInterpolate called with:", {
+    table,
+    weight,
+    pressureAltitude,
+    temperature,
+    options,
+  });
+
   const { allowExtrapolation = true, warnOnExtrapolation = true } = options;
   const { weights, pressureAltitudes, temperatures, data } = table;
 
@@ -460,19 +468,64 @@ export function trilinearInterpolate(
   const c110 = data[weightIndex + 1][altitudeIndex + 1][temperatureIndex];
   const c111 = data[weightIndex + 1][altitudeIndex + 1][temperatureIndex + 1];
 
+  // Check for null values - if any corner is null, return null
+  console.log("Corner values:", {
+    c000,
+    c001,
+    c010,
+    c011,
+    c100,
+    c101,
+    c110,
+    c111,
+  });
+
+  // Handle null values by using nearest available data points
+  const allValues = [c000, c001, c010, c011, c100, c101, c110, c111];
+  const nonNullValues = allValues.filter((v) => v !== null) as number[];
+
+  if (nonNullValues.length === 0) {
+    console.log("All corner values are null, returning null");
+    return null;
+  }
+
+  // Use the first non-null value as fallback for any null values
+  const fallbackValue = nonNullValues[0];
+  const safeC000 = c000 ?? fallbackValue;
+  const safeC001 = c001 ?? fallbackValue;
+  const safeC010 = c010 ?? fallbackValue;
+  const safeC011 = c011 ?? fallbackValue;
+  const safeC100 = c100 ?? fallbackValue;
+  const safeC101 = c101 ?? fallbackValue;
+  const safeC110 = c110 ?? fallbackValue;
+  const safeC111 = c111 ?? fallbackValue;
+
+  console.log("Safe corner values:", {
+    safeC000,
+    safeC001,
+    safeC010,
+    safeC011,
+    safeC100,
+    safeC101,
+    safeC110,
+    safeC111,
+  });
+
   // Calculate interpolation factors
   const fw = (weight - w1) / (w2 - w1);
   const fp = (pressureAltitude - p1) / (p2 - p1);
   const ft = (temperature - t1) / (t2 - t1);
 
-  // Trilinear interpolation
-  const c00 = c000 * (1 - ft) + c001 * ft;
-  const c01 = c010 * (1 - ft) + c011 * ft;
-  const c10 = c100 * (1 - ft) + c101 * ft;
-  const c11 = c110 * (1 - ft) + c111 * ft;
+  // Trilinear interpolation using safe values
+  const c00 = safeC000 * (1 - ft) + safeC001 * ft;
+  const c01 = safeC010 * (1 - ft) + safeC011 * ft;
+  const c10 = safeC100 * (1 - ft) + safeC101 * ft;
+  const c11 = safeC110 * (1 - ft) + safeC111 * ft;
 
   const c0 = c00 * (1 - fp) + c01 * fp;
   const c1 = c10 * (1 - fp) + c11 * fp;
 
-  return c0 * (1 - fw) + c1 * fw;
+  const result = c0 * (1 - fw) + c1 * fw;
+  console.log("Interpolation result:", result);
+  return result;
 }
