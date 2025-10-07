@@ -32,7 +32,8 @@ export default function Calculations({ state }: CalculationsProps) {
   const [isCalculatingTOLD, setIsCalculatingTOLD] = useState(false);
 
   // Maneuvering speeds state management
-  const [maneuveringSpeeds, setManeuveringSpeeds] = useState<ManeuveringSpeeds | null>(null);
+  const [maneuveringSpeeds, setManeuveringSpeeds] =
+    useState<ManeuveringSpeeds | null>(null);
 
   const handlePressureUpdate = useCallback(
     (PAs: [number | null, number | null, number | null]) => {
@@ -45,7 +46,6 @@ export default function Calculations({ state }: CalculationsProps) {
     },
     []
   );
-
 
   // Enhanced TOLD calculation function with pressure altitude integration
   const performTOLDCalculation = useCallback(async () => {
@@ -331,9 +331,9 @@ export default function Calculations({ state }: CalculationsProps) {
             toldData={handleTOLDResultsUpdate()}
           />
         </TOLDErrorBoundary>
-        <ManeuveringPerformance 
-          aircraftModel={state.acType} 
-          maneuveringSpeeds={handleManeuveringSpeedsUpdate()} 
+        <ManeuveringPerformance
+          aircraftModel={state.acType}
+          maneuveringSpeeds={handleManeuveringSpeedsUpdate()}
         />
       </div>
     </div>
