@@ -14,14 +14,14 @@
 
 ## Tasks
 
-- [ ] 1.0 Create Vra calculation utility function
+- [x] 1.0 Create Vra calculation utility function
 
-  - [ ] 1.1 Add `calculateVra` function to `src/utils/formulas.ts` that takes an Aircraft object and returns Vra value
-  - [ ] 1.2 Implement the formula: Vra = 1.7 × Vso (0° flap configuration) using `aircraft.stallSpeeds.Vso[0]`
-  - [ ] 1.3 Add proper TypeScript typing for the function parameters and return value
-  - [ ] 1.4 Add JSDoc documentation explaining the Vra calculation formula and usage
-  - [ ] 1.5 Handle edge cases where Vso data might be missing or invalid
-  - [ ] 1.6 Round the result to the nearest whole number (no decimal places)
+  - [x] 1.1 Add `calculateVra` function to `src/utils/formulas.ts` that takes an Aircraft object and returns Vra value
+  - [x] 1.2 Implement the formula: Vra = 1.7 × Vso (0° flap configuration) using `aircraft.stallSpeeds.Vso[0]`
+  - [x] 1.3 Add proper TypeScript typing for the function parameters and return value
+  - [x] 1.4 Add JSDoc documentation explaining the Vra calculation formula and usage
+  - [x] 1.5 Handle edge cases where Vso data might be missing or invalid
+  - [x] 1.6 Round the result to the nearest whole number (no decimal places)
 
 - [ ] 2.0 Implement Vra calculation in ClimbPerformance component
 
