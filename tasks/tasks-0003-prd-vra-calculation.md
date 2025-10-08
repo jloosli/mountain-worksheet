@@ -1,11 +1,11 @@
 ## Relevant Files
 
-- `src/components/ClimbPerformance.tsx` - Main component where Vra calculation and display will be implemented
-- `src/components/ClimbPerformance.test.tsx` - Unit tests for the ClimbPerformance component (to be created)
-- `src/utils/formulas.ts` - Utility functions for aviation calculations, where Vra calculation function will be added
-- `src/utils/formulas.test.ts` - Unit tests for the formulas utility functions
+- `src/components/ClimbPerformance.tsx` - Main component where Vra calculation and display is implemented
+- `src/components/ClimbPerformance.test.tsx` - Unit tests for the ClimbPerformance component
+- `src/utils/formulas.ts` - Utility functions for aviation calculations, contains calculateVra function
+- `src/utils/formulas.test.ts` - Unit tests for the formulas utility functions including Vra tests
 - `src/data/aircraft.json` - Aircraft data containing Vso values needed for Vra calculation
-- `src/utils/types.ts` - TypeScript type definitions (may need updates for Vra-related types)
+- `src/utils/types.ts` - TypeScript type definitions (Aircraft type used for Vra calculation)
 
 ### Notes
 

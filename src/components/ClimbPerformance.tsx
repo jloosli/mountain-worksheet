@@ -162,32 +162,32 @@ export default function ClimbPerformance({
             <tr className="border-b dark:border-gray-700">
               <td className="py-2 px-4">Rate of Climb (Actual Wt, note 11)</td>
               <td className="py-2 px-4 text-right">
-                {actROC(ratesOfClimb[0])}*
+                {actROC(ratesOfClimb[0])}
               </td>
               <td className="py-2 px-4 text-right">
-                {actROC(ratesOfClimb[1])}*
+                {actROC(ratesOfClimb[1])}
               </td>
               <td className="py-2 px-4 text-right">
-                {actROC(ratesOfClimb[2])}*
+                {actROC(ratesOfClimb[2])}
               </td>
             </tr>
             <tr className="border-b dark:border-gray-700">
               <td className="py-2 px-4">Vx (Best Angle)</td>
               <td className="py-2 px-4 text-right">
-                {Math.round(Vy(PAs![0]!) * 0.9)}*
+                {Math.round(Vy(PAs![0]!) * 0.9)}
               </td>
               <td className="py-2 px-4 text-right">
-                {Math.round(Vy(PAs![1]!) * 0.9)}*
+                {Math.round(Vy(PAs![1]!) * 0.9)}
               </td>
               <td className="py-2 px-4 text-right">
-                {Math.round(Vy(PAs![2]!) * 0.9)}*
+                {Math.round(Vy(PAs![2]!) * 0.9)}
               </td>
             </tr>
             <tr className="border-b dark:border-gray-700">
               <td className="py-2 px-4">Vy (Best Rate)</td>
-              <td className="py-2 px-4 text-right">{Vy(PAs![0]!)}*</td>
-              <td className="py-2 px-4 text-right">{Vy(PAs![1]!)}*</td>
-              <td className="py-2 px-4 text-right">{Vy(PAs![2]!)}*</td>
+              <td className="py-2 px-4 text-right">{Vy(PAs![0]!)}</td>
+              <td className="py-2 px-4 text-right">{Vy(PAs![1]!)}</td>
+              <td className="py-2 px-4 text-right">{Vy(PAs![2]!)}</td>
             </tr>
             <tr className="border-b dark:border-gray-700">
               <td className="py-2 px-4">Va at Actual Weight</td>
@@ -215,9 +215,15 @@ export default function ClimbPerformance({
             </tr>
             <tr className="border-b dark:border-gray-700">
               <td className="py-2 px-4">Service Ceiling (300 ft/min ROC)</td>
-              <td className="py-2 px-4 text-right">{Math.round(serviceCeiling(OATs![0]!)).toLocaleString()} ft</td>
-              <td className="py-2 px-4 text-right">{Math.round(serviceCeiling(OATs![1]!)).toLocaleString()} ft</td>
-              <td className="py-2 px-4 text-right">{Math.round(serviceCeiling(OATs![2]!)).toLocaleString()} ft</td>
+              <td className="py-2 px-4 text-right">
+                {Math.round(serviceCeiling(OATs![0]!)).toLocaleString()} ft
+              </td>
+              <td className="py-2 px-4 text-right">
+                {Math.round(serviceCeiling(OATs![1]!)).toLocaleString()} ft
+              </td>
+              <td className="py-2 px-4 text-right">
+                {Math.round(serviceCeiling(OATs![2]!)).toLocaleString()} ft
+              </td>
             </tr>
           </tbody>
         </table>
