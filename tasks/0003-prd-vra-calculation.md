@@ -69,4 +69,4 @@ This feature implements the calculation and display of Vra (Rough Air Speed) for
 
 ## Implementation Notes
 
-The Vra calculation follows the standard aviation formula: Vra = 1.7 × Vso (0° flap). For the Cessna 182T example, this would be 1.7 × 51 = 86.7 knots (rounded to 87 knots). The calculation should be implemented as a simple function within the ClimbPerformance component, similar to the existing Va() function.
+The Vra calculation follows the standard aviation formula: Vra = 1.7 × Vso (0° flap). For the Cessna 182T example, this would be 1.7 × 51 = 86.7 knots (rounded to 87 knots). The calculation is implemented as a reusable utility function (`calculateVra` in `formulas.ts`), which is called from the ClimbPerformance component, ensuring consistency and reusability across components.
