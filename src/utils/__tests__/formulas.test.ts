@@ -199,37 +199,55 @@ describe("Vra Calculation Function", () => {
   });
 
   test("returns null for aircraft with missing stallSpeeds", () => {
-    const aircraftWithoutStallSpeeds = { ...mockAircraft, stallSpeeds: undefined as any };
+    const aircraftWithoutStallSpeeds = {
+      ...mockAircraft,
+      stallSpeeds: undefined,
+    } as Aircraft;
     const result = calculateVra(aircraftWithoutStallSpeeds);
     expect(result).toBeNull();
   });
 
   test("returns null for aircraft with missing Vso array", () => {
-    const aircraftWithoutVso = { ...mockAircraft, stallSpeeds: { flaps: [0, 30], Vso: undefined as any } };
+    const aircraftWithoutVso = {
+      ...mockAircraft,
+      stallSpeeds: { flaps: [0, 30], Vso: undefined },
+    } as Aircraft;
     const result = calculateVra(aircraftWithoutVso);
     expect(result).toBeNull();
   });
 
   test("returns null for aircraft with empty Vso array", () => {
-    const aircraftWithEmptyVso = { ...mockAircraft, stallSpeeds: { flaps: [0, 30], Vso: [] } };
+    const aircraftWithEmptyVso = {
+      ...mockAircraft,
+      stallSpeeds: { flaps: [0, 30], Vso: [] },
+    };
     const result = calculateVra(aircraftWithEmptyVso);
     expect(result).toBeNull();
   });
 
   test("returns null for aircraft with invalid Vso values", () => {
-    const aircraftWithInvalidVso = { ...mockAircraft, stallSpeeds: { flaps: [0, 30], Vso: [0, 41] } };
+    const aircraftWithInvalidVso = {
+      ...mockAircraft,
+      stallSpeeds: { flaps: [0, 30], Vso: [0, 41] },
+    };
     const result = calculateVra(aircraftWithInvalidVso);
     expect(result).toBeNull();
   });
 
   test("returns null for aircraft with negative Vso values", () => {
-    const aircraftWithNegativeVso = { ...mockAircraft, stallSpeeds: { flaps: [0, 30], Vso: [-10, 41] } };
+    const aircraftWithNegativeVso = {
+      ...mockAircraft,
+      stallSpeeds: { flaps: [0, 30], Vso: [-10, 41] },
+    };
     const result = calculateVra(aircraftWithNegativeVso);
     expect(result).toBeNull();
   });
 
   test("rounds result to nearest whole number", () => {
-    const aircraftWithDecimalVso = { ...mockAircraft, stallSpeeds: { flaps: [0, 30], Vso: [50.5, 41] } };
+    const aircraftWithDecimalVso = {
+      ...mockAircraft,
+      stallSpeeds: { flaps: [0, 30], Vso: [50.5, 41] },
+    };
     const result = calculateVra(aircraftWithDecimalVso);
     // Vra = 1.7 × 50.5 = 85.85, rounded to 86
     expect(result).toBe(86);
