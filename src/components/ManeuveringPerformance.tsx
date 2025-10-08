@@ -29,8 +29,7 @@ export default function ManeuveringPerformance({
       <h3 className="text-xl font-semibold mb-4">
         Maneuver/Canyon Turn Speed (kts) ({aircraftModel})
       </h3>
-      <div className="overflow-x-auto">
-        <table className="min-w-full table-auto border-collapse border border-gray-300 dark:border-gray-700">
+        <table className="min-w-full border-collapse border border-gray-300 dark:border-gray-700">
           <thead>
             <tr>
               <th className="border border-gray-300 dark:border-gray-700 p-2 text-center"></th>
@@ -86,6 +85,5 @@ export default function ManeuveringPerformance({
           </tbody>
         </table>
       </div>
-    </div>
   );
 }
