@@ -6,6 +6,7 @@ import {
   findInverseXgivenYandZ,
   FlexibleInterpolationTable,
 } from "@/utils/interpolation";
+import { calculateVra } from "@/utils/formulas";
 import { Aircraft } from "@/utils/types";
 
 interface ClimbPerformanceProps {
@@ -116,6 +117,12 @@ export default function ClimbPerformance({
     );
   };
 
+  const Vra = () => {
+    if (!aircraft) return "N/A";
+    const vraValue = calculateVra(aircraft);
+    return vraValue !== null ? vraValue : "N/A";
+  };
+
   const serviceCeiling = (oat: number) => {
     if (!aircraft) return 0;
     // Find the altitude where rate of climb is 300 ft/min
@@ -190,7 +197,7 @@ export default function ClimbPerformance({
             </tr>
             <tr className="border-b dark:border-gray-700">
               <td className="py-2 px-4">Vra (Rough Air Speed)</td>
-              <td className="py-2 px-4 text-right">TBD</td>
+              <td className="py-2 px-4 text-right">{Vra()}</td>
               <td className="py-2 px-4 text-right"></td>
               <td className="py-2 px-4 text-right"></td>
             </tr>

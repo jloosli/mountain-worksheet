@@ -4,8 +4,10 @@ import {
   pressureAltitudeToDensityAltitude,
   altitudeToPressureAltitude,
   getRateOfClimb,
+  calculateVra,
 } from "../formulas";
 import { type InterpolationTable } from "../interpolation";
+import { type Aircraft } from "../types";
 
 // Mock the interpolation module
 jest.mock("../interpolation", () => ({
@@ -142,5 +144,94 @@ describe("Rate of Climb Function", () => {
       15,
       options
     );
+  });
+});
+
+describe("Vra Calculation Function", () => {
+  const mockAircraft: Aircraft = {
+    id: "C182T",
+    name: "Cessna 182T",
+    emptyWeight: 2300,
+    maxGrossWeight: 3100,
+    fuelCapacity: 88,
+    fuelWeightPerGallon: 6,
+    serviceCeiling: 14000,
+    maneuvering: {
+      weights: [2100, 2600, 3100],
+      Va: [91, 101, 110],
+    },
+    stallSpeeds: {
+      flaps: [0, 30],
+      Vso: [51, 41],
+    },
+    climbPerformance: {
+      pressureAltitudes: [0, 2000, 4000],
+      climbSpeeds: [80, 79, 78],
+      temperatures: [-20, 0, 20],
+      data: [
+        [1055, 980, 905],
+        [945, 875, 805],
+        [840, 770, 705],
+      ],
+    },
+    shortFieldTakeoff: {
+      weights: [2300, 2700, 3100],
+      pressureAltitudes: [0, 1000, 2000],
+      temperatures: [0, 10, 20],
+      data: [
+        {
+          groundRoll: [[365, 390, 420]],
+          groundRoll50ft: [[705, 750, 800]],
+        },
+      ],
+    },
+  };
+
+  test("calculates Vra correctly for valid aircraft data", () => {
+    const result = calculateVra(mockAircraft);
+    // Vra = 1.7 × Vso[0] = 1.7 × 51 = 86.7, rounded to 87
+    expect(result).toBe(87);
+  });
+
+  test("returns null for null aircraft", () => {
+    const result = calculateVra(null);
+    expect(result).toBeNull();
+  });
+
+  test("returns null for aircraft with missing stallSpeeds", () => {
+    const aircraftWithoutStallSpeeds = { ...mockAircraft, stallSpeeds: undefined as any };
+    const result = calculateVra(aircraftWithoutStallSpeeds);
+    expect(result).toBeNull();
+  });
+
+  test("returns null for aircraft with missing Vso array", () => {
+    const aircraftWithoutVso = { ...mockAircraft, stallSpeeds: { flaps: [0, 30], Vso: undefined as any } };
+    const result = calculateVra(aircraftWithoutVso);
+    expect(result).toBeNull();
+  });
+
+  test("returns null for aircraft with empty Vso array", () => {
+    const aircraftWithEmptyVso = { ...mockAircraft, stallSpeeds: { flaps: [0, 30], Vso: [] } };
+    const result = calculateVra(aircraftWithEmptyVso);
+    expect(result).toBeNull();
+  });
+
+  test("returns null for aircraft with invalid Vso values", () => {
+    const aircraftWithInvalidVso = { ...mockAircraft, stallSpeeds: { flaps: [0, 30], Vso: [0, 41] } };
+    const result = calculateVra(aircraftWithInvalidVso);
+    expect(result).toBeNull();
+  });
+
+  test("returns null for aircraft with negative Vso values", () => {
+    const aircraftWithNegativeVso = { ...mockAircraft, stallSpeeds: { flaps: [0, 30], Vso: [-10, 41] } };
+    const result = calculateVra(aircraftWithNegativeVso);
+    expect(result).toBeNull();
+  });
+
+  test("rounds result to nearest whole number", () => {
+    const aircraftWithDecimalVso = { ...mockAircraft, stallSpeeds: { flaps: [0, 30], Vso: [50.5, 41] } };
+    const result = calculateVra(aircraftWithDecimalVso);
+    // Vra = 1.7 × 50.5 = 85.85, rounded to 86
+    expect(result).toBe(86);
   });
 });
