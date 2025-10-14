@@ -44,6 +44,8 @@ export default function AppInputs({
     time: state.time || "",
     acType: state.acType || "",
     tailN: state.tailN || "",
+    airport: state.airport || ["", ""],
+    route: state.route || "",
   };
 
   const weatherData = {

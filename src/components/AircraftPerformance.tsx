@@ -34,21 +34,10 @@ export default function AircraftPerformance({
     index: number,
     value: string
   ) => {
-    let newValue: string | number;
-
-    if (category === "airport") {
-      newValue = value || "";
-    } else {
-      newValue = Number(value);
-    }
+    const newValue = Number(value);
     const newData = { ...initialData };
 
     switch (category) {
-      case "airport":
-        const airportArray = [...initialData.airport] as [string, string];
-        airportArray[index] = newValue as unknown as string;
-        newData.airport = airportArray;
-        break;
       case "temp":
         const tempArray = [...initialData.temp] as [number, number, number];
         tempArray[index] = newValue as number;
@@ -100,25 +89,15 @@ export default function AircraftPerformance({
             <tr className="border-b">
               <td className="p-2">Airport</td>
               <td className="p-2">
-                <input
-                  type="text"
-                  value={getValue("airport", 0)}
-                  onChange={(e) =>
-                    handleInputChange("airport", 0, e.target.value)
-                  }
-                  className="w-full border rounded p-1"
-                />
+                <span className="text-gray-700 dark:text-gray-300">
+                  {initialData.airport[0] || "Not specified"}
+                </span>
               </td>
               <td className="p-2"></td>
               <td className="p-2">
-                <input
-                  type="text"
-                  value={getValue("airport", 1)}
-                  onChange={(e) =>
-                    handleInputChange("airport", 1, e.target.value)
-                  }
-                  className="w-full border rounded p-1"
-                />
+                <span className="text-gray-700 dark:text-gray-300">
+                  {initialData.airport[1] || "Not specified"}
+                </span>
               </td>
               <td className="p-2">Flight Plan</td>
             </tr>

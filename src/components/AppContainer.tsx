@@ -20,6 +20,8 @@ export default function AppContainer() {
     }),
     acType: "",
     tailN: "",
+    airport: ["", ""],
+    route: "",
 
     // Weather Information
     wind: [
@@ -32,7 +34,6 @@ export default function AppContainer() {
     mtnObsc: false,
 
     // Aircraft Performance
-    airport: ["", ""],
     temp: [21, 21, 21],
     altimeter: [29.92, 29.92, 29.92],
     altitude: [8000, 8000, 8000],

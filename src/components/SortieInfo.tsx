@@ -6,7 +6,7 @@ import type { URLSerializable, WorksheetData } from "@/utils/types";
 
 type SortieFields = Pick<
   WorksheetData,
-  "pilot" | "date" | "time" | "acType" | "tailN"
+  "pilot" | "date" | "time" | "acType" | "tailN" | "airport" | "route"
 >;
 
 interface SortieInfoProps {
@@ -21,6 +21,8 @@ export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
     time: "",
     acType: "",
     tailN: "",
+    airport: ["", ""],
+    route: "",
   });
 
   useEffect(() => {
@@ -34,6 +36,14 @@ export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
   ) => {
     const { name, value } = e.target;
     const updatedData = { ...formData, [name]: value };
+    setFormData(updatedData);
+    onUpdate(updatedData);
+  };
+
+  const handleAirportChange = (index: number, value: string) => {
+    const airportArray = [...formData.airport] as [string, string];
+    airportArray[index] = value;
+    const updatedData = { ...formData, airport: airportArray };
     setFormData(updatedData);
     onUpdate(updatedData);
   };
@@ -113,6 +123,49 @@ export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
             name="tailN"
             value={formData.tailN || ""}
             onChange={handleInputChange}
+            className="w-full px-3 py-2 border rounded-md dark:bg-black/[.15] dark:border-white/[.145]"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label
+            htmlFor="departureAirport"
+            className="block text-sm font-medium"
+          >
+            Departure Airport
+          </label>
+          <input
+            type="text"
+            id="departureAirport"
+            value={formData.airport[0] || ""}
+            onChange={(e) => handleAirportChange(0, e.target.value)}
+            className="w-full px-3 py-2 border rounded-md dark:bg-black/[.15] dark:border-white/[.145]"
+          />
+        </div>
+
+        <div className="space-y-2 sm:col-span-2">
+          <label htmlFor="route" className="block text-sm font-medium">
+            Area of Operations/Route
+          </label>
+          <input
+            type="text"
+            id="route"
+            name="route"
+            value={formData.route || ""}
+            onChange={handleInputChange}
+            className="w-full px-3 py-2 border rounded-md dark:bg-black/[.15] dark:border-white/[.145]"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label htmlFor="arrivalAirport" className="block text-sm font-medium">
+            Arrival Airport
+          </label>
+          <input
+            type="text"
+            id="arrivalAirport"
+            value={formData.airport[1] || ""}
+            onChange={(e) => handleAirportChange(1, e.target.value)}
             className="w-full px-3 py-2 border rounded-md dark:bg-black/[.15] dark:border-white/[.145]"
           />
         </div>
