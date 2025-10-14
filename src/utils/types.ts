@@ -21,6 +21,8 @@ export interface WorksheetData {
   time: string;
   acType: string;
   tailN: string;
+  airport: [string, string]; // [departure, arrival]
+  route: string; // Area of Operations/Route
 
   // Weather Information
   wind: [number[], number[], number[]]; // [wDir, wVel, temp] arrays for each altitude
@@ -29,7 +31,6 @@ export interface WorksheetData {
   mtnObsc: boolean;
 
   // Aircraft Performance
-  airport: [string, string]; // [departure, arrival]
   temp: [number, number, number]; // [departure, operating, arrival]
   altimeter: [number, number, number]; // [departure, operating, arrival]
   altitude: [number, number, number]; // [departure, operating, arrival]
