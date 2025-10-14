@@ -143,32 +143,6 @@ export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
           />
         </div>
 
-        <div className="space-y-2">
-          <label htmlFor="arrivalAirport" className="block text-sm font-medium">
-            Arrival Airport
-          </label>
-          <input
-            type="text"
-            id="arrivalAirport"
-            value={formData.airport[1] || ""}
-            onChange={(e) => handleAirportChange(1, e.target.value)}
-            className="w-full px-3 py-2 border rounded-md dark:bg-black/[.15] dark:border-white/[.145]"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <label htmlFor="arrivalAirport" className="block text-sm font-medium">
-            Arrival Airport
-          </label>
-          <input
-            type="text"
-            id="arrivalAirport"
-            value={formData.airport[1] || ""}
-            onChange={(e) => handleAirportChange(1, e.target.value)}
-            className="w-full px-3 py-2 border rounded-md dark:bg-black/[.15] dark:border-white/[.145]"
-          />
-        </div>
-
         <div className="space-y-2 sm:col-span-2">
           <label htmlFor="route" className="block text-sm font-medium">
             Area of Operations/Route
