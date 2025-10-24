@@ -271,12 +271,72 @@ export function mapWeatherDataToWorksheet(
 }
 
 /**
- * Helper function to find closest altitude data
+ * Helper function to find closest altitude data with interpolation support
  */
 function findClosestAltitudeData(
   altitudeData: Map<number, WindTempResponse>,
   targetAltitude: number
 ): WindTempResponse | null {
+  const altitudes = Array.from(altitudeData.keys()).sort((a, b) => a - b);
+
+  // Find the two closest altitudes
+  let lowerAltitude: number | null = null;
+  let upperAltitude: number | null = null;
+
+  for (const alt of altitudes) {
+    if (alt <= targetAltitude) {
+      lowerAltitude = alt;
+    } else if (alt > targetAltitude && upperAltitude === null) {
+      upperAltitude = alt;
+      break;
+    }
+  }
+
+  // If we have both lower and upper altitudes, interpolate
+  if (lowerAltitude !== null && upperAltitude !== null) {
+    const lowerData = altitudeData.get(lowerAltitude)!;
+    const upperData = altitudeData.get(upperAltitude)!;
+
+    // Calculate interpolation factor (0 = lower altitude, 1 = upper altitude)
+    const factor =
+      (targetAltitude - lowerAltitude) / (upperAltitude - lowerAltitude);
+
+    // Interpolate wind direction (handle wraparound at 360 degrees)
+    const lowerWdir = lowerData.wdir;
+    const upperWdir = upperData.wdir;
+    let interpolatedWdir: number;
+
+    if (Math.abs(upperWdir - lowerWdir) > 180) {
+      // Handle wraparound case
+      if (upperWdir > lowerWdir) {
+        interpolatedWdir =
+          ((lowerWdir + 360) * (1 - factor) + upperWdir * factor) % 360;
+      } else {
+        interpolatedWdir =
+          (lowerWdir * (1 - factor) + (upperWdir + 360) * factor) % 360;
+      }
+    } else {
+      interpolatedWdir = lowerWdir * (1 - factor) + upperWdir * factor;
+    }
+
+    // Interpolate wind speed and temperature (linear)
+    const interpolatedWspd =
+      lowerData.wspd * (1 - factor) + upperData.wspd * factor;
+    const interpolatedTemp =
+      lowerData.temp * (1 - factor) + upperData.temp * factor;
+
+    return {
+      icaoId: lowerData.icaoId,
+      altitude: targetAltitude,
+      wdir: Math.round(interpolatedWdir),
+      wspd: Math.round(interpolatedWspd),
+      temp: Math.round(interpolatedTemp),
+      pressure: lowerData.pressure, // Use lower altitude pressure
+      validTime: lowerData.validTime, // Use lower altitude validTime
+    };
+  }
+
+  // Fallback to closest altitude if interpolation isn't possible
   let closest: WindTempResponse | null = null;
   let minDifference = Infinity;
 
@@ -334,7 +394,7 @@ function findLongestRunway(
 ): { length: number } | null {
   if (!runways || runways.length === 0) return null;
 
-  return runways.reduce((longest, current) => {
+  return runways.reduce<{ length: number } | null>((longest, current) => {
     if (!longest || current.length > longest.length) {
       return current;
     }
@@ -463,10 +523,26 @@ export function isApiPopulatedData(data: Partial<WorksheetData>): {
   runway: boolean;
 } {
   return {
-    wind: !!(data.wind && data.wind[0].some((val) => val !== 0)),
-    temperature: !!(data.temp && data.temp.some((val) => val !== 21)),
-    pressure: !!(data.altimeter && data.altimeter.some((val) => val !== 29.92)),
-    runway: !!(data.rwy && data.rwy.some((val) => val !== null)),
+    wind: !!(
+      data.wind &&
+      Array.isArray(data.wind[0]) &&
+      data.wind[0].some((val) => val !== 0)
+    ),
+    temperature: !!(
+      data.temp &&
+      Array.isArray(data.temp) &&
+      data.temp.some((val) => val !== 21)
+    ),
+    pressure: !!(
+      data.altimeter &&
+      Array.isArray(data.altimeter) &&
+      data.altimeter.some((val) => val !== 29.92)
+    ),
+    runway: !!(
+      data.rwy &&
+      Array.isArray(data.rwy) &&
+      data.rwy.some((val) => val !== null)
+    ),
   };
 }
 

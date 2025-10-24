@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { URLSerializable, WorksheetData } from "@/utils/types";
+import { isApiPopulatedData } from "@/utils/weatherDataMapper";
 
 type WeatherFields = Pick<
   WorksheetData,
@@ -9,6 +10,8 @@ type WeatherFields = Pick<
 interface WeatherInfoProps {
   initialData?: WeatherFields;
   onUpdate: (data: Partial<URLSerializable<WorksheetData>>) => void;
+  worksheetData?: Partial<WorksheetData>; // Full worksheet data to check API population
+  lastUpdated?: Date; // Timestamp for when data was last updated
 }
 
 const altitudes = ["3,000", "6,000", "9,000", "12,000", "15,000"];
@@ -27,11 +30,71 @@ const DEFAULT_WEATHER_DATA: WeatherFields = {
 export default function WeatherInfo({
   initialData = DEFAULT_WEATHER_DATA,
   onUpdate,
+  worksheetData,
+  lastUpdated,
 }: WeatherInfoProps) {
   const [data, setData] = useState<WeatherFields>(() => ({
     ...DEFAULT_WEATHER_DATA,
     ...initialData,
   }));
+
+  // Determine which fields are API-populated
+  const apiPopulated = worksheetData
+    ? isApiPopulatedData(worksheetData)
+    : {
+        wind: false,
+        temperature: false,
+        pressure: false,
+        runway: false,
+      };
+
+  // Update local data when initialData changes (from API population)
+  useEffect(() => {
+    if (initialData) {
+      setData((prev) => ({
+        ...prev,
+        ...initialData,
+      }));
+    }
+  }, [initialData]);
+
+  // Use worksheetData for display values if available, otherwise use local data
+  const hasApiWindData =
+    worksheetData?.wind &&
+    Array.isArray(worksheetData.wind) &&
+    worksheetData.wind.length === 3 &&
+    worksheetData.wind[0] &&
+    Array.isArray(worksheetData.wind[0]) &&
+    worksheetData.wind[0].some((val) => val !== 0);
+
+  const displayData = hasApiWindData
+    ? {
+        wind: worksheetData.wind,
+        turb: worksheetData.turb || data.turb,
+        cielVis: worksheetData.cielVis || data.cielVis,
+        mtnObsc: worksheetData.mtnObsc || data.mtnObsc,
+      }
+    : data;
+
+  // Helper function to get input styling based on API population
+  const getInputStyling = (fieldType: "windDir" | "windVel" | "temp") => {
+    const baseClasses = "w-full p-1 text-center border rounded";
+    const apiPopulatedClasses =
+      "bg-blue-50 border-blue-300 dark:bg-blue-900/20 dark:border-blue-600";
+    const manualClasses =
+      "bg-white border-gray-300 dark:bg-gray-800 dark:border-gray-600";
+
+    if (fieldType === "windDir" || fieldType === "windVel") {
+      return apiPopulated.wind
+        ? `${baseClasses} ${apiPopulatedClasses}`
+        : `${baseClasses} ${manualClasses}`;
+    } else if (fieldType === "temp") {
+      return apiPopulated.temperature
+        ? `${baseClasses} ${apiPopulatedClasses}`
+        : `${baseClasses} ${manualClasses}`;
+    }
+    return `${baseClasses} ${manualClasses}`;
+  };
 
   const handleNumericChange = (
     type: number, // 0 for wDir, 1 for wVel, 2 for temp
@@ -82,6 +145,14 @@ export default function WeatherInfo({
 
   return (
     <div className="w-full max-w-4xl">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-xl font-bold">Weather Information</h2>
+        {lastUpdated && (
+          <div className="text-sm text-gray-600 dark:text-gray-400">
+            Last updated: {lastUpdated.toLocaleTimeString()}
+          </div>
+        )}
+      </div>
       <table className="w-full border-collapse">
         <thead>
           <tr className="bg-gray-100 dark:bg-gray-800">
@@ -103,7 +174,7 @@ export default function WeatherInfo({
                   type="number"
                   min={0}
                   max={359}
-                  value={data.wind[0][altitudes.indexOf(alt)] || ""}
+                  value={displayData.wind[0][altitudes.indexOf(alt)] || ""}
                   onChange={(e) =>
                     handleNumericChange(
                       0,
@@ -111,7 +182,7 @@ export default function WeatherInfo({
                       e.target.value
                     )
                   }
-                  className="w-full p-1 text-center border rounded"
+                  className={getInputStyling("windDir")}
                 />
               </td>
             ))}
@@ -125,7 +196,7 @@ export default function WeatherInfo({
                   type="number"
                   min={0}
                   max={150}
-                  value={data.wind[1][altitudes.indexOf(alt)] || ""}
+                  value={displayData.wind[1][altitudes.indexOf(alt)] || ""}
                   onChange={(e) =>
                     handleNumericChange(
                       1,
@@ -133,7 +204,7 @@ export default function WeatherInfo({
                       e.target.value
                     )
                   }
-                  className="w-full p-1 text-center border rounded"
+                  className={getInputStyling("windVel")}
                 />
               </td>
             ))}
@@ -147,7 +218,7 @@ export default function WeatherInfo({
                   type="number"
                   min={-50}
                   max={50}
-                  value={data.wind[2][altitudes.indexOf(alt)] || ""}
+                  value={displayData.wind[2][altitudes.indexOf(alt)] || ""}
                   onChange={(e) =>
                     handleNumericChange(
                       2,
@@ -155,7 +226,7 @@ export default function WeatherInfo({
                       e.target.value
                     )
                   }
-                  className="w-full p-1 text-center border rounded"
+                  className={getInputStyling("temp")}
                 />
               </td>
             ))}
@@ -169,7 +240,7 @@ export default function WeatherInfo({
           <input
             type="checkbox"
             id="turbulence"
-            checked={data.turb}
+            checked={displayData.turb}
             onChange={() => handleCheckboxChange("turb")}
             className="rounded border-gray-300"
           />
@@ -182,7 +253,7 @@ export default function WeatherInfo({
           <input
             type="checkbox"
             id="ceilingVisibility"
-            checked={data.cielVis}
+            checked={displayData.cielVis}
             onChange={() => handleCheckboxChange("cielVis")}
             className="rounded border-gray-300"
           />
@@ -196,7 +267,7 @@ export default function WeatherInfo({
           <input
             type="checkbox"
             id="mountainObscuration"
-            checked={data.mtnObsc}
+            checked={displayData.mtnObsc}
             onChange={() => handleCheckboxChange("mtnObsc")}
             className="rounded border-gray-300"
           />

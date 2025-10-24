@@ -5,6 +5,7 @@ import {
   CloudArrowDownIcon,
   ExclamationTriangleIcon,
 } from "@heroicons/react/24/outline";
+import { ArrowPathIcon } from "@heroicons/react/24/solid";
 import { getWeatherDataBatch } from "@/utils/aviationWeatherApi";
 import {
   mapWeatherDataToWorksheet,
@@ -21,6 +22,7 @@ import type { WorksheetData } from "@/utils/types";
 interface WeatherDataIntegrationProps {
   worksheetData: Partial<WorksheetData>;
   onDataUpdate: (data: Partial<WorksheetData>) => void;
+  onTimestampUpdate?: (timestamp: Date) => void; // Callback to pass timestamp to parent
   disabled?: boolean;
 }
 
@@ -40,6 +42,7 @@ interface WeatherApiState {
 export default function WeatherDataIntegration({
   worksheetData,
   onDataUpdate,
+  onTimestampUpdate,
   disabled = false,
 }: WeatherDataIntegrationProps) {
   const [apiState, setApiState] = useState<WeatherApiState>({
@@ -157,12 +160,18 @@ export default function WeatherDataIntegration({
         // Update the worksheet data
         onDataUpdate(mergedData);
 
+        const updateTime = new Date();
         setApiState((prev) => ({
           ...prev,
           isLoading: false,
-          lastUpdated: new Date(),
+          lastUpdated: updateTime,
           isRetrying: false,
         }));
+
+        // Pass timestamp to parent
+        if (onTimestampUpdate) {
+          onTimestampUpdate(updateTime);
+        }
       } catch (error) {
         console.error("Weather data fetch error:", error);
 
@@ -271,12 +280,17 @@ export default function WeatherDataIntegration({
             type="button"
             onClick={() => fetchWeatherData(false)}
             disabled={!canFetch || apiState.isLoading}
-            className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+            className={`px-4 py-2 rounded transition-colors flex items-center gap-2 ${
               canFetch && !apiState.isLoading
-                ? "bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400"
+                ? "bg-green-500 text-white hover:bg-green-600"
                 : "bg-gray-300 text-gray-500 cursor-not-allowed dark:bg-gray-600 dark:text-gray-400"
             }`}
           >
+            {apiState.isLoading ? (
+              <ArrowPathIcon className="h-5 w-5 animate-spin" />
+            ) : (
+              <CloudArrowDownIcon className="h-5 w-5" />
+            )}
             {apiState.isLoading ? "Loading..." : "Fetch Weather"}
           </button>
         </div>

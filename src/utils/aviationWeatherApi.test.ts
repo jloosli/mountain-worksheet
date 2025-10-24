@@ -60,7 +60,7 @@ describe("Aviation Weather API", () => {
       const result = await getMETAR(["KORD"], 1);
 
       expect(fetch).toHaveBeenCalledWith(
-        expect.stringContaining("https://aviationweather.gov/api/data/metar"),
+        expect.stringContaining("/api/aviation-weather?endpoint=metar"),
         expect.objectContaining({
           method: "GET",
           headers: {
@@ -94,7 +94,9 @@ describe("Aviation Weather API", () => {
         text: async () => "Airport not found",
       });
 
-      await expect(getMETAR(["INVALID"], 1, 0)).rejects.toThrow("Not Found - Airport or data not available");
+      await expect(getMETAR(["INVALID"], 1, 0)).rejects.toThrow(
+        "Not Found - Airport or data not available"
+      );
     });
   });
 
@@ -121,7 +123,7 @@ describe("Aviation Weather API", () => {
       const result = await getTAF(["KORD"], 24);
 
       expect(fetch).toHaveBeenCalledWith(
-        expect.stringContaining("https://aviationweather.gov/api/data/taf"),
+        expect.stringContaining("/api/aviation-weather?endpoint=taf"),
         expect.objectContaining({
           method: "GET",
           headers: {
@@ -141,7 +143,9 @@ describe("Aviation Weather API", () => {
         text: async () => "Bad request",
       });
 
-      await expect(getTAF(["KORD"], 24, 0)).rejects.toThrow("Bad Request - Invalid parameters");
+      await expect(getTAF(["KORD"], 24, 0)).rejects.toThrow(
+        "Bad Request - Invalid parameters"
+      );
     });
   });
 
@@ -183,7 +187,7 @@ describe("Aviation Weather API", () => {
       const result = await getAirportInfo(["KORD"]);
 
       expect(fetch).toHaveBeenCalledWith(
-        expect.stringContaining("https://aviationweather.gov/api/data/airport"),
+        expect.stringContaining("/api/aviation-weather?endpoint=airport"),
         expect.objectContaining({
           method: "GET",
           headers: {
@@ -219,7 +223,7 @@ describe("Aviation Weather API", () => {
       const result = await getWindTemp(["KORD"], [3000, 6000, 9000]);
 
       expect(fetch).toHaveBeenCalledWith(
-        expect.stringContaining("https://aviationweather.gov/api/data/windtemp"),
+        expect.stringContaining("/api/aviation-weather?endpoint=windtemp"),
         expect.objectContaining({
           method: "GET",
           headers: {
@@ -295,10 +299,22 @@ describe("Aviation Weather API", () => {
 
     it("should fetch all weather data types in batch", async () => {
       (fetch as jest.Mock)
-        .mockResolvedValueOnce({ ok: true, json: async () => mockBatchResponse.metar })
-        .mockResolvedValueOnce({ ok: true, json: async () => mockBatchResponse.taf })
-        .mockResolvedValueOnce({ ok: true, json: async () => mockBatchResponse.airport })
-        .mockResolvedValueOnce({ ok: true, json: async () => mockBatchResponse.windTemp });
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => mockBatchResponse.metar,
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => mockBatchResponse.taf,
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => mockBatchResponse.airport,
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => mockBatchResponse.windTemp,
+        });
 
       const result = await getWeatherDataBatch(["KORD"]);
 
@@ -308,9 +324,18 @@ describe("Aviation Weather API", () => {
 
     it("should handle partial failures in batch requests", async () => {
       (fetch as jest.Mock)
-        .mockResolvedValueOnce({ ok: true, json: async () => mockBatchResponse.metar })
-        .mockResolvedValueOnce({ ok: true, json: async () => mockBatchResponse.airport })
-        .mockResolvedValueOnce({ ok: true, json: async () => mockBatchResponse.windTemp });
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => mockBatchResponse.metar,
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => mockBatchResponse.airport,
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => mockBatchResponse.windTemp,
+        });
 
       const result = await getWeatherDataBatch(["KORD"], {
         includeMETAR: true,
@@ -354,7 +379,9 @@ describe("Aviation Weather API", () => {
         text: async () => "Bad request",
       });
 
-      await expect(getMETAR(["INVALID"], 1, 0)).rejects.toThrow("Bad Request - Invalid parameters");
+      await expect(getMETAR(["INVALID"], 1, 0)).rejects.toThrow(
+        "Bad Request - Invalid parameters"
+      );
       expect(fetch).toHaveBeenCalledTimes(1);
     });
 
@@ -365,7 +392,9 @@ describe("Aviation Weather API", () => {
         text: async () => "Not found",
       });
 
-      await expect(getMETAR(["INVALID"], 1, 0)).rejects.toThrow("Not Found - Airport or data not available");
+      await expect(getMETAR(["INVALID"], 1, 0)).rejects.toThrow(
+        "Not Found - Airport or data not available"
+      );
       expect(fetch).toHaveBeenCalledTimes(1);
     });
 
@@ -376,13 +405,17 @@ describe("Aviation Weather API", () => {
         text: async () => "Bad request",
       });
 
-      await expect(getMETAR(["KORD"], 1, 0)).rejects.toThrow("Bad Request - Invalid parameters");
+      await expect(getMETAR(["KORD"], 1, 0)).rejects.toThrow(
+        "Bad Request - Invalid parameters"
+      );
     });
   });
 
   describe("debouncedRequest", () => {
     it("should handle errors in debounced requests", async () => {
-      const mockRequest = jest.fn().mockRejectedValue(new Error("Request failed"));
+      const mockRequest = jest
+        .fn()
+        .mockRejectedValue(new Error("Request failed"));
 
       const promise = debouncedRequest(mockRequest, 1000);
 
@@ -419,7 +452,7 @@ describe("Aviation Weather API", () => {
       await getMETAR(["KORD", "KLAX"], 2);
 
       const callUrl = (fetch as jest.Mock).mock.calls[0][0];
-      expect(callUrl).toContain("https://aviationweather.gov/api/data/metar");
+      expect(callUrl).toContain("/api/aviation-weather?endpoint=metar");
       expect(callUrl).toContain("ids=KORD%2CKLAX");
       expect(callUrl).toContain("format=json");
       expect(callUrl).toContain("hours=2");

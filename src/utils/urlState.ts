@@ -7,16 +7,31 @@ const serializeValue = (value: unknown): string | null => {
     return value ? "1" : "0";
   }
   if (Array.isArray(value)) {
-    // Filter out empty values from arrays
-    const filtered = value.filter(
-      (v) => v !== null && v !== undefined && v !== ""
-    );
-    // Convert each value to string, handling booleans specially
-    const mapped = filtered.map((v) => {
-      if (typeof v === "boolean") return v ? "1" : "0";
-      return String(v);
-    });
-    return mapped.length ? mapped.join(",") : null;
+    // Check if this is a nested array (2D array)
+    if (value.length > 0 && Array.isArray(value[0])) {
+      // Handle nested arrays by joining each sub-array with "|" and all sub-arrays with "||"
+      const nestedSerialized = value.map((subArray) => {
+        const filtered = subArray.filter(
+          (v) => v !== null && v !== undefined && v !== ""
+        );
+        const mapped = filtered.map((v) => {
+          if (typeof v === "boolean") return v ? "1" : "0";
+          return String(v);
+        });
+        return mapped.join(",");
+      });
+      return nestedSerialized.join("||");
+    } else {
+      // Handle simple arrays
+      const filtered = value.filter(
+        (v) => v !== null && v !== undefined && v !== ""
+      );
+      const mapped = filtered.map((v) => {
+        if (typeof v === "boolean") return v ? "1" : "0";
+        return String(v);
+      });
+      return mapped.length ? mapped.join(",") : null;
+    }
   }
   return String(value);
 };
@@ -27,23 +42,69 @@ const deserializeValue = (value: string | null, hint?: unknown): unknown => {
 
   // If we have a hint that this should be an array, split by comma
   if (Array.isArray(hint)) {
-    return value.split(",").map((v, i) => {
-      // Try to get hint from corresponding index or first valid hint
-      const typeHint =
-        hint[i] ?? hint.find((h) => h !== null && h !== undefined);
+    // Check if this is a nested array (2D array) by looking for "||" separator
+    if (value.includes("||")) {
+      // Handle nested arrays
+      const subArrays = value.split("||");
+      return subArrays.map((subArrayStr) => {
+        if (!subArrayStr) return [];
+        return subArrayStr.split(",").map((v, i) => {
+          // Try to get hint from corresponding index or first valid hint
+          const typeHint =
+            hint[i] ?? hint.find((h) => h !== null && h !== undefined);
 
-      // For "mixed" type arrays, preserve the original type if possible
-      if (typeof typeHint === "string") return v;
-      if (typeof typeHint === "boolean") return v === "1";
-      // Default to number if hinted that way or if string looks numeric
-      if (
-        typeof typeHint === "number" ||
-        (typeof v === "string" && v.trim() !== "" && /^[+-]?\d+(\.\d+)?$/.test(v))
-      ) {
-        return Number(v);
+          // For "mixed" type arrays, preserve the original type if possible
+          if (typeof typeHint === "string") return v;
+          if (typeof typeHint === "boolean") return v === "1";
+          // Default to number if hinted that way or if string looks numeric
+          if (
+            typeof typeHint === "number" ||
+            (typeof v === "string" &&
+              v.trim() !== "" &&
+              /^[+-]?\d+(\.\d+)?$/.test(v))
+          ) {
+            return Number(v);
+          }
+          return v;
+        });
+      });
+    } else {
+      // Handle simple arrays
+      const simpleArray = value.split(",").map((v, i) => {
+        // Try to get hint from corresponding index or first valid hint
+        const typeHint =
+          hint[i] ?? hint.find((h) => h !== null && h !== undefined);
+
+        // For "mixed" type arrays, preserve the original type if possible
+        if (typeof typeHint === "string") return v;
+        if (typeof typeHint === "boolean") return v === "1";
+        // Default to number if hinted that way or if string looks numeric
+        if (
+          typeof typeHint === "number" ||
+          (typeof v === "string" &&
+            v.trim() !== "" &&
+            /^[+-]?\d+(\.\d+)?$/.test(v))
+        ) {
+          return Number(v);
+        }
+        return v;
+      });
+
+      // Check if the hint suggests this should be a nested array
+      if (hint.length > 0 && Array.isArray(hint[0])) {
+        // The hint suggests this should be a nested array, but we got a flat string
+        // This means the data was flattened during serialization
+        // Try to reconstruct the nested structure based on the hint
+        const subArrayLength = hint[0].length;
+        const result = [];
+        for (let i = 0; i < simpleArray.length; i += subArrayLength) {
+          result.push(simpleArray.slice(i, i + subArrayLength));
+        }
+        return result;
       }
-      return v;
-    });
+
+      return simpleArray;
+    }
   }
 
   // Use the hint to determine the type
@@ -85,10 +146,8 @@ export const deserializeState = <T>(
   for (const [key, value] of params.entries()) {
     const initial = initialState as Record<string, unknown>;
     if (key in initial) {
-      (result as Record<string, unknown>)[key] = deserializeValue(
-        value,
-        initial[key]
-      );
+      const deserialized = deserializeValue(value, initial[key]);
+      (result as Record<string, unknown>)[key] = deserialized;
     }
   }
 

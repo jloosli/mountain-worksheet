@@ -48,10 +48,10 @@
   - [x] 4.5 Add weather data display components with API integration
   - [x] 4.6 Write unit tests in `src/components/WeatherModal.test.tsx` covering all modal states and user interactions
 - [ ] 5.0 Integrate Weather Data Population into Existing Components
-  - [ ] 5.1 Add "Check AviationWeather" button to `src/components/AppInputs.tsx` below title and action buttons
-  - [ ] 5.2 Implement button state management (enabled/disabled based on required flight info)
-  - [ ] 5.3 Add loading state with spinner and disable button during API calls
-  - [ ] 5.4 Integrate weather data population into `src/components/WeatherInfo.tsx` with visual indicators for API-populated fields
+  - [x] 5.1 Add "Check AviationWeather" button to `src/components/AppInputs.tsx` below title and action buttons
+  - [x] 5.2 Implement button state management (enabled/disabled based on required flight info)
+  - [x] 5.3 Add loading state with spinner and disable button during API calls
+  - [x] 5.4 Integrate weather data population into `src/components/WeatherInfo.tsx` with visual indicators for API-populated fields
   - [ ] 5.5 Add runway data population to `src/components/AircraftPerformance.tsx`
   - [ ] 5.6 Implement timestamp display for "Last updated" near weather section
   - [ ] 5.7 Add visual indicators (subtle background color) to show API vs manual entry

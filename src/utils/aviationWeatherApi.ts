@@ -6,7 +6,7 @@
  */
 
 // Base URL for AviationWeather.gov API
-const BASE_URL = "https://aviationweather.gov/api/data";
+const BASE_URL = "/api/aviation-weather";
 
 // Rate limiting configuration
 const RATE_LIMIT = {
@@ -165,7 +165,10 @@ async function makeApiRequest<T>(
     });
   }
 
-  const url = new URL(`${BASE_URL}/${endpoint}`);
+  const url = new URL(
+    `${BASE_URL}?endpoint=${endpoint}`,
+    window.location.origin
+  );
   Object.entries(params).forEach(([key, value]) => {
     url.searchParams.append(key, value);
   });
@@ -296,15 +299,17 @@ export async function getAirportInfo(
 
 /**
  * Get wind and temperature data for specified altitudes
+ * Uses regional data to get SLC windtemp information
  */
 export async function getWindTemp(
   airports: string[],
-  altitudes: number[] = [3000, 6000, 9000, 12000, 15000]
+  _altitudes: number[] = [3000, 6000, 9000, 12000, 15000]
 ): Promise<WindTempResponse[]> {
   const params = {
-    ids: airports.join(","),
+    region: "us",
+    level: "low",
+    fcst: "06",
     format: "json",
-    altitudes: altitudes.join(","),
   };
 
   return makeApiRequest<WindTempResponse[]>("windtemp", params);
@@ -370,28 +375,31 @@ export async function getWeatherDataBatch(
   if (includeMETAR) {
     response.metar =
       results[resultIndex].status === "fulfilled"
-        ? results[resultIndex].value
+        ? (results[resultIndex] as PromiseFulfilledResult<METARResponse[]>)
+            .value
         : [];
     resultIndex++;
   }
   if (includeTAF) {
     response.taf =
       results[resultIndex].status === "fulfilled"
-        ? results[resultIndex].value
+        ? (results[resultIndex] as PromiseFulfilledResult<TAFResponse[]>).value
         : [];
     resultIndex++;
   }
   if (includeAirport) {
     response.airport =
       results[resultIndex].status === "fulfilled"
-        ? results[resultIndex].value
+        ? (results[resultIndex] as PromiseFulfilledResult<AirportResponse[]>)
+            .value
         : [];
     resultIndex++;
   }
   if (includeWindTemp) {
     response.windTemp =
       results[resultIndex].status === "fulfilled"
-        ? results[resultIndex].value
+        ? (results[resultIndex] as PromiseFulfilledResult<WindTempResponse[]>)
+            .value
         : [];
     resultIndex++;
   }

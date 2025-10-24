@@ -77,7 +77,7 @@ describe("WeatherDataIntegration", () => {
   it("should disable fetch button when required data is missing", () => {
     const incompleteData = {
       ...defaultProps.worksheetData,
-      airport: ["", ""], // Missing airports
+      airport: ["", ""] as [string, string], // Missing airports
     };
 
     render(
