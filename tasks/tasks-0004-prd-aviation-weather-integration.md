@@ -31,14 +31,14 @@
   - [x] 1.4 Implement request batching and debouncing to respect rate limits (100 requests/minute)
   - [x] 1.5 Add TypeScript interfaces for API response types (METAR, TAF, Airport, WindTemp)
   - [x] 1.6 Write comprehensive unit tests in `src/utils/aviationWeatherApi.test.ts` covering all API functions, error cases, and retry logic
-- [ ] 3.0 Build Weather Data Mapping and Validation
-  - [ ] 3.1 Create `src/utils/weatherDataMapper.ts` to convert API responses to WorksheetData format
-  - [ ] 3.2 Implement wind data mapping for altitudes 3k, 6k, 9k, 12k, 15k (leave blank if not available)
-  - [ ] 3.3 Add temperature and pressure data extraction from METAR/TAF responses
-  - [ ] 3.4 Implement runway data parsing and longest runway selection logic
-  - [ ] 3.5 Add data validation against expected ranges before populating fields
-  - [ ] 3.6 Implement TAF time selection based on flight date/time
-  - [ ] 3.7 Write unit tests in `src/utils/weatherDataMapper.test.ts` covering all mapping functions, validation, and edge cases
+- [x] 3.0 Build Weather Data Mapping and Validation
+  - [x] 3.1 Create `src/utils/weatherDataMapper.ts` to convert API responses to WorksheetData format
+  - [x] 3.2 Implement wind data mapping for altitudes 3k, 6k, 9k, 12k, 15k (leave blank if not available)
+  - [x] 3.3 Add temperature and pressure data extraction from METAR/TAF responses
+  - [x] 3.4 Implement runway data parsing and longest runway selection logic
+  - [x] 3.5 Add data validation against expected ranges before populating fields
+  - [x] 3.6 Implement TAF time selection based on flight date/time
+  - [x] 3.7 Write unit tests in `src/utils/weatherDataMapper.test.ts` covering all mapping functions, validation, and edge cases
 - [ ] 4.0 Create User Interface Components
   - [ ] 4.1 Create `src/components/WeatherModal.tsx` for error handling and loading states
   - [ ] 4.2 Implement modal for API data retrieval failures with retry option

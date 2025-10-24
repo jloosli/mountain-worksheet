@@ -340,7 +340,9 @@ export async function getWeatherDataBatch(
     altitudes = [3000, 6000, 9000, 12000, 15000],
   } = options;
 
-  const promises: Promise<METARResponse[] | TAFResponse[] | AirportResponse[] | WindTempResponse[]>[] = [];
+  const promises: Promise<
+    METARResponse[] | TAFResponse[] | AirportResponse[] | WindTempResponse[]
+  >[] = [];
 
   if (includeMETAR) {
     promises.push(getMETAR(airports, metarHours));
