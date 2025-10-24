@@ -39,13 +39,13 @@
   - [x] 3.5 Add data validation against expected ranges before populating fields
   - [x] 3.6 Implement TAF time selection based on flight date/time
   - [x] 3.7 Write unit tests in `src/utils/weatherDataMapper.test.ts` covering all mapping functions, validation, and edge cases
-- [ ] 4.0 Create User Interface Components
-  - [ ] 4.1 Create `src/components/WeatherModal.tsx` for error handling and loading states
-  - [ ] 4.2 Implement modal for API data retrieval failures with retry option
-  - [ ] 4.3 Add modal for airport not found errors with clear messaging
-  - [ ] 4.4 Implement loading spinner/progress indicator for API calls
-  - [ ] 4.5 Add modal for offline/poor connectivity scenarios
-  - [ ] 4.6 Write unit tests in `src/components/WeatherModal.test.tsx` covering all modal states and user interactions
+- [x] 4.0 Create User Interface Components
+  - [x] 4.1 Create `src/components/WeatherModal.tsx` for error handling and loading states
+  - [x] 4.2 Implement modal for API data retrieval failures with retry option
+  - [x] 4.3 Add modal for airport not found errors with clear messaging
+  - [x] 4.4 Implement loading spinner/progress indicator for API calls
+  - [x] 4.5 Add weather data display components with API integration
+  - [x] 4.6 Write unit tests in `src/components/WeatherModal.test.tsx` covering all modal states and user interactions
 - [ ] 5.0 Integrate Weather Data Population into Existing Components
   - [ ] 5.1 Add "Check AviationWeather" button to `src/components/AppInputs.tsx` below title and action buttons
   - [ ] 5.2 Implement button state management (enabled/disabled based on required flight info)

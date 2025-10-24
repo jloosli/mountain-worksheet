@@ -197,10 +197,14 @@ describe("Weather Data Mapper", () => {
         flightTime: "12:00",
       };
 
-      const result = mapTemperaturePressureData(mockMETARData, mockTAFData, options);
+      const result = mapTemperaturePressureData(
+        mockMETARData,
+        mockTAFData,
+        options
+      );
 
       // Note: Current implementation processes TAF after METAR, so TAF overwrites METAR
-      // This test verifies the current behavior - in a real implementation, 
+      // This test verifies the current behavior - in a real implementation,
       // METAR should take precedence for current conditions
       expect(result.temp).toEqual([18, 18, 18]); // From TAF (current behavior)
       expect(result.altimeter).toEqual([29.85, 29.85, 29.85]); // From TAF (current behavior)
@@ -222,7 +226,9 @@ describe("Weather Data Mapper", () => {
         },
       ];
 
-      const result = mapTemperaturePressureData(invalidMETARData, [], { validateData: true });
+      const result = mapTemperaturePressureData(invalidMETARData, [], {
+        validateData: true,
+      });
 
       expect(result.temp).toEqual([21, 21, 21]); // Should use defaults due to validation
       expect(result.altimeter).toEqual([29.92, 29.92, 29.92]); // Should use defaults due to validation
@@ -468,8 +474,12 @@ describe("Weather Data Mapper", () => {
 
       expect(result.success).toBe(true);
       expect(result.warnings).toContain("No wind/temperature data available");
-      expect(result.warnings).toContain("No METAR/TAF data available for temperature/pressure");
-      expect(result.warnings).toContain("No airport data available for runway information");
+      expect(result.warnings).toContain(
+        "No METAR/TAF data available for temperature/pressure"
+      );
+      expect(result.warnings).toContain(
+        "No airport data available for runway information"
+      );
     });
 
     it("should validate data when validation is enabled", () => {
@@ -487,7 +497,9 @@ describe("Weather Data Mapper", () => {
         ],
       };
 
-      const result = mapWeatherDataToWorksheet(invalidApiData, { validateData: true });
+      const result = mapWeatherDataToWorksheet(invalidApiData, {
+        validateData: true,
+      });
 
       expect(result.success).toBe(true);
       // The validation happens in individual mapping functions, so errors are caught there
@@ -503,9 +515,9 @@ describe("Weather Data Mapper", () => {
             icaoId: "KORD",
             validTime: "2024-01-15T12:00:00Z",
             altitude: 3000,
-            wdir: null as any, // This should cause issues
-            wspd: undefined as any,
-            temp: "invalid" as any,
+            wdir: null as unknown as number, // This should cause issues
+            wspd: undefined as unknown as number,
+            temp: "invalid" as unknown as number,
             pressure: 26.92,
           },
         ],
@@ -521,7 +533,11 @@ describe("Weather Data Mapper", () => {
   describe("isApiPopulatedData", () => {
     it("should detect API-populated wind data", () => {
       const data = {
-        wind: [[270, 0, 0, 0, 0], [25, 0, 0, 0, 0], [15, 0, 0, 0, 0]],
+        wind: [
+          [270, 0, 0, 0, 0],
+          [25, 0, 0, 0, 0],
+          [15, 0, 0, 0, 0],
+        ],
       };
 
       const result = isApiPopulatedData(data);
@@ -573,7 +589,11 @@ describe("Weather Data Mapper", () => {
 
     it("should detect default values as not API-populated", () => {
       const data = {
-        wind: [[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]],
+        wind: [
+          [0, 0, 0, 0, 0],
+          [0, 0, 0, 0, 0],
+          [0, 0, 0, 0, 0],
+        ],
         temp: [21, 21, 21],
         altimeter: [29.92, 29.92, 29.92],
         rwy: [null, null],
@@ -591,14 +611,22 @@ describe("Weather Data Mapper", () => {
   describe("mergeWeatherData", () => {
     it("should merge API data with existing data", () => {
       const existingData = {
-        wind: [[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]],
+        wind: [
+          [0, 0, 0, 0, 0],
+          [0, 0, 0, 0, 0],
+          [0, 0, 0, 0, 0],
+        ],
         temp: [21, 21, 21],
         altimeter: [29.92, 29.92, 29.92],
         rwy: [null, null],
       };
 
       const apiData = {
-        wind: [[270, 0, 0, 0, 0], [25, 0, 0, 0, 0], [15, 0, 0, 0, 0]],
+        wind: [
+          [270, 0, 0, 0, 0],
+          [25, 0, 0, 0, 0],
+          [15, 0, 0, 0, 0],
+        ],
         temp: [18, 18, 18],
         altimeter: [29.85, 29.85, 29.85],
         rwy: [10000, null],
@@ -614,14 +642,22 @@ describe("Weather Data Mapper", () => {
 
     it("should preserve user-modified data when preserveUserData is true", () => {
       const existingData = {
-        wind: [[180, 0, 0, 0, 0], [20, 0, 0, 0, 0], [10, 0, 0, 0, 0]], // User modified
+        wind: [
+          [180, 0, 0, 0, 0],
+          [20, 0, 0, 0, 0],
+          [10, 0, 0, 0, 0],
+        ], // User modified
         temp: [25, 25, 25], // User modified
-        altimeter: [30.00, 30.00, 30.00], // User modified
+        altimeter: [30.0, 30.0, 30.0], // User modified
         rwy: [5000, null], // User modified
       };
 
       const apiData = {
-        wind: [[270, 0, 0, 0, 0], [25, 0, 0, 0, 0], [15, 0, 0, 0, 0]],
+        wind: [
+          [270, 0, 0, 0, 0],
+          [25, 0, 0, 0, 0],
+          [15, 0, 0, 0, 0],
+        ],
         temp: [18, 18, 18],
         altimeter: [29.85, 29.85, 29.85],
         rwy: [10000, null],
@@ -631,20 +667,28 @@ describe("Weather Data Mapper", () => {
 
       expect(result.wind![0][0]).toBe(180); // User data should be preserved
       expect(result.temp![0]).toBe(25); // User data should be preserved
-      expect(result.altimeter![0]).toBe(30.00); // User data should be preserved
+      expect(result.altimeter![0]).toBe(30.0); // User data should be preserved
       expect(result.rwy![0]).toBe(5000); // User data should be preserved
     });
 
     it("should overwrite user data when preserveUserData is false", () => {
       const existingData = {
-        wind: [[180, 0, 0, 0, 0], [20, 0, 0, 0, 0], [10, 0, 0, 0, 0]],
+        wind: [
+          [180, 0, 0, 0, 0],
+          [20, 0, 0, 0, 0],
+          [10, 0, 0, 0, 0],
+        ],
         temp: [25, 25, 25],
-        altimeter: [30.00, 30.00, 30.00],
+        altimeter: [30.0, 30.0, 30.0],
         rwy: [5000, null],
       };
 
       const apiData = {
-        wind: [[270, 0, 0, 0, 0], [25, 0, 0, 0, 0], [15, 0, 0, 0, 0]],
+        wind: [
+          [270, 0, 0, 0, 0],
+          [25, 0, 0, 0, 0],
+          [15, 0, 0, 0, 0],
+        ],
         temp: [18, 18, 18],
         altimeter: [29.85, 29.85, 29.85],
         rwy: [10000, null],
@@ -681,15 +725,17 @@ describe("Weather Data Mapper", () => {
             icaoId: "KORD",
             validTime: "2024-01-15T12:00:00Z",
             altitude: 3000,
-            wdir: null as any, // Invalid wind direction
-            wspd: undefined as any, // Invalid wind speed
-            temp: "invalid" as any, // Invalid temperature
+            wdir: null as unknown as number, // Invalid wind direction
+            wspd: undefined as unknown as number, // Invalid wind speed
+            temp: "invalid" as unknown as number, // Invalid temperature
             pressure: 26.92,
           },
         ],
       };
 
-      const result = mapWeatherDataToWorksheet(dataWithNulls, { validateData: true });
+      const result = mapWeatherDataToWorksheet(dataWithNulls, {
+        validateData: true,
+      });
 
       expect(result.success).toBe(true);
       // Should handle gracefully without crashing
@@ -714,7 +760,11 @@ describe("Weather Data Mapper", () => {
         flightTime: "invalid-time",
       };
 
-      const result = mapTemperaturePressureData([], tafDataWithInvalidTime, options);
+      const result = mapTemperaturePressureData(
+        [],
+        tafDataWithInvalidTime,
+        options
+      );
 
       // Should not crash and should return default values
       expect(result.temp).toEqual([21, 21, 21]);

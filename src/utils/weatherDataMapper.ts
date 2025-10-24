@@ -1,6 +1,6 @@
 /**
  * Weather Data Mapping and Validation
- * 
+ *
  * This module provides functions to convert AviationWeather.gov API responses
  * to WorksheetData format, with proper validation and data transformation.
  */
@@ -62,7 +62,7 @@ export function mapWindTempData(
   TARGET_ALTITUDES.forEach((targetAlt, index) => {
     // Find closest altitude data
     const closestData = findClosestAltitudeData(altitudeData, targetAlt);
-    
+
     if (closestData) {
       const windDir = closestData.wdir;
       const windVel = closestData.wspd;
@@ -106,7 +106,7 @@ export function mapTemperaturePressureData(
   // Process METAR data for current conditions
   if (metarData.length > 0) {
     const metar = metarData[0]; // Use first METAR
-    
+
     if (metar.temp !== undefined) {
       const temp = Math.round(metar.temp);
       if (!options.validateData || isValidTemperature(temp)) {
@@ -124,8 +124,12 @@ export function mapTemperaturePressureData(
 
   // Process TAF data for forecast conditions
   if (tafData.length > 0 && options.flightDate && options.flightTime) {
-    const selectedTAF = selectTAFForFlightTime(tafData, options.flightDate, options.flightTime);
-    
+    const selectedTAF = selectTAFForFlightTime(
+      tafData,
+      options.flightDate,
+      options.flightTime
+    );
+
     if (selectedTAF) {
       if (selectedTAF.temp !== undefined) {
         const temp = Math.round(selectedTAF.temp);
@@ -166,10 +170,13 @@ export function mapRunwayData(
     const departureAirport = airportData.find(
       (airport) => airport.icaoId === options.departureAirport
     );
-    
+
     if (departureAirport?.runway) {
       const longestRunway = findLongestRunway(departureAirport.runway);
-      if (longestRunway && (!options.validateData || isValidRunwayLength(longestRunway.length))) {
+      if (
+        longestRunway &&
+        (!options.validateData || isValidRunwayLength(longestRunway.length))
+      ) {
         result.rwy![0] = longestRunway.length;
       }
     }
@@ -180,10 +187,13 @@ export function mapRunwayData(
     const arrivalAirport = airportData.find(
       (airport) => airport.icaoId === options.arrivalAirport
     );
-    
+
     if (arrivalAirport?.runway) {
       const longestRunway = findLongestRunway(arrivalAirport.runway);
-      if (longestRunway && (!options.validateData || isValidRunwayLength(longestRunway.length))) {
+      if (
+        longestRunway &&
+        (!options.validateData || isValidRunwayLength(longestRunway.length))
+      ) {
         result.rwy![1] = longestRunway.length;
       }
     }
@@ -229,7 +239,9 @@ export function mapWeatherDataToWorksheet(
       );
       result.data = { ...result.data, ...tempPressureData };
     } else {
-      result.warnings.push("No METAR/TAF data available for temperature/pressure");
+      result.warnings.push(
+        "No METAR/TAF data available for temperature/pressure"
+      );
     }
 
     // Map runway data
@@ -246,10 +258,13 @@ export function mapWeatherDataToWorksheet(
       result.errors.push(...validationResult.errors);
       result.warnings.push(...validationResult.warnings);
     }
-
   } catch (error) {
     result.success = false;
-    result.errors.push(`Mapping error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    result.errors.push(
+      `Mapping error: ${
+        error instanceof Error ? error.message : "Unknown error"
+      }`
+    );
   }
 
   return result;
@@ -289,13 +304,16 @@ function selectTAFForFlightTime(
 
   try {
     const flightDateTime = new Date(`${flightDate}T${flightTime}:00`);
-    
+
     // Find TAF that covers the flight time
     for (const taf of tafData) {
       const validTime = new Date(taf.validTime);
       const validTimeEnd = taf.validTimeEnd ? new Date(taf.validTimeEnd) : null;
-      
-      if (flightDateTime >= validTime && (!validTimeEnd || flightDateTime <= validTimeEnd)) {
+
+      if (
+        flightDateTime >= validTime &&
+        (!validTimeEnd || flightDateTime <= validTimeEnd)
+      ) {
         return taf;
       }
     }
@@ -311,7 +329,9 @@ function selectTAFForFlightTime(
 /**
  * Find the longest runway from airport runway data
  */
-function findLongestRunway(runways: any[]): any | null {
+function findLongestRunway(
+  runways: { length: number }[]
+): { length: number } | null {
   if (!runways || runways.length === 0) return null;
 
   return runways.reduce((longest, current) => {
@@ -378,19 +398,25 @@ function validateMappedData(data: Partial<WorksheetData>): {
   if (data.wind) {
     data.wind[0].forEach((dir, index) => {
       if (dir !== 0 && !isValidWindDirection(dir)) {
-        errors.push(`Invalid wind direction at altitude ${TARGET_ALTITUDES[index]}ft: ${dir}`);
+        errors.push(
+          `Invalid wind direction at altitude ${TARGET_ALTITUDES[index]}ft: ${dir}`
+        );
       }
     });
 
     data.wind[1].forEach((speed, index) => {
       if (speed !== 0 && !isValidWindSpeed(speed)) {
-        errors.push(`Invalid wind speed at altitude ${TARGET_ALTITUDES[index]}ft: ${speed}`);
+        errors.push(
+          `Invalid wind speed at altitude ${TARGET_ALTITUDES[index]}ft: ${speed}`
+        );
       }
     });
 
     data.wind[2].forEach((temp, index) => {
       if (temp !== 0 && !isValidTemperature(temp)) {
-        errors.push(`Invalid temperature at altitude ${TARGET_ALTITUDES[index]}ft: ${temp}`);
+        errors.push(
+          `Invalid temperature at altitude ${TARGET_ALTITUDES[index]}ft: ${temp}`
+        );
       }
     });
   }
@@ -408,7 +434,9 @@ function validateMappedData(data: Partial<WorksheetData>): {
   if (data.altimeter) {
     data.altimeter.forEach((altimeter, index) => {
       if (!isValidAltimeter(altimeter)) {
-        errors.push(`Invalid altimeter setting for phase ${index}: ${altimeter}`);
+        errors.push(
+          `Invalid altimeter setting for phase ${index}: ${altimeter}`
+        );
       }
     });
   }
@@ -435,10 +463,10 @@ export function isApiPopulatedData(data: Partial<WorksheetData>): {
   runway: boolean;
 } {
   return {
-    wind: !!(data.wind && data.wind[0].some(val => val !== 0)),
-    temperature: !!(data.temp && data.temp.some(val => val !== 21)),
-    pressure: !!(data.altimeter && data.altimeter.some(val => val !== 29.92)),
-    runway: !!(data.rwy && data.rwy.some(val => val !== null)),
+    wind: !!(data.wind && data.wind[0].some((val) => val !== 0)),
+    temperature: !!(data.temp && data.temp.some((val) => val !== 21)),
+    pressure: !!(data.altimeter && data.altimeter.some((val) => val !== 29.92)),
+    runway: !!(data.rwy && data.rwy.some((val) => val !== null)),
   };
 }
 
