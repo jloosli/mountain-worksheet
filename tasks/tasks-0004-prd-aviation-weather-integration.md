@@ -25,12 +25,12 @@
 
 ## Tasks
 
-- [ ] 1.0 Create Aviation Weather API Integration Infrastructure
-  - [ ] 1.1 Create `src/utils/aviationWeatherApi.ts` with API client functions for METAR, TAF, airport, and wind/temp endpoints
-  - [ ] 1.3 Add error handling for HTTP status codes (400, 404, 429, 500) with retry logic
-  - [ ] 1.4 Implement request batching and debouncing to respect rate limits (100 requests/minute)
-  - [ ] 1.5 Add TypeScript interfaces for API response types (METAR, TAF, Airport, WindTemp)
-  - [ ] 1.6 Write comprehensive unit tests in `src/utils/aviationWeatherApi.test.ts` covering all API functions, error cases, and retry logic
+- [x] 1.0 Create Aviation Weather API Integration Infrastructure
+  - [x] 1.1 Create `src/utils/aviationWeatherApi.ts` with API client functions for METAR, TAF, airport, and wind/temp endpoints
+  - [x] 1.3 Add error handling for HTTP status codes (400, 404, 429, 500) with retry logic
+  - [x] 1.4 Implement request batching and debouncing to respect rate limits (100 requests/minute)
+  - [x] 1.5 Add TypeScript interfaces for API response types (METAR, TAF, Airport, WindTemp)
+  - [x] 1.6 Write comprehensive unit tests in `src/utils/aviationWeatherApi.test.ts` covering all API functions, error cases, and retry logic
 - [ ] 3.0 Build Weather Data Mapping and Validation
   - [ ] 3.1 Create `src/utils/weatherDataMapper.ts` to convert API responses to WorksheetData format
   - [ ] 3.2 Implement wind data mapping for altitudes 3k, 6k, 9k, 12k, 15k (leave blank if not available)
