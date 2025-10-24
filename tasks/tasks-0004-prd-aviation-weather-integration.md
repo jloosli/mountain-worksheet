@@ -22,6 +22,7 @@
 - Unit tests should typically be placed alongside the code files they are testing (e.g., `MyComponent.tsx` and `MyComponent.test.tsx` in the same directory).
 - Use `npx jest [optional/path/to/test/file]` to run tests. Running without a path executes all tests found by the Jest configuration.
 - See https://aviationweather.gov/data/api/#schema and https://aviationweather.gov/data/schema/openapi.yaml for the API schema.
+- Use icons from already imported `@heroicons/react` library.
 
 ## Tasks
 
