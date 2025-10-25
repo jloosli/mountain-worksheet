@@ -16,6 +16,9 @@
 - `src/utils/weatherDataMapper.test.ts` - Unit tests for weather data mapping utilities
 - `src/utils/types.ts` - Type definitions that may need updates for weather data tracking
 - `src/utils/types.test.ts` - Unit tests for type utilities
+- `src/app/api/aviation-weather/route.ts` - Next.js API route to proxy AviationWeather.gov API calls and parse data
+- `src/utils/windTempParser.ts` - Parser for AviationWeather.gov windtemp plain text data
+- `src/utils/urlState.ts` - URL state management with support for nested arrays
 
 ### Notes
 
@@ -52,7 +55,7 @@
   - [x] 5.2 Implement button state management (enabled/disabled based on required flight info)
   - [x] 5.3 Add loading state with spinner and disable button during API calls
   - [x] 5.4 Integrate weather data population into `src/components/WeatherInfo.tsx` with visual indicators for API-populated fields
-  - [ ] 5.5 Add runway data population to `src/components/AircraftPerformance.tsx`
+  - [x] 5.5 Add runway data population to `src/components/AircraftPerformance.tsx`
   - [ ] 5.6 Implement timestamp display for "Last updated" near weather section
   - [ ] 5.7 Add visual indicators (subtle background color) to show API vs manual entry
   - [ ] 5.8 Ensure all API-populated fields remain editable after population

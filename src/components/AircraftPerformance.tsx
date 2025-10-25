@@ -84,7 +84,8 @@ export default function AircraftPerformance({
 
   // Helper function to get input styling based on API population
   const getInputStyling = (
-    fieldType: "temp" | "altimeter" | "altitude" | "rwy"
+    fieldType: "temp" | "altimeter" | "altitude" | "rwy",
+    index?: number
   ) => {
     const baseClasses = "w-full border rounded p-1";
     const apiPopulatedClasses =
@@ -98,6 +99,15 @@ export default function AircraftPerformance({
         : `${baseClasses} ${manualClasses}`;
     } else if (fieldType === "rwy") {
       return apiPopulated.runway
+        ? `${baseClasses} ${apiPopulatedClasses}`
+        : `${baseClasses} ${manualClasses}`;
+    } else if (fieldType === "altitude") {
+      // Check if this specific altitude index is API-populated
+      const isApiPopulated =
+        apiPopulated.altitude &&
+        ((index === 0 && displayData.altitude[0] !== 8000) || // departure
+          (index === 2 && displayData.altitude[2] !== 8000)); // arrival
+      return isApiPopulated
         ? `${baseClasses} ${apiPopulatedClasses}`
         : `${baseClasses} ${manualClasses}`;
     }
@@ -262,7 +272,7 @@ export default function AircraftPerformance({
                   onChange={(e) =>
                     handleInputChange("altitude", 0, e.target.value)
                   }
-                  className="w-full border rounded p-1"
+                  className={getInputStyling("altitude", 0)}
                 />
               </td>
               <td className="p-2">
@@ -272,7 +282,7 @@ export default function AircraftPerformance({
                   onChange={(e) =>
                     handleInputChange("altitude", 1, e.target.value)
                   }
-                  className="w-full border rounded p-1"
+                  className={getInputStyling("altitude", 1)}
                 />
               </td>
               <td className="p-2">
@@ -282,7 +292,7 @@ export default function AircraftPerformance({
                   onChange={(e) =>
                     handleInputChange("altitude", 2, e.target.value)
                   }
-                  className="w-full border rounded p-1"
+                  className={getInputStyling("altitude", 2)}
                 />
               </td>
               <td className="p-2">Flight Plan, ForeFlight</td>

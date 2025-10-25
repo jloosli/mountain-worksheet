@@ -203,6 +203,59 @@ export function mapRunwayData(
 }
 
 /**
+ * Map airport elevation data to worksheet format
+ */
+export function mapAirportElevationData(
+  airportData: AirportResponse[],
+  options: WeatherMappingOptions = {}
+): Partial<WorksheetData> {
+  const result: Partial<WorksheetData> = {};
+
+  if (airportData.length === 0) {
+    return result;
+  }
+
+  // Only set altitude values for departure and arrival, leave operating altitude untouched
+  const altitudeUpdates: (number | undefined)[] = [];
+
+  // Process departure airport elevation (altitude[0])
+  if (options.departureAirport) {
+    const departureAirport = airportData.find(
+      (airport) => airport.icaoId === options.departureAirport
+    );
+
+    if (departureAirport?.elev) {
+      // Convert elevation from meters to feet (1 meter = 3.28084 feet)
+      altitudeUpdates[0] = Math.round(departureAirport.elev * 3.28084);
+    }
+  }
+
+  // Process arrival airport elevation (altitude[2])
+  if (options.arrivalAirport) {
+    const arrivalAirport = airportData.find(
+      (airport) => airport.icaoId === options.arrivalAirport
+    );
+
+    if (arrivalAirport?.elev) {
+      // Convert elevation from meters to feet (1 meter = 3.28084 feet)
+      altitudeUpdates[2] = Math.round(arrivalAirport.elev * 3.28084);
+    }
+  }
+
+  // Only set altitude if we have updates
+  if (altitudeUpdates.some((val) => val !== undefined)) {
+    // Convert sparse array to fixed 3-element array
+    result.altitude = [
+      altitudeUpdates[0] ?? 8000, // departure
+      -1, // operating (special value to indicate "don't update")
+      altitudeUpdates[2] ?? 8000, // arrival
+    ];
+  }
+
+  return result;
+}
+
+/**
  * Map all weather data from API responses to WorksheetData format
  */
 export function mapWeatherDataToWorksheet(
@@ -250,6 +303,12 @@ export function mapWeatherDataToWorksheet(
       result.data = { ...result.data, ...runwayData };
     } else {
       result.warnings.push("No airport data available for runway information");
+    }
+
+    // Map airport elevation data
+    if (apiData.airport && apiData.airport.length > 0) {
+      const elevationData = mapAirportElevationData(apiData.airport, options);
+      result.data = { ...result.data, ...elevationData };
     }
 
     // Validate mapped data
@@ -521,6 +580,7 @@ export function isApiPopulatedData(data: Partial<WorksheetData>): {
   temperature: boolean;
   pressure: boolean;
   runway: boolean;
+  altitude: boolean;
 } {
   return {
     wind: !!(
@@ -543,6 +603,14 @@ export function isApiPopulatedData(data: Partial<WorksheetData>): {
       Array.isArray(data.rwy) &&
       data.rwy.some((val) => val !== null)
     ),
+    altitude: !!(
+      (
+        data.altitude &&
+        Array.isArray(data.altitude) &&
+        ((data.altitude[0] !== undefined && data.altitude[0] !== 8000) || // departure
+          (data.altitude[2] !== undefined && data.altitude[2] !== 8000))
+      ) // arrival
+    ),
   };
 }
 
@@ -560,47 +628,47 @@ export function mergeWeatherData(
     return { ...result, ...apiData };
   }
 
-  // Only update fields that are empty or have default values
-  if (apiData.wind && result.wind) {
-    apiData.wind.forEach((apiArray, arrayIndex) => {
-      apiArray.forEach((apiValue, valueIndex) => {
-        const existingValue = result.wind![arrayIndex][valueIndex];
-        // Only update if existing value is 0 (default) or API has valid data
-        if (existingValue === 0 && apiValue !== 0) {
-          result.wind![arrayIndex][valueIndex] = apiValue;
-        }
-      });
-    });
+  // Always overwrite with API data when available
+  if (apiData.wind) {
+    result.wind = apiData.wind;
   }
 
-  if (apiData.temp && result.temp) {
-    apiData.temp.forEach((apiValue, index) => {
-      const existingValue = result.temp![index];
-      // Only update if existing value is default (21) or API has different valid data
-      if (existingValue === 21 && apiValue !== 21) {
-        result.temp![index] = apiValue;
-      }
-    });
+  if (apiData.temp) {
+    result.temp = apiData.temp;
   }
 
-  if (apiData.altimeter && result.altimeter) {
-    apiData.altimeter.forEach((apiValue, index) => {
-      const existingValue = result.altimeter![index];
-      // Only update if existing value is default (29.92) or API has different valid data
-      if (existingValue === 29.92 && apiValue !== 29.92) {
-        result.altimeter![index] = apiValue;
-      }
-    });
+  if (apiData.altimeter) {
+    result.altimeter = apiData.altimeter;
   }
 
-  if (apiData.rwy && result.rwy) {
-    apiData.rwy.forEach((apiValue, index) => {
-      const existingValue = result.rwy![index];
-      // Only update if existing value is null or API has valid data
-      if (existingValue === null && apiValue !== null) {
-        result.rwy![index] = apiValue;
+  if (apiData.rwy) {
+    result.rwy = apiData.rwy;
+  }
+
+  if (apiData.altitude) {
+    // Only update departure (index 0) and arrival (index 2) altitudes, preserve operating (index 1)
+    if (result.altitude && apiData.altitude) {
+      // Preserve existing operating altitude
+      const existingOperatingAltitude = result.altitude[1];
+
+      // Update only departure and arrival altitudes
+      if (apiData.altitude[0] !== undefined) {
+        result.altitude[0] = apiData.altitude[0]; // departure
       }
-    });
+      if (apiData.altitude[2] !== undefined) {
+        result.altitude[2] = apiData.altitude[2]; // arrival
+      }
+
+      // Don't update operating altitude if it's -1 (special value indicating "don't update")
+      if (apiData.altitude[1] !== -1) {
+        result.altitude[1] = apiData.altitude[1];
+      }
+
+      // Ensure operating altitude is preserved
+      result.altitude[1] = existingOperatingAltitude;
+    } else {
+      result.altitude = apiData.altitude;
+    }
   }
 
   return result;
