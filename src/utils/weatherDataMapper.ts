@@ -151,6 +151,156 @@ export function mapTemperaturePressureData(
 }
 
 /**
+ * Map airport-specific temperature and pressure data for departure and arrival airports
+ * Operating values are not updated (manual entry only)
+ */
+export function mapAirportSpecificWeatherData(
+  metarData: METARResponse[],
+  tafData: TAFResponse[],
+  options: WeatherMappingOptions = {}
+): Partial<WorksheetData> {
+  const result: Partial<WorksheetData> = {};
+
+  // Process departure airport weather
+  if (options.departureAirport) {
+    const departureMetar = metarData.find(
+      (metar) => metar.icaoId === options.departureAirport
+    );
+
+    const departureTAF = tafData.find(
+      (taf) => taf.icaoId === options.departureAirport
+    );
+
+    // Prefer TAF if available and flight is in the future, otherwise use METAR
+    let departureTemp: number | undefined;
+    let departureAltimeter: number | undefined;
+
+    // First, try to get values from METAR (current conditions)
+    if (departureMetar) {
+      if (departureMetar.temp !== undefined) {
+        departureTemp = departureMetar.temp;
+      }
+      if (departureMetar.altim !== undefined) {
+        // Convert from hectopascals to inches of mercury, rounded to 2 decimal places
+        departureAltimeter =
+          Math.round(departureMetar.altim * 0.0295299 * 100) / 100;
+      }
+    }
+
+    // Then, try TAF if available and flight is in the future
+    if (departureTAF && options.flightDate && options.flightTime) {
+      const selectedTAF = selectTAFForFlightTime(
+        [departureTAF],
+        options.flightDate,
+        options.flightTime
+      );
+
+      if (selectedTAF) {
+        // Only use TAF values if they are defined (TAF values are optional)
+        if (selectedTAF.temp !== undefined) {
+          departureTemp = selectedTAF.temp;
+        }
+        if (selectedTAF.altim !== undefined) {
+          departureAltimeter = selectedTAF.altim;
+        }
+      }
+    }
+
+    // Update departure values if available
+    if (departureTemp !== undefined) {
+      const temp = Math.round(departureTemp);
+      if (!options.validateData || isValidTemperature(temp)) {
+        if (!result.temp) {
+          result.temp = [-1, -1, -1]; // Initialize with placeholders
+        }
+        result.temp[0] = temp; // departure
+      }
+    }
+
+    if (departureAltimeter !== undefined) {
+      if (!options.validateData || isValidAltimeter(departureAltimeter)) {
+        // Only create the array if it doesn't exist, but don't set all defaults
+        if (!result.altimeter) {
+          // Create array with -1 as placeholder for positions we don't have data for
+          result.altimeter = [-1, -1, -1];
+        }
+        result.altimeter[0] = departureAltimeter; // departure
+      }
+    }
+  }
+
+  // Process arrival airport weather
+  if (options.arrivalAirport) {
+    const arrivalMetar = metarData.find(
+      (metar) => metar.icaoId === options.arrivalAirport
+    );
+
+    const arrivalTAF = tafData.find(
+      (taf) => taf.icaoId === options.arrivalAirport
+    );
+
+    // Prefer TAF if available and flight is in the future, otherwise use METAR
+    let arrivalTemp: number | undefined;
+    let arrivalAltimeter: number | undefined;
+
+    // First, try to get values from METAR (current conditions)
+    if (arrivalMetar) {
+      if (arrivalMetar.temp !== undefined) {
+        arrivalTemp = arrivalMetar.temp;
+      }
+      if (arrivalMetar.altim !== undefined) {
+        // Convert from hectopascals to inches of mercury, rounded to 2 decimal places
+        arrivalAltimeter =
+          Math.round(arrivalMetar.altim * 0.0295299 * 100) / 100;
+      }
+    }
+
+    // Then, try TAF if available and flight is in the future
+    if (arrivalTAF && options.flightDate && options.flightTime) {
+      const selectedTAF = selectTAFForFlightTime(
+        [arrivalTAF],
+        options.flightDate,
+        options.flightTime
+      );
+
+      if (selectedTAF) {
+        // Only use TAF values if they are defined (TAF values are optional)
+        if (selectedTAF.temp !== undefined) {
+          arrivalTemp = selectedTAF.temp;
+        }
+        if (selectedTAF.altim !== undefined) {
+          arrivalAltimeter = selectedTAF.altim;
+        }
+      }
+    }
+
+    // Update arrival values if available
+    if (arrivalTemp !== undefined) {
+      const temp = Math.round(arrivalTemp);
+      if (!options.validateData || isValidTemperature(temp)) {
+        if (!result.temp) {
+          result.temp = [-1, -1, -1]; // Initialize with placeholders
+        }
+        result.temp[2] = temp; // arrival
+      }
+    }
+
+    if (arrivalAltimeter !== undefined) {
+      if (!options.validateData || isValidAltimeter(arrivalAltimeter)) {
+        // Only create the array if it doesn't exist, but don't set all defaults
+        if (!result.altimeter) {
+          // Create array with -1 as placeholder for positions we don't have data for
+          result.altimeter = [-1, -1, -1];
+        }
+        result.altimeter[2] = arrivalAltimeter; // arrival
+      }
+    }
+  }
+
+  return result;
+}
+
+/**
  * Extract runway data from airport information
  */
 export function mapRunwayData(
@@ -283,17 +433,17 @@ export function mapWeatherDataToWorksheet(
       result.warnings.push("No wind/temperature data available");
     }
 
-    // Map temperature and pressure data
+    // Map airport-specific temperature and pressure data
     if (apiData.metar || apiData.taf) {
-      const tempPressureData = mapTemperaturePressureData(
+      const airportWeatherData = mapAirportSpecificWeatherData(
         apiData.metar || [],
         apiData.taf || [],
         options
       );
-      result.data = { ...result.data, ...tempPressureData };
+      result.data = { ...result.data, ...airportWeatherData };
     } else {
       result.warnings.push(
-        "No METAR/TAF data available for temperature/pressure"
+        "No METAR/TAF data available for airport-specific temperature/pressure"
       );
     }
 
@@ -589,14 +739,20 @@ export function isApiPopulatedData(data: Partial<WorksheetData>): {
       data.wind[0].some((val) => val !== 0)
     ),
     temperature: !!(
-      data.temp &&
-      Array.isArray(data.temp) &&
-      data.temp.some((val) => val !== 21)
+      (
+        data.temp &&
+        Array.isArray(data.temp) &&
+        ((data.temp[0] !== undefined && data.temp[0] !== 21) || // departure
+          (data.temp[2] !== undefined && data.temp[2] !== 21))
+      ) // arrival
     ),
     pressure: !!(
-      data.altimeter &&
-      Array.isArray(data.altimeter) &&
-      data.altimeter.some((val) => val !== 29.92)
+      (
+        data.altimeter &&
+        Array.isArray(data.altimeter) &&
+        (data.altimeter[0] !== 29.92 || data.altimeter[2] !== 29.92) && // departure or arrival different from default
+        (data.altimeter[0] !== undefined || data.altimeter[2] !== undefined)
+      ) // at least one is defined
     ),
     runway: !!(
       data.rwy &&
@@ -634,11 +790,53 @@ export function mergeWeatherData(
   }
 
   if (apiData.temp) {
-    result.temp = apiData.temp;
+    // Only update departure (index 0) and arrival (index 2) temperatures, preserve operating (index 1)
+    if (result.temp && apiData.temp) {
+      // Preserve existing operating temperature
+      const existingOperatingTemp = result.temp[1];
+
+      // Update only departure and arrival temperatures (ignore placeholder -1)
+      if (apiData.temp[0] !== undefined && apiData.temp[0] !== -1) {
+        result.temp[0] = apiData.temp[0]; // departure
+      }
+      if (apiData.temp[2] !== undefined && apiData.temp[2] !== -1) {
+        result.temp[2] = apiData.temp[2]; // arrival
+      }
+
+      // Ensure operating temperature is preserved (manual entry only)
+      // Only restore if it wasn't a placeholder
+      if (existingOperatingTemp !== -1) {
+        result.temp[1] = existingOperatingTemp;
+      }
+    } else {
+      result.temp = apiData.temp;
+    }
   }
 
   if (apiData.altimeter) {
-    result.altimeter = apiData.altimeter;
+    // Only update departure (index 0) and arrival (index 2) altimeters, preserve operating (index 1)
+    if (result.altimeter && apiData.altimeter) {
+      // Preserve existing operating altimeter
+      const existingOperatingAltimeter = result.altimeter[1];
+
+      // Update only departure and arrival altimeters (ignore placeholder -1)
+      if (apiData.altimeter[0] !== undefined && apiData.altimeter[0] !== -1) {
+        result.altimeter[0] = apiData.altimeter[0]; // departure
+      }
+      if (apiData.altimeter[2] !== undefined && apiData.altimeter[2] !== -1) {
+        result.altimeter[2] = apiData.altimeter[2]; // arrival
+      }
+
+      // Ensure operating altimeter is preserved (manual entry only)
+      // Only restore if it wasn't a placeholder
+      if (existingOperatingAltimeter !== -1) {
+        result.altimeter[1] = existingOperatingAltimeter;
+      }
+    } else {
+      // No existing altimeter data, use API data as-is (including placeholders)
+      // The operating altimeter (index 1) will be a placeholder -1 if not provided
+      result.altimeter = apiData.altimeter;
+    }
   }
 
   if (apiData.rwy) {

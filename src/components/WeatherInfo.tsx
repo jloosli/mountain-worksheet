@@ -174,7 +174,7 @@ export default function WeatherInfo({
                   type="number"
                   min={0}
                   max={359}
-                  value={displayData.wind[0][altitudes.indexOf(alt)] || ""}
+                  value={displayData.wind?.[0]?.[altitudes.indexOf(alt)] || ""}
                   onChange={(e) =>
                     handleNumericChange(
                       0,
@@ -196,7 +196,7 @@ export default function WeatherInfo({
                   type="number"
                   min={0}
                   max={150}
-                  value={displayData.wind[1][altitudes.indexOf(alt)] || ""}
+                  value={displayData.wind?.[1]?.[altitudes.indexOf(alt)] || ""}
                   onChange={(e) =>
                     handleNumericChange(
                       1,
@@ -218,7 +218,7 @@ export default function WeatherInfo({
                   type="number"
                   min={-50}
                   max={50}
-                  value={displayData.wind[2][altitudes.indexOf(alt)] || ""}
+                  value={displayData.wind?.[2]?.[altitudes.indexOf(alt)] || ""}
                   onChange={(e) =>
                     handleNumericChange(
                       2,

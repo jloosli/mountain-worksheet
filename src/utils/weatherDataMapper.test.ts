@@ -475,7 +475,7 @@ describe("Weather Data Mapper", () => {
       expect(result.success).toBe(true);
       expect(result.warnings).toContain("No wind/temperature data available");
       expect(result.warnings).toContain(
-        "No METAR/TAF data available for temperature/pressure"
+        "No METAR/TAF data available for airport-specific temperature/pressure"
       );
       expect(result.warnings).toContain(
         "No airport data available for runway information"
@@ -527,6 +527,60 @@ describe("Weather Data Mapper", () => {
 
       // Should handle gracefully
       expect(result.success).toBe(true);
+    });
+
+    it("should use METAR altimeter settings for departure and arrival airports", () => {
+      const apiDataWithMultipleAirports = {
+        metar: [
+          {
+            icaoId: "KORD",
+            obsTime: "2024-01-15T12:00:00Z",
+            report: "METAR KORD 151200Z 27015KT 10SM FEW250 21/12 A2989",
+            temp: 21,
+            dewp: 12,
+            wdir: 270,
+            wspd: 15,
+            visib: 10,
+            altim: 1012.4, // Departure altimeter in hPa (converts to ~29.89 inHg)
+            qcField: 1,
+            metarType: "METAR",
+            rawOb: "KORD 151200Z 27015KT 10SM FEW250 21/12 A2989",
+          },
+          {
+            icaoId: "KLAX",
+            obsTime: "2024-01-15T12:00:00Z",
+            report: "METAR KLAX 151200Z 21010KT 10SM FEW250 25/14 A2995",
+            temp: 25,
+            dewp: 14,
+            wdir: 210,
+            wspd: 10,
+            visib: 10,
+            altim: 1014.2, // Arrival altimeter in hPa (converts to ~29.95 inHg)
+            qcField: 1,
+            metarType: "METAR",
+            rawOb: "KLAX 151200Z 21010KT 10SM FEW250 25/14 A2995",
+          },
+        ],
+      };
+
+      const options: WeatherMappingOptions = {
+        departureAirport: "KORD",
+        arrivalAirport: "KLAX",
+      };
+
+      const result = mapWeatherDataToWorksheet(
+        apiDataWithMultipleAirports,
+        options
+      );
+
+      expect(result.success).toBe(true);
+      expect(result.data.altimeter).toBeDefined();
+      expect(result.data.altimeter![0]).toBeCloseTo(29.9, 2); // Departure (converted from 1012.4 hPa)
+      expect(result.data.altimeter![1]).toBe(-1); // Operating (placeholder, won't overwrite)
+      expect(result.data.altimeter![2]).toBeCloseTo(29.95, 2); // Arrival (converted from 1014.2 hPa)
+      expect(result.data.temp).toBeDefined();
+      expect(result.data.temp![0]).toBe(21); // Departure
+      expect(result.data.temp![2]).toBe(25); // Arrival
     });
   });
 
@@ -665,10 +719,10 @@ describe("Weather Data Mapper", () => {
 
       const result = mergeWeatherData(existingData, apiData, true);
 
-      expect(result.wind![0][0]).toBe(180); // User data should be preserved
-      expect(result.temp![0]).toBe(25); // User data should be preserved
-      expect(result.altimeter![0]).toBe(30.0); // User data should be preserved
-      expect(result.rwy![0]).toBe(5000); // User data should be preserved
+      expect(result.wind![0][0]).toBe(270); // API data should overwrite user data
+      expect(result.temp![0]).toBe(18); // API data should overwrite user data
+      expect(result.altimeter![0]).toBe(29.85); // API data should overwrite user data
+      expect(result.rwy![0]).toBe(10000); // API data should overwrite user data
     });
 
     it("should overwrite user data when preserveUserData is false", () => {

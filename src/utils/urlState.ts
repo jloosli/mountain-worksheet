@@ -12,9 +12,9 @@ const serializeValue = (value: unknown): string | null => {
       // Handle nested arrays by joining each sub-array with "|" and all sub-arrays with "||"
       const nestedSerialized = value.map((subArray) => {
         const filtered = subArray.filter(
-          (v) => v !== null && v !== undefined && v !== ""
+          (v: unknown) => v !== null && v !== undefined && v !== ""
         );
-        const mapped = filtered.map((v) => {
+        const mapped = filtered.map((v: unknown) => {
           if (typeof v === "boolean") return v ? "1" : "0";
           return String(v);
         });

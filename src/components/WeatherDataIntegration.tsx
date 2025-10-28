@@ -212,7 +212,7 @@ export default function WeatherDataIntegration({
         }));
       }
     },
-    [worksheetData, onDataUpdate, canFetchWeather]
+    [worksheetData, onDataUpdate, canFetchWeather, onTimestampUpdate]
   );
 
   const handleRetry = useCallback(() => {

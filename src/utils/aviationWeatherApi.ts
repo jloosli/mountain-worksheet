@@ -303,7 +303,7 @@ export async function getAirportInfo(
  */
 export async function getWindTemp(
   airports: string[],
-  _altitudes: number[] = [3000, 6000, 9000, 12000, 15000]
+  _altitudes: number[] = [3000, 6000, 9000, 12000, 15000] // eslint-disable-line @typescript-eslint/no-unused-vars
 ): Promise<WindTempResponse[]> {
   const params = {
     region: "us",

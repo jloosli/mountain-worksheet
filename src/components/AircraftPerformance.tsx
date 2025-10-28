@@ -41,6 +41,7 @@ export default function AircraftPerformance({
         temperature: false,
         pressure: false,
         runway: false,
+        altitude: false,
       };
 
   // Update local data when initialData changes (from API population)
@@ -94,7 +95,17 @@ export default function AircraftPerformance({
       "bg-white border-gray-300 dark:bg-gray-800 dark:border-gray-600";
 
     if (fieldType === "temp" || fieldType === "altimeter") {
-      return apiPopulated.temperature || apiPopulated.pressure
+      // Only apply API styling to departure (index 0) and arrival (index 2) fields
+      // Operating field (index 1) should always be manual entry (no API styling)
+      const isApiPopulated =
+        index !== 1 && // Never apply API styling to operating field
+        ((fieldType === "temp" && apiPopulated.temperature) ||
+          (fieldType === "altimeter" && apiPopulated.pressure)) &&
+        ((index === 0 &&
+          displayData[fieldType][0] !== (fieldType === "temp" ? 21 : 29.92)) || // departure
+          (index === 2 &&
+            displayData[fieldType][2] !== (fieldType === "temp" ? 21 : 29.92))); // arrival
+      return isApiPopulated
         ? `${baseClasses} ${apiPopulatedClasses}`
         : `${baseClasses} ${manualClasses}`;
     } else if (fieldType === "rwy") {
@@ -102,9 +113,11 @@ export default function AircraftPerformance({
         ? `${baseClasses} ${apiPopulatedClasses}`
         : `${baseClasses} ${manualClasses}`;
     } else if (fieldType === "altitude") {
-      // Check if this specific altitude index is API-populated
+      // Only apply API styling to departure (index 0) and arrival (index 2) altitudes
+      // Operating altitude (index 1) should always be manual entry (no API styling)
       const isApiPopulated =
         apiPopulated.altitude &&
+        index !== 1 && // Never apply API styling to operating altitude
         ((index === 0 && displayData.altitude[0] !== 8000) || // departure
           (index === 2 && displayData.altitude[2] !== 8000)); // arrival
       return isApiPopulated
@@ -195,7 +208,7 @@ export default function AircraftPerformance({
                   onChange={(e) => handleInputChange("temp", 0, e.target.value)}
                   min="-30"
                   max="55"
-                  className={getInputStyling("temp")}
+                  className={getInputStyling("temp", 0)}
                 />
               </td>
               <td className="p-2">
@@ -205,7 +218,7 @@ export default function AircraftPerformance({
                   onChange={(e) => handleInputChange("temp", 1, e.target.value)}
                   min="-30"
                   max="55"
-                  className={getInputStyling("temp")}
+                  className={getInputStyling("temp", 1)}
                 />
               </td>
               <td className="p-2">
@@ -215,7 +228,7 @@ export default function AircraftPerformance({
                   onChange={(e) => handleInputChange("temp", 2, e.target.value)}
                   min="-30"
                   max="55"
-                  className={getInputStyling("temp")}
+                  className={getInputStyling("temp", 2)}
                 />
               </td>
               <td className="p-2">ForeFlight METAR, TAF, Daily, Winds Aloft</td>
@@ -232,7 +245,7 @@ export default function AircraftPerformance({
                   onChange={(e) =>
                     handleInputChange("altimeter", 0, e.target.value)
                   }
-                  className={getInputStyling("altimeter")}
+                  className={getInputStyling("altimeter", 0)}
                 />
               </td>
               <td className="p-2">
@@ -245,7 +258,7 @@ export default function AircraftPerformance({
                   onChange={(e) =>
                     handleInputChange("altimeter", 1, e.target.value)
                   }
-                  className={getInputStyling("altimeter")}
+                  className={getInputStyling("altimeter", 1)}
                 />
               </td>
               <td className="p-2">
@@ -258,7 +271,7 @@ export default function AircraftPerformance({
                   onChange={(e) =>
                     handleInputChange("altimeter", 2, e.target.value)
                   }
-                  className={getInputStyling("altimeter")}
+                  className={getInputStyling("altimeter", 2)}
                 />
               </td>
               <td className="p-2">ForeFlight METAR, TAF, Daily</td>

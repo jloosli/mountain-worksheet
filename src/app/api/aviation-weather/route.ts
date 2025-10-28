@@ -62,23 +62,37 @@ export async function GET(request: NextRequest) {
 
       // For airport endpoint, parse runway dimensions
       if (endpoint === "airport" && Array.isArray(data)) {
-        data = data.map((airport: any) => ({
-          ...airport,
-          runway:
-            airport.runways?.map((runway: any) => {
-              const [length, width] = runway.dimension
-                ?.split("x")
-                .map(Number) || [0, 0];
-              return {
-                id: runway.id,
-                length,
-                width,
-                surface: runway.surface,
-                lighted: true, // Default to true
-                closed: false, // Default to false
-              };
-            }) || [],
-        }));
+        data = data.map(
+          (airport: {
+            runways?: Array<{
+              dimension: string;
+              id: string;
+              surface: string;
+            }>;
+          }) => ({
+            ...airport,
+            runway:
+              airport.runways?.map(
+                (runway: {
+                  dimension: string;
+                  id: string;
+                  surface: string;
+                }) => {
+                  const [length, width] = runway.dimension
+                    ?.split("x")
+                    .map(Number) || [0, 0];
+                  return {
+                    id: runway.id,
+                    length,
+                    width,
+                    surface: runway.surface,
+                    lighted: true, // Default to true
+                    closed: false, // Default to false
+                  };
+                }
+              ) || [],
+          })
+        );
       }
     } else {
       // Handle plain text response (like windtemp data)
