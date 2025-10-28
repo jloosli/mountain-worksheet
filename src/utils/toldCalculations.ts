@@ -696,14 +696,7 @@ export function validatePressureAltitude(
     return { isValid: false, errors, warnings };
   }
 
-  if (pressureAltitude < 0) {
-    errors.push({
-      type: "altitude_out_of_range",
-      message: "Pressure altitude must be non-negative",
-      field: "pressureAltitude",
-      severity: "error",
-    });
-  } else if (pressureAltitude > 15000) {
+  if (pressureAltitude > 15000) {
     warnings.push({
       type: "altitude_out_of_range",
       message:
@@ -870,13 +863,6 @@ export function validateTOLDInputs(
     errors.push({
       type: "invalid_input",
       message: "Pressure altitude is required for TOLD calculations",
-      field: "pressureAltitude",
-      severity: "error",
-    });
-  } else if (params.pressureAltitude < 0) {
-    errors.push({
-      type: "invalid_input",
-      message: "Pressure altitude must be non-negative",
       field: "pressureAltitude",
       severity: "error",
     });

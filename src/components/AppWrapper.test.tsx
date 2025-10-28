@@ -1,9 +1,9 @@
 import { render, screen } from "@testing-library/react";
-import AppWrapper from "../AppWrapper";
+import AppWrapper from "./AppWrapper";
 
 let shouldSuspend = false;
 
-jest.mock("../AppContainer", () => {
+jest.mock("./AppContainer", () => {
   return function MockAppContainer() {
     if (shouldSuspend) {
       throw new Promise(() => {});

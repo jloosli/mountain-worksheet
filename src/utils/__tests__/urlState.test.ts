@@ -51,8 +51,8 @@ describe("serializeState", () => {
     };
 
     const params = serializeState(state);
-    expect(params.get("nested")).toBe("1,2,3,4");
-    expect(params.get("mixed")).toBe("1,a,b,2");
+    expect(params.get("nested")).toBe("1,2||3,4");
+    expect(params.get("mixed")).toBe("1,a||b,2");
   });
 
   it("should handle complex state objects", () => {
@@ -71,7 +71,7 @@ describe("serializeState", () => {
     expect(params.get("pilot")).toBe("John Doe");
     expect(params.get("date")).toBe("2025-09-21");
     expect(params.get("altitude")).toBe("1000,2000,3000");
-    expect(params.get("wind")).toBe("0,90,180,5,10,15");
+    expect(params.get("wind")).toBe("0,90,180||5,10,15");
     expect(params.get("flags")).toBe("1,0,1");
   });
 });
@@ -173,7 +173,10 @@ describe("deserializeState", () => {
       pilot: "John Doe",
       date: "2025-09-21",
       altitude: [1000, 2000, 3000],
-      wind: [0, 90, 180, 5, 10, 15], // Note: Flattened array due to serialization
+      wind: [
+        [0, 90, 180],
+        [5, 10, 15],
+      ],
       turb: true,
     });
   });

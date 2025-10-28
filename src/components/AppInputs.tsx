@@ -1,11 +1,12 @@
 "use client";
 
-import { type ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import SortieInfo from "@/components/SortieInfo";
 import WeatherInfo from "@/components/WeatherInfo";
 import AircraftPerformance from "@/components/AircraftPerformance";
 import AircraftWeight from "@/components/AircraftWeight";
 import MountainQuals from "@/components/MountainQuals";
+import WeatherDataIntegration from "@/components/WeatherDataIntegration";
 import type { URLSerializable, WorksheetData } from "@/utils/types";
 import { LinkIcon } from "@heroicons/react/24/solid";
 
@@ -18,8 +19,16 @@ export default function AppInputs({
   state,
   onStateUpdate,
 }: WorksheetFormProps): ReactNode {
+  const [weatherLastUpdated, setWeatherLastUpdated] = useState<Date | null>(
+    null
+  );
+
   const handleUpdate = (data: Partial<URLSerializable<WorksheetData>>) => {
     onStateUpdate(data);
+  };
+
+  const handleWeatherTimestampUpdate = (timestamp: Date) => {
+    setWeatherLastUpdated(timestamp);
   };
 
   const handleReset = () => {
@@ -92,9 +101,23 @@ export default function AppInputs({
           </button>
         </div>
       </div>
+      <WeatherDataIntegration
+        worksheetData={state}
+        onDataUpdate={handleUpdate}
+        onTimestampUpdate={handleWeatherTimestampUpdate}
+      />
       <SortieInfo onUpdate={handleUpdate} initialData={sortieData} />
-      <WeatherInfo onUpdate={handleUpdate} initialData={weatherData} />
-      <AircraftPerformance onUpdate={handleUpdate} initialData={perfData} />
+      <WeatherInfo
+        onUpdate={handleUpdate}
+        initialData={weatherData}
+        worksheetData={state}
+        lastUpdated={weatherLastUpdated || undefined}
+      />
+      <AircraftPerformance
+        onUpdate={handleUpdate}
+        initialData={perfData}
+        worksheetData={state}
+      />
       <AircraftWeight onUpdate={handleUpdate} initialData={weightData} />
       <MountainQuals onUpdate={handleUpdate} initialData={mtnQualsData} />
     </div>

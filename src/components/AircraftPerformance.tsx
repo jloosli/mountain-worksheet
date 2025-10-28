@@ -1,6 +1,8 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import type { URLSerializable, WorksheetData } from "@/utils/types";
+import { isApiPopulatedData } from "@/utils/weatherDataMapper";
 
 type PerfFields = Pick<
   WorksheetData,
@@ -10,6 +12,7 @@ type PerfFields = Pick<
 interface AircraftPerformanceProps {
   initialData?: PerfFields;
   onUpdate: (data: Partial<URLSerializable<WorksheetData>>) => void;
+  worksheetData?: Partial<WorksheetData>; // Full worksheet data to check API population
 }
 
 const DEFAULT_DATA: PerfFields = {
@@ -23,10 +26,105 @@ const DEFAULT_DATA: PerfFields = {
 export default function AircraftPerformance({
   initialData = DEFAULT_DATA,
   onUpdate,
+  worksheetData,
 }: AircraftPerformanceProps) {
+  const [data, setData] = useState<PerfFields>(() => ({
+    ...DEFAULT_DATA,
+    ...initialData,
+  }));
+
+  // Determine which fields are API-populated
+  const apiPopulated = worksheetData
+    ? isApiPopulatedData(worksheetData)
+    : {
+        wind: false,
+        temperature: false,
+        pressure: false,
+        runway: false,
+        altitude: false,
+      };
+
+  // Update local data when initialData changes (from API population)
+  useEffect(() => {
+    if (initialData) {
+      setData((prev) => ({
+        ...prev,
+        ...initialData,
+      }));
+    }
+  }, [initialData]);
+
+  // Update local data when worksheetData changes (from API population)
+  useEffect(() => {
+    if (worksheetData) {
+      setData((prev) => ({
+        ...prev,
+        airport: worksheetData.airport ?? prev.airport,
+        temp: worksheetData.temp ?? prev.temp,
+        altimeter: worksheetData.altimeter ?? prev.altimeter,
+        altitude: worksheetData.altitude ?? prev.altitude,
+        rwy: worksheetData.rwy ?? prev.rwy,
+      }));
+    }
+  }, [worksheetData]);
+
+  // Use worksheetData for display values if available, otherwise use local data
+  const displayData = worksheetData
+    ? {
+        airport: worksheetData.airport || data.airport,
+        temp: worksheetData.temp || data.temp,
+        altimeter: worksheetData.altimeter || data.altimeter,
+        altitude: worksheetData.altitude || data.altitude,
+        rwy: worksheetData.rwy || data.rwy,
+      }
+    : data;
   const getValue = (category: keyof PerfFields, index: number): string => {
-    const arr = initialData[category];
+    const arr = displayData[category];
     return arr[index]?.toString() ?? "";
+  };
+
+  // Helper function to get input styling based on API population
+  const getInputStyling = (
+    fieldType: "temp" | "altimeter" | "altitude" | "rwy",
+    index?: number
+  ) => {
+    const baseClasses = "w-full border rounded p-1";
+    const apiPopulatedClasses =
+      "bg-blue-50 border-blue-300 dark:bg-blue-900/20 dark:border-blue-600";
+    const manualClasses =
+      "bg-white border-gray-300 dark:bg-gray-800 dark:border-gray-600";
+
+    if (fieldType === "temp" || fieldType === "altimeter") {
+      // Only apply API styling to departure (index 0) and arrival (index 2) fields
+      // Operating field (index 1) should always be manual entry (no API styling)
+      const isApiPopulated =
+        index !== 1 && // Never apply API styling to operating field
+        ((fieldType === "temp" && apiPopulated.temperature) ||
+          (fieldType === "altimeter" && apiPopulated.pressure)) &&
+        ((index === 0 &&
+          displayData[fieldType][0] !== (fieldType === "temp" ? 21 : 29.92)) || // departure
+          (index === 2 &&
+            displayData[fieldType][2] !== (fieldType === "temp" ? 21 : 29.92))); // arrival
+      return isApiPopulated
+        ? `${baseClasses} ${apiPopulatedClasses}`
+        : `${baseClasses} ${manualClasses}`;
+    } else if (fieldType === "rwy") {
+      return apiPopulated.runway
+        ? `${baseClasses} ${apiPopulatedClasses}`
+        : `${baseClasses} ${manualClasses}`;
+    } else if (fieldType === "altitude") {
+      // Only apply API styling to departure (index 0) and arrival (index 2) altitudes
+      // Operating altitude (index 1) should always be manual entry (no API styling)
+      const isApiPopulated =
+        apiPopulated.altitude &&
+        index !== 1 && // Never apply API styling to operating altitude
+        ((index === 0 && displayData.altitude[0] !== 8000) || // departure
+          (index === 2 && displayData.altitude[2] !== 8000)); // arrival
+      return isApiPopulated
+        ? `${baseClasses} ${apiPopulatedClasses}`
+        : `${baseClasses} ${manualClasses}`;
+    }
+    return `${baseClasses} ${manualClasses}`;
   };
 
   const handleInputChange = (
@@ -110,7 +208,7 @@ export default function AircraftPerformance({
                   onChange={(e) => handleInputChange("temp", 0, e.target.value)}
                   min="-30"
                   max="55"
-                  className="w-full border rounded p-1"
+                  className={getInputStyling("temp", 0)}
                 />
               </td>
               <td className="p-2">
@@ -120,7 +218,7 @@ export default function AircraftPerformance({
                   onChange={(e) => handleInputChange("temp", 1, e.target.value)}
                   min="-30"
                   max="55"
-                  className="w-full border rounded p-1"
+                  className={getInputStyling("temp", 1)}
                 />
               </td>
               <td className="p-2">
@@ -130,7 +228,7 @@ export default function AircraftPerformance({
                   onChange={(e) => handleInputChange("temp", 2, e.target.value)}
                   min="-30"
                   max="55"
-                  className="w-full border rounded p-1"
+                  className={getInputStyling("temp", 2)}
                 />
               </td>
               <td className="p-2">ForeFlight METAR, TAF, Daily, Winds Aloft</td>
@@ -147,7 +245,7 @@ export default function AircraftPerformance({
                   onChange={(e) =>
                     handleInputChange("altimeter", 0, e.target.value)
                   }
-                  className="w-full border rounded p-1"
+                  className={getInputStyling("altimeter", 0)}
                 />
               </td>
               <td className="p-2">
@@ -160,7 +258,7 @@ export default function AircraftPerformance({
                   onChange={(e) =>
                     handleInputChange("altimeter", 1, e.target.value)
                   }
-                  className="w-full border rounded p-1"
+                  className={getInputStyling("altimeter", 1)}
                 />
               </td>
               <td className="p-2">
@@ -173,7 +271,7 @@ export default function AircraftPerformance({
                   onChange={(e) =>
                     handleInputChange("altimeter", 2, e.target.value)
                   }
-                  className="w-full border rounded p-1"
+                  className={getInputStyling("altimeter", 2)}
                 />
               </td>
               <td className="p-2">ForeFlight METAR, TAF, Daily</td>
@@ -187,7 +285,7 @@ export default function AircraftPerformance({
                   onChange={(e) =>
                     handleInputChange("altitude", 0, e.target.value)
                   }
-                  className="w-full border rounded p-1"
+                  className={getInputStyling("altitude", 0)}
                 />
               </td>
               <td className="p-2">
@@ -197,7 +295,7 @@ export default function AircraftPerformance({
                   onChange={(e) =>
                     handleInputChange("altitude", 1, e.target.value)
                   }
-                  className="w-full border rounded p-1"
+                  className={getInputStyling("altitude", 1)}
                 />
               </td>
               <td className="p-2">
@@ -207,7 +305,7 @@ export default function AircraftPerformance({
                   onChange={(e) =>
                     handleInputChange("altitude", 2, e.target.value)
                   }
-                  className="w-full border rounded p-1"
+                  className={getInputStyling("altitude", 2)}
                 />
               </td>
               <td className="p-2">Flight Plan, ForeFlight</td>
@@ -219,7 +317,7 @@ export default function AircraftPerformance({
                   type="number"
                   value={getValue("rwy", 0)}
                   onChange={(e) => handleInputChange("rwy", 0, e.target.value)}
-                  className="w-full border rounded p-1"
+                  className={getInputStyling("rwy")}
                 />
               </td>
               <td className="p-2"></td>
@@ -228,7 +326,7 @@ export default function AircraftPerformance({
                   type="number"
                   value={getValue("rwy", 1)}
                   onChange={(e) => handleInputChange("rwy", 1, e.target.value)}
-                  className="w-full border rounded p-1"
+                  className={getInputStyling("rwy")}
                 />
               </td>
               <td className="p-2">ForeFlight</td>
