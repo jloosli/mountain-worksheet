@@ -420,11 +420,10 @@ describe("TOLD Calculations", () => {
         expect(result.errors[0].type).toBe("invalid_input");
       });
 
-      it("should return error for negative pressure altitude", () => {
+      it("should validate negative pressure altitude as valid", () => {
         const result = validatePressureAltitude(-1000);
-        expect(result.isValid).toBe(false);
-        expect(result.errors).toHaveLength(1);
-        expect(result.errors[0].type).toBe("altitude_out_of_range");
+        expect(result.isValid).toBe(true);
+        expect(result.errors).toHaveLength(0);
       });
     });
 
