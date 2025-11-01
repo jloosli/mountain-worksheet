@@ -4,12 +4,16 @@
 
 ## Description
 
-The CAP Mountain Flying Worksheet is a web application designed to help pilots plan and execute mountain flying operations safely and effectively. It provides tools and resources for flight planning, risk assessment, and decision-making in mountainous terrain.
+The CAP Mountain Flying Worksheet is a web application designed to help pilots plan and execute mountain flying operations safely and effectively. It provides tools and resources for flight planning, risk assessment, and decision-making in mountainous terrain. It also integrates with the Aviation Weather API to provide weather forecasts for the flight.
 Built with [Next.js](https://nextjs.org/) and [Tailwind CSS](https://tailwindcss.com/).
 
 ## Chart Calculations
 
 Most calculations are based on the POH for the aircraft in use. Tables are interplated using [bilinear interpolation](https://en.wikipedia.org/wiki/Bilinear_interpolation).
+
+## Data Source
+
+* [Aviation Weather API](https://aviationweather.gov/data/api/) ([OpenAPI Schema](https://aviationweather.gov/data/schema/openapi.yaml))
 
 ## Development
 
