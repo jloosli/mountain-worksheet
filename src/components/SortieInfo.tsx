@@ -85,7 +85,7 @@ export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
           </select>
         </div>
 
-       <div className="space-y-2">
+        <div className="space-y-2">
           <label htmlFor="date" className="block text-sm font-medium">
             Date of Sortie
           </label>
