@@ -43,7 +43,10 @@ export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
     e: ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
-    const updatedData = { ...formData, [name]: value };
+    // Convert to uppercase for tailN and route fields
+    const processedValue =
+      name === "tailN" || name === "route" ? value.toUpperCase() : value;
+    const updatedData = { ...formData, [name]: processedValue };
     setFormData(updatedData);
     onUpdate(updatedData);
   };
@@ -57,7 +60,8 @@ export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
 
   const handleAirportChange = (index: number, value: string) => {
     const airportArray = [...formData.airport] as [string, string];
-    airportArray[index] = value;
+    // Convert airport codes to uppercase
+    airportArray[index] = value.toUpperCase();
     const updatedData = { ...formData, airport: airportArray };
     setFormData(updatedData);
     onUpdate(updatedData);
