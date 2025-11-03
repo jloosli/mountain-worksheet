@@ -9,6 +9,8 @@ import MountainQuals from "@/components/MountainQuals";
 import WeatherDataIntegration from "@/components/WeatherDataIntegration";
 import type { URLSerializable, WorksheetData } from "@/utils/types";
 import { LinkIcon } from "@heroicons/react/24/solid";
+import { CloudArrowDownIcon } from "@heroicons/react/24/outline";
+import { ArrowPathIcon } from "@heroicons/react/24/solid";
 
 interface WorksheetFormProps {
   state: URLSerializable<WorksheetData>;
@@ -99,13 +101,33 @@ export default function AppInputs({
             <LinkIcon className="h-5 w-5" />
             Copy Link
           </button>
+          <WeatherDataIntegration
+            worksheetData={state}
+            onDataUpdate={handleUpdate}
+            onTimestampUpdate={handleWeatherTimestampUpdate}
+            hideBox={true}
+            renderButton={({ onClick, disabled, isLoading }) => (
+              <button
+                type="button"
+                onClick={onClick}
+                disabled={disabled}
+                className={`px-4 py-2 rounded transition-colors flex items-center gap-2 ${
+                  !disabled
+                    ? "bg-green-500 text-white hover:bg-green-600"
+                    : "bg-gray-300 text-gray-500 cursor-not-allowed dark:bg-gray-600 dark:text-gray-400"
+                }`}
+              >
+                {isLoading ? (
+                  <ArrowPathIcon className="h-5 w-5 animate-spin" />
+                ) : (
+                  <CloudArrowDownIcon className="h-5 w-5" />
+                )}
+                {isLoading ? "Loading..." : "Fetch Weather"}
+              </button>
+            )}
+          />
         </div>
       </div>
-      <WeatherDataIntegration
-        worksheetData={state}
-        onDataUpdate={handleUpdate}
-        onTimestampUpdate={handleWeatherTimestampUpdate}
-      />
       <SortieInfo onUpdate={handleUpdate} initialData={sortieData} />
       <WeatherInfo
         onUpdate={handleUpdate}

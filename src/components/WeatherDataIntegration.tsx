@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, type ReactNode } from "react";
 import {
   CloudArrowDownIcon,
   ExclamationTriangleIcon,
@@ -24,6 +24,12 @@ interface WeatherDataIntegrationProps {
   onDataUpdate: (data: Partial<WorksheetData>) => void;
   onTimestampUpdate?: (timestamp: Date) => void; // Callback to pass timestamp to parent
   disabled?: boolean;
+  hideBox?: boolean; // If true, don't render the box UI, only modals
+  renderButton?: (props: {
+    onClick: () => void;
+    disabled: boolean;
+    isLoading: boolean;
+  }) => ReactNode; // Optional render function for custom button rendering
 }
 
 interface WeatherApiState {
@@ -44,6 +50,8 @@ export default function WeatherDataIntegration({
   onDataUpdate,
   onTimestampUpdate,
   disabled = false,
+  hideBox = false,
+  renderButton,
 }: WeatherDataIntegrationProps) {
   const [apiState, setApiState] = useState<WeatherApiState>({
     isLoading: false,
@@ -235,66 +243,76 @@ export default function WeatherDataIntegration({
   const isApiDataPopulated = isApiPopulatedData(worksheetData);
   const canFetch = canFetchWeather() && !disabled;
 
+  const buttonProps = {
+    onClick: () => fetchWeatherData(false),
+    disabled: !canFetch || apiState.isLoading,
+    isLoading: apiState.isLoading,
+  };
+
   return (
     <>
-      <div className="flex items-center justify-between p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-        <div className="flex items-center space-x-3">
-          <CloudArrowDownIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-          <div>
-            <h3 className="text-sm font-medium text-blue-900 dark:text-blue-100">
-              Aviation Weather Data
-            </h3>
-            <p className="text-xs text-blue-700 dark:text-blue-300">
-              {isApiDataPopulated.wind ||
-              isApiDataPopulated.temperature ||
-              isApiDataPopulated.pressure ||
-              isApiDataPopulated.runway
-                ? "Data populated from AviationWeather.gov"
-                : "No weather data loaded"}
-            </p>
-            {apiState.lastUpdated && (
-              <p className="text-xs text-blue-600 dark:text-blue-400">
-                Last updated: {apiState.lastUpdated.toLocaleTimeString()}
+      {!hideBox && (
+        <div className="flex items-center justify-between p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+          <div className="flex items-center space-x-3">
+            <CloudArrowDownIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            <div>
+              <h3 className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                Aviation Weather Data
+              </h3>
+              <p className="text-xs text-blue-700 dark:text-blue-300">
+                {isApiDataPopulated.wind ||
+                isApiDataPopulated.temperature ||
+                isApiDataPopulated.pressure ||
+                isApiDataPopulated.runway
+                  ? "Data populated from AviationWeather.gov"
+                  : "No weather data loaded"}
               </p>
+              {apiState.lastUpdated && (
+                <p className="text-xs text-blue-600 dark:text-blue-400">
+                  Last updated: {apiState.lastUpdated.toLocaleTimeString()}
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            {isApiDataPopulated.wind ||
+            isApiDataPopulated.temperature ||
+            isApiDataPopulated.pressure ||
+            isApiDataPopulated.runway ? (
+              <div className="flex items-center space-x-1 text-xs text-green-600 dark:text-green-400">
+                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                <span>Data Available</span>
+              </div>
+            ) : (
+              <div className="flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-400">
+                <ExclamationTriangleIcon className="w-4 h-4" />
+                <span>Manual Entry Required</span>
+              </div>
             )}
+
+            <button
+              type="button"
+              onClick={buttonProps.onClick}
+              disabled={buttonProps.disabled}
+              className={`px-4 py-2 rounded transition-colors flex items-center gap-2 ${
+                canFetch && !apiState.isLoading
+                  ? "bg-green-500 text-white hover:bg-green-600"
+                  : "bg-gray-300 text-gray-500 cursor-not-allowed dark:bg-gray-600 dark:text-gray-400"
+              }`}
+            >
+              {apiState.isLoading ? (
+                <ArrowPathIcon className="h-5 w-5 animate-spin" />
+              ) : (
+                <CloudArrowDownIcon className="h-5 w-5" />
+              )}
+              {apiState.isLoading ? "Loading..." : "Fetch Weather"}
+            </button>
           </div>
         </div>
+      )}
 
-        <div className="flex items-center space-x-2">
-          {isApiDataPopulated.wind ||
-          isApiDataPopulated.temperature ||
-          isApiDataPopulated.pressure ||
-          isApiDataPopulated.runway ? (
-            <div className="flex items-center space-x-1 text-xs text-green-600 dark:text-green-400">
-              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-              <span>Data Available</span>
-            </div>
-          ) : (
-            <div className="flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-400">
-              <ExclamationTriangleIcon className="w-4 h-4" />
-              <span>Manual Entry Required</span>
-            </div>
-          )}
-
-          <button
-            type="button"
-            onClick={() => fetchWeatherData(false)}
-            disabled={!canFetch || apiState.isLoading}
-            className={`px-4 py-2 rounded transition-colors flex items-center gap-2 ${
-              canFetch && !apiState.isLoading
-                ? "bg-green-500 text-white hover:bg-green-600"
-                : "bg-gray-300 text-gray-500 cursor-not-allowed dark:bg-gray-600 dark:text-gray-400"
-            }`}
-          >
-            {apiState.isLoading ? (
-              <ArrowPathIcon className="h-5 w-5 animate-spin" />
-            ) : (
-              <CloudArrowDownIcon className="h-5 w-5" />
-            )}
-            {apiState.isLoading ? "Loading..." : "Fetch Weather"}
-          </button>
-        </div>
-      </div>
+      {renderButton && renderButton(buttonProps)}
 
       {/* Loading Modal */}
       <WeatherLoadingModal
