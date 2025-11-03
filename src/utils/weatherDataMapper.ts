@@ -22,7 +22,7 @@ export const VALIDATION_RANGES = {
   windSpeed: { min: 0, max: 150 },
   temperature: { min: -50, max: 50 },
   altimeter: { min: 28.0, max: 31.0 },
-  runwayLength: { min: 1000, max: 15000 },
+  runwayLength: { min: 1000, max: 20000 }, // Increased to accommodate major airports like KDEN (16000 ft)
   pressure: { min: 20.0, max: 35.0 },
 };
 
@@ -317,8 +317,9 @@ export function mapRunwayData(
 
   // Process departure airport
   if (options.departureAirport) {
+    const departureAirportCode = options.departureAirport.toUpperCase();
     const departureAirport = airportData.find(
-      (airport) => airport.icaoId === options.departureAirport
+      (airport) => airport.icaoId?.toUpperCase() === departureAirportCode
     );
 
     if (departureAirport?.runway) {
@@ -334,8 +335,9 @@ export function mapRunwayData(
 
   // Process arrival airport
   if (options.arrivalAirport) {
+    const arrivalAirportCode = options.arrivalAirport.toUpperCase();
     const arrivalAirport = airportData.find(
-      (airport) => airport.icaoId === options.arrivalAirport
+      (airport) => airport.icaoId?.toUpperCase() === arrivalAirportCode
     );
 
     if (arrivalAirport?.runway) {
