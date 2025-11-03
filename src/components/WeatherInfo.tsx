@@ -252,7 +252,15 @@ export default function WeatherInfo({
             className="rounded border-gray-300"
           />
           <label htmlFor="turbulence">
-            Turbulence (AIRMET Tango)? - ForeFlight AIRMET
+            Turbulence (AIRMET Tango)? -{" "}
+            <a
+              href="https://aviationweather.gov/gfa/#gairmet"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 dark:text-blue-400 hover:underline"
+            >
+              AIRMET
+            </a>
           </label>
         </div>
 
@@ -265,8 +273,15 @@ export default function WeatherInfo({
             className="rounded border-gray-300"
           />
           <label htmlFor="ceilingVisibility">
-            Ceiling and Vis &lt; 10sm/2000&apos;? - ForeFlight Ceiling,
-            Visibility, Cameras
+            Ceiling and Vis &lt; 10sm/2000&apos;? -{" "}
+            <a
+              href="https://aviationweather.gov/gfa/#cigvis"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 dark:text-blue-400 hover:underline"
+            >
+              Cieling/Vis
+            </a>
           </label>
         </div>
 
@@ -279,7 +294,15 @@ export default function WeatherInfo({
             className="rounded border-gray-300"
           />
           <label htmlFor="mountainObscuration">
-            Mtn Obscuration (AIRMET Sierra)? - ForeFlight AIRMET
+            Mtn Obscuration (AIRMET Sierra)? -{" "}
+            <a
+              href="https://aviationweather.gov/gfa/#gairmet"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 dark:text-blue-400 hover:underline"
+            >
+              AIRMET
+            </a>
           </label>
         </div>
       </div>
