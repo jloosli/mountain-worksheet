@@ -66,6 +66,26 @@ export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
         </div>
 
         <div className="space-y-2">
+          <label htmlFor="acType" className="block text-sm font-medium">
+            Aircraft Model
+          </label>
+          <select
+            id="acType"
+            name="acType"
+            value={formData.acType || ""}
+            onChange={handleInputChange}
+            className="w-full px-3 py-2 border rounded-md dark:bg-black/[.15] dark:border-white/[.145]"
+          >
+            <option value="">Select Aircraft</option>
+            {aircraftData.map((aircraft) => (
+              <option key={aircraft.id} value={aircraft.id}>
+                {aircraft.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+       <div className="space-y-2">
           <label htmlFor="date" className="block text-sm font-medium">
             Date of Sortie
           </label>
@@ -91,26 +111,6 @@ export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
             onChange={handleInputChange}
             className="w-full px-3 py-2 border rounded-md dark:bg-black/[.15] dark:border-white/[.145]"
           />
-        </div>
-
-        <div className="space-y-2">
-          <label htmlFor="acType" className="block text-sm font-medium">
-            Aircraft Model
-          </label>
-          <select
-            id="acType"
-            name="acType"
-            value={formData.acType || ""}
-            onChange={handleInputChange}
-            className="w-full px-3 py-2 border rounded-md dark:bg-black/[.15] dark:border-white/[.145]"
-          >
-            <option value="">Select Aircraft</option>
-            {aircraftData.map((aircraft) => (
-              <option key={aircraft.id} value={aircraft.id}>
-                {aircraft.name}
-              </option>
-            ))}
-          </select>
         </div>
 
         <div className="space-y-2">
