@@ -295,7 +295,7 @@ export default function Calculations({ state }: CalculationsProps) {
   }, [maneuveringSpeeds]);
 
   return (
-    <div className="w-full bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
+    <div className="w-full max-w-4xl bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
       <h2 className="text-2xl font-bold mb-4">Calculations</h2>
 
       <div className="space-y-4">

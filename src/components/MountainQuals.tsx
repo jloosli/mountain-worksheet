@@ -25,7 +25,7 @@ export default function MountainQuals({
   }, [initialData]);
 
   return (
-    <section className="flex flex-col gap-4 w-full max-w-2xl">
+    <section className="flex flex-col gap-4 w-full max-w-4xl">
       <h2>Mountain Pilot Qualifications</h2>
       <div className="flex flex-col gap-2">
         <label className="flex items-center gap-2">
