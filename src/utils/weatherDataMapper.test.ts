@@ -210,11 +210,11 @@ describe("Weather Data Mapper", () => {
       expect(result.altimeter).toEqual([29.85, 29.85, 29.85]); // From TAF (current behavior)
     });
 
-    it("should use default values when no data is available", () => {
+    it("should use null values when no data is available", () => {
       const result = mapTemperaturePressureData([], []);
 
-      expect(result.temp).toEqual([21, 21, 21]); // Default values
-      expect(result.altimeter).toEqual([29.92, 29.92, 29.92]); // Default values
+      expect(result.temp).toEqual([null, null, null]); // No default values
+      expect(result.altimeter).toEqual([null, null, null]); // No default values
     });
 
     it("should validate temperature and pressure data", () => {
@@ -230,8 +230,8 @@ describe("Weather Data Mapper", () => {
         validateData: true,
       });
 
-      expect(result.temp).toEqual([21, 21, 21]); // Should use defaults due to validation
-      expect(result.altimeter).toEqual([29.92, 29.92, 29.92]); // Should use defaults due to validation
+      expect(result.temp).toEqual([null, null, null]); // Should use null when validation fails
+      expect(result.altimeter).toEqual([null, null, null]); // Should use null when validation fails
     });
   });
 
@@ -641,15 +641,15 @@ describe("Weather Data Mapper", () => {
       expect(result.runway).toBe(true);
     });
 
-    it("should detect default values as not API-populated", () => {
+    it("should detect null values as not API-populated", () => {
       const data = {
         wind: [
           [0, 0, 0, 0, 0],
           [0, 0, 0, 0, 0],
           [0, 0, 0, 0, 0],
         ],
-        temp: [21, 21, 21],
-        altimeter: [29.92, 29.92, 29.92],
+        temp: [null, null, null],
+        altimeter: [null, null, null],
         rwy: [null, null],
       };
 
@@ -820,9 +820,9 @@ describe("Weather Data Mapper", () => {
         options
       );
 
-      // Should not crash and should return default values
-      expect(result.temp).toEqual([21, 21, 21]);
-      expect(result.altimeter).toEqual([29.92, 29.92, 29.92]);
+      // Should not crash and should return null values
+      expect(result.temp).toEqual([null, null, null]);
+      expect(result.altimeter).toEqual([null, null, null]);
     });
 
     it("should handle empty arrays in API responses", () => {

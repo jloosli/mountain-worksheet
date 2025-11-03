@@ -401,13 +401,13 @@ describe("AircraftPerformance", () => {
     const runwayInput = screen.getAllByDisplayValue("1000")[0];
     fireEvent.change(runwayInput, { target: { value: "" } });
 
-    // Should handle empty string gracefully (converts to 0)
+    // Should handle empty string gracefully (converts to null)
     expect(mockOnUpdate).toHaveBeenCalledWith({
       airport: ["KOGD", "KSLC"],
       temp: [21, 21, 21],
       altimeter: [29.92, 29.92, 29.92],
       altitude: [8000, 8000, 8000],
-      rwy: [0, 1000],
+      rwy: [null, 1000],
     });
   });
 

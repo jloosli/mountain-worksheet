@@ -99,8 +99,8 @@ export function mapTemperaturePressureData(
   options: WeatherMappingOptions = {}
 ): Partial<WorksheetData> {
   const result: Partial<WorksheetData> = {
-    temp: [21, 21, 21], // Default values
-    altimeter: [29.92, 29.92, 29.92], // Default values
+    temp: [null, null, null],
+    altimeter: [null, null, null],
   };
 
   // Process METAR data for current conditions
@@ -396,9 +396,9 @@ export function mapAirportElevationData(
   if (altitudeUpdates.some((val) => val !== undefined)) {
     // Convert sparse array to fixed 3-element array
     result.altitude = [
-      altitudeUpdates[0] ?? 8000, // departure
+      altitudeUpdates[0] ?? null, // departure
       -1, // operating (special value to indicate "don't update")
-      altitudeUpdates[2] ?? 8000, // arrival
+      altitudeUpdates[2] ?? null, // arrival
     ];
   }
 
@@ -739,20 +739,16 @@ export function isApiPopulatedData(data: Partial<WorksheetData>): {
       data.wind[0].some((val) => val !== 0)
     ),
     temperature: !!(
-      (
-        data.temp &&
-        Array.isArray(data.temp) &&
-        ((data.temp[0] !== undefined && data.temp[0] !== 21) || // departure
-          (data.temp[2] !== undefined && data.temp[2] !== 21))
-      ) // arrival
+      data.temp &&
+      Array.isArray(data.temp) &&
+      ((data.temp[0] !== null && data.temp[0] !== undefined) || // departure
+        (data.temp[2] !== null && data.temp[2] !== undefined)) // arrival
     ),
     pressure: !!(
-      (
-        data.altimeter &&
-        Array.isArray(data.altimeter) &&
-        (data.altimeter[0] !== 29.92 || data.altimeter[2] !== 29.92) && // departure or arrival different from default
-        (data.altimeter[0] !== undefined || data.altimeter[2] !== undefined)
-      ) // at least one is defined
+      data.altimeter &&
+      Array.isArray(data.altimeter) &&
+      ((data.altimeter[0] !== null && data.altimeter[0] !== undefined) ||
+        (data.altimeter[2] !== null && data.altimeter[2] !== undefined))
     ),
     runway: !!(
       data.rwy &&
@@ -760,12 +756,10 @@ export function isApiPopulatedData(data: Partial<WorksheetData>): {
       data.rwy.some((val) => val !== null)
     ),
     altitude: !!(
-      (
-        data.altitude &&
-        Array.isArray(data.altitude) &&
-        ((data.altitude[0] !== undefined && data.altitude[0] !== 8000) || // departure
-          (data.altitude[2] !== undefined && data.altitude[2] !== 8000))
-      ) // arrival
+      data.altitude &&
+      Array.isArray(data.altitude) &&
+      ((data.altitude[0] !== null && data.altitude[0] !== undefined) || // departure
+        (data.altitude[2] !== null && data.altitude[2] !== undefined)) // arrival
     ),
   };
 }

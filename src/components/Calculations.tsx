@@ -49,19 +49,15 @@ export default function Calculations({ state }: CalculationsProps) {
 
   // Enhanced TOLD calculation function with pressure altitude integration
   const performTOLDCalculation = useCallback(async () => {
-    // Temporary test data for debugging
-    const testParams = {
-      acType: state.acType || "C182T",
-      weight: state.weight || 2800,
-      rwy: state.rwy || [1000, 1000],
-      PAs: PAs || [8000, 8000, 8000],
-    };
-
+    // Check if required values are provided
     if (
-      !testParams.acType ||
-      !testParams.weight ||
-      !testParams.rwy[0] ||
-      !testParams.rwy[1]
+      !state.acType ||
+      !state.weight ||
+      !state.rwy[0] ||
+      !state.rwy[1] ||
+      !state.temp[0] ||
+      !state.temp[1] ||
+      !state.temp[2]
     ) {
       setToldResults(null);
       setToldErrors([]);
@@ -69,6 +65,13 @@ export default function Calculations({ state }: CalculationsProps) {
       setToldExtrapolationWarnings([]);
       return;
     }
+
+    const testParams = {
+      acType: state.acType,
+      weight: state.weight,
+      rwy: state.rwy as [number, number],
+      PAs: PAs || [8000, 8000, 8000],
+    };
 
     // Validate pressure altitudes are available
     if (PAs.every((pa) => pa === 0)) {
@@ -88,7 +91,7 @@ export default function Calculations({ state }: CalculationsProps) {
           testParams.PAs[2],
           testParams.PAs[1],
         ] as [number, number, number], // [departure, arrival, operating]
-        temperatures: [state.temp[0], state.temp[2], state.temp[1]] as [
+        temperatures: [state.temp[0]!, state.temp[2]!, state.temp[1]!] as [
           number,
           number,
           number
@@ -151,9 +154,9 @@ export default function Calculations({ state }: CalculationsProps) {
   const isTOLDCalculationValid = useCallback(() => {
     return (
       state.acType &&
-      state.weight &&
-      state.rwy[0] &&
-      state.rwy[1] &&
+      state.weight !== null &&
+      state.rwy[0] !== null &&
+      state.rwy[1] !== null &&
       state.temp.every((temp) => temp !== null) &&
       PAs.every((pa) => pa !== null)
     );

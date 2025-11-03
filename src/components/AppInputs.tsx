@@ -68,10 +68,10 @@ export default function AppInputs({
 
   const perfData = {
     airport: state.airport || ["", ""],
-    temp: state.temp || [21, 21, 21],
-    altimeter: state.altimeter || [29.92, 29.92, 29.92],
-    altitude: state.altitude || [8000, 8000, 8000],
-    rwy: state.rwy || [1000, 1000],
+    temp: state.temp || [null, null, null],
+    altimeter: state.altimeter || [null, null, null],
+    altitude: state.altitude || [null, null, null],
+    rwy: state.rwy || [null, null],
   };
 
   const mtnQualsData = {

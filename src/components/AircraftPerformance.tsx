@@ -7,7 +7,12 @@ import { isApiPopulatedData } from "@/utils/weatherDataMapper";
 type PerfFields = Pick<
   WorksheetData,
   "airport" | "temp" | "altimeter" | "altitude" | "rwy"
->;
+> & {
+  temp: [number | null, number | null, number | null];
+  altimeter: [number | null, number | null, number | null];
+  altitude: [number | null, number | null, number | null];
+  rwy: [number | null, number | null];
+};
 
 interface AircraftPerformanceProps {
   initialData?: PerfFields;
@@ -17,10 +22,10 @@ interface AircraftPerformanceProps {
 
 const DEFAULT_DATA: PerfFields = {
   airport: ["", ""],
-  temp: [21, 21, 21],
-  altimeter: [29.92, 29.92, 29.92],
-  altitude: [8000, 8000, 8000],
-  rwy: [1000, 1000],
+  temp: [null, null, null] as [number | null, number | null, number | null],
+  altimeter: [null, null, null] as [number | null, number | null, number | null],
+  altitude: [null, null, null] as [number | null, number | null, number | null],
+  rwy: [null, null] as [number | null, number | null],
 };
 
 export default function AircraftPerformance({
@@ -80,7 +85,8 @@ export default function AircraftPerformance({
     : data;
   const getValue = (category: keyof PerfFields, index: number): string => {
     const arr = displayData[category];
-    return arr[index]?.toString() ?? "";
+    const value = arr[index];
+    return value !== null && value !== undefined ? value.toString() : "";
   };
 
   // Helper function to get input styling based on API population
@@ -100,11 +106,7 @@ export default function AircraftPerformance({
       const isApiPopulated =
         index !== 1 && // Never apply API styling to operating field
         ((fieldType === "temp" && apiPopulated.temperature) ||
-          (fieldType === "altimeter" && apiPopulated.pressure)) &&
-        ((index === 0 &&
-          displayData[fieldType][0] !== (fieldType === "temp" ? 21 : 29.92)) || // departure
-          (index === 2 &&
-            displayData[fieldType][2] !== (fieldType === "temp" ? 21 : 29.92))); // arrival
+          (fieldType === "altimeter" && apiPopulated.pressure));
       return isApiPopulated
         ? `${baseClasses} ${apiPopulatedClasses}`
         : `${baseClasses} ${manualClasses}`;
@@ -117,9 +119,7 @@ export default function AircraftPerformance({
       // Operating altitude (index 1) should always be manual entry (no API styling)
       const isApiPopulated =
         apiPopulated.altitude &&
-        index !== 1 && // Never apply API styling to operating altitude
-        ((index === 0 && displayData.altitude[0] !== 8000) || // departure
-          (index === 2 && displayData.altitude[2] !== 8000)); // arrival
+        index !== 1; // Never apply API styling to operating altitude
       return isApiPopulated
         ? `${baseClasses} ${apiPopulatedClasses}`
         : `${baseClasses} ${manualClasses}`;
@@ -132,36 +132,40 @@ export default function AircraftPerformance({
     index: number,
     value: string
   ) => {
-    const newValue = Number(value);
+    const newValue = value === "" ? null : Number(value);
     const newData = { ...initialData };
 
     switch (category) {
       case "temp":
-        const tempArray = [...initialData.temp] as [number, number, number];
-        tempArray[index] = newValue as number;
+        const tempArray = [...initialData.temp] as [
+          number | null,
+          number | null,
+          number | null
+        ];
+        tempArray[index] = newValue as number | null;
         newData.temp = tempArray;
         break;
       case "altimeter":
         const altimeterArray = [...initialData.altimeter] as [
-          number,
-          number,
-          number
+          number | null,
+          number | null,
+          number | null
         ];
-        altimeterArray[index] = newValue as number;
+        altimeterArray[index] = newValue as number | null;
         newData.altimeter = altimeterArray;
         break;
       case "altitude":
         const altitudeArray = [...initialData.altitude] as [
-          number,
-          number,
-          number
+          number | null,
+          number | null,
+          number | null
         ];
-        altitudeArray[index] = newValue as number;
+        altitudeArray[index] = newValue as number | null;
         newData.altitude = altitudeArray;
         break;
       case "rwy":
-        const rwyArray = [...initialData.rwy] as [number, number];
-        rwyArray[index] = newValue as number;
+        const rwyArray = [...initialData.rwy] as [number | null, number | null];
+        rwyArray[index] = newValue as number | null;
         newData.rwy = rwyArray;
         break;
     }
