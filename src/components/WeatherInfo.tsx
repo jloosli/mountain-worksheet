@@ -153,6 +153,17 @@ export default function WeatherInfo({
           </div>
         )}
       </div>
+      <p className="mb-4">
+        Obtain from aviationweather.gov{" "}
+        <a
+          href="https://aviationweather.gov/gfa/#winds"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-blue-600 dark:text-blue-400 hover:underline"
+        >
+          winds
+        </a>
+      </p>
       <table className="w-full border-collapse">
         <thead>
           <tr className="bg-gray-100 dark:bg-gray-800">
@@ -162,7 +173,6 @@ export default function WeatherInfo({
                 {alt}&apos;
               </th>
             ))}
-            <th className="border p-2 text-left">Obtain From:</th>
           </tr>
         </thead>
         <tbody>
@@ -186,7 +196,6 @@ export default function WeatherInfo({
                 />
               </td>
             ))}
-            <td className="border p-2">Winds Aloft (ForeFlight)</td>
           </tr>
           <tr>
             <td className="border p-2">Wind Velocity (Knots)</td>
@@ -208,7 +217,6 @@ export default function WeatherInfo({
                 />
               </td>
             ))}
-            <td className="border p-2">Winds Aloft (ForeFlight)</td>
           </tr>
           <tr>
             <td className="border p-2">Temperature (°C)</td>
@@ -230,7 +238,6 @@ export default function WeatherInfo({
                 />
               </td>
             ))}
-            <td className="border p-2">Winds Aloft (ForeFlight)</td>
           </tr>
         </tbody>
       </table>

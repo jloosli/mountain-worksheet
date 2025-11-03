@@ -172,6 +172,17 @@ export default function AircraftPerformance({
   return (
     <div className="w-full max-w-4xl">
       <h2 className="text-xl font-bold mb-4">Aircraft Performance</h2>
+      <p className="mb-4">
+        Obtain from aviationweather.gov{" "}
+        <a
+          href="https://aviationweather.gov/data/metar/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-blue-600 dark:text-blue-400 hover:underline"
+        >
+          METAR/TAF
+        </a>
+      </p>
       <div className="overflow-x-auto">
         <table className="min-w-full border-collapse">
           <thead>
@@ -180,7 +191,6 @@ export default function AircraftPerformance({
               <th className="p-2">Departure</th>
               <th className="p-2">Operating</th>
               <th className="p-2">Arrival</th>
-              <th className="text-left p-2">Obtain From:</th>
             </tr>
           </thead>
           <tbody>
@@ -197,7 +207,6 @@ export default function AircraftPerformance({
                   {initialData.airport[1] || "Not specified"}
                 </span>
               </td>
-              <td className="p-2">Flight Plan</td>
             </tr>
             <tr className="border-b">
               <td className="p-2">Temperature (°C)</td>
@@ -231,7 +240,6 @@ export default function AircraftPerformance({
                   className={getInputStyling("temp", 2)}
                 />
               </td>
-              <td className="p-2">ForeFlight METAR, TAF, Daily, Winds Aloft</td>
             </tr>
             <tr className="border-b">
               <td className="p-2">Altimeter setting</td>
@@ -274,7 +282,6 @@ export default function AircraftPerformance({
                   className={getInputStyling("altimeter", 2)}
                 />
               </td>
-              <td className="p-2">ForeFlight METAR, TAF, Daily</td>
             </tr>
             <tr className="border-b">
               <td className="p-2">Airport/Max Flight Altitude (MSL)</td>
@@ -308,7 +315,6 @@ export default function AircraftPerformance({
                   className={getInputStyling("altitude", 2)}
                 />
               </td>
-              <td className="p-2">Flight Plan, ForeFlight</td>
             </tr>
             <tr className="border-b">
               <td className="p-2">Runway length (feet)</td>
@@ -329,7 +335,6 @@ export default function AircraftPerformance({
                   className={getInputStyling("rwy")}
                 />
               </td>
-              <td className="p-2">ForeFlight</td>
             </tr>
           </tbody>
         </table>
