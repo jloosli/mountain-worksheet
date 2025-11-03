@@ -6,7 +6,14 @@ import type { URLSerializable, WorksheetData } from "@/utils/types";
 
 type SortieFields = Pick<
   WorksheetData,
-  "pilot" | "date" | "time" | "acType" | "tailN" | "airport" | "route"
+  | "pilot"
+  | "date"
+  | "time"
+  | "acType"
+  | "tailN"
+  | "airport"
+  | "route"
+  | "weight"
 >;
 
 interface SortieInfoProps {
@@ -23,6 +30,7 @@ export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
     tailN: "",
     airport: ["", ""],
     route: "",
+    weight: null,
   });
 
   useEffect(() => {
@@ -38,6 +46,13 @@ export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
     const updatedData = { ...formData, [name]: value };
     setFormData(updatedData);
     onUpdate(updatedData);
+  };
+
+  const handleWeightChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value === "" ? null : Number(e.target.value);
+    const updatedData = { ...formData, weight: value };
+    setFormData(updatedData);
+    onUpdate({ weight: value });
   };
 
   const handleAirportChange = (index: number, value: string) => {
@@ -166,6 +181,22 @@ export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
             id="arrivalAirport"
             value={formData.airport[1] || ""}
             onChange={(e) => handleAirportChange(1, e.target.value)}
+            className="w-full px-3 py-2 border rounded-md dark:bg-black/[.15] dark:border-white/[.145]"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label htmlFor="weight" className="block text-sm font-medium">
+            Aircraft Takeoff Weight (lbs)
+          </label>
+          <input
+            type="number"
+            id="weight"
+            name="weight"
+            value={formData.weight ?? ""}
+            onChange={handleWeightChange}
+            min={2200}
+            max={3600}
             className="w-full px-3 py-2 border rounded-md dark:bg-black/[.15] dark:border-white/[.145]"
           />
         </div>

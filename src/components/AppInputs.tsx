@@ -4,7 +4,6 @@ import { type ReactNode, useState } from "react";
 import SortieInfo from "@/components/SortieInfo";
 import WeatherInfo from "@/components/WeatherInfo";
 import AircraftPerformance from "@/components/AircraftPerformance";
-import AircraftWeight from "@/components/AircraftWeight";
 import MountainQuals from "@/components/MountainQuals";
 import WeatherDataIntegration from "@/components/WeatherDataIntegration";
 import type { URLSerializable, WorksheetData } from "@/utils/types";
@@ -57,6 +56,7 @@ export default function AppInputs({
     tailN: state.tailN || "",
     airport: state.airport || ["", ""],
     route: state.route || "",
+    weight: state.weight || null,
   };
 
   const weatherData = {
@@ -72,10 +72,6 @@ export default function AppInputs({
     altimeter: state.altimeter || [29.92, 29.92, 29.92],
     altitude: state.altitude || [8000, 8000, 8000],
     rwy: state.rwy || [1000, 1000],
-  };
-
-  const weightData = {
-    weight: state.weight || null,
   };
 
   const mtnQualsData = {
@@ -129,6 +125,7 @@ export default function AppInputs({
         </div>
       </div>
       <SortieInfo onUpdate={handleUpdate} initialData={sortieData} />
+      <MountainQuals onUpdate={handleUpdate} initialData={mtnQualsData} />
       <WeatherInfo
         onUpdate={handleUpdate}
         initialData={weatherData}
@@ -140,8 +137,6 @@ export default function AppInputs({
         initialData={perfData}
         worksheetData={state}
       />
-      <AircraftWeight onUpdate={handleUpdate} initialData={weightData} />
-      <MountainQuals onUpdate={handleUpdate} initialData={mtnQualsData} />
     </div>
   );
 }

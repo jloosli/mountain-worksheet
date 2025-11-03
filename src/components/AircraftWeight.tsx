@@ -33,8 +33,6 @@ export default function AircraftWeight({
         </div>
         <p className="text-sm text-gray-600 dark:text-gray-400">
           Obtain from ForeFlight W&B; must be between 2200 and 3600 pounds
-          <br />
-          See aircraft POH for wgts outside this range (Note 5)
         </p>
       </div>
     </div>
