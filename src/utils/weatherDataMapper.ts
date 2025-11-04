@@ -161,13 +161,17 @@ export function mapAirportSpecificWeatherData(
 ): Partial<WorksheetData> {
   const result: Partial<WorksheetData> = {};
 
+  // Ensure metarData and tafData are arrays
+  const safeMetarData = Array.isArray(metarData) ? metarData : [];
+  const safeTafData = Array.isArray(tafData) ? tafData : [];
+
   // Process departure airport weather
   if (options.departureAirport) {
-    const departureMetar = metarData.find(
+    const departureMetar = safeMetarData.find(
       (metar) => metar.icaoId === options.departureAirport
     );
 
-    const departureTAF = tafData.find(
+    const departureTAF = safeTafData.find(
       (taf) => taf.icaoId === options.departureAirport
     );
 
@@ -231,11 +235,11 @@ export function mapAirportSpecificWeatherData(
 
   // Process arrival airport weather
   if (options.arrivalAirport) {
-    const arrivalMetar = metarData.find(
+    const arrivalMetar = safeMetarData.find(
       (metar) => metar.icaoId === options.arrivalAirport
     );
 
-    const arrivalTAF = tafData.find(
+    const arrivalTAF = safeTafData.find(
       (taf) => taf.icaoId === options.arrivalAirport
     );
 
@@ -427,19 +431,25 @@ export function mapWeatherDataToWorksheet(
   };
 
   try {
+    // Ensure all data types are arrays before processing
+    const windTempData = Array.isArray(apiData.windTemp) ? apiData.windTemp : [];
+    const metarData = Array.isArray(apiData.metar) ? apiData.metar : [];
+    const tafData = Array.isArray(apiData.taf) ? apiData.taf : [];
+    const airportData = Array.isArray(apiData.airport) ? apiData.airport : [];
+    
     // Map wind/temperature data
-    if (apiData.windTemp && apiData.windTemp.length > 0) {
-      const windData = mapWindTempData(apiData.windTemp, options);
+    if (windTempData.length > 0) {
+      const windData = mapWindTempData(windTempData, options);
       result.data = { ...result.data, ...windData };
     } else {
       result.warnings.push("No wind/temperature data available");
     }
 
     // Map airport-specific temperature and pressure data
-    if (apiData.metar || apiData.taf) {
+    if (metarData.length > 0 || tafData.length > 0) {
       const airportWeatherData = mapAirportSpecificWeatherData(
-        apiData.metar || [],
-        apiData.taf || [],
+        metarData,
+        tafData,
         options
       );
       result.data = { ...result.data, ...airportWeatherData };
@@ -450,16 +460,16 @@ export function mapWeatherDataToWorksheet(
     }
 
     // Map runway data
-    if (apiData.airport && apiData.airport.length > 0) {
-      const runwayData = mapRunwayData(apiData.airport, options);
+    if (airportData.length > 0) {
+      const runwayData = mapRunwayData(airportData, options);
       result.data = { ...result.data, ...runwayData };
     } else {
       result.warnings.push("No airport data available for runway information");
     }
 
     // Map airport elevation data
-    if (apiData.airport && apiData.airport.length > 0) {
-      const elevationData = mapAirportElevationData(apiData.airport, options);
+    if (airportData.length > 0) {
+      const elevationData = mapAirportElevationData(airportData, options);
       result.data = { ...result.data, ...elevationData };
     }
 

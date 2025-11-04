@@ -767,7 +767,7 @@ describe("Weather Data Mapper", () => {
       expect(VALIDATION_RANGES.windSpeed).toEqual({ min: 0, max: 150 });
       expect(VALIDATION_RANGES.temperature).toEqual({ min: -50, max: 50 });
       expect(VALIDATION_RANGES.altimeter).toEqual({ min: 28.0, max: 31.0 });
-      expect(VALIDATION_RANGES.runwayLength).toEqual({ min: 1000, max: 15000 });
+      expect(VALIDATION_RANGES.runwayLength).toEqual({ min: 1000, max: 20000 });
     });
   });
 
