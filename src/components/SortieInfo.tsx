@@ -1,6 +1,6 @@
 "use client";
 
-import { ChangeEvent, useEffect, useState } from "react";
+import { ChangeEvent, useEffect, useMemo, useState } from "react";
 import aircraftData from "@/data/aircraft.json";
 import type { URLSerializable, WorksheetData } from "@/utils/types";
 
@@ -32,6 +32,16 @@ export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
     route: "",
     weight: null,
   });
+
+  const [currentTime, setCurrentTime] = useState<Date>(() => new Date());
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 60000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     if (initialData) {
@@ -66,6 +76,74 @@ export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
     setFormData(updatedData);
     onUpdate(updatedData);
   };
+
+  const utcHourOptions = useMemo(
+    () =>
+      Array.from({ length: 24 }, (_, hour) => {
+        const paddedHour = String(hour).padStart(2, "0");
+        return {
+          value: `${paddedHour}:00`,
+          label: `${paddedHour}00`,
+        };
+      }),
+    []
+  );
+
+  const sortieLocalTiming = useMemo(() => {
+    if (!formData.date || !formData.time || !formData.time.includes(":")) {
+      return null;
+    }
+
+    const [yearStr, monthStr, dayStr] = formData.date.split("-");
+    const [hourStr, minuteStr] = formData.time.split(":");
+
+    const year = Number(yearStr);
+    const month = Number(monthStr);
+    const day = Number(dayStr);
+    const hour = Number(hourStr);
+    const minute = Number(minuteStr);
+
+    if (
+      [year, month, day, hour, minute].some((value) => Number.isNaN(value))
+    ) {
+      return null;
+    }
+
+    const sortieUtc = new Date(Date.UTC(year, month - 1, day, hour, minute));
+
+    if (Number.isNaN(sortieUtc.getTime())) {
+      return null;
+    }
+
+    const localMonth = String(sortieUtc.getMonth() + 1).padStart(2, "0");
+    const localDay = String(sortieUtc.getDate()).padStart(2, "0");
+    const localYear = String(sortieUtc.getFullYear() % 100).padStart(2, "0");
+    const localHours = String(sortieUtc.getHours()).padStart(2, "0");
+    const localMinutes = String(sortieUtc.getMinutes()).padStart(2, "0");
+
+    const localDisplay = `${localMonth}/${localDay}/${localYear} ${localHours}${localMinutes} local`;
+
+    const diffMinutes = Math.round(
+      (sortieUtc.getTime() - currentTime.getTime()) / 60000
+    );
+    const absMinutes = Math.abs(diffMinutes);
+
+    if (absMinutes === 0) {
+      return `${localDisplay}, now`;
+    }
+
+    const isFuture = diffMinutes > 0;
+
+    if (absMinutes < 60) {
+      const minutes = absMinutes;
+      const minuteLabel = `${minutes} minute${minutes === 1 ? "" : "s"}`;
+      return `${localDisplay}, ${minuteLabel} ${isFuture ? "from now" : "ago"}`;
+    }
+
+    const hours = Math.round(absMinutes / 60);
+    const hourLabel = `${hours} hour${hours === 1 ? "" : "s"}`;
+    return `${localDisplay}, ${hourLabel} ${isFuture ? "from now" : "ago"}`;
+  }, [formData.date, formData.time, currentTime]);
 
   return (
     <div className="w-full max-w-4xl space-y-4 bg-white dark:bg-black/[.15] rounded-lg shadow-sm">
@@ -120,17 +198,29 @@ export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
 
         <div className="space-y-2">
           <label htmlFor="time" className="block text-sm font-medium">
-            Time of Sortie
+            Time of Sortie (UTC)
           </label>
-          <input
-            type="time"
+          <select
             id="time"
             name="time"
             value={formData.time}
             onChange={handleInputChange}
             className="w-full px-3 py-2 border rounded-md dark:bg-black/[.15] dark:border-white/[.145]"
-          />
+          >
+            <option value="">Select Time</option>
+            {utcHourOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
         </div>
+
+        {sortieLocalTiming && (
+          <div className="sm:col-span-2 text-xs text-gray-600 dark:text-gray-400">
+            {sortieLocalTiming}
+          </div>
+        )}
 
         <div className="space-y-2">
           <label htmlFor="tailN" className="block text-sm font-medium">
