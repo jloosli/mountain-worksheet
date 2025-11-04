@@ -705,7 +705,7 @@ function validateMappedData(data: Partial<WorksheetData>): {
   // Validate temperature data
   if (data.temp) {
     data.temp.forEach((temp, index) => {
-      if (!isValidTemperature(temp)) {
+      if (temp !== null && !isValidTemperature(temp)) {
         errors.push(`Invalid temperature for phase ${index}: ${temp}`);
       }
     });
@@ -714,7 +714,7 @@ function validateMappedData(data: Partial<WorksheetData>): {
   // Validate altimeter data
   if (data.altimeter) {
     data.altimeter.forEach((altimeter, index) => {
-      if (!isValidAltimeter(altimeter)) {
+      if (altimeter !== null && !isValidAltimeter(altimeter)) {
         errors.push(
           `Invalid altimeter setting for phase ${index}: ${altimeter}`
         );
