@@ -31,9 +31,9 @@ export interface WorksheetData {
   mtnObsc: boolean;
 
   // Aircraft Performance
-  temp: [number, number, number]; // [departure, operating, arrival]
-  altimeter: [number, number, number]; // [departure, operating, arrival]
-  altitude: [number, number, number]; // [departure, operating, arrival]
+  temp: [number | null, number | null, number | null]; // [departure, operating, arrival]
+  altimeter: [number | null, number | null, number | null]; // [departure, operating, arrival]
+  altitude: [number | null, number | null, number | null]; // [departure, operating, arrival]
   rwy: [number | null, number | null]; // [departure, arrival] runway lengths in feet
 
   // Aircraft Weight

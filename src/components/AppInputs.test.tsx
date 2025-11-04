@@ -52,6 +52,12 @@ jest.mock("./SortieInfo", () => {
         >
           Update Sortie
         </button>
+        <button
+          data-testid="update-weight-btn"
+          onClick={() => onUpdate({ weight: 2500 })}
+        >
+          Update Weight
+        </button>
       </div>
     );
   };
@@ -108,24 +114,6 @@ jest.mock("./AircraftPerformance", () => {
   };
 });
 
-jest.mock("./AircraftWeight", () => {
-  return function MockAircraftWeight({
-    onUpdate,
-  }: {
-    onUpdate: (data: Partial<WorksheetData>) => void;
-  }) {
-    return (
-      <div data-testid="aircraft-weight">
-        <button
-          data-testid="update-weight-btn"
-          onClick={() => onUpdate({ weight: 2500 })}
-        >
-          Update Weight
-        </button>
-      </div>
-    );
-  };
-});
 
 jest.mock("./MountainQuals", () => {
   return function MockMountainQuals({
@@ -218,7 +206,6 @@ describe("AppInputs", () => {
     expect(screen.getByTestId("sortie-info")).toBeInTheDocument();
     expect(screen.getByTestId("weather-info")).toBeInTheDocument();
     expect(screen.getByTestId("aircraft-performance")).toBeInTheDocument();
-    expect(screen.getByTestId("aircraft-weight")).toBeInTheDocument();
     expect(screen.getByTestId("mountain-quals")).toBeInTheDocument();
   });
 

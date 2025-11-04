@@ -22,7 +22,7 @@ export const VALIDATION_RANGES = {
   windSpeed: { min: 0, max: 150 },
   temperature: { min: -50, max: 50 },
   altimeter: { min: 28.0, max: 31.0 },
-  runwayLength: { min: 1000, max: 15000 },
+  runwayLength: { min: 1000, max: 20000 }, // Increased to accommodate major airports like KDEN (16000 ft)
   pressure: { min: 20.0, max: 35.0 },
 };
 
@@ -99,8 +99,8 @@ export function mapTemperaturePressureData(
   options: WeatherMappingOptions = {}
 ): Partial<WorksheetData> {
   const result: Partial<WorksheetData> = {
-    temp: [21, 21, 21], // Default values
-    altimeter: [29.92, 29.92, 29.92], // Default values
+    temp: [null, null, null],
+    altimeter: [null, null, null],
   };
 
   // Process METAR data for current conditions
@@ -161,13 +161,17 @@ export function mapAirportSpecificWeatherData(
 ): Partial<WorksheetData> {
   const result: Partial<WorksheetData> = {};
 
+  // Ensure metarData and tafData are arrays
+  const safeMetarData = Array.isArray(metarData) ? metarData : [];
+  const safeTafData = Array.isArray(tafData) ? tafData : [];
+
   // Process departure airport weather
   if (options.departureAirport) {
-    const departureMetar = metarData.find(
+    const departureMetar = safeMetarData.find(
       (metar) => metar.icaoId === options.departureAirport
     );
 
-    const departureTAF = tafData.find(
+    const departureTAF = safeTafData.find(
       (taf) => taf.icaoId === options.departureAirport
     );
 
@@ -231,11 +235,11 @@ export function mapAirportSpecificWeatherData(
 
   // Process arrival airport weather
   if (options.arrivalAirport) {
-    const arrivalMetar = metarData.find(
+    const arrivalMetar = safeMetarData.find(
       (metar) => metar.icaoId === options.arrivalAirport
     );
 
-    const arrivalTAF = tafData.find(
+    const arrivalTAF = safeTafData.find(
       (taf) => taf.icaoId === options.arrivalAirport
     );
 
@@ -317,8 +321,9 @@ export function mapRunwayData(
 
   // Process departure airport
   if (options.departureAirport) {
+    const departureAirportCode = options.departureAirport.toUpperCase();
     const departureAirport = airportData.find(
-      (airport) => airport.icaoId === options.departureAirport
+      (airport) => airport.icaoId?.toUpperCase() === departureAirportCode
     );
 
     if (departureAirport?.runway) {
@@ -334,8 +339,9 @@ export function mapRunwayData(
 
   // Process arrival airport
   if (options.arrivalAirport) {
+    const arrivalAirportCode = options.arrivalAirport.toUpperCase();
     const arrivalAirport = airportData.find(
-      (airport) => airport.icaoId === options.arrivalAirport
+      (airport) => airport.icaoId?.toUpperCase() === arrivalAirportCode
     );
 
     if (arrivalAirport?.runway) {
@@ -396,9 +402,9 @@ export function mapAirportElevationData(
   if (altitudeUpdates.some((val) => val !== undefined)) {
     // Convert sparse array to fixed 3-element array
     result.altitude = [
-      altitudeUpdates[0] ?? 8000, // departure
+      altitudeUpdates[0] ?? null, // departure
       -1, // operating (special value to indicate "don't update")
-      altitudeUpdates[2] ?? 8000, // arrival
+      altitudeUpdates[2] ?? null, // arrival
     ];
   }
 
@@ -425,19 +431,25 @@ export function mapWeatherDataToWorksheet(
   };
 
   try {
+    // Ensure all data types are arrays before processing
+    const windTempData = Array.isArray(apiData.windTemp) ? apiData.windTemp : [];
+    const metarData = Array.isArray(apiData.metar) ? apiData.metar : [];
+    const tafData = Array.isArray(apiData.taf) ? apiData.taf : [];
+    const airportData = Array.isArray(apiData.airport) ? apiData.airport : [];
+    
     // Map wind/temperature data
-    if (apiData.windTemp && apiData.windTemp.length > 0) {
-      const windData = mapWindTempData(apiData.windTemp, options);
+    if (windTempData.length > 0) {
+      const windData = mapWindTempData(windTempData, options);
       result.data = { ...result.data, ...windData };
     } else {
       result.warnings.push("No wind/temperature data available");
     }
 
     // Map airport-specific temperature and pressure data
-    if (apiData.metar || apiData.taf) {
+    if (metarData.length > 0 || tafData.length > 0) {
       const airportWeatherData = mapAirportSpecificWeatherData(
-        apiData.metar || [],
-        apiData.taf || [],
+        metarData,
+        tafData,
         options
       );
       result.data = { ...result.data, ...airportWeatherData };
@@ -448,16 +460,16 @@ export function mapWeatherDataToWorksheet(
     }
 
     // Map runway data
-    if (apiData.airport && apiData.airport.length > 0) {
-      const runwayData = mapRunwayData(apiData.airport, options);
+    if (airportData.length > 0) {
+      const runwayData = mapRunwayData(airportData, options);
       result.data = { ...result.data, ...runwayData };
     } else {
       result.warnings.push("No airport data available for runway information");
     }
 
     // Map airport elevation data
-    if (apiData.airport && apiData.airport.length > 0) {
-      const elevationData = mapAirportElevationData(apiData.airport, options);
+    if (airportData.length > 0) {
+      const elevationData = mapAirportElevationData(airportData, options);
       result.data = { ...result.data, ...elevationData };
     }
 
@@ -693,7 +705,7 @@ function validateMappedData(data: Partial<WorksheetData>): {
   // Validate temperature data
   if (data.temp) {
     data.temp.forEach((temp, index) => {
-      if (!isValidTemperature(temp)) {
+      if (temp !== null && !isValidTemperature(temp)) {
         errors.push(`Invalid temperature for phase ${index}: ${temp}`);
       }
     });
@@ -702,7 +714,7 @@ function validateMappedData(data: Partial<WorksheetData>): {
   // Validate altimeter data
   if (data.altimeter) {
     data.altimeter.forEach((altimeter, index) => {
-      if (!isValidAltimeter(altimeter)) {
+      if (altimeter !== null && !isValidAltimeter(altimeter)) {
         errors.push(
           `Invalid altimeter setting for phase ${index}: ${altimeter}`
         );
@@ -739,20 +751,16 @@ export function isApiPopulatedData(data: Partial<WorksheetData>): {
       data.wind[0].some((val) => val !== 0)
     ),
     temperature: !!(
-      (
-        data.temp &&
-        Array.isArray(data.temp) &&
-        ((data.temp[0] !== undefined && data.temp[0] !== 21) || // departure
-          (data.temp[2] !== undefined && data.temp[2] !== 21))
-      ) // arrival
+      data.temp &&
+      Array.isArray(data.temp) &&
+      ((data.temp[0] !== null && data.temp[0] !== undefined) || // departure
+        (data.temp[2] !== null && data.temp[2] !== undefined)) // arrival
     ),
     pressure: !!(
-      (
-        data.altimeter &&
-        Array.isArray(data.altimeter) &&
-        (data.altimeter[0] !== 29.92 || data.altimeter[2] !== 29.92) && // departure or arrival different from default
-        (data.altimeter[0] !== undefined || data.altimeter[2] !== undefined)
-      ) // at least one is defined
+      data.altimeter &&
+      Array.isArray(data.altimeter) &&
+      ((data.altimeter[0] !== null && data.altimeter[0] !== undefined) ||
+        (data.altimeter[2] !== null && data.altimeter[2] !== undefined))
     ),
     runway: !!(
       data.rwy &&
@@ -760,12 +768,10 @@ export function isApiPopulatedData(data: Partial<WorksheetData>): {
       data.rwy.some((val) => val !== null)
     ),
     altitude: !!(
-      (
-        data.altitude &&
-        Array.isArray(data.altitude) &&
-        ((data.altitude[0] !== undefined && data.altitude[0] !== 8000) || // departure
-          (data.altitude[2] !== undefined && data.altitude[2] !== 8000))
-      ) // arrival
+      data.altitude &&
+      Array.isArray(data.altitude) &&
+      ((data.altitude[0] !== null && data.altitude[0] !== undefined) || // departure
+        (data.altitude[2] !== null && data.altitude[2] !== undefined)) // arrival
     ),
   };
 }

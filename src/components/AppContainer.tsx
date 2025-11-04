@@ -34,10 +34,10 @@ export default function AppContainer() {
     mtnObsc: false,
 
     // Aircraft Performance
-    temp: [21, 21, 21],
-    altimeter: [29.92, 29.92, 29.92],
-    altitude: [8000, 8000, 8000],
-    rwy: [1000, 1000],
+    temp: [null, null, null],
+    altimeter: [null, null, null],
+    altitude: [null, null, null],
+    rwy: [null, null],
 
     // Aircraft Weight
     weight: null,
