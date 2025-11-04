@@ -39,9 +39,14 @@ const formatUtcDisplay = (date: Date) => {
 };
 
 const UtcClock = () => {
+  const [mounted, setMounted] = useState(false);
   const [now, setNow] = useState(() => new Date());
 
   useEffect(() => {
+    setMounted(true);
+    // Update immediately on mount to ensure client and server match
+    setNow(new Date());
+
     const interval = setInterval(() => {
       setNow(new Date());
     }, 1000);
@@ -50,6 +55,19 @@ const UtcClock = () => {
   }, []);
 
   const { dateLabel, timeLabel } = useMemo(() => formatUtcDisplay(now), [now]);
+
+  // Don't render time until after hydration to avoid mismatch
+  if (!mounted) {
+    return (
+      <div className="flex flex-col items-start text-left md:items-end md:text-right gap-0.5">
+        <span className="uppercase text-xs tracking-wide text-slate-300">
+          Current UTC
+        </span>
+        <span className="font-mono text-2xl font-semibold">--:--:-- UTC</span>
+        <span className="text-sm text-slate-300">-- --- --</span>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col items-start text-left md:items-end md:text-right gap-0.5">
