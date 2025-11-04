@@ -120,6 +120,17 @@ export default function AppContainer() {
           <Calculations state={state} />
         </div>
       </main>
+      <footer className="w-full py-4 px-2 md:px-8 text-center text-sm text-gray-600 dark:text-gray-400 border-t border-gray-200 dark:border-gray-800">
+        Found an issue or bug?{" "}
+        <a
+          href="https://github.com/jloosli/mountain-worksheet/issues"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-blue-600 dark:text-blue-400 hover:underline"
+        >
+          Report it here
+        </a>
+      </footer>
     </div>
   );
 }
