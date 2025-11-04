@@ -1,50 +1,25 @@
 "use client";
 
-import { type ReactNode, useState } from "react";
+import { type ReactNode } from "react";
 import SortieInfo from "@/components/SortieInfo";
 import WeatherInfo from "@/components/WeatherInfo";
 import AircraftPerformance from "@/components/AircraftPerformance";
 import MountainQuals from "@/components/MountainQuals";
-import WeatherDataIntegration from "@/components/WeatherDataIntegration";
 import type { URLSerializable, WorksheetData } from "@/utils/types";
-import { LinkIcon } from "@heroicons/react/24/solid";
-import { CloudArrowDownIcon } from "@heroicons/react/24/outline";
-import { ArrowPathIcon } from "@heroicons/react/24/solid";
 
 interface WorksheetFormProps {
   state: URLSerializable<WorksheetData>;
   onStateUpdate: (updates: Partial<URLSerializable<WorksheetData>>) => void;
+  weatherLastUpdated?: Date;
 }
 
 export default function AppInputs({
   state,
   onStateUpdate,
+  weatherLastUpdated,
 }: WorksheetFormProps): ReactNode {
-  const [weatherLastUpdated, setWeatherLastUpdated] = useState<Date | null>(
-    null
-  );
-
   const handleUpdate = (data: Partial<URLSerializable<WorksheetData>>) => {
     onStateUpdate(data);
-  };
-
-  const handleWeatherTimestampUpdate = (timestamp: Date) => {
-    setWeatherLastUpdated(timestamp);
-  };
-
-  const handleReset = () => {
-    window.history.replaceState({}, "", window.location.pathname);
-    window.location.reload();
-  };
-
-  const handleShare = async () => {
-    const shareLink = window.location.href.replace(/%22/g, '"');
-    try {
-      await navigator.clipboard.writeText(shareLink);
-      alert("URL copied to clipboard!");
-    } catch (error) {
-      console.error("Error sharing:", error);
-    }
   };
 
   // Extract data for each component
@@ -66,77 +41,34 @@ export default function AppInputs({
     mtnObsc: state.mtnObsc || false,
   };
 
-  const perfData = {
-    airport: state.airport || ["", ""],
-    temp: state.temp || [null, null, null],
-    altimeter: state.altimeter || [null, null, null],
-    altitude: state.altitude || [null, null, null],
-    rwy: state.rwy || [null, null],
-  };
+    const perfData = {
+      airport: state.airport || ["", ""],
+      temp: state.temp || [null, null, null],
+      altimeter: state.altimeter || [null, null, null],
+      altitude: state.altitude || [null, null, null],
+      rwy: state.rwy || [null, null],
+    };
 
-  const mtnQualsData = {
-    mtnEndorse: state.mtnEndorse || false,
-    mtnCert: state.mtnCert || false,
-  };
+    const mtnQualsData = {
+      mtnEndorse: state.mtnEndorse || false,
+      mtnCert: state.mtnCert || false,
+    };
 
-  return (
-    <div className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-      <div className="flex flex-col gap-4 items-center sm:items-start">
-        <h1 className="text-4xl font-bold">Mountain Flying Worksheet</h1>
-        <div className="flex gap-2">
-          <button
-            onClick={handleReset}
-            className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
-          >
-            Reset Worksheet
-          </button>
-          <button
-            onClick={handleShare}
-            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors flex items-center gap-2"
-          >
-            <LinkIcon className="h-5 w-5" />
-            Copy Link
-          </button>
-          <WeatherDataIntegration
-            worksheetData={state}
-            onDataUpdate={handleUpdate}
-            onTimestampUpdate={handleWeatherTimestampUpdate}
-            hideBox={true}
-            renderButton={({ onClick, disabled, isLoading }) => (
-              <button
-                type="button"
-                onClick={onClick}
-                disabled={disabled}
-                className={`px-4 py-2 rounded transition-colors flex items-center gap-2 ${
-                  !disabled
-                    ? "bg-green-500 text-white hover:bg-green-600"
-                    : "bg-gray-300 text-gray-500 cursor-not-allowed dark:bg-gray-600 dark:text-gray-400"
-                }`}
-              >
-                {isLoading ? (
-                  <ArrowPathIcon className="h-5 w-5 animate-spin" />
-                ) : (
-                  <CloudArrowDownIcon className="h-5 w-5" />
-                )}
-                {isLoading ? "Loading..." : "Fetch Weather"}
-              </button>
-            )}
-          />
-        </div>
+    return (
+      <div className="flex w-full max-w-4xl flex-col gap-8">
+        <SortieInfo onUpdate={handleUpdate} initialData={sortieData} />
+        <MountainQuals onUpdate={handleUpdate} initialData={mtnQualsData} />
+        <WeatherInfo
+          onUpdate={handleUpdate}
+          initialData={weatherData}
+          worksheetData={state}
+          lastUpdated={weatherLastUpdated}
+        />
+        <AircraftPerformance
+          onUpdate={handleUpdate}
+          initialData={perfData}
+          worksheetData={state}
+        />
       </div>
-      <SortieInfo onUpdate={handleUpdate} initialData={sortieData} />
-      <MountainQuals onUpdate={handleUpdate} initialData={mtnQualsData} />
-      <WeatherInfo
-        onUpdate={handleUpdate}
-        initialData={weatherData}
-        worksheetData={state}
-        lastUpdated={weatherLastUpdated || undefined}
-      />
-      <AircraftPerformance
-        onUpdate={handleUpdate}
-        initialData={perfData}
-        worksheetData={state}
-      />
-    </div>
-  );
+    );
 }

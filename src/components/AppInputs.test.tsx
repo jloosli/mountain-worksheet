@@ -1,41 +1,6 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import AppInputs from "./AppInputs";
 import type { WorksheetData } from "@/utils/types";
-
-// Mock the WeatherDataIntegration component
-jest.mock("./WeatherDataIntegration", () => {
-  return function MockWeatherDataIntegration({
-    onDataUpdate,
-    onTimestampUpdate,
-  }: {
-    onDataUpdate: (data: Partial<WorksheetData>) => void;
-    onTimestampUpdate?: (timestamp: Date) => void;
-  }) {
-    return (
-      <div data-testid="weather-data-integration">
-        <button
-          data-testid="fetch-weather-btn"
-          onClick={() => {
-            onDataUpdate({
-              wind: [
-                [0, 260, 270, 340, 345],
-                [0, 5, 7, 13, 17],
-                [0, 6, 1, -11, -17],
-              ],
-              temp: [16, 16, 16],
-              altimeter: [29.92, 29.92, 29.92],
-              rwy: [8107, 12002],
-              altitude: [4471, 8000, 4229],
-            });
-            onTimestampUpdate?.(new Date("2025-01-24T10:30:00Z"));
-          }}
-        >
-          Fetch Weather
-        </button>
-      </div>
-    );
-  };
-});
 
 // Mock other components
 jest.mock("./SortieInfo", () => {
@@ -134,30 +99,6 @@ jest.mock("./MountainQuals", () => {
   };
 });
 
-// Mock window methods
-const mockReplaceState = jest.fn();
-const mockWriteText = jest.fn();
-
-// Mock window.history
-Object.defineProperty(window, "history", {
-  value: {
-    replaceState: mockReplaceState,
-  },
-  writable: true,
-});
-
-// Note: window.location.reload cannot be mocked in Jest environment
-// We'll test that the reset button calls the function without checking reload
-
-Object.defineProperty(navigator, "clipboard", {
-  value: {
-    writeText: mockWriteText,
-  },
-  writable: true,
-});
-
-// Mock alert
-global.alert = jest.fn();
 
 describe("AppInputs", () => {
   const mockOnStateUpdate = jest.fn();
@@ -184,17 +125,6 @@ describe("AppInputs", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockWriteText.mockResolvedValue(undefined);
-  });
-
-  it("renders the component with title and action buttons", () => {
-    render(
-      <AppInputs state={defaultState} onStateUpdate={mockOnStateUpdate} />
-    );
-
-    expect(screen.getByText("Mountain Flying Worksheet")).toBeInTheDocument();
-    expect(screen.getByText("Reset Worksheet")).toBeInTheDocument();
-    expect(screen.getByText("Copy Link")).toBeInTheDocument();
   });
 
   it("renders all child components", () => {
@@ -202,111 +132,10 @@ describe("AppInputs", () => {
       <AppInputs state={defaultState} onStateUpdate={mockOnStateUpdate} />
     );
 
-    expect(screen.getByTestId("weather-data-integration")).toBeInTheDocument();
     expect(screen.getByTestId("sortie-info")).toBeInTheDocument();
     expect(screen.getByTestId("weather-info")).toBeInTheDocument();
     expect(screen.getByTestId("aircraft-performance")).toBeInTheDocument();
     expect(screen.getByTestId("mountain-quals")).toBeInTheDocument();
-  });
-
-  it("handles reset button click", () => {
-    render(
-      <AppInputs state={defaultState} onStateUpdate={mockOnStateUpdate} />
-    );
-
-    const resetButton = screen.getByText("Reset Worksheet");
-    fireEvent.click(resetButton);
-
-    // In Jest environment, window.location.pathname is "/"
-    expect(mockReplaceState).toHaveBeenCalledWith({}, "", "/");
-    // Note: window.location.reload cannot be mocked, but we test that the button works
-  });
-
-  it("handles share button click successfully", async () => {
-    render(
-      <AppInputs state={defaultState} onStateUpdate={mockOnStateUpdate} />
-    );
-
-    const shareButton = screen.getByText("Copy Link");
-    fireEvent.click(shareButton);
-
-    await waitFor(() => {
-      // In Jest environment, window.location.href is "http://localhost/"
-      expect(mockWriteText).toHaveBeenCalledWith("http://localhost/");
-      expect(global.alert).toHaveBeenCalledWith("URL copied to clipboard!");
-    });
-  });
-
-  it("handles share button click with error", async () => {
-    const consoleSpy = jest
-      .spyOn(console, "error")
-      .mockImplementation(() => {});
-    mockWriteText.mockRejectedValue(new Error("Clipboard error"));
-
-    render(
-      <AppInputs state={defaultState} onStateUpdate={mockOnStateUpdate} />
-    );
-
-    const shareButton = screen.getByText("Copy Link");
-    fireEvent.click(shareButton);
-
-    await waitFor(() => {
-      expect(consoleSpy).toHaveBeenCalledWith(
-        "Error sharing:",
-        expect.any(Error)
-      );
-    });
-
-    consoleSpy.mockRestore();
-  });
-
-  it("passes worksheet data to WeatherDataIntegration", () => {
-    const testState = {
-      ...defaultState,
-      pilot: "Test Pilot",
-      airport: ["KOGD", "KSLC"],
-    };
-
-    render(<AppInputs state={testState} onStateUpdate={mockOnStateUpdate} />);
-
-    // The WeatherDataIntegration component should receive the worksheet data
-    expect(screen.getByTestId("weather-data-integration")).toBeInTheDocument();
-  });
-
-  it("handles weather data updates from WeatherDataIntegration", async () => {
-    render(
-      <AppInputs state={defaultState} onStateUpdate={mockOnStateUpdate} />
-    );
-
-    const fetchWeatherButton = screen.getByTestId("fetch-weather-btn");
-    fireEvent.click(fetchWeatherButton);
-
-    expect(mockOnStateUpdate).toHaveBeenCalledWith({
-      wind: [
-        [0, 260, 270, 340, 345],
-        [0, 5, 7, 13, 17],
-        [0, 6, 1, -11, -17],
-      ],
-      temp: [16, 16, 16],
-      altimeter: [29.92, 29.92, 29.92],
-      rwy: [8107, 12002],
-      altitude: [4471, 8000, 4229],
-    });
-  });
-
-  it("handles timestamp updates from WeatherDataIntegration", async () => {
-    render(
-      <AppInputs state={defaultState} onStateUpdate={mockOnStateUpdate} />
-    );
-
-    const fetchWeatherButton = screen.getByTestId("fetch-weather-btn");
-    fireEvent.click(fetchWeatherButton);
-
-    // Check that the timestamp is passed to WeatherInfo
-    await waitFor(() => {
-      const lastUpdatedElement = screen.getByTestId("last-updated");
-      expect(lastUpdatedElement).toHaveTextContent("2025-01-24T10:30:00.000Z");
-    });
   });
 
   it("passes worksheet data and timestamp to WeatherInfo", () => {
@@ -377,25 +206,19 @@ describe("AppInputs", () => {
     expect(mockOnStateUpdate).toHaveBeenCalledWith({ mtnEndorse: true });
   });
 
-  it("maintains weather timestamp state correctly", async () => {
+  it("passes weather timestamp to WeatherInfo", () => {
+    const testTimestamp = new Date("2025-01-24T10:30:00Z");
     render(
-      <AppInputs state={defaultState} onStateUpdate={mockOnStateUpdate} />
+      <AppInputs
+        state={defaultState}
+        onStateUpdate={mockOnStateUpdate}
+        weatherLastUpdated={testTimestamp}
+      />
     );
 
-    // Initially no timestamp
     expect(screen.getByTestId("last-updated")).toHaveTextContent(
-      "No timestamp"
+      testTimestamp.toISOString()
     );
-
-    // After fetching weather, timestamp should be set
-    const fetchWeatherButton = screen.getByTestId("fetch-weather-btn");
-    fireEvent.click(fetchWeatherButton);
-
-    await waitFor(() => {
-      expect(screen.getByTestId("last-updated")).toHaveTextContent(
-        "2025-01-24T10:30:00.000Z"
-      );
-    });
   });
 
   it("handles multiple rapid updates correctly", () => {
@@ -442,7 +265,10 @@ describe("AppInputs", () => {
       <AppInputs state={populatedState} onStateUpdate={mockOnStateUpdate} />
     );
 
-    expect(screen.getByText("Mountain Flying Worksheet")).toBeInTheDocument();
-    expect(screen.getByTestId("weather-data-integration")).toBeInTheDocument();
+    // Verify all child components are rendered
+    expect(screen.getByTestId("sortie-info")).toBeInTheDocument();
+    expect(screen.getByTestId("weather-info")).toBeInTheDocument();
+    expect(screen.getByTestId("aircraft-performance")).toBeInTheDocument();
+    expect(screen.getByTestId("mountain-quals")).toBeInTheDocument();
   });
 });
