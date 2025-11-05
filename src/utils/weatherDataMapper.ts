@@ -612,7 +612,7 @@ function selectTAFForFlightTime(
  * Helipads have a null alignment value and should be excluded
  */
 function findShortestRunway(
-  runways: { length: number; alignment?: number | null }[]
+  runways: { length: number; alignment: number | null }[]
 ): { length: number } | null {
   if (!runways || runways.length === 0) return null;
 
