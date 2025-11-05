@@ -316,38 +316,38 @@ describe("TOLD Calculations", () => {
 
   describe("calculateAvailableRunwayRemaining", () => {
     it("should calculate available runway remaining correctly", () => {
-      const result = calculateAvailableRunwayRemaining(3000, 1000);
-      expect(result).toBe(2000);
+      const result = calculateAvailableRunwayRemaining(3000, 1000, 500);
+      expect(result).toBe(1500);
     });
 
     it("should return null for null runway length", () => {
-      const result = calculateAvailableRunwayRemaining(null, 1000);
+      const result = calculateAvailableRunwayRemaining(null, 1000, 500);
       expect(result).toBeNull();
     });
 
-    it("should return null for null required distance", () => {
-      const result = calculateAvailableRunwayRemaining(3000, null);
+    it("should return null for null takeoff distance", () => {
+      const result = calculateAvailableRunwayRemaining(3000, null, 500);
+      expect(result).toBeNull();
+    });
+
+    it("should return null for null landing distance", () => {
+      const result = calculateAvailableRunwayRemaining(3000, 1000, null);
       expect(result).toBeNull();
     });
 
     it("should return null for invalid runway length", () => {
-      const result = calculateAvailableRunwayRemaining(0, 1000);
-      expect(result).toBeNull();
-    });
-
-    it("should return null for invalid required distance", () => {
-      const result = calculateAvailableRunwayRemaining(3000, 0);
+      const result = calculateAvailableRunwayRemaining(0, 1000, 500);
       expect(result).toBeNull();
     });
 
     it("should handle negative remaining runway", () => {
-      const result = calculateAvailableRunwayRemaining(1000, 2000);
-      expect(result).toBe(-1000);
+      const result = calculateAvailableRunwayRemaining(1000, 800, 500);
+      expect(result).toBe(-300);
     });
 
     it("should round results to nearest integer", () => {
-      const result = calculateAvailableRunwayRemaining(3000, 1000.7);
-      expect(result).toBe(1999);
+      const result = calculateAvailableRunwayRemaining(3000, 1000.7, 500.3);
+      expect(result).toBe(1499);
     });
   });
 

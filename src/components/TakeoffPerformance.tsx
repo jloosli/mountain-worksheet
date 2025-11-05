@@ -140,6 +140,23 @@ export default function TakeoffPerformance({
     return baseClasses;
   };
 
+  // Helper function to get CSS classes for available runway remaining cells
+  // Shows red text for negative values
+  const getAvailableRunwayCellClasses = (
+    value: number | null | undefined,
+    isCalculating: boolean,
+    hasErrors: boolean
+  ): string => {
+    const baseClasses = "py-2 px-4 text-right";
+    if (isCalculating) return `${baseClasses} text-blue-600 dark:text-blue-400`;
+    if (hasErrors) return `${baseClasses} text-red-600 dark:text-red-400`;
+    if (value === null || value === undefined)
+      return `${baseClasses} text-gray-500 dark:text-gray-400`;
+    // Show red text for negative values (available runway remaining)
+    if (value < 0) return `${baseClasses} text-red-600 dark:text-red-400`;
+    return baseClasses;
+  };
+
   // Extract TOLD data
   const results = toldData?.results;
   const isCalculating = toldData?.isCalculating || false;
@@ -318,7 +335,7 @@ export default function TakeoffPerformance({
               <td className="py-2 px-4">Available runway remaining</td>
               <td
                 className={
-                  getCellClasses(
+                  getAvailableRunwayCellClasses(
                     results?.availableRunwayRemainingTakeoffGroundRoll
                       .departure,
                     isCalculating,
@@ -334,7 +351,7 @@ export default function TakeoffPerformance({
               </td>
               <td
                 className={
-                  getCellClasses(
+                  getAvailableRunwayCellClasses(
                     results?.availableRunwayRemainingTakeoffGroundRoll.arrival,
                     isCalculating,
                     hasErrors
@@ -349,7 +366,7 @@ export default function TakeoffPerformance({
               </td>
               <td
                 className={
-                  getCellClasses(
+                  getAvailableRunwayCellClasses(
                     results?.availableRunwayRemainingTakeoff50ft.departure,
                     isCalculating,
                     hasErrors
@@ -363,7 +380,7 @@ export default function TakeoffPerformance({
                 )}
               </td>
               <td
-                className={getCellClasses(
+                className={getAvailableRunwayCellClasses(
                   results?.availableRunwayRemainingTakeoff50ft.arrival,
                   isCalculating,
                   hasErrors

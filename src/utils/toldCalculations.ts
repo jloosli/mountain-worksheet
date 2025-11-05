@@ -293,12 +293,14 @@ export function calculateLanding50ftObstacle(
 /**
  * Calculate available runway remaining after required distance
  * @param runwayLength The total runway length in feet (can be null)
- * @param requiredDistance The required distance for takeoff or landing in feet
+ * @param takeoffDistance The required distance for takeoff in feet (can be null)
+ * @param landingDistance The required distance for landing in feet (can be null)
  * @returns The available runway remaining in feet, or null if calculation fails
  */
 export function calculateAvailableRunwayRemaining(
   runwayLength: number | null,
-  requiredDistance: number | null
+  takeoffDistance: number | null,
+  landingDistance: number | null
 ): number | null {
   try {
     // If runway length is not specified, return null
@@ -312,16 +314,15 @@ export function calculateAvailableRunwayRemaining(
       return null;
     }
 
-    if (requiredDistance === null) {
+    // Both takeoff and landing distances are required
+    if (takeoffDistance === null || landingDistance === null) {
       return null;
     }
 
-    if (requiredDistance <= 0) {
-      console.error("Invalid required distance:", requiredDistance);
-      return null;
-    }
+    // Calculate total required distance (takeoff + landing)
+    const totalRequiredDistance = takeoffDistance + landingDistance;
 
-    const remaining = runwayLength - requiredDistance;
+    const remaining = runwayLength - totalRequiredDistance;
 
     // Return the remaining distance (can be negative if runway is too short)
     return Math.round(remaining);
@@ -358,15 +359,14 @@ export function calculateAllTOLDDistances(
     landingGroundRoll,
     landing50ftObstacle,
     availableRunwayRemainingTakeoffGroundRoll:
-      calculateAvailableRunwayRemaining(params.runwayLength, takeoffGroundRoll),
+      calculateAvailableRunwayRemaining(
+        params.runwayLength,
+        takeoffGroundRoll,
+        landingGroundRoll
+      ),
     availableRunwayRemainingTakeoff50ft: calculateAvailableRunwayRemaining(
       params.runwayLength,
-      takeoff50ftObstacle
-    ),
-    availableRunwayRemainingLandingGroundRoll:
-      calculateAvailableRunwayRemaining(params.runwayLength, landingGroundRoll),
-    availableRunwayRemainingLanding50ft: calculateAvailableRunwayRemaining(
-      params.runwayLength,
+      takeoff50ftObstacle,
       landing50ftObstacle
     ),
   };
