@@ -171,6 +171,7 @@ describe("Aviation Weather API", () => {
             length: 10000,
             width: 150,
             surface: "CONCRETE",
+            alignment: 100,
             lighted: true,
             closed: false,
           },

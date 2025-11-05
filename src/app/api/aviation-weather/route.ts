@@ -68,6 +68,7 @@ export async function GET(request: NextRequest) {
               dimension: string;
               id: string;
               surface: string;
+              alignment: number | null;
             }>;
           }) => ({
             ...airport,
@@ -77,6 +78,7 @@ export async function GET(request: NextRequest) {
                   dimension: string;
                   id: string;
                   surface: string;
+                  alignment: number | null;
                 }) => {
                   const [length, width] = runway.dimension
                     ?.split("x")
@@ -86,6 +88,7 @@ export async function GET(request: NextRequest) {
                     length,
                     width,
                     surface: runway.surface,
+                    alignment: runway.alignment,
                     lighted: true, // Default to true
                     closed: false, // Default to false
                   };

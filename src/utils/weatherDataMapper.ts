@@ -608,14 +608,20 @@ function selectTAFForFlightTime(
 }
 
 /**
- * Find the shortest runway from airport runway data
+ * Find the shortest runway from airport runway data, excluding helipads
+ * Helipads have a null alignment value and should be excluded
  */
 function findShortestRunway(
-  runways: { length: number }[]
+  runways: { length: number; alignment?: number | null }[]
 ): { length: number } | null {
   if (!runways || runways.length === 0) return null;
 
-  return runways.reduce<{ length: number } | null>((shortest, current) => {
+  // Filter out helipads (runways with null alignment)
+  const validRunways = runways.filter((runway) => runway.alignment !== null);
+
+  if (validRunways.length === 0) return null;
+
+  return validRunways.reduce<{ length: number } | null>((shortest, current) => {
     if (!shortest || current.length < shortest.length) {
       return current;
     }
