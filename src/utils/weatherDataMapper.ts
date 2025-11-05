@@ -327,12 +327,12 @@ export function mapRunwayData(
     );
 
     if (departureAirport?.runway) {
-      const longestRunway = findLongestRunway(departureAirport.runway);
+      const shortestRunway = findShortestRunway(departureAirport.runway);
       if (
-        longestRunway &&
-        (!options.validateData || isValidRunwayLength(longestRunway.length))
+        shortestRunway &&
+        (!options.validateData || isValidRunwayLength(shortestRunway.length))
       ) {
-        result.rwy![0] = longestRunway.length;
+        result.rwy![0] = shortestRunway.length;
       }
     }
   }
@@ -345,12 +345,12 @@ export function mapRunwayData(
     );
 
     if (arrivalAirport?.runway) {
-      const longestRunway = findLongestRunway(arrivalAirport.runway);
+      const shortestRunway = findShortestRunway(arrivalAirport.runway);
       if (
-        longestRunway &&
-        (!options.validateData || isValidRunwayLength(longestRunway.length))
+        shortestRunway &&
+        (!options.validateData || isValidRunwayLength(shortestRunway.length))
       ) {
-        result.rwy![1] = longestRunway.length;
+        result.rwy![1] = shortestRunway.length;
       }
     }
   }
@@ -608,18 +608,18 @@ function selectTAFForFlightTime(
 }
 
 /**
- * Find the longest runway from airport runway data
+ * Find the shortest runway from airport runway data
  */
-function findLongestRunway(
+function findShortestRunway(
   runways: { length: number }[]
 ): { length: number } | null {
   if (!runways || runways.length === 0) return null;
 
-  return runways.reduce<{ length: number } | null>((longest, current) => {
-    if (!longest || current.length > longest.length) {
+  return runways.reduce<{ length: number } | null>((shortest, current) => {
+    if (!shortest || current.length < shortest.length) {
       return current;
     }
-    return longest;
+    return shortest;
   }, null);
 }
 

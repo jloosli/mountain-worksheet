@@ -321,7 +321,7 @@ describe("Weather Data Mapper", () => {
 
       const result = mapRunwayData(mockAirportData, options);
 
-      expect(result.rwy).toEqual([12000, 12000]); // Longest runway for each airport
+      expect(result.rwy).toEqual([8000, 11000]); // Shortest runway for each airport
     });
 
     it("should handle missing airport data", () => {
