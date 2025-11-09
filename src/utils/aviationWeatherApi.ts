@@ -93,6 +93,7 @@ export interface RunwayInfo {
   length: number;
   width: number;
   surface: string;
+  alignment: number | null;
   lighted: boolean;
   closed: boolean;
 }

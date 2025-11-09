@@ -256,7 +256,8 @@ describe("Weather Data Mapper", () => {
             id: "10L/28R",
             length: 10000,
             width: 150,
-            surface: "CONCRETE",
+            surface: "C",
+            alignment: 100,
             lighted: true,
             closed: false,
           },
@@ -264,7 +265,8 @@ describe("Weather Data Mapper", () => {
             id: "10R/28L",
             length: 12000,
             width: 150,
-            surface: "CONCRETE",
+            surface: "C",
+            alignment: 280,
             lighted: true,
             closed: false,
           },
@@ -272,7 +274,8 @@ describe("Weather Data Mapper", () => {
             id: "14L/32R",
             length: 8000,
             width: 150,
-            surface: "CONCRETE",
+            surface: "C",
+            alignment: 140,
             lighted: true,
             closed: false,
           },
@@ -297,7 +300,8 @@ describe("Weather Data Mapper", () => {
             id: "06L/24R",
             length: 12000,
             width: 150,
-            surface: "CONCRETE",
+            surface: "C",
+            alignment: 60,
             lighted: true,
             closed: false,
           },
@@ -305,7 +309,8 @@ describe("Weather Data Mapper", () => {
             id: "06R/24L",
             length: 11000,
             width: 150,
-            surface: "CONCRETE",
+            surface: "C",
+            alignment: 60,
             lighted: true,
             closed: false,
           },
@@ -361,7 +366,8 @@ describe("Weather Data Mapper", () => {
               id: "10L/28R",
               length: 500, // Invalid runway length
               width: 150,
-              surface: "CONCRETE",
+              surface: "C",
+              alignment: 100,
               lighted: true,
               closed: false,
             },
@@ -377,6 +383,140 @@ describe("Weather Data Mapper", () => {
       const result = mapRunwayData(airportDataWithInvalidRunways, options);
 
       expect(result.rwy).toEqual([null, null]); // Should be null due to validation
+    });
+
+    it("should filter out helipads (runways with null alignment)", () => {
+      const airportDataWithHelipads: AirportResponse[] = [
+        {
+          icaoId: "KSLC",
+          iataId: "SLC",
+          name: "Salt Lake City International Airport",
+          city: "Salt Lake City",
+          state: "UT",
+          country: "US",
+          lat: 40.7884,
+          lon: -111.9778,
+          elev: 1289,
+          priority: 1,
+          tz: "America/Denver",
+          metar: true,
+          taaf: true,
+          runway: [
+            {
+              id: "14/32",
+              length: 4893,
+              width: 150,
+              surface: "A",
+              alignment: 153,
+              lighted: true,
+              closed: false,
+            },
+            {
+              id: "16L/34R",
+              length: 12002,
+              width: 150,
+              surface: "A",
+              alignment: 175,
+              lighted: true,
+              closed: false,
+            },
+            {
+              id: "16R/34L",
+              length: 12000,
+              width: 150,
+              surface: "C",
+              alignment: 175,
+              lighted: true,
+              closed: false,
+            },
+            {
+              id: "17/35",
+              length: 9596,
+              width: 150,
+              surface: "A",
+              alignment: 180,
+              lighted: true,
+              closed: false,
+            },
+            {
+              id: "HB",
+              length: 60,
+              width: 60,
+              surface: "A",
+              alignment: null,
+              lighted: true,
+              closed: false,
+            },
+            {
+              id: "HF",
+              length: 60,
+              width: 60,
+              surface: "A",
+              alignment: null,
+              lighted: true,
+              closed: false,
+            },
+          ],
+        },
+      ];
+
+      const options: WeatherMappingOptions = {
+        departureAirport: "KSLC",
+      };
+
+      const result = mapRunwayData(airportDataWithHelipads, options);
+
+      // Should select 4893 (shortest non-helipad runway), not 60 (helipad)
+      expect(result.rwy).toEqual([4893, null]);
+    });
+
+    it("should return null if only helipads are available", () => {
+      const airportDataWithOnlyHelipads: AirportResponse[] = [
+        {
+          icaoId: "TEST",
+          iataId: "TST",
+          name: "Test Heliport",
+          city: "Test City",
+          state: "TS",
+          country: "US",
+          lat: 40.0,
+          lon: -110.0,
+          elev: 1000,
+          priority: 1,
+          tz: "America/Denver",
+          metar: true,
+          taaf: true,
+          runway: [
+            {
+              id: "H1",
+              length: 60,
+              width: 60,
+              surface: "A",
+              alignment: null,
+              lighted: true,
+              closed: false,
+            },
+            {
+              id: "H2",
+              length: 80,
+              width: 80,
+              surface: "A",
+              alignment: null,
+              lighted: true,
+              closed: false,
+            },
+          ],
+        },
+      ];
+
+      const options: WeatherMappingOptions = {
+        departureAirport: "TEST",
+      };
+
+      const result = mapRunwayData(airportDataWithOnlyHelipads, options);
+
+      // Should return null if only helipads are available
+      expect(result.rwy).toEqual([null, null]);
     });
   });
 
@@ -431,7 +571,8 @@ describe("Weather Data Mapper", () => {
               id: "10L/28R",
               length: 10000,
               width: 150,
-              surface: "CONCRETE",
+              surface: "C",
+              alignment: 100,
               lighted: true,
               closed: false,
             },
