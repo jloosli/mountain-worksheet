@@ -29,7 +29,6 @@ export default function AppInputs({
       <WeatherInfo
         onUpdate={handleUpdate}
         initialData={state}
-        worksheetData={state}
         lastUpdated={weatherLastUpdated}
       />
       <AircraftPerformance

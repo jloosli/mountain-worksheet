@@ -19,7 +19,7 @@ describe("WeatherInfo", () => {
       turb: false,
       cielVis: false,
       mtnObsc: false,
-    },
+    } as WorksheetData,
   };
 
   it("should render weather info component", () => {
@@ -32,7 +32,8 @@ describe("WeatherInfo", () => {
   });
 
   it("should show API-populated styling when worksheetData has API data", () => {
-    const worksheetDataWithApi: Partial<WorksheetData> = {
+    const worksheetDataWithApi: WorksheetData = {
+      ...defaultProps.initialData,
       wind: [
         [270, 0, 0, 0, 0],
         [25, 0, 0, 0, 0],
@@ -43,7 +44,7 @@ describe("WeatherInfo", () => {
     };
 
     render(
-      <WeatherInfo {...defaultProps} worksheetData={worksheetDataWithApi} />
+      <WeatherInfo {...defaultProps} initialData={worksheetDataWithApi} />
     );
 
     // Check that wind direction inputs have API-populated styling
@@ -52,7 +53,8 @@ describe("WeatherInfo", () => {
   });
 
   it("should show manual entry styling when worksheetData has no API data", () => {
-    const worksheetDataManual: Partial<WorksheetData> = {
+    const worksheetDataManual: WorksheetData = {
+      ...defaultProps.initialData,
       wind: [
         [0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0],
@@ -61,7 +63,7 @@ describe("WeatherInfo", () => {
     };
 
     render(
-      <WeatherInfo {...defaultProps} worksheetData={worksheetDataManual} />
+      <WeatherInfo {...defaultProps} initialData={worksheetDataManual} />
     );
 
     // Check that inputs have manual entry styling

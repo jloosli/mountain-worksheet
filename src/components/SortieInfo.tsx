@@ -9,7 +9,17 @@ interface SortieInfoProps {
   onUpdate: (data: Partial<WorksheetData>) => void;
 }
 
-type SortieInfoData = Pick<WorksheetData, "pilot" | "date" | "time" | "acType" | "tailN" | "airport" | "route" | "weight">;
+type SortieInfoData = Pick<
+  WorksheetData,
+  | "pilot"
+  | "date"
+  | "time"
+  | "acType"
+  | "tailN"
+  | "airport"
+  | "route"
+  | "weight"
+>;
 
 export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
   const [formData, setFormData] = useState<SortieInfoData>({
@@ -37,10 +47,10 @@ export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
     if (initialData) {
       const newData = {} as Partial<SortieInfoData>;
       for (const key in formData) {
-        if (initialData[key as keyof SortieInfoData]) {
+        if (initialData[key as keyof WorksheetData]) {
           // @ts-expect-error - Dynamic key assignment is safe here
           newData[key as keyof SortieInfoData] =
-            initialData[key as keyof SortieInfoData];
+            initialData[key as keyof WorksheetData];
         }
       }
       setFormData({ ...formData, ...newData });

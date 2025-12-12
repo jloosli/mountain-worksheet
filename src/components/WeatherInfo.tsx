@@ -8,9 +8,8 @@ type WeatherFields = Pick<
 >;
 
 interface WeatherInfoProps {
-  initialData?: WeatherFields;
+  initialData?: WorksheetData;
   onUpdate: (data: Partial<WorksheetData>) => void;
-  worksheetData?: Partial<WorksheetData>; // Full worksheet data to check API population
   lastUpdated?: Date; // Timestamp for when data was last updated
 }
 
@@ -28,24 +27,31 @@ const DEFAULT_WEATHER_DATA: WeatherFields = {
 };
 
 export default function WeatherInfo({
-  initialData = DEFAULT_WEATHER_DATA,
+  initialData,
   onUpdate,
-  worksheetData,
   lastUpdated,
 }: WeatherInfoProps) {
   const [data, setData] = useState<WeatherFields>(() => ({
     ...DEFAULT_WEATHER_DATA,
-    ...initialData,
+    // If initialData is provided, destructure its fields that exist in DEFAULT_WEATHER_DATA
+    ...(initialData
+      ? Object.fromEntries(
+          Object.keys(DEFAULT_WEATHER_DATA)
+            .filter((key) => key in (initialData ?? {}))
+            .map((key) => [key, initialData[key as keyof WeatherFields]])
+        )
+      : {}),
   }));
 
   // Determine which fields are API-populated
-  const apiPopulated = worksheetData
-    ? isApiPopulatedData(worksheetData)
+  const apiPopulated = initialData
+    ? isApiPopulatedData(initialData)
     : {
         wind: false,
         temperature: false,
         pressure: false,
         runway: false,
+        altitude: false,
       };
 
   // Update local data when initialData changes (from API population)
@@ -53,26 +59,31 @@ export default function WeatherInfo({
     if (initialData) {
       setData((prev) => ({
         ...prev,
-        ...initialData,
+        // Only extract weather-related fields from initialData
+        ...(Object.fromEntries(
+          Object.keys(DEFAULT_WEATHER_DATA)
+            .filter((key) => key in (initialData ?? {}))
+            .map((key) => [key, initialData[key as keyof WeatherFields]])
+        ) as Partial<WeatherFields>),
       }));
     }
   }, [initialData]);
 
-  // Use worksheetData for display values if available, otherwise use local data
+  // Use initialData for display values if available, otherwise use local data
   const hasApiWindData =
-    worksheetData?.wind &&
-    Array.isArray(worksheetData.wind) &&
-    worksheetData.wind.length === 3 &&
-    worksheetData.wind[0] &&
-    Array.isArray(worksheetData.wind[0]) &&
-    worksheetData.wind[0].some((val) => val !== 0);
+    initialData?.wind &&
+    Array.isArray(initialData.wind) &&
+    initialData.wind.length === 3 &&
+    initialData.wind[0] &&
+    Array.isArray(initialData.wind[0]) &&
+    initialData.wind[0].some((val) => val !== 0);
 
   const displayData = hasApiWindData
     ? {
-        wind: worksheetData.wind,
-        turb: worksheetData.turb || data.turb,
-        cielVis: worksheetData.cielVis || data.cielVis,
-        mtnObsc: worksheetData.mtnObsc || data.mtnObsc,
+        wind: initialData.wind,
+        turb: initialData.turb || data.turb,
+        cielVis: initialData.cielVis || data.cielVis,
+        mtnObsc: initialData.mtnObsc || data.mtnObsc,
       }
     : data;
 
