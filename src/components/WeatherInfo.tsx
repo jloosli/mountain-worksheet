@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import type { URLSerializable, WorksheetData } from "@/utils/types";
+import type { WorksheetData } from "@/utils/types";
 import { isApiPopulatedData } from "@/utils/weatherDataMapper";
 
 type WeatherFields = Pick<
@@ -9,7 +9,7 @@ type WeatherFields = Pick<
 
 interface WeatherInfoProps {
   initialData?: WeatherFields;
-  onUpdate: (data: Partial<URLSerializable<WorksheetData>>) => void;
+  onUpdate: (data: Partial<WorksheetData>) => void;
   worksheetData?: Partial<WorksheetData>; // Full worksheet data to check API population
   lastUpdated?: Date; // Timestamp for when data was last updated
 }

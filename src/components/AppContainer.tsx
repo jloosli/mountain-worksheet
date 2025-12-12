@@ -5,7 +5,7 @@ import AppInputs from "@/components/AppInputs";
 import Calculations from "@/components/Calculations";
 import WorksheetHeader from "@/components/WorksheetHeader";
 import { useUrlState } from "@/utils/useUrlState";
-import type { URLSerializable, WorksheetData } from "@/utils/types";
+import type { WorksheetData } from "@/utils/types";
 
 const getDefaultSortieDateTime = () => {
   const now = new Date();
@@ -29,34 +29,39 @@ const getDefaultSortieDateTime = () => {
 
 export default function AppContainer() {
   const defaultSortieDateTime = getDefaultSortieDateTime();
-  const [state, setState] = useUrlState<
-    WorksheetData,
-    URLSerializable<WorksheetData>
-  >({
+  const [state, setState] = useUrlState({
     // Sortie Information
     pilot: "",
     date: defaultSortieDateTime.date,
     time: defaultSortieDateTime.time,
     acType: "",
     tailN: "",
-    airport: ["", ""],
+    airport: ["", ""] as [string, string],
     route: "",
 
     // Weather Information
     wind: [
-      Array(5).fill(0), // wDir values for 3k,6k,9k,12k,15k
-      Array(5).fill(0), // wVel values for 3k,6k,9k,12k,15k
-      Array(5).fill(0), // temp values for 3k,6k,9k,12k,15k
-    ],
+      Array(5).fill(0) as number[], // wDir values for 3k,6k,9k,12k,15k
+      Array(5).fill(0) as number[], // wVel values for 3k,6k,9k,12k,15k
+      Array(5).fill(0) as number[], // temp values for 3k,6k,9k,12k,15k
+    ] as [number[], number[], number[]],
     turb: false,
     cielVis: false,
     mtnObsc: false,
 
     // Aircraft Performance
-    temp: [null, null, null],
-    altimeter: [null, null, null],
-    altitude: [null, null, null],
-    rwy: [null, null],
+    temp: [null, null, null] as [number | null, number | null, number | null],
+    altimeter: [null, null, null] as [
+      number | null,
+      number | null,
+      number | null
+    ],
+    altitude: [null, null, null] as [
+      number | null,
+      number | null,
+      number | null
+    ],
+    rwy: [null, null] as [number | null, number | null],
 
     // Aircraft Weight
     weight: null,
@@ -64,21 +69,21 @@ export default function AppContainer() {
     // Mountain Qualifications
     mtnEndorse: false,
     mtnCert: false,
-  });
+  } as WorksheetData);
 
   const [weatherLastUpdated, setWeatherLastUpdated] = useState<Date | null>(
     null
   );
 
-  const handleUpdate = (updates: Partial<URLSerializable<WorksheetData>>) => {
-    setState((prev) => {
-      const merged = { ...prev, ...updates } as URLSerializable<WorksheetData>;
+  const handleUpdate = (updates: Partial<WorksheetData>) => {
+    setState((prev: WorksheetData) => {
+      const merged = { ...prev, ...updates } as WorksheetData;
       return merged;
     });
   };
 
   const handleWeatherDataUpdate = (data: Partial<WorksheetData>) => {
-    handleUpdate(data as Partial<URLSerializable<WorksheetData>>);
+    handleUpdate(data);
   };
 
   const handleWeatherTimestampUpdate = (timestamp: Date) => {

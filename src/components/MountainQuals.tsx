@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
-import type { URLSerializable, WorksheetData } from "@/utils/types";
+import type { WorksheetData } from "@/utils/types";
 
 type QualFields = Pick<WorksheetData, "mtnEndorse" | "mtnCert">;
 
 interface MountainQualsProps {
-  onUpdate: (data: Partial<URLSerializable<WorksheetData>>) => void;
+  onUpdate: (data: Partial<WorksheetData>) => void;
   initialData?: QualFields;
 }
 

@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useRouter, usePathname } from "next/navigation";
-import type { URLSerializable } from "./types";
 import { serializeState, deserializeState } from "./urlState";
 
-export function useUrlState<TBase, T extends URLSerializable<TBase>>(
+export function useUrlState<T>(
   initialState: T
 ): readonly [T, (newState: T | ((prev: T) => T)) => void] {
   const router = useRouter();

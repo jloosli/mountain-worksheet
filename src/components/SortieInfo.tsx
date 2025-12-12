@@ -2,27 +2,15 @@
 
 import { ChangeEvent, useEffect, useMemo, useState } from "react";
 import aircraftData from "@/data/aircraft.json";
-import type { URLSerializable, WorksheetData } from "@/utils/types";
-
-type SortieFields = Pick<
-  WorksheetData,
-  | "pilot"
-  | "date"
-  | "time"
-  | "acType"
-  | "tailN"
-  | "airport"
-  | "route"
-  | "weight"
->;
+import type { WorksheetData } from "@/utils/types";
 
 interface SortieInfoProps {
-  initialData?: SortieFields;
-  onUpdate: (data: Partial<URLSerializable<WorksheetData>>) => void;
+  initialData?: WorksheetData;
+  onUpdate: (data: Partial<WorksheetData>) => void;
 }
 
 export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
-  const [formData, setFormData] = useState<SortieFields>({
+  const [formData, setFormData] = useState<Partial<WorksheetData>>({
     pilot: "",
     date: "",
     time: "",
@@ -45,7 +33,15 @@ export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
 
   useEffect(() => {
     if (initialData) {
-      setFormData(initialData);
+      const newData = {} as Partial<WorksheetData>;
+      for (const key in formData) {
+        if (initialData[key as keyof WorksheetData]) {
+          // @ts-expect-error - Dynamic key assignment is safe here
+          newData[key as keyof WorksheetData] =
+            initialData[key as keyof WorksheetData];
+        }
+      }
+      setFormData({ ...formData, ...newData });
     }
   }, [initialData]);
 
@@ -69,7 +65,9 @@ export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
   };
 
   const handleAirportChange = (index: number, value: string) => {
-    const airportArray = [...formData.airport] as [string, string];
+    const airportArray = (
+      formData.airport ? [...formData.airport] : ["", ""]
+    ) as [string, string];
     // Convert airport codes to uppercase
     airportArray[index] = value.toUpperCase();
     const updatedData = { ...formData, airport: airportArray };
@@ -103,9 +101,7 @@ export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
     const hour = Number(hourStr);
     const minute = Number(minuteStr);
 
-    if (
-      [year, month, day, hour, minute].some((value) => Number.isNaN(value))
-    ) {
+    if ([year, month, day, hour, minute].some((value) => Number.isNaN(value))) {
       return null;
     }
 
@@ -246,7 +242,7 @@ export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
           <input
             type="text"
             id="departureAirport"
-            value={formData.airport[0] || ""}
+            value={formData.airport?.[0] || ""}
             onChange={(e) => handleAirportChange(0, e.target.value)}
             className="w-full px-3 py-2 border rounded-md dark:bg-black/[.15] dark:border-white/[.145]"
           />
@@ -273,7 +269,7 @@ export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
           <input
             type="text"
             id="arrivalAirport"
-            value={formData.airport[1] || ""}
+            value={formData.airport?.[1] || ""}
             onChange={(e) => handleAirportChange(1, e.target.value)}
             className="w-full px-3 py-2 border rounded-md dark:bg-black/[.15] dark:border-white/[.145]"
           />

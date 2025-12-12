@@ -1,17 +1,4 @@
 /**
- * Makes a type URL-serializable by ensuring all properties can be converted to string
- * and stored in the URL state.
- */
-export type URLSerializable<T> = T;
-
-/**
- * Helper type for objects that need indexed access while remaining URL-serializable
- */
-export type IndexedURLSerializable<T> = {
-  [key: string]: T;
-};
-
-/**
  * Consolidated worksheet data type that combines all form fields
  */
 export interface WorksheetData {

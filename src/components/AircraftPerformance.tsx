@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { URLSerializable, WorksheetData } from "@/utils/types";
+import type { WorksheetData } from "@/utils/types";
 import { isApiPopulatedData } from "@/utils/weatherDataMapper";
 
 type PerfFields = Pick<
@@ -16,14 +16,18 @@ type PerfFields = Pick<
 
 interface AircraftPerformanceProps {
   initialData?: PerfFields;
-  onUpdate: (data: Partial<URLSerializable<WorksheetData>>) => void;
+  onUpdate: (data: Partial<WorksheetData>) => void;
   worksheetData?: Partial<WorksheetData>; // Full worksheet data to check API population
 }
 
 const DEFAULT_DATA: PerfFields = {
   airport: ["", ""],
   temp: [null, null, null] as [number | null, number | null, number | null],
-  altimeter: [null, null, null] as [number | null, number | null, number | null],
+  altimeter: [null, null, null] as [
+    number | null,
+    number | null,
+    number | null
+  ],
   altitude: [null, null, null] as [number | null, number | null, number | null],
   rwy: [null, null] as [number | null, number | null],
 };
@@ -117,9 +121,7 @@ export default function AircraftPerformance({
     } else if (fieldType === "altitude") {
       // Only apply API styling to departure (index 0) and arrival (index 2) altitudes
       // Operating altitude (index 1) should always be manual entry (no API styling)
-      const isApiPopulated =
-        apiPopulated.altitude &&
-        index !== 1; // Never apply API styling to operating altitude
+      const isApiPopulated = apiPopulated.altitude && index !== 1; // Never apply API styling to operating altitude
       return isApiPopulated
         ? `${baseClasses} ${apiPopulatedClasses}`
         : `${baseClasses} ${manualClasses}`;

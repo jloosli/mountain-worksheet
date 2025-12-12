@@ -4,7 +4,7 @@ import qs from "qs";
 // This makes URLs more readable: "John Doe" -> "John+Doe" instead of "John%20Doe"
 const spaceEncoder = (
   str: string | number | boolean,
-  defaultEncoder: (str: any, defaultEncoder?: any, charset?: string) => string,
+  defaultEncoder: (str: unknown, defaultEncoder?: unknown, charset?: string) => string,
   charset: string,
   type: "key" | "value"
 ): string => {

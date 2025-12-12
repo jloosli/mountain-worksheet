@@ -354,10 +354,10 @@ export function findInverseXgivenYandZ(
       (targetZ - zValuesAtY[last - 1]) /
       (zValuesAtY[last] - zValuesAtY[last - 1]);
     return xAxis[last - 1] + t * (xAxis[last] - xAxis[last - 1]);
+  } else {
+    // This should never happen if the data is properly sorted
+    throw new Error("Could not find matching climb rate");
   }
-
-  // This should never happen if the data is properly sorted
-  throw new Error("Could not find matching climb rate");
 }
 
 /**
