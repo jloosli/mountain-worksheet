@@ -174,7 +174,7 @@ describe("useUrlState", () => {
     });
 
     expect(mockRouter.push).toHaveBeenCalledWith(
-      "/test?numbers=4%2C5%2C6&nested=1%2C2%7C%7C3%2C4",
+      "/test?numbers=4,5,6&nested=1,2||3,4",
       { scroll: false }
     );
   });

@@ -11,15 +11,17 @@ export function useUrlState<TBase, T extends URLSerializable<TBase>>(
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [state, setState] = useState<T>(() => {
-    return deserializeState(searchParams, initialState);
+    // Convert URLSearchParams to string for deserialization
+    const queryString = searchParams.toString();
+    return deserializeState(queryString || null, initialState);
   });
 
   const pendingStateRef = useRef<T | null>(null);
 
   const updateUrl = useCallback(
     (newState: T) => {
-      const params = serializeState(newState as Record<string, unknown>);
-      const query = params.toString() ? `?${params.toString()}` : "";
+      const queryString = serializeState(newState as Record<string, unknown>);
+      const query = queryString ? `?${queryString}` : "";
       const url = `${pathname}${query}`;
       router.push(url, { scroll: false });
       pendingStateRef.current = null;
