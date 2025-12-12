@@ -47,7 +47,7 @@ The application uses URL query strings to persist application state, allowing us
 - **Booleans**: Serialized as "1" or "0" (e.g., `?turb=1`)
 - **Nested Arrays (2D)**: Custom format with `||` separator (e.g., `?wind=0,90,180||5,10,15`)
 - **Empty values**: Null, undefined, empty strings, and empty arrays are automatically omitted
-- **No URL encoding**: Values are stored as-is for readability (e.g., `?pilot=John Doe` not `?pilot=John%20Doe`)
+- **No URL encoding**: Values are stored as-is for readability (e.g., `?pilot=John+Doe` not `?pilot=John%20Doe`)
 
 **Type Hints:**
 - Deserialization uses `initialState` as type hints to properly convert strings back to numbers, booleans, etc.
@@ -91,6 +91,7 @@ npm run dev     # Start development server with Turbopack
 - Use TypeScript for all components
 - Implement proper type definitions for props
 - Follow Next.js App Router patterns for layouts and pages
+- Most components are stateless and use props to update the state
 
 ### Styles
 
