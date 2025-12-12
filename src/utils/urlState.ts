@@ -1,10 +1,11 @@
 import qs from "qs";
 
+
 // Custom encoder that converts spaces to '+' while keeping arrays unencoded
 // This makes URLs more readable: "John Doe" -> "John+Doe" instead of "John%20Doe"
 const spaceEncoder = (
   str: string | number | boolean,
-  defaultEncoder: (str: unknown, defaultEncoder?: unknown, charset?: string) => string,
+  defaultEncoder: (str: string | number | boolean, defaultEncoder?: (str: string | number | boolean) => string, charset?: string) => string,
   charset: string,
   type: "key" | "value"
 ): string => {
