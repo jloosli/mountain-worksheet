@@ -1,4 +1,5 @@
 import { serializeState, deserializeState } from "../urlState";
+import qs from "qs";
 
 describe("serializeState", () => {
   it("should serialize primitive values correctly", () => {
@@ -11,7 +12,8 @@ describe("serializeState", () => {
       emptyString: "",
     };
 
-    const params = serializeState(state);
+    const queryString = serializeState(state);
+    const params = new URLSearchParams(queryString);
     expect(params.get("string")).toBe("hello");
     expect(params.get("number")).toBe("42");
     expect(params.get("boolean")).toBe("1");
@@ -30,7 +32,8 @@ describe("serializeState", () => {
       withEmpty: [1, "", null, 2, undefined, 3],
     };
 
-    const params = serializeState(state);
+    const queryString = serializeState(state);
+    const params = new URLSearchParams(queryString);
     expect(params.get("numbers")).toBe("1,2,3");
     expect(params.get("strings")).toBe("a,b,c");
     expect(params.get("mixed")).toBe("1,b,3");
@@ -50,7 +53,8 @@ describe("serializeState", () => {
       ],
     };
 
-    const params = serializeState(state);
+    const queryString = serializeState(state);
+    const params = new URLSearchParams(queryString);
     expect(params.get("nested")).toBe("1,2||3,4");
     expect(params.get("mixed")).toBe("1,a||b,2");
   });
@@ -67,7 +71,8 @@ describe("serializeState", () => {
       flags: [true, false, true],
     };
 
-    const params = serializeState(state);
+    const queryString = serializeState(state);
+    const params = new URLSearchParams(queryString);
     expect(params.get("pilot")).toBe("John Doe");
     expect(params.get("date")).toBe("2025-09-21");
     expect(params.get("altitude")).toBe("1000,2000,3000");
