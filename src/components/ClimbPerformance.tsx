@@ -6,7 +6,7 @@ import {
   findInverseXgivenYandZ,
   FlexibleInterpolationTable,
 } from "@/utils/interpolation";
-import { calculateVra } from "@/utils/formulas";
+import { calculateVra, calculateVx } from "@/utils/formulas";
 import { Aircraft } from "@/utils/types";
 
 interface ClimbPerformanceProps {
@@ -123,6 +123,12 @@ export default function ClimbPerformance({
     return vraValue !== null ? vraValue : "N/A";
   };
 
+  const Vx = (pa: number): number => {
+    if (!aircraft) return 0;
+    const vxValue = calculateVx(aircraft, pa);
+    return vxValue !== null ? vxValue : 0;
+  };
+
   const serviceCeiling = (oat: number) => {
     if (!aircraft) return 0;
     // Find the altitude where rate of climb is 300 ft/min
@@ -173,15 +179,9 @@ export default function ClimbPerformance({
             </tr>
             <tr className="border-b dark:border-gray-700">
               <td className="py-2 px-4">Vx (Best Angle)</td>
-              <td className="py-2 px-4 text-right">
-                {Math.round(Vy(PAs![0]!) * 0.9)}
-              </td>
-              <td className="py-2 px-4 text-right">
-                {Math.round(Vy(PAs![1]!) * 0.9)}
-              </td>
-              <td className="py-2 px-4 text-right">
-                {Math.round(Vy(PAs![2]!) * 0.9)}
-              </td>
+              <td className="py-2 px-4 text-right">{Vx(PAs![0]!)}</td>
+              <td className="py-2 px-4 text-right">{Vx(PAs![1]!)}</td>
+              <td className="py-2 px-4 text-right">{Vx(PAs![2]!)}</td>
             </tr>
             <tr className="border-b dark:border-gray-700">
               <td className="py-2 px-4">Vy (Best Rate)</td>

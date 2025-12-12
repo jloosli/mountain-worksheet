@@ -12,7 +12,7 @@
       "Va": [91, 101, 110]
     },
     "stallSpeeds": {
-      "flaps": [0,30],
+      "flaps": [0, 30],
       "Vso": [51, 41]
     },
     "climbPerformance": {
@@ -29,6 +29,10 @@
         [410, 350, 285, 225],
         [310, 250, 190, 130]
       ]
+    },
+    "Vx": {
+      "speeds": [65, 68],
+      "altitudes": [0, 10000]
     },
     "shortFieldTakeoff": {
       "weights": [2300, 2700, 3100],

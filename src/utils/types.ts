@@ -52,6 +52,10 @@ export interface Aircraft {
     temperatures: number[];
     data: number[][];
   };
+  Vx: {
+    speeds: number[];
+    altitudes: number[];
+  };
   shortFieldTakeoff: {
     weights: number[];
     pressureAltitudes: number[];
