@@ -29,6 +29,40 @@ A Next.js web application designed to help Civil Air Patrol (CAP) pilots plan an
 - Custom fonts: Geist Sans and Geist Mono via `next/font/google`
 - Dark mode support built into component styles
 
+### URL State Management
+
+The application uses URL query strings to persist application state, allowing users to bookmark and share worksheet configurations.
+
+**Key Files:**
+- `src/utils/urlState.ts` - Serialization/deserialization logic
+- `src/utils/useUrlState.ts` - React hook for URL state management
+
+**Serialization Approach:**
+- Uses the `qs` library (https://github.com/ljharb/qs) for query string handling
+- Query strings are optimized for compactness and human-readability
+- Configuration: `{arrayFormat: 'comma', encode: false, skipNulls: true}`
+
+**Format Details:**
+- **Arrays**: Comma-separated values (e.g., `?numbers=1,2,3`)
+- **Booleans**: Serialized as "1" or "0" (e.g., `?turb=1`)
+- **Nested Arrays (2D)**: Custom format with `||` separator (e.g., `?wind=0,90,180||5,10,15`)
+- **Empty values**: Null, undefined, empty strings, and empty arrays are automatically omitted
+- **No URL encoding**: Values are stored as-is for readability (e.g., `?pilot=John Doe` not `?pilot=John%20Doe`)
+
+**Type Hints:**
+- Deserialization uses `initialState` as type hints to properly convert strings back to numbers, booleans, etc.
+- This ensures type safety when reading from URL parameters
+
+**Usage Example:**
+```typescript
+const [state, setState] = useUrlState({
+  pilot: "",
+  altitude: [0, 0, 0],
+  turb: false,
+});
+// State is automatically synced with URL query string
+```
+
 ## Development Workflow
 
 ### Environment Setup
