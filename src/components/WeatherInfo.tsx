@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { WorksheetData } from "@/utils/types";
 import { isApiPopulatedData } from "@/utils/weatherDataMapper";
 
@@ -54,20 +54,94 @@ export default function WeatherInfo({
         altitude: false,
       };
 
-  // Update local data when initialData changes (from API population)
+  // Track previous initialData to detect actual changes
+  const prevInitialDataRef = useRef<WorksheetData | undefined>(initialData);
+  const prevApiPopulatedWindRef = useRef(apiPopulated.wind);
+  const prevApiPopulatedTempRef = useRef(apiPopulated.temperature);
+
+  // Helper to deep compare arrays
+  const arraysEqual = (
+    a: number[] | undefined,
+    b: number[] | undefined
+  ): boolean => {
+    if (!a || !b) return a === b;
+    if (a.length !== b.length) return false;
+    return a.every((val, idx) => val === b[idx]);
+  };
+
+  // Helper to deep compare wind arrays (3D array)
+  const windArraysEqual = (
+    a: [number[], number[], number[]] | undefined,
+    b: [number[], number[], number[]] | undefined
+  ): boolean => {
+    if (!a || !b) return a === b;
+    if (a.length !== b.length) return false;
+    return a.every((arr, idx) => arraysEqual(arr, b[idx]));
+  };
+
+  // Update local data only when API-populated fields actually change
   useEffect(() => {
-    if (initialData) {
-      setData((prev) => ({
-        ...prev,
-        // Only extract weather-related fields from initialData
-        ...(Object.fromEntries(
-          Object.keys(DEFAULT_WEATHER_DATA)
-            .filter((key) => key in (initialData ?? {}))
-            .map((key) => [key, initialData[key as keyof WeatherFields]])
-        ) as Partial<WeatherFields>),
-      }));
+    if (!initialData) {
+      prevInitialDataRef.current = initialData;
+      prevApiPopulatedWindRef.current = apiPopulated.wind;
+      prevApiPopulatedTempRef.current = apiPopulated.temperature;
+      return;
     }
-  }, [initialData]);
+
+    const prevInitialData = prevInitialDataRef.current;
+    const prevApiPopulatedWind = prevApiPopulatedWindRef.current;
+    const prevApiPopulatedTemp = prevApiPopulatedTempRef.current;
+
+    // Check if API-populated status has changed (new API data available)
+    const windApiStatusChanged = apiPopulated.wind !== prevApiPopulatedWind;
+    const tempApiStatusChanged =
+      apiPopulated.temperature !== prevApiPopulatedTemp;
+
+    // Check if API-populated fields have actually changed
+    const windDataChanged = !windArraysEqual(
+      initialData.wind,
+      prevInitialData?.wind
+    );
+    const tempDataChanged = !arraysEqual(
+      initialData.wind?.[2], // temperature is stored in wind[2]
+      prevInitialData?.wind?.[2]
+    );
+
+    // Only update if:
+    // 1. Field is API-populated AND data changed, OR
+    // 2. Field just became API-populated (status changed from false to true)
+    const shouldUpdateWind =
+      apiPopulated.wind &&
+      (windDataChanged || (windApiStatusChanged && !prevApiPopulatedWind));
+    const shouldUpdateTemp =
+      apiPopulated.temperature &&
+      (tempDataChanged || (tempApiStatusChanged && !prevApiPopulatedTemp));
+
+    // Only update if API-populated fields have changed
+    if (shouldUpdateWind || shouldUpdateTemp) {
+      setData((prev) => {
+        const updates: Partial<WeatherFields> = {};
+
+        // Only update wind if it's API-populated and should be updated
+        if (shouldUpdateWind && initialData.wind) {
+          updates.wind = initialData.wind as [number[], number[], number[]];
+        }
+
+        // Preserve user edits to non-API fields (turb, cielVis, mtnObsc)
+        // These should never be overwritten by API data
+
+        return {
+          ...prev,
+          ...updates,
+        };
+      });
+    }
+
+    // Update refs for next comparison
+    prevInitialDataRef.current = initialData;
+    prevApiPopulatedWindRef.current = apiPopulated.wind;
+    prevApiPopulatedTempRef.current = apiPopulated.temperature;
+  }, [initialData, apiPopulated.wind, apiPopulated.temperature]);
 
   // Use initialData for display values if available, otherwise use local data
   const hasApiWindData =
