@@ -29,6 +29,10 @@ jest.mock("../data/aircraft.json", () => [
         [840, 770, 705],
       ],
     },
+    Vx: {
+      speeds: [65, 68],
+      altitudes: [0, 10000],
+    },
     shortFieldTakeoff: {
       weights: [2300, 2700, 3100],
       pressureAltitudes: [0, 1000, 2000],
@@ -91,7 +95,9 @@ describe("ClimbPerformance Component", () => {
 
   test("renders without crashing", () => {
     render(<ClimbPerformance {...defaultProps} />);
-    expect(screen.getByText("Rates of Climb, V Speeds, Ceilings (C182T)")).toBeInTheDocument();
+    expect(
+      screen.getByText("Rates of Climb, V Speeds, Ceilings (C182T)")
+    ).toBeInTheDocument();
   });
 
   test("displays Vra value correctly for valid aircraft", () => {
@@ -107,7 +113,9 @@ describe("ClimbPerformance Component", () => {
 
   test("displays N/A when no aircraft model is provided", () => {
     render(<ClimbPerformance {...defaultProps} aircraftModel={undefined} />);
-    expect(screen.queryByText("Rates of Climb, V Speeds, Ceilings")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Rates of Climb, V Speeds, Ceilings")
+    ).not.toBeInTheDocument();
   });
 
   test("updates Vra value when aircraft model changes", () => {
@@ -120,13 +128,13 @@ describe("ClimbPerformance Component", () => {
 
   test("Vra row appears after Va row in the table", () => {
     render(<ClimbPerformance {...defaultProps} />);
-    
+
     const table = screen.getByRole("table");
     const rows = table.querySelectorAll("tbody tr");
-    
+
     let vaRowIndex = -1;
     let vraRowIndex = -1;
-    
+
     rows.forEach((row, index) => {
       const text = row.textContent || "";
       if (text.includes("Va at Actual Weight")) {
@@ -136,7 +144,7 @@ describe("ClimbPerformance Component", () => {
         vraRowIndex = index;
       }
     });
-    
+
     expect(vaRowIndex).toBeGreaterThan(-1);
     expect(vraRowIndex).toBeGreaterThan(-1);
     expect(vraRowIndex).toBeGreaterThan(vaRowIndex);
@@ -144,10 +152,10 @@ describe("ClimbPerformance Component", () => {
 
   test("Vra value is displayed only in departure column", () => {
     render(<ClimbPerformance {...defaultProps} />);
-    
+
     const vraRow = screen.getByText("Vra (Rough Air Speed)").closest("tr");
     const cells = vraRow?.querySelectorAll("td");
-    
+
     expect(cells).toHaveLength(4); // Metric, Departure, Operating, Arrival
     expect(cells?.[1]).toHaveTextContent("87"); // Departure column
     expect(cells?.[2]).toHaveTextContent(""); // Operating column should be empty
@@ -156,10 +164,10 @@ describe("ClimbPerformance Component", () => {
 
   test("Vra value has correct styling (right-aligned)", () => {
     render(<ClimbPerformance {...defaultProps} />);
-    
+
     const vraRow = screen.getByText("Vra (Rough Air Speed)").closest("tr");
     const departureCell = vraRow?.querySelectorAll("td")[1];
-    
+
     expect(departureCell).toHaveClass("text-right");
   });
 });

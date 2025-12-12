@@ -5,6 +5,7 @@ import {
   altitudeToPressureAltitude,
   getRateOfClimb,
   calculateVra,
+  calculateVx,
 } from "../formulas";
 import { type InterpolationTable } from "../interpolation";
 import { type Aircraft } from "../types";
@@ -251,5 +252,156 @@ describe("Vra Calculation Function", () => {
     const result = calculateVra(aircraftWithDecimalVso);
     // Vra = 1.7 × 50.5 = 85.85, rounded to 86
     expect(result).toBe(86);
+  });
+});
+
+describe("Vx Calculation Function", () => {
+  const mockAircraft: Aircraft = {
+    id: "C182T",
+    name: "Cessna 182T",
+    emptyWeight: 2300,
+    maxGrossWeight: 3100,
+    fuelCapacity: 88,
+    fuelWeightPerGallon: 6,
+    serviceCeiling: 14000,
+    maneuvering: {
+      weights: [2100, 2600, 3100],
+      Va: [91, 101, 110],
+    },
+    stallSpeeds: {
+      flaps: [0, 30],
+      Vso: [51, 41],
+    },
+    climbPerformance: {
+      pressureAltitudes: [0, 2000, 4000],
+      climbSpeeds: [80, 79, 78],
+      temperatures: [-20, 0, 20],
+      data: [
+        [1055, 980, 905],
+        [945, 875, 805],
+        [840, 770, 705],
+      ],
+    },
+    Vx: {
+      speeds: [65, 68],
+      altitudes: [0, 10000],
+    },
+    shortFieldTakeoff: {
+      weights: [2300, 2700, 3100],
+      pressureAltitudes: [0, 1000, 2000],
+      temperatures: [0, 10, 20],
+      data: [
+        {
+          groundRoll: [[365, 390, 420]],
+          groundRoll50ft: [[705, 750, 800]],
+        },
+      ],
+    },
+  };
+
+  test("calculates Vx correctly for altitude at minimum point", () => {
+    const result = calculateVx(mockAircraft, 0);
+    expect(result).toBe(65);
+  });
+
+  test("calculates Vx correctly for altitude at maximum point", () => {
+    const result = calculateVx(mockAircraft, 10000);
+    expect(result).toBe(68);
+  });
+
+  test("interpolates Vx correctly for altitude in middle", () => {
+    const result = calculateVx(mockAircraft, 5000);
+    // Linear interpolation: 65 + (68 - 65) * (5000 - 0) / (10000 - 0) = 65 + 3 * 0.5 = 66.5, rounded to 67
+    expect(result).toBe(67);
+  });
+
+  test("interpolates Vx correctly for altitude at 2500ft", () => {
+    const result = calculateVx(mockAircraft, 2500);
+    // Linear interpolation: 65 + (68 - 65) * (2500 - 0) / (10000 - 0) = 65 + 3 * 0.25 = 65.75, rounded to 66
+    expect(result).toBe(66);
+  });
+
+  test("extrapolates Vx correctly for altitude below minimum", () => {
+    const result = calculateVx(mockAircraft, -1000);
+    // Extrapolation using slope from first two points: 65 + (68 - 65) * (-1000 - 0) / (10000 - 0) = 65 - 0.3 = 64.7, rounded to 65
+    expect(result).toBe(65);
+  });
+
+  test("extrapolates Vx correctly for altitude above maximum", () => {
+    const result = calculateVx(mockAircraft, 12000);
+    // Extrapolation using slope from last two points: 68 + (68 - 65) * (12000 - 10000) / (10000 - 0) = 68 + 0.6 = 68.6, rounded to 69
+    expect(result).toBe(69);
+  });
+
+  test("handles single value Vx data", () => {
+    const aircraftWithSingleVx = {
+      ...mockAircraft,
+      Vx: {
+        speeds: [65],
+        altitudes: [0],
+      },
+    };
+    const result1 = calculateVx(aircraftWithSingleVx, 0);
+    const result2 = calculateVx(aircraftWithSingleVx, 10000);
+    const result3 = calculateVx(aircraftWithSingleVx, 5000);
+    expect(result1).toBe(65);
+    expect(result2).toBe(65);
+    expect(result3).toBe(65);
+  });
+
+  test("returns null for null aircraft", () => {
+    const result = calculateVx(null, 5000);
+    expect(result).toBeNull();
+  });
+
+  test("returns null for aircraft with missing Vx data", () => {
+    const aircraftWithoutVx = {
+      ...mockAircraft,
+      Vx: undefined,
+    } as Aircraft;
+    const result = calculateVx(aircraftWithoutVx, 5000);
+    expect(result).toBeNull();
+  });
+
+  test("returns null for aircraft with empty speeds array", () => {
+    const aircraftWithEmptySpeeds = {
+      ...mockAircraft,
+      Vx: {
+        speeds: [],
+        altitudes: [0, 10000],
+      },
+    };
+    const result = calculateVx(aircraftWithEmptySpeeds, 5000);
+    expect(result).toBeNull();
+  });
+
+  test("returns null for aircraft with empty altitudes array", () => {
+    const aircraftWithEmptyAltitudes = {
+      ...mockAircraft,
+      Vx: {
+        speeds: [65, 68],
+        altitudes: [],
+      },
+    };
+    const result = calculateVx(aircraftWithEmptyAltitudes, 5000);
+    expect(result).toBeNull();
+  });
+
+  test("returns null for aircraft with mismatched array lengths", () => {
+    const aircraftWithMismatchedArrays = {
+      ...mockAircraft,
+      Vx: {
+        speeds: [65, 68],
+        altitudes: [0],
+      },
+    };
+    const result = calculateVx(aircraftWithMismatchedArrays, 5000);
+    expect(result).toBeNull();
+  });
+
+  test("rounds result to nearest whole number", () => {
+    const result = calculateVx(mockAircraft, 3333);
+    // Linear interpolation: 65 + (68 - 65) * (3333 - 0) / (10000 - 0) = 65 + 0.9999 = 65.9999, rounded to 66
+    expect(result).toBe(66);
   });
 });
