@@ -195,7 +195,7 @@ export const deserializeState = <T>(
 
   const parsed = qs.parse(queryStr, {
     comma: true, // Parse comma-separated values as arrays
-    decode: false, // Don't decode since we used encode: false
+    decoder: (str: string) => str, // Don't decode since we used encode: false
   });
 
   return postprocessState(parsed as Record<string, unknown>, initialState);
