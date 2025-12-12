@@ -52,7 +52,7 @@ export interface Aircraft {
     temperatures: number[];
     data: number[][];
   };
-  Vx: {
+  Vx?: {
     speeds: number[];
     altitudes: number[];
   };
