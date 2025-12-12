@@ -1,5 +1,23 @@
 import qs from "qs";
 
+// Custom encoder that converts spaces to '+' while keeping arrays unencoded
+// This makes URLs more readable: "John Doe" -> "John+Doe" instead of "John%20Doe"
+const spaceEncoder = (
+  str: string | number | boolean,
+  defaultEncoder: (str: any, defaultEncoder?: any, charset?: string) => string,
+  charset: string,
+  type: "key" | "value"
+): string => {
+  if (typeof str === "string") {
+    // Only encode spaces as '+' for values (not keys, to keep them readable)
+    if (type === "value") {
+      return str.replace(/ /g, "+");
+    }
+  }
+  // Use default encoder for other characters
+  return defaultEncoder(str, defaultEncoder, charset);
+};
+
 // Filter function for qs.stringify to skip null, undefined, empty strings, and empty arrays
 const filterEmpty = (prefix: string, value: unknown): unknown => {
   if (value === null || value === undefined || value === "") {
@@ -162,11 +180,12 @@ const postprocessState = <T>(
 // qs options for compact, human-readable query strings
 const QS_STRINGIFY_OPTIONS: qs.IStringifyOptions = {
   arrayFormat: "comma", // Comma-separated arrays: ?arr=1,2,3
-  encode: false, // No URL encoding for human-readable strings
+  encode: true, // Enable encoding to use custom encoder for spaces
+  encoder: spaceEncoder, // Custom encoder: spaces -> '+', arrays stay unencoded
   skipNulls: true, // Skip null values automatically
   filter: filterEmpty, // Also skip undefined, empty strings, and empty arrays
   addQueryPrefix: false, // Don't add ? prefix (we add it in useUrlState)
-  format: "RFC1738",
+  format: "RFC1738", // Use RFC1738 format (spaces as '+')
 };
 
 // Convert state object to query string
