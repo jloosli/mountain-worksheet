@@ -318,22 +318,21 @@ export function findInverseXgivenYandZ(
   }
   // First interpolate values at our y-value (temperature) for each x (altitude)
   const zValuesAtY: number[] = [];
+  const validXAxis: number[] = [];
 
   // For each altitude (x value), find the climb rate at our temperature
   for (let i = 0; i < xAxis.length; i++) {
-    let zAtY: number;
+    let zAtY: number | null = null;
 
     // Check if y-value (temperature) is exactly in the table
     const yIndex = yAxis.indexOf(yVal);
     if (yIndex !== -1) {
       // Exact match - use the value directly
       const value = data[i][yIndex];
-      if (value === null) {
-        throw new Error(
-          `Cannot calculate inverse: data point at index [${i}][${yIndex}] is null`
-        );
+      if (value !== null) {
+        zAtY = value;
       }
-      zAtY = value;
+      // If value is null, zAtY remains null and we skip this altitude
     } else {
       // Find surrounding y indices
       const yIdx = findSurroundingIndex(yAxis, yVal);
@@ -342,28 +341,37 @@ export function findInverseXgivenYandZ(
       const z1 = data[i][yIdx]; // Climb rate at lower temperature
       const z2 = data[i][yIdx + 1]; // Climb rate at higher temperature
 
-      if (z1 === null || z2 === null) {
-        throw new Error(
-          `Cannot calculate inverse: data contains null values at indices [${i}][${yIdx}] or [${i}][${yIdx + 1}]`
-        );
+      if (z1 !== null && z2 !== null) {
+        // Linear interpolation for temperature
+        const t = (yVal - y1) / (y2 - y1);
+        zAtY = z1 + t * (z2 - z1);
       }
-
-      // Linear interpolation for temperature
-      const t = (yVal - y1) / (y2 - y1);
-      zAtY = z1 + t * (z2 - z1);
+      // If either z1 or z2 is null, zAtY remains null and we skip this altitude
     }
-    zValuesAtY.push(zAtY);
+
+    // Only add valid data points
+    if (zAtY !== null) {
+      zValuesAtY.push(zAtY);
+      validXAxis.push(xAxis[i]);
+    }
+  }
+
+  // Check if we have enough valid data points
+  if (validXAxis.length === 0) {
+    throw new Error(
+      "Cannot calculate inverse: all data points are null at the requested temperature"
+    );
   }
 
   // Now find where these interpolated values match our target
-  for (let i = 0; i < xAxis.length - 1; i++) {
+  for (let i = 0; i < validXAxis.length - 1; i++) {
     const z1 = zValuesAtY[i];
     const z2 = zValuesAtY[i + 1];
 
     // Check if target is between these points
     if ((targetZ >= z1 && targetZ <= z2) || (targetZ >= z2 && targetZ <= z1)) {
-      const x1 = xAxis[i];
-      const x2 = xAxis[i + 1];
+      const x1 = validXAxis[i];
+      const x2 = validXAxis[i + 1];
       // Linear interpolation to find exact x
       const t = (targetZ - z1) / (z2 - z1);
       return x1 + t * (x2 - x1);
@@ -376,15 +384,23 @@ export function findInverseXgivenYandZ(
 
   if (targetZ < Math.min(firstZ, lastZ)) {
     // Target is below the data range, extrapolate using first two points
+    if (validXAxis.length < 2) {
+      // Not enough points for extrapolation
+      return validXAxis[0];
+    }
     const t = (targetZ - zValuesAtY[0]) / (zValuesAtY[1] - zValuesAtY[0]);
-    return xAxis[0] + t * (xAxis[1] - xAxis[0]);
+    return validXAxis[0] + t * (validXAxis[1] - validXAxis[0]);
   } else if (targetZ > Math.max(firstZ, lastZ)) {
     // Target is above the data range, extrapolate using last two points
-    const last = xAxis.length - 1;
+    if (validXAxis.length < 2) {
+      // Not enough points for extrapolation
+      return validXAxis[0];
+    }
+    const last = validXAxis.length - 1;
     const t =
       (targetZ - zValuesAtY[last - 1]) /
       (zValuesAtY[last] - zValuesAtY[last - 1]);
-    return xAxis[last - 1] + t * (xAxis[last] - xAxis[last - 1]);
+    return validXAxis[last - 1] + t * (validXAxis[last] - validXAxis[last - 1]);
   } else {
     // This should never happen if the data is properly sorted
     throw new Error("Could not find matching climb rate");
