@@ -317,7 +317,7 @@ export function findInverseXgivenYandZ(
     }
   }
   // First interpolate values at our y-value (temperature) for each x (altitude)
-  const zValuesAtY: (number | null)[] = [];
+  const zValuesAtY: number[] = [];
   const validXAxis: number[] = [];
 
   // For each altitude (x value), find the climb rate at our temperature
