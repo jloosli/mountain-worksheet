@@ -63,21 +63,47 @@ const [state, setState] = useUrlState({
 // State is automatically synced with URL query string
 ```
 
+### Performance Calculations
+
+Aircraft performance tables (from POH data) are stored in `src/data/aircraft.json` indexed by weight × altitude × temperature. Calculations use trilinear interpolation (`src/utils/interpolation.ts`) to find values between table entries.
+
+Key calculation files:
+- `src/utils/toldCalculations.ts` — takeoff/landing distance calculations
+- `src/utils/maneuveringCalculations.ts` — maneuvering speed calculations
+- `src/utils/formulas.ts` — density altitude and other aviation formulas
+
+### Type Definitions
+
+All core types are in `src/utils/types.ts`:
+- `WorksheetData` — the complete form state
+- `Aircraft` — aircraft model with performance tables
+- `TOLDResults`, `TOLDInputs` — takeoff/landing calculation I/O
+
 ## Development Workflow
 
-### Environment Setup
+### Commands
 
 ```bash
-npm install     # Install dependencies
-npm run dev     # Start development server with Turbopack
+npm install          # Install dependencies
+npm run dev          # Development server (Turbopack)
+npm run build        # Production build
+npm run lint         # ESLint
+npm test             # Run tests once
+npm run test:watch   # Tests in watch mode
+npm run test:coverage # Coverage report
 ```
 
-### Key Commands
+To run a single test file:
+```bash
+npx jest src/utils/__tests__/interpolation.test.ts
+npx jest src/components/__tests__/AppContainer.test.tsx
+```
 
-- `npm run dev` - Development server with hot reload
-- `npm run build` - Production build with Turbopack
-- `npm run lint` - Run ESLint checks
-- `npm start` - Start production server
+### Testing
+
+Jest + React Testing Library. Next.js navigation (`useRouter`, `useSearchParams`, `usePathname`) is mocked in `jest.setup.ts`. Tests live alongside source in `__tests__/` subdirectories.
+
+CI runs tests, lint, and build on every push/PR to `main`.
 
 ### Deployment
 
@@ -116,9 +142,3 @@ npm run dev     # Start development server with Turbopack
 - Add Tailwind classes directly to components
 - Update global styles in `src/app/globals.css`
 - Configure Tailwind in `tailwind.config.js`
-
-## Need Help?
-
-- Check [Next.js App Router Documentation](https://nextjs.org/docs)
-- Review [Tailwind CSS Documentation](https://tailwindcss.com/docs)
-- See deployment details in [Vercel Dashboard](https://vercel.com/dashboard)
