@@ -199,6 +199,79 @@ describe("Interpolation Functions", () => {
         findInverseXgivenYandZ(invalidData, invalidXAxis, invalidYAxis, 2, 0);
       }).toThrow(); // Should throw due to dimension mismatch
     });
+
+    it("should handle null values by skipping affected altitudes", () => {
+      // Test data with null values at high altitude/high temperature
+      const xAxisWithNulls = [0, 2000, 4000, 6000, 8000];
+      const yAxisWithNulls = [-20, 0, 20, 40];
+      const dataWithNulls = [
+        [1000, 900, 800, 700], // Climb rates at 0ft for each temp
+        [900, 800, 700, 600], // Climb rates at 2000ft
+        [800, 700, 600, 500], // Climb rates at 4000ft
+        [700, 600, 500, 400], // Climb rates at 6000ft
+        [600, 500, null, null], // Climb rates at 8000ft - high temps not available
+      ];
+
+      // At 30°C (between 20° and 40°), find altitude where climb rate is 550 fpm
+      // The function should skip the 8000ft altitude since it has null values
+      const result = findInverseXgivenYandZ(
+        dataWithNulls,
+        xAxisWithNulls,
+        yAxisWithNulls,
+        550,
+        30
+      );
+      // At 30°C, for each altitude we interpolate between temps 20° and 40°:
+      // 0ft: between 800 and 700 = 750 fpm
+      // 2000ft: between 700 and 600 = 650 fpm
+      // 4000ft: between 600 and 500 = 550 fpm (exact match)
+      // 6000ft: between 500 and 400 = 450 fpm
+      // 8000ft: skipped due to nulls
+      expect(result).toBe(4000);
+    });
+
+    it("should handle exact temperature match with null values", () => {
+      // Test data with null values at exact temperature
+      const xAxisWithNulls = [0, 2000, 4000, 6000];
+      const yAxisWithNulls = [-20, 0, 20, 40];
+      const dataWithNulls = [
+        [1000, 900, 800, 700],
+        [900, 800, 700, 600],
+        [800, 700, 600, 500],
+        [700, 600, null, 400], // null at 20°C
+      ];
+
+      // At exactly 20°C, find altitude where climb rate is 700 fpm
+      // Should skip the 6000ft altitude due to null value
+      const result = findInverseXgivenYandZ(
+        dataWithNulls,
+        xAxisWithNulls,
+        yAxisWithNulls,
+        700,
+        20
+      );
+      // Valid data points at 20°C:
+      // 0ft: 800 fpm
+      // 2000ft: 700 fpm (exact match)
+      // 4000ft: 600 fpm
+      // 6000ft: skipped (null)
+      expect(result).toBe(2000);
+    });
+
+    it("should throw error when all data points are null at requested temperature", () => {
+      const xAxisAllNulls = [0, 2000, 4000];
+      const yAxisAllNulls = [-20, 0, 20, 40];
+      const dataAllNulls = [
+        [1000, 900, null, null],
+        [900, 800, null, null],
+        [800, 700, null, null],
+      ];
+
+      // At 30°C (between 20° and 40°), all data points are null
+      expect(() => {
+        findInverseXgivenYandZ(dataAllNulls, xAxisAllNulls, yAxisAllNulls, 500, 30);
+      }).toThrow("all data points are null");
+    });
   });
 
   describe("createInterpolationTable", () => {

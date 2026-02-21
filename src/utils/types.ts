@@ -50,7 +50,7 @@ export interface Aircraft {
     pressureAltitudes: number[];
     climbSpeeds: number[];
     temperatures: number[];
-    data: number[][];
+    data: (number | null)[][];
   };
   Vx?: {
     speeds: number[];
