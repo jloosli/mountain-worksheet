@@ -40,14 +40,16 @@ The application uses URL query strings to persist application state, allowing us
 **Serialization Approach:**
 - Uses the `qs` library (https://github.com/ljharb/qs) for query string handling
 - Query strings are optimized for compactness and human-readability
-- Configuration: `{arrayFormat: 'comma', encode: false, skipNulls: true}`
+- Configuration: `{arrayFormat: 'comma', encode: true, skipNulls: true}` with a custom encoder that converts spaces to `+`
 
 **Format Details:**
 - **Arrays**: Comma-separated values (e.g., `?numbers=1,2,3`)
 - **Booleans**: Serialized as "1" or "0" (e.g., `?turb=1`)
-- **Nested Arrays (2D)**: Custom format with `||` separator (e.g., `?wind=0,90,180||5,10,15`)
-- **Empty values**: Null/undefined top-level values and fully-empty arrays are omitted. However, null elements *within* a fixed-length array are preserved as empty slots (e.g. `[30.24, null, 30.31]` → `altimeter=30.24,,30.31`) so that array indices are stable across round-trips. Deserialization restores empty slots back to `null`.
-- **No URL encoding**: Values are stored as-is for readability (e.g., `?pilot=John+Doe` not `?pilot=John%20Doe`)
+- **Nested Arrays (2D)**: Custom format with `||` separator (e.g., `?wind=,90,180||5,10,15`). Null positions are preserved as empty slots (e.g. `[null, 90, 180]` → `,90,180`).
+- **Empty values**: Null/undefined top-level values and fully-empty arrays are omitted. However, null elements *within* any array (simple or nested) are preserved as empty slots so that array indices are stable across round-trips. Deserialization restores empty slots back to `null`.
+- **Spaces**: Encoded as `+` for readability (e.g., `?pilot=John+Doe` not `?pilot=John%20Doe`)
+
+**Wind data null semantics:** The `wind` field uses `null` (not `0`) to represent missing data for an altitude. A value of `0` is a legitimate wind direction or velocity. This distinction matters in both the URL (`wind=,255,257` means null at 3,000ft, not zero) and in rendering (`??` not `||` must be used when reading values for display).
 
 **Type Hints:**
 - Deserialization uses `initialState` as type hints to properly convert strings back to numbers, booleans, etc.

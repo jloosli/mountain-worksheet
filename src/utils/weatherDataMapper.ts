@@ -49,7 +49,7 @@ export function mapWindTempData(
   options: WeatherMappingOptions = {}
 ): Partial<WorksheetData> {
   const result: Partial<WorksheetData> = {
-    wind: [Array(5).fill(0), Array(5).fill(0), Array(5).fill(0)],
+    wind: [Array(5).fill(null), Array(5).fill(null), Array(5).fill(null)],
   };
 
   // Group data by altitude
@@ -684,7 +684,7 @@ function validateMappedData(data: Partial<WorksheetData>): {
   // Validate wind data
   if (data.wind) {
     data.wind[0].forEach((dir, index) => {
-      if (dir !== 0 && !isValidWindDirection(dir)) {
+      if (dir !== null && dir !== undefined && !isValidWindDirection(dir)) {
         errors.push(
           `Invalid wind direction at altitude ${TARGET_ALTITUDES[index]}ft: ${dir}`
         );
@@ -692,7 +692,7 @@ function validateMappedData(data: Partial<WorksheetData>): {
     });
 
     data.wind[1].forEach((speed, index) => {
-      if (speed !== 0 && !isValidWindSpeed(speed)) {
+      if (speed !== null && speed !== undefined && !isValidWindSpeed(speed)) {
         errors.push(
           `Invalid wind speed at altitude ${TARGET_ALTITUDES[index]}ft: ${speed}`
         );
@@ -700,7 +700,7 @@ function validateMappedData(data: Partial<WorksheetData>): {
     });
 
     data.wind[2].forEach((temp, index) => {
-      if (temp !== 0 && !isValidTemperature(temp)) {
+      if (temp !== null && temp !== undefined && !isValidTemperature(temp)) {
         errors.push(
           `Invalid temperature at altitude ${TARGET_ALTITUDES[index]}ft: ${temp}`
         );
@@ -754,7 +754,7 @@ export function isApiPopulatedData(data: Partial<WorksheetData>): {
     wind: !!(
       data.wind &&
       Array.isArray(data.wind[0]) &&
-      data.wind[0].some((val) => val !== 0)
+      data.wind[0].some((val) => val !== null && val !== undefined)
     ),
     temperature: !!(
       data.temp &&
