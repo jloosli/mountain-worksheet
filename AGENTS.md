@@ -127,6 +127,8 @@ npx jest src/components/__tests__/AppContainer.test.tsx
 
 Jest + React Testing Library. Next.js navigation (`useRouter`, `useSearchParams`, `usePathname`) is mocked in `jest.setup.ts`. Tests live alongside source in `__tests__/` subdirectories.
 
+**Every code change must include corresponding new or updated tests — see [Testing under Conventions](#testing-1).**
+
 CI runs tests, lint, and build on every push/PR to `main`.
 
 ### Deployment
@@ -154,6 +156,19 @@ CI runs tests, lint, and build on every push/PR to `main`.
 - Keep page components in `src/app/` directory
 - Place reusable components in `src/components/`
 - Static assets in `public/` directory
+
+### Testing
+
+**Tests are required whenever code changes are made.** This is not optional.
+
+- **New utility functions or calculations** → add unit tests in `src/utils/__tests__/` (or co-located `*.test.ts` next to the source file)
+- **New or modified components** → add or update component tests co-located in `src/components/` as `ComponentName.test.tsx`
+- **Bug fixes** → add a regression test that would have caught the bug
+- **Refactors** → ensure existing tests still pass; add tests for any behavior not already covered
+
+Use Jest + React Testing Library. See `src/test-utils/test-utils.ts` for the custom render wrapper. Mock external data (e.g. `aircraft.json`) and child components as shown in existing tests.
+
+Do not submit a change that touches source files without a corresponding test file change (new or updated tests).
 
 ## Common Tasks
 
