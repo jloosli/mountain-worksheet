@@ -125,7 +125,7 @@ npx jest src/components/__tests__/AppContainer.test.tsx
 
 Jest + React Testing Library. Next.js navigation (`useRouter`, `useSearchParams`, `usePathname`) is mocked in `jest.setup.ts`. Tests live alongside source in `__tests__/` subdirectories.
 
-**Every code change must include corresponding new or updated tests — see [Testing under Conventions](#testing).**
+**Every code change must include corresponding new or updated tests — see [Testing under Conventions](#testing-1).**
 
 CI runs tests, lint, and build on every push/PR to `main`.
 
