@@ -469,6 +469,10 @@
         [230, 120, null, null]
       ]
     },
+    "Vx": {
+      "speeds": [89, 89, 79],
+      "altitudes": [0, 17000, 24000]
+    },
     "shortFieldTakeoff": {
       "weights": [3000, 3300, 3600],
       "pressureAltitudes": [0, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000],
