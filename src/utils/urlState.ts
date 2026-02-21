@@ -57,18 +57,20 @@ const preprocessForQs = (state: Record<string, unknown>): Record<string, unknown
     
     // Handle nested arrays (2D arrays) - serialize them as comma-separated strings with || separator
     // This is the only custom format we need since qs doesn't support || separator natively
+    // Null/undefined positions are preserved as empty slots (e.g. [null, 0, 5] → ",0,5")
+    // so that index positions round-trip correctly (deserialization restores "" to null).
     if (Array.isArray(value) && value.length > 0 && Array.isArray(value[0])) {
       const nestedSerialized = value.map((subArray) => {
-        const filtered = subArray.filter(
-          (v: unknown) => v !== null && v !== undefined && v !== ""
-        );
-        const mapped = filtered.map((v: unknown) => {
+        const mapped = subArray.map((v: unknown) => {
+          if (v === null || v === undefined || v === "") return "";
           if (typeof v === "boolean") return v ? "1" : "0";
           return String(v);
         });
         return mapped.join(",");
       });
-      processed[key] = nestedSerialized.join("||");
+      // Only include the key if at least one sub-array has a non-empty value
+      const hasAnyValue = nestedSerialized.some((s) => s.replace(/,/g, "") !== "");
+      processed[key] = hasAnyValue ? nestedSerialized.join("||") : undefined;
       continue;
     }
     
@@ -162,18 +164,37 @@ const postprocessState = <T>(
     }
 
     const hint = initial[key];
-    
-    // Handle nested arrays (check for || separator - our custom format)
-    if (typeof value === "string" && value.includes("||")) {
-      const subArrays = value.split("||");
+
+    // Handle nested arrays (our custom || separator format).
+    // qs parses the comma-separated portion but leaves || inside element strings,
+    // so we rejoin with commas and split on || to reconstruct sub-arrays.
+    const rawStr = Array.isArray(value)
+      ? (value as unknown[]).join(",")
+      : typeof value === "string"
+        ? value
+        : null;
+
+    if (rawStr !== null && rawStr.includes("||")) {
+      const subArrays = rawStr.split("||");
       const reconstructed = subArrays.map((subArrayStr) => {
         if (!subArrayStr) return [];
         return subArrayStr.split(",").map((v, i) => {
+          // Empty slot → null (preserved null position)
+          if (v === "") return null;
+
           const typeHint = Array.isArray(hint) && hint.length > 0 && Array.isArray(hint[0])
             ? (hint[0] as unknown[])[i] ?? (hint[0] as unknown[]).find((h) => h !== null && h !== undefined)
             : hint;
-          
-          return convertValue(v, typeHint);
+
+          // If typeHint is a number or value looks like a number, convert it
+          if (
+            typeof typeHint === "number" ||
+            (v.trim() !== "" && /^[+-]?\d+(\.\d+)?$/.test(v))
+          ) {
+            return Number(v);
+          }
+          if (typeof typeHint === "boolean") return v === "1" || v === "true";
+          return v;
         });
       });
       (result as Record<string, unknown>)[key] = reconstructed;

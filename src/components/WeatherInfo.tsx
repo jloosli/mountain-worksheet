@@ -17,9 +17,9 @@ const altitudes = ["3,000", "6,000", "9,000", "12,000", "15,000"];
 
 const DEFAULT_WEATHER_DATA: WeatherFields = {
   wind: [
-    Array(5).fill(0), // wDir values for 3k,6k,9k,12k,15k
-    Array(5).fill(0), // wVel values for 3k,6k,9k,12k,15k
-    Array(5).fill(0), // temp values for 3k,6k,9k,12k,15k
+    Array(5).fill(null) as (number | null)[], // wDir values for 3k,6k,9k,12k,15k
+    Array(5).fill(null) as (number | null)[], // wVel values for 3k,6k,9k,12k,15k
+    Array(5).fill(null) as (number | null)[], // temp values for 3k,6k,9k,12k,15k
   ],
   turb: false,
   cielVis: false,
@@ -61,8 +61,8 @@ export default function WeatherInfo({
 
   // Helper to deep compare arrays
   const arraysEqual = (
-    a: number[] | undefined,
-    b: number[] | undefined
+    a: (number | null)[] | undefined,
+    b: (number | null)[] | undefined
   ): boolean => {
     if (!a || !b) return a === b;
     if (a.length !== b.length) return false;
@@ -71,8 +71,8 @@ export default function WeatherInfo({
 
   // Helper to deep compare wind arrays (3D array)
   const windArraysEqual = (
-    a: [number[], number[], number[]] | undefined,
-    b: [number[], number[], number[]] | undefined
+    a: [(number | null)[], (number | null)[], (number | null)[]] | undefined,
+    b: [(number | null)[], (number | null)[], (number | null)[]] | undefined
   ): boolean => {
     if (!a || !b) return a === b;
     if (a.length !== b.length) return false;
@@ -124,7 +124,7 @@ export default function WeatherInfo({
 
         // Only update wind if it's API-populated and should be updated
         if (shouldUpdateWind && initialData.wind) {
-          updates.wind = initialData.wind as [number[], number[], number[]];
+          updates.wind = initialData.wind as [(number | null)[], (number | null)[], (number | null)[]];
         }
 
         // Preserve user edits to non-API fields (turb, cielVis, mtnObsc)
@@ -150,7 +150,7 @@ export default function WeatherInfo({
     initialData.wind.length === 3 &&
     initialData.wind[0] &&
     Array.isArray(initialData.wind[0]) &&
-    initialData.wind[0].some((val) => val !== 0);
+    initialData.wind[0].some((val) => val !== null && val !== undefined);
 
   const displayData = hasApiWindData
     ? {
@@ -186,26 +186,28 @@ export default function WeatherInfo({
     index: number, // 0 for 3k, 1 for 6k, etc.
     value: string
   ) => {
-    const numValue = value === "" ? 0 : Number(value);
+    const numValue: number | null = value === "" ? null : Number(value);
     let isValid = true;
 
-    switch (type) {
-      case 0: // wDir
-        isValid =
-          numValue >= 0 && numValue <= 359 && Number.isInteger(numValue);
-        break;
-      case 1: // wVel
-        isValid =
-          numValue >= 0 && numValue <= 150 && Number.isInteger(numValue);
-        break;
-      case 2: // temp
-        isValid =
-          numValue >= -50 && numValue <= 50 && Number.isInteger(numValue);
-        break;
+    if (numValue !== null) {
+      switch (type) {
+        case 0: // wDir
+          isValid =
+            numValue >= 0 && numValue <= 359 && Number.isInteger(numValue);
+          break;
+        case 1: // wVel
+          isValid =
+            numValue >= 0 && numValue <= 150 && Number.isInteger(numValue);
+          break;
+        case 2: // temp
+          isValid =
+            numValue >= -50 && numValue <= 50 && Number.isInteger(numValue);
+          break;
+      }
     }
 
     if (isValid) {
-      const newWind = [...data.wind] as [number[], number[], number[]];
+      const newWind = [...data.wind] as [(number | null)[], (number | null)[], (number | null)[]];
       newWind[type] = [...newWind[type]];
       newWind[type][index] = numValue;
       const newData = {
@@ -269,7 +271,7 @@ export default function WeatherInfo({
                   type="number"
                   min={0}
                   max={359}
-                  value={displayData.wind?.[0]?.[altitudes.indexOf(alt)] || ""}
+                  value={displayData.wind?.[0]?.[altitudes.indexOf(alt)] ?? ""}
                   onChange={(e) =>
                     handleNumericChange(
                       0,
@@ -290,7 +292,7 @@ export default function WeatherInfo({
                   type="number"
                   min={0}
                   max={150}
-                  value={displayData.wind?.[1]?.[altitudes.indexOf(alt)] || ""}
+                  value={displayData.wind?.[1]?.[altitudes.indexOf(alt)] ?? ""}
                   onChange={(e) =>
                     handleNumericChange(
                       1,
@@ -311,7 +313,7 @@ export default function WeatherInfo({
                   type="number"
                   min={-50}
                   max={50}
-                  value={displayData.wind?.[2]?.[altitudes.indexOf(alt)] || ""}
+                  value={displayData.wind?.[2]?.[altitudes.indexOf(alt)] ?? ""}
                   onChange={(e) =>
                     handleNumericChange(
                       2,

@@ -12,9 +12,9 @@ describe("WeatherInfo", () => {
     onUpdate: jest.fn(),
     initialData: {
       wind: [
-        [0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0],
+        [null, null, null, null, null],
+        [null, null, null, null, null],
+        [null, null, null, null, null],
       ],
       turb: false,
       cielVis: false,
@@ -35,9 +35,9 @@ describe("WeatherInfo", () => {
     const worksheetDataWithApi: WorksheetData = {
       ...defaultProps.initialData,
       wind: [
-        [270, 0, 0, 0, 0],
-        [25, 0, 0, 0, 0],
-        [15, 0, 0, 0, 0],
+        [270, null, null, null, null],
+        [25, null, null, null, null],
+        [15, null, null, null, null],
       ],
       temp: [18, 18, 18],
       altimeter: [29.85, 29.85, 29.85],
@@ -56,9 +56,9 @@ describe("WeatherInfo", () => {
     const worksheetDataManual: WorksheetData = {
       ...defaultProps.initialData,
       wind: [
-        [0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0],
+        [null, null, null, null, null],
+        [null, null, null, null, null],
+        [null, null, null, null, null],
       ],
     };
 

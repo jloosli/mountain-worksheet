@@ -57,18 +57,18 @@ describe("Weather Data Mapper", () => {
       const result = mapWindTempData(mockWindTempData);
 
       expect(result.wind).toBeDefined();
-      expect(result.wind![0]).toEqual([270, 280, 290, 0, 0]); // Wind direction
-      expect(result.wind![1]).toEqual([25, 30, 35, 0, 0]); // Wind speed
-      expect(result.wind![2]).toEqual([15, 10, 5, 0, 0]); // Temperature
+      expect(result.wind![0]).toEqual([270, 280, 290, null, null]); // Wind direction
+      expect(result.wind![1]).toEqual([25, 30, 35, null, null]); // Wind speed
+      expect(result.wind![2]).toEqual([15, 10, 5, null, null]); // Temperature
     });
 
     it("should handle empty wind/temperature data", () => {
       const result = mapWindTempData([]);
 
       expect(result.wind).toBeDefined();
-      expect(result.wind![0]).toEqual([0, 0, 0, 0, 0]);
-      expect(result.wind![1]).toEqual([0, 0, 0, 0, 0]);
-      expect(result.wind![2]).toEqual([0, 0, 0, 0, 0]);
+      expect(result.wind![0]).toEqual([null, null, null, null, null]);
+      expect(result.wind![1]).toEqual([null, null, null, null, null]);
+      expect(result.wind![2]).toEqual([null, null, null, null, null]);
     });
 
     it("should find closest altitude data within 2000 feet", () => {
@@ -114,7 +114,7 @@ describe("Weather Data Mapper", () => {
 
       const result = mapWindTempData(dataWithFarAltitudes);
 
-      expect(result.wind![0][0]).toBe(0); // Should remain 0
+      expect(result.wind![0][0]).toBe(null); // Should remain null (no data)
     });
 
     it("should validate data when validation is enabled", () => {
@@ -132,9 +132,9 @@ describe("Weather Data Mapper", () => {
 
       const result = mapWindTempData(invalidData, { validateData: true });
 
-      expect(result.wind![0][0]).toBe(0); // Should remain 0 due to validation
-      expect(result.wind![1][0]).toBe(0); // Should remain 0 due to validation
-      expect(result.wind![2][0]).toBe(0); // Should remain 0 due to validation
+      expect(result.wind![0][0]).toBe(null); // Should remain null due to validation
+      expect(result.wind![1][0]).toBe(null); // Should remain null due to validation
+      expect(result.wind![2][0]).toBe(null); // Should remain null due to validation
     });
   });
 
@@ -785,9 +785,9 @@ describe("Weather Data Mapper", () => {
     it("should detect null values as not API-populated", () => {
       const data = {
         wind: [
-          [0, 0, 0, 0, 0],
-          [0, 0, 0, 0, 0],
-          [0, 0, 0, 0, 0],
+          [null, null, null, null, null],
+          [null, null, null, null, null],
+          [null, null, null, null, null],
         ],
         temp: [null, null, null],
         altimeter: [null, null, null],

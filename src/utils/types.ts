@@ -12,7 +12,7 @@ export interface WorksheetData {
   route: string; // Area of Operations/Route
 
   // Weather Information
-  wind: [number[], number[], number[]]; // [wDir, wVel, temp] arrays for each altitude
+  wind: [(number | null)[], (number | null)[], (number | null)[]]; // [wDir, wVel, temp] arrays for each altitude
   turb: boolean;
   cielVis: boolean;
   mtnObsc: boolean;

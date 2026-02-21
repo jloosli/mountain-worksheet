@@ -41,10 +41,10 @@ export default function AppContainer() {
 
     // Weather Information
     wind: [
-      Array(5).fill(0) as number[], // wDir values for 3k,6k,9k,12k,15k
-      Array(5).fill(0) as number[], // wVel values for 3k,6k,9k,12k,15k
-      Array(5).fill(0) as number[], // temp values for 3k,6k,9k,12k,15k
-    ] as [number[], number[], number[]],
+      Array(5).fill(null) as (number | null)[], // wDir values for 3k,6k,9k,12k,15k
+      Array(5).fill(null) as (number | null)[], // wVel values for 3k,6k,9k,12k,15k
+      Array(5).fill(null) as (number | null)[], // temp values for 3k,6k,9k,12k,15k
+    ] as [(number | null)[], (number | null)[], (number | null)[]],
     turb: false,
     cielVis: false,
     mtnObsc: false,

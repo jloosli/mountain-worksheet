@@ -76,6 +76,34 @@ describe("serializeState", () => {
     expect(params.get("mixed")).toBe("1,a||b,2");
   });
 
+  it("should preserve null positions in nested arrays", () => {
+    // Regression test for issue #41: null slots must be preserved as empty strings
+    // so that 0 and null are distinguishable in the URL.
+    const state = {
+      wind: [
+        [null, 255, 257],
+        [null, 0, 15],
+        [null, -2, -8],
+      ],
+    };
+    const queryString = serializeState(state as Record<string, unknown>);
+    const params = new URLSearchParams(queryString);
+    expect(params.get("wind")).toBe(",255,257||,0,15||,-2,-8");
+  });
+
+  it("should omit nested array key when all values are null", () => {
+    const state = {
+      wind: [
+        [null, null, null],
+        [null, null, null],
+        [null, null, null],
+      ],
+    };
+    const queryString = serializeState(state as Record<string, unknown>);
+    const params = new URLSearchParams(queryString);
+    expect(params.has("wind")).toBe(false);
+  });
+
   it("should handle complex state objects", () => {
     const state = {
       pilot: "John Doe",
@@ -240,5 +268,27 @@ describe("deserializeState", () => {
     const restored = deserializeState(serialized, initialState);
     expect(restored.altimeter).toEqual([30.24, null, 30.31]);
     expect(restored.temp).toEqual([null, 5, -2]);
+  });
+
+  it("should round-trip nested arrays with null and zero values", () => {
+    // Regression test for issue #41: null and 0 must be distinguishable after
+    // serialization and deserialization. null → empty slot, 0 → "0".
+    const originalState = {
+      wind: [
+        [null, 255, 257, 272, 281],
+        [null, 0, 15, 26, 30],
+        [null, -2, -8, -12, -17],
+      ] as (number | null)[][],
+    };
+    const serialized = serializeState(originalState as Record<string, unknown>);
+    const initialState = {
+      wind: [
+        Array(5).fill(null),
+        Array(5).fill(null),
+        Array(5).fill(null),
+      ] as (number | null)[][],
+    };
+    const restored = deserializeState(serialized, initialState);
+    expect(restored.wind).toEqual(originalState.wind);
   });
 });
