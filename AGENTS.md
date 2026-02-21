@@ -81,7 +81,7 @@ All core types are in `src/utils/types.ts`:
 
 ### API Route
 
-`src/app/api/aviation-weather/route.ts` proxies requests to the Aviation Weather API (avwx or similar) to avoid CORS issues.
+`src/app/api/aviation-weather/route.ts` proxies requests to the AviationWeather.gov API (`https://aviationweather.gov/api/data`) to avoid CORS issues.
 
 ## Development Workflow
 
