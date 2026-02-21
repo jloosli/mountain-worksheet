@@ -1,5 +1,131 @@
-import { serializeState, deserializeState } from "../urlState";
+import { serializeState, deserializeState, convertSingleValue } from "../urlState";
 import qs from "qs";
+
+describe("convertSingleValue", () => {
+  describe("null/empty string handling", () => {
+    it("should convert empty string to null", () => {
+      expect(convertSingleValue("", "string")).toBeNull();
+      expect(convertSingleValue("", 0)).toBeNull();
+      expect(convertSingleValue("", false)).toBeNull();
+    });
+  });
+
+  describe("string type hints", () => {
+    it("should return string value when typeHint is string", () => {
+      expect(convertSingleValue("hello", "hint")).toBe("hello");
+      expect(convertSingleValue("123", "hint")).toBe("123");
+      expect(convertSingleValue("true", "hint")).toBe("true");
+    });
+  });
+
+  describe("boolean type hints", () => {
+    it('should convert "1" to true when typeHint is boolean', () => {
+      expect(convertSingleValue("1", false)).toBe(true);
+      expect(convertSingleValue("1", true)).toBe(true);
+    });
+
+    it('should convert "true" to true when typeHint is boolean', () => {
+      expect(convertSingleValue("true", false)).toBe(true);
+    });
+
+    it('should convert "0" to false when typeHint is boolean', () => {
+      expect(convertSingleValue("0", false)).toBe(false);
+    });
+
+    it('should convert other values to false when typeHint is boolean', () => {
+      expect(convertSingleValue("false", false)).toBe(false);
+      expect(convertSingleValue("no", false)).toBe(false);
+      expect(convertSingleValue("", false)).toBeNull(); // empty string is null
+    });
+  });
+
+  describe("number type hints", () => {
+    it("should convert to number when typeHint is number", () => {
+      expect(convertSingleValue("42", 0)).toBe(42);
+      expect(convertSingleValue("0", 0)).toBe(0);
+      expect(convertSingleValue("-5", 0)).toBe(-5);
+      expect(convertSingleValue("3.14", 0)).toBe(3.14);
+    });
+
+    it("should handle positive numbers with + prefix", () => {
+      expect(convertSingleValue("+42", 0)).toBe(42);
+      expect(convertSingleValue("+3.14", 0)).toBe(3.14);
+    });
+
+    it("should handle negative numbers", () => {
+      expect(convertSingleValue("-42", 0)).toBe(-42);
+      expect(convertSingleValue("-3.14", 0)).toBe(-3.14);
+    });
+
+    it("should handle zero", () => {
+      expect(convertSingleValue("0", 0)).toBe(0);
+      expect(convertSingleValue("-0", 0)).toBe(-0);
+    });
+  });
+
+  describe("automatic number detection (no type hint)", () => {
+    it("should auto-detect and convert number-like strings when they match the pattern", () => {
+      expect(convertSingleValue("42", undefined)).toBe(42);
+      expect(convertSingleValue("3.14", null)).toBe(3.14);
+    });
+
+    it("should not convert strings with non-number type hints", () => {
+      // When typeHint is not a number and value has non-numeric chars, keep as string
+      expect(convertSingleValue("-5", "unknown")).toBe("-5");
+    });
+
+    it("should not convert non-numeric strings to numbers", () => {
+      expect(convertSingleValue("hello", undefined)).toBe("hello");
+      expect(convertSingleValue("123abc", null)).toBe("123abc");
+      expect(convertSingleValue("abc123", undefined)).toBe("abc123");
+    });
+
+    it("should handle numbers with leading/trailing whitespace when no type hint", () => {
+      // The regex checks v.trim(), so whitespace is handled
+      expect(convertSingleValue(" 42 ", undefined)).toBe(" 42 "); // Preserves original with spaces
+      // But when typeHint is number, it converts
+      expect(convertSingleValue(" 42 ", 0)).toBe(42);
+    });
+  });
+
+  describe("edge cases", () => {
+    it("should handle whitespace-only strings", () => {
+      expect(convertSingleValue("   ", undefined)).toBe("   ");
+      expect(convertSingleValue("\t\n", null)).toBe("\t\n");
+    });
+
+    it("should handle special numeric strings", () => {
+      expect(convertSingleValue("0.0", 0)).toBe(0);
+      expect(convertSingleValue("1.0", 0)).toBe(1);
+      expect(convertSingleValue(".5", 0)).toBe(0.5);
+    });
+
+    it("should handle invalid number strings when typeHint is number", () => {
+      // When typeHint is number, Number() is called even on invalid strings
+      expect(isNaN(convertSingleValue("1.2.3", 0) as number)).toBe(true);
+      expect(convertSingleValue("1e5", 0)).toBe(100000); // Scientific notation works
+    });
+
+    it("should handle scientific notation correctly", () => {
+      expect(convertSingleValue("1e5", 0)).toBe(100000);
+      expect(convertSingleValue("1.5e2", 0)).toBe(150);
+      expect(convertSingleValue("-1e3", 0)).toBe(-1000);
+    });
+  });
+
+  describe("null vs zero distinction", () => {
+    it("should distinguish between null (empty string) and 0 (zero string)", () => {
+      expect(convertSingleValue("", 0)).toBeNull();
+      expect(convertSingleValue("0", 0)).toBe(0);
+    });
+
+    it("should distinguish between null and negative zero", () => {
+      expect(convertSingleValue("", 0)).toBeNull();
+      expect(convertSingleValue("-0", 0)).toBe(-0);
+    });
+  });
+});
+
 
 describe("serializeState", () => {
   it("should serialize primitive values correctly", () => {

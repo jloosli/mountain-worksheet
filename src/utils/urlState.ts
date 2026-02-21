@@ -95,7 +95,8 @@ const preprocessForQs = (state: Record<string, unknown>): Record<string, unknown
 // Shared helper function to convert a single value based on a type hint
 // Used by both convertValue (for simple arrays) and postprocessState (for nested arrays)
 // This handles type coercion (string -> number, "1"/"0" -> boolean, etc.)
-const convertSingleValue = (v: string, typeHint: unknown): unknown => {
+// Exported for testing purposes
+export const convertSingleValue = (v: string, typeHint: unknown): unknown => {
   // Empty string is a preserved null position (from serialization of null array
   // elements as "" to maintain index positions). Restore to null.
   if (v === "") return null;
