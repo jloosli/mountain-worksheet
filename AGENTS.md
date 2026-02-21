@@ -46,7 +46,7 @@ The application uses URL query strings to persist application state, allowing us
 - **Arrays**: Comma-separated values (e.g., `?numbers=1,2,3`)
 - **Booleans**: Serialized as "1" or "0" (e.g., `?turb=1`)
 - **Nested Arrays (2D)**: Custom format with `||` separator (e.g., `?wind=0,90,180||5,10,15`)
-- **Empty values**: Null, undefined, empty strings, and empty arrays are automatically omitted
+- **Empty values**: Null/undefined top-level values and fully-empty arrays are omitted. However, null elements *within* a fixed-length array are preserved as empty slots (e.g. `[30.24, null, 30.31]` → `altimeter=30.24,,30.31`) so that array indices are stable across round-trips. Deserialization restores empty slots back to `null`.
 - **No URL encoding**: Values are stored as-is for readability (e.g., `?pilot=John+Doe` not `?pilot=John%20Doe`)
 
 **Type Hints:**
@@ -63,6 +63,22 @@ const [state, setState] = useUrlState({
 // State is automatically synced with URL query string
 ```
 
+### Input Components and State Flow
+
+`AircraftPerformance` receives **two props that both reflect the same parent `state` object** from `AppContainer`:
+
+- `initialData` — a subset of `WorksheetData` (the fields this component owns)
+- `worksheetData` — the full `WorksheetData`
+
+Both props are re-created on every `onUpdate` call (because `AppContainer` calls `setState`). This means **any `useEffect` depending on either prop fires on every keystroke**, not only on genuine external changes like API population.
+
+If a component calls `onUpdate` and also syncs local display state from a prop in a `useEffect`, this creates a feedback loop that clears the field mid-entry. The correct pattern to avoid this:
+
+- Keep a **local string state** for the raw display value of the input field.
+- Track the **last value pushed upstream** in a `useRef`.
+- In prop-watching `useEffect`s, only sync local display state when the incoming value **differs from what was last pushed** (i.e., it is a genuine external change, not a keystroke round-trip).
+- **HTML `min`/`max` attributes on `<input type="number">` do not block state updates** — input validation must happen in the `onChange` handler before calling `onUpdate`.
+
 ### Performance Calculations
 
 Aircraft performance tables (from POH data) are stored in `src/data/aircraft.json` indexed by weight × altitude × temperature. Calculations use trilinear interpolation (`src/utils/interpolation.ts`) to find values between table entries.
@@ -71,6 +87,8 @@ Key calculation files:
 - `src/utils/toldCalculations.ts` — takeoff/landing distance calculations
 - `src/utils/maneuveringCalculations.ts` — maneuvering speed calculations
 - `src/utils/formulas.ts` — density altitude and other aviation formulas
+
+**Null values in performance tables:** Some aircraft have `null` entries at extreme altitudes or temperatures where POH data does not exist (e.g. C206 climb performance at 24,000 ft). `trilinearInterpolate` handles nulls gracefully via a fallback average; callers of `bilinearInterpolate`/`bilinearInterpolateFlexible` should wrap calls in `try/catch` or validate that inputs fall within table bounds before calling.
 
 ### Type Definitions
 
