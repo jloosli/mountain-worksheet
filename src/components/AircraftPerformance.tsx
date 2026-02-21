@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { WorksheetData } from "@/utils/types";
 import { isApiPopulatedData } from "@/utils/weatherDataMapper";
 
@@ -42,6 +42,24 @@ export default function AircraftPerformance({
     ...initialData,
   }));
 
+  const [altimeterStrings, setAltimeterStrings] = useState<
+    [string, string, string]
+  >([
+    initialData.altimeter[0]?.toString() ?? "",
+    initialData.altimeter[1]?.toString() ?? "",
+    initialData.altimeter[2]?.toString() ?? "",
+  ]);
+
+  // Track the last altimeter values we ourselves pushed upstream via onUpdate.
+  // Used to distinguish our own round-trips from genuine external changes (e.g. API).
+  const lastPushedAltimeterRef = useRef<
+    [number | null, number | null, number | null]
+  >([
+    initialData.altimeter[0] ?? null,
+    initialData.altimeter[1] ?? null,
+    initialData.altimeter[2] ?? null,
+  ]);
+
   // Determine which fields are API-populated
   const apiPopulated = worksheetData
     ? isApiPopulatedData(worksheetData)
@@ -60,6 +78,9 @@ export default function AircraftPerformance({
         ...prev,
         ...initialData,
       }));
+      // NOTE: Do NOT sync altimeterStrings here — this effect fires on every
+      // keystroke (because onUpdate → parent state change → initialData change)
+      // and would clear the field while the user is mid-entry.
     }
   }, [initialData]);
 
@@ -74,6 +95,27 @@ export default function AircraftPerformance({
         altitude: worksheetData.altitude ?? prev.altitude,
         rwy: worksheetData.rwy ?? prev.rwy,
       }));
+      // Only sync altimeter display strings when the incoming values differ from
+      // what we last pushed upstream. This prevents the keystroke round-trip
+      // (user types → onUpdate → state changes → worksheetData changes → this
+      // effect fires) from resetting the field while the user is mid-entry.
+      if (worksheetData.altimeter) {
+        const incoming = worksheetData.altimeter;
+        const lastPushed = lastPushedAltimeterRef.current;
+        const isExternalChange = incoming.some((v, i) => v !== lastPushed[i]);
+        if (isExternalChange) {
+          setAltimeterStrings([
+            incoming[0]?.toString() ?? "",
+            incoming[1]?.toString() ?? "",
+            incoming[2]?.toString() ?? "",
+          ]);
+          lastPushedAltimeterRef.current = [...incoming] as [
+            number | null,
+            number | null,
+            number | null
+          ];
+        }
+      }
     }
   }, [worksheetData]);
 
@@ -175,6 +217,31 @@ export default function AircraftPerformance({
     onUpdate(newData);
   };
 
+  const handleAltimeterChange = (index: number, value: string) => {
+    const newStrings = [...altimeterStrings] as [string, string, string];
+    newStrings[index] = value;
+    setAltimeterStrings(newStrings);
+
+    const num = value === "" ? null : Number(value);
+    const isValid = num === null || (num >= 28.0 && num <= 31.0);
+    const altimeterArray = [...initialData.altimeter] as [
+      number | null,
+      number | null,
+      number | null
+    ];
+    altimeterArray[index] = isValid ? num : null;
+
+    // Record what we're pushing so the worksheetData useEffect can ignore
+    // this round-trip and not reset the display strings mid-entry.
+    lastPushedAltimeterRef.current = [...altimeterArray] as [
+      number | null,
+      number | null,
+      number | null
+    ];
+
+    onUpdate({ ...initialData, altimeter: altimeterArray });
+  };
+
   return (
     <div className="w-full max-w-4xl">
       <h2 className="text-xl font-bold mb-4">Aircraft Performance</h2>
@@ -255,10 +322,8 @@ export default function AircraftPerformance({
                   step="0.01"
                   min="28.00"
                   max="31.00"
-                  value={getValue("altimeter", 0)}
-                  onChange={(e) =>
-                    handleInputChange("altimeter", 0, e.target.value)
-                  }
+                  value={altimeterStrings[0]}
+                  onChange={(e) => handleAltimeterChange(0, e.target.value)}
                   className={getInputStyling("altimeter", 0)}
                 />
               </td>
@@ -267,11 +332,9 @@ export default function AircraftPerformance({
                   type="number"
                   step="0.01"
                   min="28.00"
-                  max="31.99"
-                  value={getValue("altimeter", 1)}
-                  onChange={(e) =>
-                    handleInputChange("altimeter", 1, e.target.value)
-                  }
+                  max="31.00"
+                  value={altimeterStrings[1]}
+                  onChange={(e) => handleAltimeterChange(1, e.target.value)}
                   className={getInputStyling("altimeter", 1)}
                 />
               </td>
@@ -280,11 +343,9 @@ export default function AircraftPerformance({
                   type="number"
                   step="0.01"
                   min="28.00"
-                  max="31.99"
-                  value={getValue("altimeter", 2)}
-                  onChange={(e) =>
-                    handleInputChange("altimeter", 2, e.target.value)
-                  }
+                  max="31.00"
+                  value={altimeterStrings[2]}
+                  onChange={(e) => handleAltimeterChange(2, e.target.value)}
                   className={getInputStyling("altimeter", 2)}
                 />
               </td>
