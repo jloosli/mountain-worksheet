@@ -20,7 +20,7 @@ interface CalculationsProps {
 }
 
 export default function Calculations({ state }: CalculationsProps) {
-  const [PAs, setPAs] = useState<[number, number, number]>([0, 0, 0]);
+  const [PAs, setPAs] = useState<[number | null, number | null, number | null]>([null, null, null]);
 
   // TOLD calculation state management
   const [toldResults, setToldResults] = useState<TOLDResults | null>(null);
@@ -37,12 +37,7 @@ export default function Calculations({ state }: CalculationsProps) {
 
   const handlePressureUpdate = useCallback(
     (PAs: [number | null, number | null, number | null]) => {
-      const normalizedPAs = PAs.map((pa) => pa ?? 0) as [
-        number,
-        number,
-        number
-      ];
-      setPAs(normalizedPAs);
+      setPAs(PAs);
     },
     []
   );
@@ -52,12 +47,12 @@ export default function Calculations({ state }: CalculationsProps) {
     // Check if required values are provided
     if (
       !state.acType ||
-      !state.weight ||
-      !state.rwy[0] ||
-      !state.rwy[1] ||
-      !state.temp[0] ||
-      !state.temp[1] ||
-      !state.temp[2]
+      state.weight === null || state.weight === undefined ||
+      state.rwy[0] === null || state.rwy[0] === undefined ||
+      state.rwy[1] === null || state.rwy[1] === undefined ||
+      state.temp[0] === null || state.temp[0] === undefined ||
+      state.temp[1] === null || state.temp[1] === undefined ||
+      state.temp[2] === null || state.temp[2] === undefined
     ) {
       setToldResults(null);
       setToldErrors([]);
@@ -70,11 +65,11 @@ export default function Calculations({ state }: CalculationsProps) {
       acType: state.acType,
       weight: state.weight,
       rwy: state.rwy as [number, number],
-      PAs: PAs || [8000, 8000, 8000],
+      PAs,
     };
 
-    // Validate pressure altitudes are available
-    if (PAs.every((pa) => pa === 0)) {
+    // Validate pressure altitudes are available (null means not yet calculated)
+    if (PAs.some((pa) => pa === null)) {
       console.warn(
         "Pressure altitudes not yet calculated, skipping TOLD calculation"
       );
@@ -84,12 +79,14 @@ export default function Calculations({ state }: CalculationsProps) {
     setIsCalculatingTOLD(true);
 
     try {
+      // At this point PAs are confirmed non-null by the guard above
+      const nonNullPAs = testParams.PAs as [number, number, number];
       const params = {
         weight: testParams.weight,
         pressureAltitudes: [
-          testParams.PAs[0],
-          testParams.PAs[2],
-          testParams.PAs[1],
+          nonNullPAs[0],
+          nonNullPAs[2],
+          nonNullPAs[1],
         ] as [number, number, number], // [departure, arrival, operating]
         temperatures: [state.temp[0]!, state.temp[2]!, state.temp[1]!] as [
           number,
