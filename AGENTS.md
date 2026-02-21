@@ -79,6 +79,10 @@ All core types are in `src/utils/types.ts`:
 - `Aircraft` — aircraft model with performance tables
 - `TOLDResults`, `TOLDInputs` — takeoff/landing calculation I/O
 
+### API Route
+
+`src/app/api/aviation-weather/route.ts` proxies requests to the AviationWeather.gov API (`https://aviationweather.gov/api/data`) to avoid CORS issues.
+
 ## Development Workflow
 
 ### Commands
