@@ -22,18 +22,22 @@ const spaceEncoder = (
 // Filter function for qs.stringify to skip null, undefined, empty strings, and empty arrays
 const filterEmpty = (prefix: string, value: unknown): unknown => {
   if (value === null || value === undefined || value === "") {
-    return undefined; // Skip these values
+    return undefined; // Skip top-level null/empty values
   }
   if (Array.isArray(value)) {
     // For nested arrays (2D), we'll handle them in preprocessing
     if (value.length > 0 && Array.isArray(value[0])) {
       return value; // Keep nested arrays for special handling
     }
-    // For simple arrays, filter out empty values and skip if empty
-    const filtered = value.filter(
-      (v) => v !== null && v !== undefined && v !== ""
+    // For simple arrays, preserve null/empty positions as "" so they appear as
+    // ",," in the URL (e.g. [30.24, null, 30.31] → "30.24,,30.31").
+    // This preserves index positions during round-trips (deserialization maps
+    // "" back to null). Skip the entire array only if all values are empty.
+    const mapped = value.map((v) =>
+      v === null || v === undefined || v === "" ? "" : v
     );
-    return filtered.length > 0 ? filtered : undefined;
+    const hasAnyValue = mapped.some((v) => v !== "");
+    return hasAnyValue ? mapped : undefined;
   }
   return value;
 };
@@ -104,7 +108,11 @@ const convertValue = (value: unknown, hint: unknown): unknown => {
       const vStr = String(v);
       const typeHint =
         (hint as unknown[])[i] ?? (hint as unknown[]).find((h) => h !== null && h !== undefined);
-      
+
+      // Empty string is a preserved null position (from serialization of null array
+      // elements as "" to maintain index positions). Restore to null.
+      if (vStr === "") return null;
+
       if (typeof typeHint === "string") return vStr;
       if (typeof typeHint === "boolean") return vStr === "1" || vStr === "true";
       if (

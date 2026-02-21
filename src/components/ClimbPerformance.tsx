@@ -54,18 +54,22 @@ export default function ClimbPerformance({
       if (aircraft) {
         const climbPerformance: FlexibleInterpolationTable =
           aircraft.climbPerformance;
-        setRatesOfClimb(
-          PAs.map((pa, idx) =>
-            Math.round(
-              bilinearInterpolateFlexible(
-                climbPerformance,
-                pa as number,
-                OATs[idx] as number,
-                options
+        try {
+          setRatesOfClimb(
+            PAs.map((pa, idx) =>
+              Math.round(
+                bilinearInterpolateFlexible(
+                  climbPerformance,
+                  pa as number,
+                  OATs[idx] as number,
+                  options
+                )
               )
-            )
-          ) as [number, number, number]
-        );
+            ) as [number, number, number]
+          );
+        } catch {
+          setRatesOfClimb([0, 0, 0]);
+        }
       }
     }
   }, [OATs, PAs, aircraftModel]);

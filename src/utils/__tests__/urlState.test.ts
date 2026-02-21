@@ -38,7 +38,24 @@ describe("serializeState", () => {
     expect(params.get("strings")).toBe("a,b,c");
     expect(params.get("mixed")).toBe("1,b,3");
     expect(params.has("empty")).toBe(false);
-    expect(params.get("withEmpty")).toBe("1,2,3");
+    // Null/empty positions are preserved as "" to maintain index positions
+    expect(params.get("withEmpty")).toBe("1,,,2,,3");
+  });
+
+  it("should preserve null positions in arrays for correct round-tripping", () => {
+    // Regression test for issue #40: altimeter=[30.24, null, 30.31] must not
+    // collapse to [30.24, 30.31] which would shift arrival into operating position.
+    const state = {
+      altimeter: [30.24, null, 30.31],
+      temp: [null, 5, null],
+      altitude: [5344, null, 4472],
+    };
+
+    const queryString = serializeState(state);
+    const params = new URLSearchParams(queryString);
+    expect(params.get("altimeter")).toBe("30.24,,30.31");
+    expect(params.get("temp")).toBe(",5,");
+    expect(params.get("altitude")).toBe("5344,,4472");
   });
 
   it("should serialize nested arrays correctly", () => {
@@ -184,5 +201,44 @@ describe("deserializeState", () => {
       ],
       turb: true,
     });
+  });
+
+  it("should restore null positions from empty slots in arrays", () => {
+    // Regression test for issue #40: "30.24,,30.31" must restore to
+    // [30.24, null, 30.31], not [30.24, 30.31] with arrival shifted to operating.
+    const params = new URLSearchParams();
+    params.set("altimeter", "30.24,,30.31");
+    params.set("temp", ",5,");
+    params.set("altitude", "5344,,4472");
+
+    const initialState = {
+      altimeter: [null, null, null] as (number | null)[],
+      temp: [null, null, null] as (number | null)[],
+      altitude: [null, null, null] as (number | null)[],
+    };
+
+    const result = deserializeState(params, initialState);
+    expect(result.altimeter).toEqual([30.24, null, 30.31]);
+    expect(result.temp).toEqual([null, 5, null]);
+    expect(result.altitude).toEqual([5344, null, 4472]);
+  });
+
+  it("should round-trip arrays with null positions correctly", () => {
+    // End-to-end: serialize then deserialize preserves null positions at correct indices.
+    const originalState = {
+      altimeter: [30.24, null, 30.31] as (number | null)[],
+      temp: [null, 5, -2] as (number | null)[],
+    };
+
+    const serialized = serializeState(originalState as Record<string, unknown>);
+
+    const initialState = {
+      altimeter: [null, null, null] as (number | null)[],
+      temp: [null, null, null] as (number | null)[],
+    };
+
+    const restored = deserializeState(serialized, initialState);
+    expect(restored.altimeter).toEqual([30.24, null, 30.31]);
+    expect(restored.temp).toEqual([null, 5, -2]);
   });
 });
