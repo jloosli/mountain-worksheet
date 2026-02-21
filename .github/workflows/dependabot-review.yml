@@ -31,26 +31,15 @@ jobs:
           PR_URL: ${{ github.event.pull_request.html_url }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Review major updates with Claude
+      - name: Flag major updates for manual review
         if: steps.metadata.outputs.update-type == 'version-update:semver-major'
-        uses: anthropics/claude-code-action@v1
-        with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          prompt: |
-            This is a Dependabot PR bumping **${{ steps.metadata.outputs.dependency-names }}**
-            from ${{ steps.metadata.outputs.previous-version }} to ${{ steps.metadata.outputs.new-version }}
-            (major version bump).
+        run: |
+          gh pr comment "$PR_URL" --body "⚠️ **Major version bump detected** (${{ steps.metadata.outputs.dependency-names }}: ${{ steps.metadata.outputs.previous-version }} → ${{ steps.metadata.outputs.new-version }}).
 
-            Please review this PR:
-            1. Check if there are any breaking changes that could affect this codebase
-            2. Look at the changed files (package.json, package-lock.json, and any source changes)
-            3. Post a concise PR comment summarizing:
-               - What breaking changes exist in this major version
-               - Whether the codebase appears to handle them already
-               - A clear recommendation: safe to merge, needs code changes, or needs manual review
-
-            Do NOT approve or merge — just leave an informative review comment.
-          allowed_tools: "Bash,Read,Glob,Grep"
+          Copilot code review has been automatically requested. Please review Copilot's feedback before merging."
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   automerge:
     runs-on: ubuntu-latest
