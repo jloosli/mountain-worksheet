@@ -92,6 +92,26 @@ const preprocessForQs = (state: Record<string, unknown>): Record<string, unknown
   return processed;
 };
 
+// Shared helper function to convert a single value based on a type hint
+// Used by both convertValue (for simple arrays) and postprocessState (for nested arrays)
+// This handles type coercion (string -> number, "1"/"0" -> boolean, etc.)
+// Exported for testing purposes
+export const convertSingleValue = (v: string, typeHint: unknown): unknown => {
+  // Empty string is a preserved null position (from serialization of null array
+  // elements as "" to maintain index positions). Restore to null.
+  if (v === "") return null;
+
+  if (typeof typeHint === "string") return v;
+  if (typeof typeHint === "boolean") return v === "1" || v === "true";
+  if (
+    typeof typeHint === "number" ||
+    (v.trim() !== "" && /^[+-]?\d+(\.\d+)?$/.test(v))
+  ) {
+    return Number(v);
+  }
+  return v;
+};
+
 // Helper function to convert values based on type hints from initialState
 // This handles type coercion (string -> number, "1"/"0" -> boolean, etc.)
 const convertValue = (value: unknown, hint: unknown): unknown => {
@@ -111,19 +131,7 @@ const convertValue = (value: unknown, hint: unknown): unknown => {
       const typeHint =
         (hint as unknown[])[i] ?? (hint as unknown[]).find((h) => h !== null && h !== undefined);
 
-      // Empty string is a preserved null position (from serialization of null array
-      // elements as "" to maintain index positions). Restore to null.
-      if (vStr === "") return null;
-
-      if (typeof typeHint === "string") return vStr;
-      if (typeof typeHint === "boolean") return vStr === "1" || vStr === "true";
-      if (
-        typeof typeHint === "number" ||
-        (vStr.trim() !== "" && /^[+-]?\d+(\.\d+)?$/.test(vStr))
-      ) {
-        return Number(vStr);
-      }
-      return vStr;
+      return convertSingleValue(vStr, typeHint);
     });
     
     // Check if hint suggests nested array but we got flat string (backward compatibility)
@@ -179,22 +187,11 @@ const postprocessState = <T>(
       const reconstructed = subArrays.map((subArrayStr) => {
         if (!subArrayStr) return [];
         return subArrayStr.split(",").map((v, i) => {
-          // Empty slot → null (preserved null position)
-          if (v === "") return null;
-
           const typeHint = Array.isArray(hint) && hint.length > 0 && Array.isArray(hint[0])
             ? (hint[0] as unknown[])[i] ?? (hint[0] as unknown[]).find((h) => h !== null && h !== undefined)
             : hint;
 
-          // If typeHint is a number or value looks like a number, convert it
-          if (
-            typeof typeHint === "number" ||
-            (v.trim() !== "" && /^[+-]?\d+(\.\d+)?$/.test(v))
-          ) {
-            return Number(v);
-          }
-          if (typeof typeHint === "boolean") return v === "1" || v === "true";
-          return v;
+          return convertSingleValue(v, typeHint);
         });
       });
       (result as Record<string, unknown>)[key] = reconstructed;
