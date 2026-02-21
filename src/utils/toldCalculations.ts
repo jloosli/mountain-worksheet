@@ -999,30 +999,30 @@ export function calculateTOLDForMultipleAirports(
   // Combine results into TOLDResults format
   const combinedResults = {
     takeoffGroundRoll: {
-      departure: departureResults?.takeoffGroundRoll || null,
-      arrival: arrivalResults?.takeoffGroundRoll || null,
+      departure: departureResults?.takeoffGroundRoll ?? null,
+      arrival: arrivalResults?.takeoffGroundRoll ?? null,
     },
     takeoff50ftObstacle: {
-      departure: departureResults?.takeoff50ftObstacle || null,
-      arrival: arrivalResults?.takeoff50ftObstacle || null,
+      departure: departureResults?.takeoff50ftObstacle ?? null,
+      arrival: arrivalResults?.takeoff50ftObstacle ?? null,
     },
     landingGroundRoll: {
-      departure: departureResults?.landingGroundRoll || null,
-      arrival: arrivalResults?.landingGroundRoll || null,
+      departure: departureResults?.landingGroundRoll ?? null,
+      arrival: arrivalResults?.landingGroundRoll ?? null,
     },
     landing50ftObstacle: {
-      departure: departureResults?.landing50ftObstacle || null,
-      arrival: arrivalResults?.landing50ftObstacle || null,
+      departure: departureResults?.landing50ftObstacle ?? null,
+      arrival: arrivalResults?.landing50ftObstacle ?? null,
     },
     availableRunwayRemainingTakeoffGroundRoll: {
       departure:
-        departureResults?.availableRunwayRemainingTakeoffGroundRoll || null,
+        departureResults?.availableRunwayRemainingTakeoffGroundRoll ?? null,
       arrival:
-        arrivalResults?.availableRunwayRemainingTakeoffGroundRoll || null,
+        arrivalResults?.availableRunwayRemainingTakeoffGroundRoll ?? null,
     },
     availableRunwayRemainingTakeoff50ft: {
-      departure: departureResults?.availableRunwayRemainingTakeoff50ft || null,
-      arrival: arrivalResults?.availableRunwayRemainingTakeoff50ft || null,
+      departure: departureResults?.availableRunwayRemainingTakeoff50ft ?? null,
+      arrival: arrivalResults?.availableRunwayRemainingTakeoff50ft ?? null,
     },
   };
 

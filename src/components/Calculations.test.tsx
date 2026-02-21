@@ -227,24 +227,57 @@ describe("Calculations", () => {
 
   it("recalculates maneuvering speeds when aircraft model changes", async () => {
     const { rerender } = render(<Calculations state={mockWorksheetData} />);
-    
+
     // Initially should show C182T speeds
     await waitFor(() => {
       expect(screen.getByText("51")).toBeInTheDocument();
     });
-    
+
     // Change aircraft model to unknown
     const updatedState: WorksheetData = {
       ...mockWorksheetData,
       acType: "UNKNOWN",
     };
-    
+
     rerender(<Calculations state={updatedState} />);
-    
+
     // Should now show TBD values
     await waitFor(() => {
       const tbdElements = screen.getAllByText("TBD");
       expect(tbdElements.length).toBeGreaterThan(0);
+    });
+  });
+
+  it("shows TOLD distance values (not TBD) when temperature is 0°C", async () => {
+    // Regression test for bug: !state.temp[0] was falsy when temp = 0
+    const stateWithZeroTemp: WorksheetData = {
+      ...mockWorksheetData,
+      temp: [0, 0, 0], // 0°C is a valid temperature, but was treated as falsy
+      altitude: [500, 5000, 500],
+      altimeter: [29.92, 29.92, 29.92],
+      rwy: [3000, 3000],
+    };
+    render(<Calculations state={stateWithZeroTemp} />);
+    await waitFor(() => {
+      // TOLD table should contain numeric distances, not only TBD
+      const numericCells = screen.queryAllByText(/^\d{3,}(,\d{3})*$/);
+      expect(numericCells.length).toBeGreaterThan(0);
+    });
+  });
+
+  it("shows TOLD distance values when airports are at sea level (pressure altitude ~0 ft)", async () => {
+    // Regression test for bug: PAs.every((pa) => pa === 0) skipped calculation
+    const stateAtSeaLevel: WorksheetData = {
+      ...mockWorksheetData,
+      altitude: [100, 5000, 100], // Near sea level — PA will be close to 0
+      altimeter: [29.92, 29.92, 29.92],
+      temp: [20, 20, 20],
+      rwy: [3000, 3000],
+    };
+    render(<Calculations state={stateAtSeaLevel} />);
+    await waitFor(() => {
+      const numericCells = screen.queryAllByText(/^\d{3,}(,\d{3})*$/);
+      expect(numericCells.length).toBeGreaterThan(0);
     });
   });
 });

@@ -4,6 +4,7 @@ import {
   calculateLandingGroundRoll,
   calculateLanding50ftObstacle,
   calculateAvailableRunwayRemaining,
+  calculateTOLDForMultipleAirports,
   validateAircraftWeight,
   validatePressureAltitude,
   validateTemperature,
@@ -502,6 +503,61 @@ describe("TOLD Calculations", () => {
           result.errors.every((error) => error.type === "invalid_input")
         ).toBe(true);
       });
+    });
+  });
+
+  describe("calculateTOLDForMultipleAirports", () => {
+    it("should return results when temperature is 0°C", () => {
+      const result = calculateTOLDForMultipleAirports("C182T", {
+        weight: 2800,
+        pressureAltitudes: [1000, 1000, 1000],
+        temperatures: [0, 0, 0], // 0°C — falsy but valid
+        runwayLengths: [3000, 3000],
+      });
+      expect(result.success).toBe(true);
+      expect(result.results?.takeoffGroundRoll.departure).not.toBeNull();
+      expect(result.results?.takeoffGroundRoll.arrival).not.toBeNull();
+    });
+
+    it("should return results when pressure altitude is 0 ft (sea level)", () => {
+      const result = calculateTOLDForMultipleAirports("C182T", {
+        weight: 2800,
+        pressureAltitudes: [0, 0, 0], // 0 ft — valid sea-level PA
+        temperatures: [20, 20, 20],
+        runwayLengths: [3000, 3000],
+      });
+      expect(result.success).toBe(true);
+      expect(result.results?.takeoffGroundRoll.departure).not.toBeNull();
+      expect(result.results?.takeoffGroundRoll.arrival).not.toBeNull();
+    });
+
+    it("should return results when both temperature is 0°C and pressure altitude is 0 ft", () => {
+      const result = calculateTOLDForMultipleAirports("C182T", {
+        weight: 2800,
+        pressureAltitudes: [0, 0, 0],
+        temperatures: [0, 0, 0],
+        runwayLengths: [3000, 3000],
+      });
+      expect(result.success).toBe(true);
+      expect(result.results?.takeoffGroundRoll.departure).not.toBeNull();
+      expect(result.results?.landingGroundRoll.departure).not.toBeNull();
+    });
+
+    it("should not coerce numeric results to null in combined results", () => {
+      // Regression test for || null vs ?? null bug in result combining
+      const result = calculateTOLDForMultipleAirports("C182T", {
+        weight: 2800,
+        pressureAltitudes: [0, 0, 0],
+        temperatures: [0, 0, 0],
+        runwayLengths: [3000, 3000],
+      });
+      // All result fields should be defined (not null from || coercion)
+      expect(result.results?.takeoffGroundRoll.departure).toBeDefined();
+      expect(result.results?.takeoffGroundRoll.arrival).toBeDefined();
+      expect(result.results?.takeoff50ftObstacle.departure).toBeDefined();
+      expect(result.results?.takeoff50ftObstacle.arrival).toBeDefined();
+      expect(result.results?.landingGroundRoll.departure).toBeDefined();
+      expect(result.results?.landingGroundRoll.arrival).toBeDefined();
     });
   });
 });
