@@ -367,7 +367,7 @@ export default function WeatherInfo({
               rel="noopener noreferrer"
               className="text-blue-600 dark:text-blue-400 hover:underline"
             >
-              Cieling/Vis
+              Ceiling/Vis
             </a>
           </label>
         </div>
