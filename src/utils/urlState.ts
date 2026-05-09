@@ -154,7 +154,12 @@ const convertValue = (value: unknown, hint: unknown): unknown => {
   if (typeof hint === "number") {
     return typeof value === "string" ? Number(value) : value;
   }
-  
+
+  // Null hint: auto-detect numeric strings (same logic as convertSingleValue)
+  if (hint === null && typeof value === "string" && value.trim() !== "" && /^[+-]?\d+(\.\d+)?$/.test(value)) {
+    return Number(value);
+  }
+
   return value;
 };
 

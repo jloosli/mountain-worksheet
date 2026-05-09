@@ -6,6 +6,7 @@ const defaultInitialData: WorksheetData = {
   pilot: "",
   date: "",
   time: "",
+  duration: null,
   acType: "",
   tailN: "",
   airport: ["", ""],
@@ -76,5 +77,39 @@ describe("SortieInfo", () => {
     expect(mockOnUpdate).toHaveBeenCalledWith(
       expect.objectContaining({ altitude: [4471, null, 4229] })
     );
+  });
+
+  it("renders the Expected Duration select", () => {
+    render(<SortieInfo onUpdate={mockOnUpdate} initialData={defaultInitialData} />);
+    expect(screen.getByLabelText(/Expected Duration/i)).toBeInTheDocument();
+  });
+
+  it("populates duration from initialData", () => {
+    const initialData = { ...defaultInitialData, duration: 2.5 };
+    render(<SortieInfo onUpdate={mockOnUpdate} initialData={initialData} />);
+    const select = screen.getByLabelText(/Expected Duration/i) as HTMLSelectElement;
+    expect(select.value).toBe("2.5");
+  });
+
+  it("populates duration: 0 from initialData without treating it as falsy", () => {
+    const initialData = { ...defaultInitialData, duration: 0 };
+    render(<SortieInfo onUpdate={mockOnUpdate} initialData={initialData} />);
+    const select = screen.getByLabelText(/Expected Duration/i) as HTMLSelectElement;
+    expect(select.value).toBe("0");
+  });
+
+  it("calls onUpdate with numeric duration when a value is selected", () => {
+    render(<SortieInfo onUpdate={mockOnUpdate} initialData={defaultInitialData} />);
+    const select = screen.getByLabelText(/Expected Duration/i);
+    fireEvent.change(select, { target: { value: "1.5" } });
+    expect(mockOnUpdate).toHaveBeenCalledWith(expect.objectContaining({ duration: 1.5 }));
+  });
+
+  it("calls onUpdate with null duration when selection is cleared", () => {
+    const initialData = { ...defaultInitialData, duration: 2 };
+    render(<SortieInfo onUpdate={mockOnUpdate} initialData={initialData} />);
+    const select = screen.getByLabelText(/Expected Duration/i);
+    fireEvent.change(select, { target: { value: "" } });
+    expect(mockOnUpdate).toHaveBeenCalledWith(expect.objectContaining({ duration: null }));
   });
 });
