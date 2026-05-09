@@ -291,6 +291,7 @@ export default function Calculations({ state }: CalculationsProps) {
           weight={state.weight}
           OATs={state.temp}
           PAs={PAs}
+          altimeters={state.altimeter}
         />
         <TOLDErrorBoundary
           onError={(error, errorInfo) => {
