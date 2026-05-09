@@ -14,6 +14,7 @@ type SortieInfoData = Pick<
   | "pilot"
   | "date"
   | "time"
+  | "duration"
   | "acType"
   | "tailN"
   | "airport"
@@ -27,6 +28,7 @@ export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
     pilot: "",
     date: "",
     time: "",
+    duration: null,
     acType: "",
     tailN: "",
     airport: ["", ""],
@@ -49,7 +51,7 @@ export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
     if (initialData) {
       const newData = {} as Partial<SortieInfoData>;
       for (const key in formData) {
-        if (initialData[key as keyof WorksheetData]) {
+        if (initialData[key as keyof WorksheetData] !== undefined && initialData[key as keyof WorksheetData] !== null) {
           // @ts-expect-error - Dynamic key assignment is safe here
           newData[key as keyof SortieInfoData] =
             initialData[key as keyof WorksheetData];
@@ -109,6 +111,22 @@ export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
       }),
     []
   );
+
+  const durationOptions = useMemo(
+    () =>
+      Array.from({ length: 13 }, (_, i) => {
+        const value = i * 0.5;
+        return { value, label: value.toFixed(1) };
+      }),
+    []
+  );
+
+  const handleDurationChange = (e: ChangeEvent<HTMLSelectElement>) => {
+    const value = e.target.value === "" ? null : Number(e.target.value);
+    const updatedData = { ...formData, duration: value };
+    setFormData(updatedData);
+    onUpdate({ duration: value });
+  };
 
   const sortieLocalTiming = useMemo(() => {
     if (!formData.date || !formData.time || !formData.time.includes(":")) {
@@ -236,6 +254,26 @@ export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
           >
             <option value="">Select Time</option>
             {utcHourOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="space-y-2">
+          <label htmlFor="duration" className="block text-sm font-medium">
+            Expected Duration (hrs)
+          </label>
+          <select
+            id="duration"
+            name="duration"
+            value={formData.duration ?? ""}
+            onChange={handleDurationChange}
+            className="w-full px-3 py-2 border rounded-md dark:bg-black/[.15] dark:border-white/[.145]"
+          >
+            <option value="">Select Duration</option>
+            {durationOptions.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
               </option>

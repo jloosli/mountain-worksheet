@@ -106,6 +106,7 @@ describe("AppInputs", () => {
     pilot: "",
     date: "",
     time: "",
+    duration: null,
     acType: "",
     tailN: "",
     airport: ["", ""],

@@ -6,6 +6,7 @@ export interface WorksheetData {
   pilot: string;
   date: string;
   time: string;
+  duration: number | null;
   acType: string;
   tailN: string;
   airport: [string, string]; // [departure, arrival]

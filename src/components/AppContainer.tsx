@@ -68,6 +68,7 @@ export default function AppContainer() {
 
     // Aircraft Weight
     weight: null,
+    duration: null,
 
     // Mountain Qualifications
     mtnEndorse: false,
