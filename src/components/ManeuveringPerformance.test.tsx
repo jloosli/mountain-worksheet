@@ -23,7 +23,7 @@ describe("ManeuveringPerformance", () => {
       />
     );
     
-    expect(screen.getByText("Maneuver/Canyon Turn Speed (kts) (C182T)")).toBeInTheDocument();
+    expect(screen.getByText("Minimum Maneuver/Canyon Turn Speed (kts) (C182T)")).toBeInTheDocument();
   });
 
   it("does not render when aircraft model is not provided", () => {

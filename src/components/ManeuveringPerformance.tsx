@@ -27,7 +27,7 @@ export default function ManeuveringPerformance({
   return (
     <div className="mt-6">
       <h3 className="text-xl font-semibold mb-4">
-        Maneuver/Canyon Turn Speed (kts) ({aircraftModel})
+        Minimum Maneuver/Canyon Turn Speed (kts) ({aircraftModel})
       </h3>
         <table className="min-w-full border-collapse border border-gray-300 dark:border-gray-700">
           <thead>
