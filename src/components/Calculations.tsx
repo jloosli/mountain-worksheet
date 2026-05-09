@@ -44,16 +44,7 @@ export default function Calculations({ state }: CalculationsProps) {
 
   // Enhanced TOLD calculation function with pressure altitude integration
   const performTOLDCalculation = useCallback(async () => {
-    // Check if required values are provided
-    if (
-      !state.acType ||
-      state.weight === null || state.weight === undefined ||
-      state.rwy[0] === null || state.rwy[0] === undefined ||
-      state.rwy[1] === null || state.rwy[1] === undefined ||
-      state.temp[0] === null || state.temp[0] === undefined ||
-      state.temp[1] === null || state.temp[1] === undefined ||
-      state.temp[2] === null || state.temp[2] === undefined
-    ) {
+    if (!state.acType || state.weight === null || state.weight === undefined) {
       setToldResults(null);
       setToldErrors([]);
       setToldWarnings([]);
@@ -61,43 +52,28 @@ export default function Calculations({ state }: CalculationsProps) {
       return;
     }
 
-    const testParams = {
-      acType: state.acType,
-      weight: state.weight,
-      rwy: state.rwy as [number, number],
-      PAs,
-    };
+    // PAs: [0]=departure, [1]=operating, [2]=arrival — TOLD only needs dept+arrival
+    const deptPA = PAs[0];
+    const arrPA = PAs[2];
+    const deptValid = deptPA !== null && state.temp[0] !== null && state.temp[0] !== undefined;
+    const arrValid = arrPA !== null && state.temp[2] !== null && state.temp[2] !== undefined;
 
-    // Validate pressure altitudes are available (null means not yet calculated)
-    if (PAs.some((pa) => pa === null)) {
-      console.warn(
-        "Pressure altitudes not yet calculated, skipping TOLD calculation"
-      );
+    if (!deptValid && !arrValid) {
       return;
     }
 
     setIsCalculatingTOLD(true);
 
     try {
-      // At this point PAs are confirmed non-null by the guard above
-      const nonNullPAs = testParams.PAs as [number, number, number];
       const params = {
-        weight: testParams.weight,
-        pressureAltitudes: [
-          nonNullPAs[0],
-          nonNullPAs[2],
-          nonNullPAs[1],
-        ] as [number, number, number], // [departure, arrival, operating]
-        temperatures: [state.temp[0]!, state.temp[2]!, state.temp[1]!] as [
-          number,
-          number,
-          number
-        ], // [departure, arrival, operating]
-        runwayLengths: testParams.rwy,
+        weight: state.weight,
+        pressureAltitudes: [deptPA, arrPA] as [number | null, number | null],
+        temperatures: [state.temp[0] ?? null, state.temp[2] ?? null] as [number | null, number | null],
+        runwayLengths: state.rwy,
       };
 
       const result = calculateTOLDForMultipleAirports(
-        testParams.acType,
+        state.acType,
         params
       );
 
@@ -298,6 +274,11 @@ export default function Calculations({ state }: CalculationsProps) {
     <div className="w-full max-w-4xl bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
       <h2 className="text-2xl font-bold mb-4">Calculations</h2>
 
+      {!state.acType && (
+        <p className="text-sm text-yellow-600 dark:text-yellow-400 mb-2">
+          Select an aircraft model in the Sortie Information section to see performance calculations.
+        </p>
+      )}
       <div className="space-y-4">
         <Altitudes
           altitudes={state.altitude}

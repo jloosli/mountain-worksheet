@@ -22,8 +22,8 @@ export default function ClimbPerformance({
   OATs,
   PAs,
 }: ClimbPerformanceProps) {
-  const [ratesOfClimb, setRatesOfClimb] = useState<[number, number, number]>([
-    0, 0, 0,
+  const [ratesOfClimb, setRatesOfClimb] = useState<[number | null, number | null, number | null]>([
+    null, null, null,
   ]);
   const [percentMGW, setPercentMGW] = useState<number | null>(null);
   const [aircraft, setAircraft] = useState<Aircraft | null>(null);
@@ -38,40 +38,31 @@ export default function ClimbPerformance({
   }, [aircraftModel]);
 
   useEffect(() => {
-    if (
-      OATs &&
-      PAs &&
-      aircraftModel &&
-      OATs.every((temp) => temp !== null) &&
-      PAs.every((pa) => pa !== null)
-    ) {
-      const aircraft = aircraftData.find((a) => a.id === aircraftModel);
-      const options = {
-        extrapolate: true,
-        xAxisName: "pressureAltitudes",
-        yAxisName: "temperatures",
-      };
-      if (aircraft) {
-        const climbPerformance: FlexibleInterpolationTable =
-          aircraft.climbPerformance;
+    if (!aircraftModel) return;
+    const aircraft = aircraftData.find((a) => a.id === aircraftModel);
+    if (!aircraft) return;
+
+    const climbPerformance: FlexibleInterpolationTable = aircraft.climbPerformance;
+    const options = {
+      xAxisName: "pressureAltitudes",
+      yAxisName: "temperatures",
+    };
+
+    const newRates: [number | null, number | null, number | null] = [null, null, null];
+    for (let i = 0; i < 3; i++) {
+      const pa = PAs?.[i];
+      const oat = OATs?.[i];
+      if (pa != null && oat != null) {
         try {
-          setRatesOfClimb(
-            PAs.map((pa, idx) =>
-              Math.round(
-                bilinearInterpolateFlexible(
-                  climbPerformance,
-                  pa as number,
-                  OATs[idx] as number,
-                  options
-                )
-              )
-            ) as [number, number, number]
+          newRates[i] = Math.round(
+            bilinearInterpolateFlexible(climbPerformance, pa, oat, options)
           );
         } catch {
-          setRatesOfClimb([0, 0, 0]);
+          newRates[i] = null;
         }
       }
     }
+    setRatesOfClimb(newRates);
   }, [OATs, PAs, aircraftModel]);
 
   useEffect(() => {
@@ -93,21 +84,22 @@ export default function ClimbPerformance({
     return "";
   };
 
-  // @todo Determine actual rate of climb based on weight
+  const actROC = (roc: number | null): number | null => {
+    if (roc === null || percentMGW === null) return null;
+    return Math.round(roc * (1 + (1 - percentMGW / 100)));
+  };
 
-  const actROC = (roc: number) =>
-    Math.round(roc * (1 + (1 - percentMGW! / 100)));
-
-  const Vy = (pa: number): number => {
-    let idx = aircraft?.climbPerformance.pressureAltitudes.findIndex(
+  const Vy = (pa: number | null): number | null => {
+    if (pa === null || !aircraft) return null;
+    let idx = aircraft.climbPerformance.pressureAltitudes.findIndex(
       (p) => p >= pa
     );
     if (idx === -1) idx = 0;
-    return aircraft?.climbPerformance.climbSpeeds[idx!] ?? 0;
+    return aircraft.climbPerformance.climbSpeeds[idx] ?? null;
   };
 
-  const Va = () => {
-    if (!weight || !aircraft) return 0;
+  const Va = (): number | null => {
+    if (!weight || !aircraft) return null;
     return Math.round(
       bilinearInterpolate(
         {
@@ -121,30 +113,30 @@ export default function ClimbPerformance({
     );
   };
 
-  const Vra = () => {
+  const Vra = (): number | string => {
     if (!aircraft) return "N/A";
     const vraValue = calculateVra(aircraft);
     return vraValue !== null ? vraValue : "N/A";
   };
 
-  const Vx = (pa: number): number => {
-    if (!aircraft) return 0;
-    const vxValue = calculateVx(aircraft, pa);
-    return vxValue !== null ? vxValue : 0;
+  const Vx = (pa: number | null): number | null => {
+    if (pa === null || !aircraft) return null;
+    return calculateVx(aircraft, pa);
   };
 
-  const serviceCeiling = (oat: number) => {
-    if (!aircraft) return 0;
-    // Find the altitude where rate of climb is 300 ft/min
-    const targetROC = 300;
-    const altitude = findInverseXgivenYandZ(
-      aircraft.climbPerformance.data,
-      aircraft.climbPerformance.pressureAltitudes,
-      aircraft.climbPerformance.temperatures,
-      targetROC,
-      oat
-    );
-    return altitude;
+  const serviceCeiling = (oat: number | null): number | null => {
+    if (oat === null || !aircraft) return null;
+    try {
+      return findInverseXgivenYandZ(
+        aircraft.climbPerformance.data,
+        aircraft.climbPerformance.pressureAltitudes,
+        aircraft.climbPerformance.temperatures,
+        300,
+        oat
+      );
+    } catch {
+      return null;
+    }
   };
 
   return (
@@ -165,37 +157,37 @@ export default function ClimbPerformance({
           <tbody>
             <tr className="border-b dark:border-gray-700">
               <td className="py-2 px-4">Rate of Climb (MGW)</td>
-              <td className="py-2 px-4 text-right">{ratesOfClimb[0]}</td>
-              <td className="py-2 px-4 text-right">{ratesOfClimb[1]}</td>
-              <td className="py-2 px-4 text-right">{ratesOfClimb[2]}</td>
+              <td className="py-2 px-4 text-right">{ratesOfClimb[0] ?? "-"}</td>
+              <td className="py-2 px-4 text-right">{ratesOfClimb[1] ?? "-"}</td>
+              <td className="py-2 px-4 text-right">{ratesOfClimb[2] ?? "-"}</td>
             </tr>
             <tr className="border-b dark:border-gray-700">
               <td className="py-2 px-4">Rate of Climb (Actual Wt, note 11)</td>
               <td className="py-2 px-4 text-right">
-                {actROC(ratesOfClimb[0])}
+                {actROC(ratesOfClimb[0]) ?? "-"}
               </td>
               <td className="py-2 px-4 text-right">
-                {actROC(ratesOfClimb[1])}
+                {actROC(ratesOfClimb[1]) ?? "-"}
               </td>
               <td className="py-2 px-4 text-right">
-                {actROC(ratesOfClimb[2])}
+                {actROC(ratesOfClimb[2]) ?? "-"}
               </td>
             </tr>
             <tr className="border-b dark:border-gray-700">
               <td className="py-2 px-4">Vx (Best Angle)</td>
-              <td className="py-2 px-4 text-right">{Vx(PAs![0]!)}</td>
-              <td className="py-2 px-4 text-right">{Vx(PAs![1]!)}</td>
-              <td className="py-2 px-4 text-right">{Vx(PAs![2]!)}</td>
+              <td className="py-2 px-4 text-right">{Vx(PAs?.[0] ?? null) ?? "-"}</td>
+              <td className="py-2 px-4 text-right">{Vx(PAs?.[1] ?? null) ?? "-"}</td>
+              <td className="py-2 px-4 text-right">{Vx(PAs?.[2] ?? null) ?? "-"}</td>
             </tr>
             <tr className="border-b dark:border-gray-700">
               <td className="py-2 px-4">Vy (Best Rate)</td>
-              <td className="py-2 px-4 text-right">{Vy(PAs![0]!)}</td>
-              <td className="py-2 px-4 text-right">{Vy(PAs![1]!)}</td>
-              <td className="py-2 px-4 text-right">{Vy(PAs![2]!)}</td>
+              <td className="py-2 px-4 text-right">{Vy(PAs?.[0] ?? null) ?? "-"}</td>
+              <td className="py-2 px-4 text-right">{Vy(PAs?.[1] ?? null) ?? "-"}</td>
+              <td className="py-2 px-4 text-right">{Vy(PAs?.[2] ?? null) ?? "-"}</td>
             </tr>
             <tr className="border-b dark:border-gray-700">
               <td className="py-2 px-4">Va at Actual Weight</td>
-              <td className="py-2 px-4 text-right">{Va()}</td>
+              <td className="py-2 px-4 text-right">{Va() ?? "-"}</td>
               <td className="py-2 px-4 text-right"></td>
               <td className="py-2 px-4 text-right"></td>
             </tr>
@@ -219,15 +211,14 @@ export default function ClimbPerformance({
             </tr>
             <tr className="border-b dark:border-gray-700">
               <td className="py-2 px-4">Service Ceiling (300 ft/min ROC)</td>
-              <td className="py-2 px-4 text-right">
-                {Math.round(serviceCeiling(OATs![0]!)).toLocaleString()} ft
-              </td>
-              <td className="py-2 px-4 text-right">
-                {Math.round(serviceCeiling(OATs![1]!)).toLocaleString()} ft
-              </td>
-              <td className="py-2 px-4 text-right">
-                {Math.round(serviceCeiling(OATs![2]!)).toLocaleString()} ft
-              </td>
+              {([0, 1, 2] as const).map((i) => {
+                const sc = serviceCeiling(OATs?.[i] ?? null);
+                return (
+                  <td key={i} className="py-2 px-4 text-right">
+                    {sc !== null ? `${Math.round(sc).toLocaleString()} ft` : "-"}
+                  </td>
+                );
+              })}
             </tr>
           </tbody>
         </table>
