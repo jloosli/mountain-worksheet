@@ -61,7 +61,7 @@ const UtcClock = () => {
     return (
       <div className="flex flex-col items-start text-left md:items-end md:text-right gap-0.5">
         <span className="uppercase text-xs tracking-wide text-slate-300">
-          Current UTC
+          Current Time
         </span>
         <span className="font-mono text-2xl font-semibold">--:--:-- UTC</span>
         <span className="text-sm text-slate-300">-- --- --</span>
@@ -72,7 +72,7 @@ const UtcClock = () => {
   return (
     <div className="flex flex-col items-start text-left md:items-end md:text-right gap-0.5">
       <span className="uppercase text-xs tracking-wide text-slate-300">
-        Current UTC
+        Current Time
       </span>
       <span className="font-mono text-2xl font-semibold">{timeLabel}</span>
       <span className="text-sm text-slate-300">{dateLabel}</span>
