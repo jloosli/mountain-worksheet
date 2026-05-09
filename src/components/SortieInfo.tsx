@@ -19,6 +19,7 @@ type SortieInfoData = Pick<
   | "airport"
   | "route"
   | "weight"
+  | "altitude"
 >;
 
 export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
@@ -31,6 +32,7 @@ export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
     airport: ["", ""],
     route: "",
     weight: null,
+    altitude: [null, null, null],
   });
 
   const [currentTime, setCurrentTime] = useState<Date>(() => new Date());
@@ -85,6 +87,15 @@ export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
     const updatedData = { ...formData, airport: airportArray };
     setFormData(updatedData);
     onUpdate(updatedData);
+  };
+
+  const handleOperatingAltitudeChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value === "" ? null : Number(e.target.value);
+    const currentAltitude = (initialData?.altitude ?? formData.altitude ?? [null, null, null]) as [number | null, number | null, number | null];
+    const newAltitude: [number | null, number | null, number | null] = [currentAltitude[0], value, currentAltitude[2]];
+    const updatedData = { ...formData, altitude: newAltitude };
+    setFormData(updatedData);
+    onUpdate({ altitude: newAltitude });
   };
 
   const utcHourOptions = useMemo(
@@ -260,9 +271,9 @@ export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
           />
         </div>
 
-        <div className="space-y-2 sm:col-span-2">
+        <div className="space-y-2">
           <label htmlFor="route" className="block text-sm font-medium">
-            Area of Operations/Route
+            Area of Operations (position)
           </label>
           <input
             type="text"
@@ -270,6 +281,19 @@ export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
             name="route"
             value={formData.route || ""}
             onChange={handleInputChange}
+            className="w-full px-3 py-2 border rounded-md dark:bg-black/[.15] dark:border-white/[.145]"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label htmlFor="operatingAltitude" className="block text-sm font-medium">
+            Operating Altitude (MSL ft)
+          </label>
+          <input
+            type="number"
+            id="operatingAltitude"
+            value={formData.altitude?.[1] ?? ""}
+            onChange={handleOperatingAltitudeChange}
             className="w-full px-3 py-2 border rounded-md dark:bg-black/[.15] dark:border-white/[.145]"
           />
         </div>

@@ -77,9 +77,11 @@ describe("AircraftPerformance", () => {
     const altimeterInputs = screen.getAllByDisplayValue("29.92");
     expect(altimeterInputs).toHaveLength(3);
 
-    // Check altitude inputs
+    // Operating altitude is now read-only text; only departure and arrival are inputs
     const altitudeInputs = screen.getAllByDisplayValue("8000");
-    expect(altitudeInputs).toHaveLength(3);
+    expect(altitudeInputs).toHaveLength(2);
+    // Operating altitude shown as text
+    expect(screen.getByText("8000")).toBeInTheDocument();
 
     // Check runway inputs
     const runwayInputs = screen.getAllByDisplayValue("1000");
@@ -188,7 +190,9 @@ describe("AircraftPerformance", () => {
       />
     );
 
+    // Operating altitude is now read-only; only departure and arrival are inputs
     const altitudeInputs = screen.getAllByDisplayValue("8000");
+    expect(altitudeInputs).toHaveLength(2);
 
     // Test departure altitude change
     fireEvent.change(altitudeInputs[0], { target: { value: "4471" } });
@@ -200,18 +204,8 @@ describe("AircraftPerformance", () => {
       rwy: [1000, 1000],
     });
 
-    // Test operating altitude change
-    fireEvent.change(altitudeInputs[1], { target: { value: "9000" } });
-    expect(mockOnUpdate).toHaveBeenCalledWith({
-      airport: ["KOGD", "KSLC"],
-      temp: [21, 21, 21],
-      altimeter: [29.92, 29.92, 29.92],
-      altitude: [8000, 9000, 8000],
-      rwy: [1000, 1000],
-    });
-
     // Test arrival altitude change
-    fireEvent.change(altitudeInputs[2], { target: { value: "4229" } });
+    fireEvent.change(altitudeInputs[1], { target: { value: "4229" } });
     expect(mockOnUpdate).toHaveBeenCalledWith({
       airport: ["KOGD", "KSLC"],
       temp: [21, 21, 21],
@@ -358,9 +352,8 @@ describe("AircraftPerformance", () => {
     const arrivalAltitudeInput = screen.getByDisplayValue("4229");
     expect(arrivalAltitudeInput).toHaveClass("bg-blue-50", "border-blue-300");
 
-    // Check that operating altitude (8000) has manual styling
-    const operatingAltitudeInput = screen.getByDisplayValue("8000");
-    expect(operatingAltitudeInput).toHaveClass("bg-white", "border-gray-300");
+    // Operating altitude is now read-only text (moved to SortieInfo)
+    expect(screen.getByText("8000")).toBeInTheDocument();
   });
 
   it("applies manual styling to fields when data is not API-populated", () => {
@@ -494,7 +487,9 @@ describe("AircraftPerformance", () => {
     // Should display initialData values
     expect(screen.getAllByDisplayValue("21")).toHaveLength(3);
     expect(screen.getAllByDisplayValue("1000")).toHaveLength(2);
-    expect(screen.getAllByDisplayValue("8000")).toHaveLength(3);
+    // Operating altitude is read-only text; departure and arrival remain as inputs
+    expect(screen.getAllByDisplayValue("8000")).toHaveLength(2);
+    expect(screen.getByText("8000")).toBeInTheDocument();
   });
 
   it("handles partial worksheetData updates", () => {
@@ -517,6 +512,8 @@ describe("AircraftPerformance", () => {
 
     // Should display initialData for temp and altitude
     expect(screen.getAllByDisplayValue("21")).toHaveLength(3);
-    expect(screen.getAllByDisplayValue("8000")).toHaveLength(3);
+    // Operating altitude is read-only text; departure and arrival remain as inputs
+    expect(screen.getAllByDisplayValue("8000")).toHaveLength(2);
+    expect(screen.getByText("8000")).toBeInTheDocument();
   });
 });
