@@ -6,6 +6,7 @@ import Calculations from "@/components/Calculations";
 import MountainFlyingChecklist from "@/components/MountainFlyingChecklist";
 import WorksheetHeader from "@/components/WorksheetHeader";
 import { useUrlState } from "@/utils/useUrlState";
+import { useTempUnit } from "@/utils/useTempUnit";
 import type { WorksheetData } from "@/utils/types";
 
 const getDefaultSortieDateTime = () => {
@@ -30,6 +31,7 @@ const getDefaultSortieDateTime = () => {
 
 export default function AppContainer() {
   const defaultSortieDateTime = getDefaultSortieDateTime();
+  const { useFahrenheit, toggleTempUnit } = useTempUnit();
   const [state, setState] = useUrlState({
     // Sortie Information
     pilot: "",
@@ -115,6 +117,8 @@ export default function AppContainer() {
         onWeatherDataUpdate={handleWeatherDataUpdate}
         onWeatherTimestampUpdate={handleWeatherTimestampUpdate}
         weatherLastUpdated={weatherLastUpdated ?? undefined}
+        useFahrenheit={useFahrenheit}
+        onToggleTempUnit={toggleTempUnit}
       />
       <main className="flex-1 w-full flex justify-center px-2 md:px-8 pb-20">
         <div className="w-full max-w-5xl flex flex-col gap-16 items-center">
@@ -122,6 +126,7 @@ export default function AppContainer() {
             state={state}
             onStateUpdate={handleUpdate}
             weatherLastUpdated={weatherLastUpdated ?? undefined}
+            useFahrenheit={useFahrenheit}
           />
           <Calculations state={state} />
           <MountainFlyingChecklist />
