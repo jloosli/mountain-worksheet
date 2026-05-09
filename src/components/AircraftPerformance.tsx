@@ -363,14 +363,9 @@ export default function AircraftPerformance({
                 />
               </td>
               <td className="p-2">
-                <input
-                  type="number"
-                  value={getValue("altitude", 1)}
-                  onChange={(e) =>
-                    handleInputChange("altitude", 1, e.target.value)
-                  }
-                  className={getInputStyling("altitude", 1)}
-                />
+                <span className="text-gray-700 dark:text-gray-300">
+                  {getValue("altitude", 1) || "—"}
+                </span>
               </td>
               <td className="p-2">
                 <input
