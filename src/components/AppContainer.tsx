@@ -3,6 +3,7 @@
 import { useState } from "react";
 import AppInputs from "@/components/AppInputs";
 import Calculations from "@/components/Calculations";
+import MountainFlyingChecklist from "@/components/MountainFlyingChecklist";
 import WorksheetHeader from "@/components/WorksheetHeader";
 import { useUrlState } from "@/utils/useUrlState";
 import type { WorksheetData } from "@/utils/types";
@@ -123,6 +124,7 @@ export default function AppContainer() {
             weatherLastUpdated={weatherLastUpdated ?? undefined}
           />
           <Calculations state={state} />
+          <MountainFlyingChecklist />
         </div>
       </main>
       <footer className="w-full py-4 px-2 md:px-8 text-center text-sm text-gray-600 dark:text-gray-400 border-t border-gray-200 dark:border-gray-800">
