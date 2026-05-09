@@ -13,6 +13,8 @@ interface WorksheetHeaderProps {
   onWeatherDataUpdate: (data: Partial<WorksheetData>) => void;
   onWeatherTimestampUpdate: (timestamp: Date) => void;
   weatherLastUpdated?: Date;
+  useFahrenheit: boolean;
+  onToggleTempUnit: () => void;
 }
 
 const formatUtcDisplay = (date: Date) => {
@@ -87,6 +89,8 @@ export default function WorksheetHeader({
   onWeatherDataUpdate,
   onWeatherTimestampUpdate,
   weatherLastUpdated,
+  useFahrenheit,
+  onToggleTempUnit,
 }: WorksheetHeaderProps) {
   return (
     <header className="w-full bg-slate-900 text-white shadow-md">
@@ -112,6 +116,15 @@ export default function WorksheetHeader({
             >
               <LinkIcon className="h-5 w-5" />
               Copy Link
+            </button>
+            <button
+              onClick={onToggleTempUnit}
+              className="flex items-center gap-1 rounded-md bg-slate-700 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-slate-600"
+              title="Toggle temperature unit"
+            >
+              <span className={useFahrenheit ? "text-slate-400" : "font-bold"}>°C</span>
+              <span className="text-slate-500">|</span>
+              <span className={useFahrenheit ? "font-bold" : "text-slate-400"}>°F</span>
             </button>
             <WeatherDataIntegration
               worksheetData={worksheetData}

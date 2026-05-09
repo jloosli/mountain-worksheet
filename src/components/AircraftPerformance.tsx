@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { WorksheetData } from "@/utils/types";
 import { isApiPopulatedData } from "@/utils/weatherDataMapper";
+import { celciusToFarenheit, farenheitToCelcius } from "@/utils/formulas";
 
 type PerfFields = Pick<
   WorksheetData,
@@ -17,7 +18,8 @@ type PerfFields = Pick<
 interface AircraftPerformanceProps {
   initialData?: PerfFields;
   onUpdate: (data: Partial<WorksheetData>) => void;
-  worksheetData?: Partial<WorksheetData>; // Full worksheet data to check API population
+  worksheetData?: Partial<WorksheetData>;
+  useFahrenheit?: boolean;
 }
 
 const DEFAULT_DATA: PerfFields = {
@@ -36,6 +38,7 @@ export default function AircraftPerformance({
   initialData = DEFAULT_DATA,
   onUpdate,
   worksheetData,
+  useFahrenheit = false,
 }: AircraftPerformanceProps) {
   const [data, setData] = useState<PerfFields>(() => ({
     ...DEFAULT_DATA,
@@ -132,7 +135,14 @@ export default function AircraftPerformance({
   const getValue = (category: keyof PerfFields, index: number): string => {
     const arr = displayData[category];
     const value = arr[index];
-    return value !== null && value !== undefined ? value.toString() : "";
+    if (value === null || value === undefined) return "";
+    if (category === "temp") {
+      if (useFahrenheit) {
+        return Math.round(celciusToFarenheit(value as number)).toString();
+      }
+      return parseFloat((value as number).toFixed(1)).toString();
+    }
+    return value.toString();
   };
 
   // Helper function to get input styling based on API population
@@ -186,7 +196,9 @@ export default function AircraftPerformance({
           number | null,
           number | null
         ];
-        tempArray[index] = newValue as number | null;
+        tempArray[index] = newValue !== null && useFahrenheit
+          ? farenheitToCelcius(newValue)
+          : newValue as number | null;
         newData.temp = tempArray;
         break;
       case "altimeter":
@@ -282,14 +294,14 @@ export default function AircraftPerformance({
               </td>
             </tr>
             <tr className="border-b">
-              <td className="p-2">Temperature (°C)</td>
+              <td className="p-2">Temperature (°{useFahrenheit ? "F" : "C"})</td>
               <td className="p-2">
                 <input
                   type="number"
                   value={getValue("temp", 0)}
                   onChange={(e) => handleInputChange("temp", 0, e.target.value)}
-                  min="-30"
-                  max="55"
+                  min={useFahrenheit ? "-22" : "-30"}
+                  max={useFahrenheit ? "131" : "55"}
                   className={getInputStyling("temp", 0)}
                 />
               </td>
@@ -298,8 +310,8 @@ export default function AircraftPerformance({
                   type="number"
                   value={getValue("temp", 1)}
                   onChange={(e) => handleInputChange("temp", 1, e.target.value)}
-                  min="-30"
-                  max="55"
+                  min={useFahrenheit ? "-22" : "-30"}
+                  max={useFahrenheit ? "131" : "55"}
                   className={getInputStyling("temp", 1)}
                 />
               </td>
@@ -308,8 +320,8 @@ export default function AircraftPerformance({
                   type="number"
                   value={getValue("temp", 2)}
                   onChange={(e) => handleInputChange("temp", 2, e.target.value)}
-                  min="-30"
-                  max="55"
+                  min={useFahrenheit ? "-22" : "-30"}
+                  max={useFahrenheit ? "131" : "55"}
                   className={getInputStyling("temp", 2)}
                 />
               </td>

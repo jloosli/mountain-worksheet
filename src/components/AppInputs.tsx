@@ -11,12 +11,14 @@ interface WorksheetFormProps {
   state: WorksheetData;
   onStateUpdate: (updates: Partial<WorksheetData>) => void;
   weatherLastUpdated?: Date;
+  useFahrenheit?: boolean;
 }
 
 export default function AppInputs({
   state,
   onStateUpdate,
   weatherLastUpdated,
+  useFahrenheit,
 }: WorksheetFormProps): ReactNode {
   const handleUpdate = (data: Partial<WorksheetData>) => {
     onStateUpdate(data);
@@ -30,11 +32,13 @@ export default function AppInputs({
         onUpdate={handleUpdate}
         initialData={state}
         lastUpdated={weatherLastUpdated}
+        useFahrenheit={useFahrenheit}
       />
       <AircraftPerformance
         onUpdate={handleUpdate}
         initialData={state}
         worksheetData={state}
+        useFahrenheit={useFahrenheit}
       />
     </div>
   );

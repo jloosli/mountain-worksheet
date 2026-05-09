@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import type { WorksheetData } from "@/utils/types";
 import { isApiPopulatedData } from "@/utils/weatherDataMapper";
+import { celciusToFarenheit, farenheitToCelcius } from "@/utils/formulas";
 
 type WeatherFields = Pick<
   WorksheetData,
@@ -10,7 +11,8 @@ type WeatherFields = Pick<
 interface WeatherInfoProps {
   initialData?: WorksheetData;
   onUpdate: (data: Partial<WorksheetData>) => void;
-  lastUpdated?: Date; // Timestamp for when data was last updated
+  lastUpdated?: Date;
+  useFahrenheit?: boolean;
 }
 
 const altitudes = ["3,000", "6,000", "9,000", "12,000", "15,000"];
@@ -30,6 +32,7 @@ export default function WeatherInfo({
   initialData,
   onUpdate,
   lastUpdated,
+  useFahrenheit = false,
 }: WeatherInfoProps) {
   const [data, setData] = useState<WeatherFields>(() => ({
     ...DEFAULT_WEATHER_DATA,
@@ -199,17 +202,21 @@ export default function WeatherInfo({
           isValid =
             numValue >= 0 && numValue <= 150 && Number.isInteger(numValue);
           break;
-        case 2: // temp
-          isValid =
-            numValue >= -50 && numValue <= 50 && Number.isInteger(numValue);
+        case 2: { // temp
+          const celsiusValue = useFahrenheit ? farenheitToCelcius(numValue) : numValue;
+          isValid = celsiusValue >= -50 && celsiusValue <= 50;
           break;
+        }
       }
     }
 
     if (isValid) {
       const newWind = [...data.wind] as [(number | null)[], (number | null)[], (number | null)[]];
       newWind[type] = [...newWind[type]];
-      newWind[type][index] = numValue;
+      const storedValue = type === 2 && numValue !== null && useFahrenheit
+        ? farenheitToCelcius(numValue)
+        : numValue;
+      newWind[type][index] = storedValue;
       const newData = {
         ...data,
         wind: newWind,
@@ -306,25 +313,28 @@ export default function WeatherInfo({
             ))}
           </tr>
           <tr>
-            <td className="border p-2">Temperature (°C)</td>
-            {altitudes.map((alt) => (
-              <td key={alt} className="border p-2">
-                <input
-                  type="number"
-                  min={-50}
-                  max={50}
-                  value={displayData.wind?.[2]?.[altitudes.indexOf(alt)] ?? ""}
-                  onChange={(e) =>
-                    handleNumericChange(
-                      2,
-                      altitudes.indexOf(alt),
-                      e.target.value
-                    )
-                  }
-                  className={getInputStyling("temp")}
-                />
-              </td>
-            ))}
+            <td className="border p-2">Temperature (°{useFahrenheit ? "F" : "C"})</td>
+            {altitudes.map((alt) => {
+              const idx = altitudes.indexOf(alt);
+              const rawVal = displayData.wind?.[2]?.[idx];
+              const displayVal = rawVal !== null && rawVal !== undefined
+                ? (useFahrenheit ? Math.round(celciusToFarenheit(rawVal)) : parseFloat(rawVal.toFixed(1)))
+                : "";
+              return (
+                <td key={alt} className="border p-2">
+                  <input
+                    type="number"
+                    min={useFahrenheit ? -58 : -50}
+                    max={useFahrenheit ? 122 : 50}
+                    value={displayVal}
+                    onChange={(e) =>
+                      handleNumericChange(2, idx, e.target.value)
+                    }
+                    className={getInputStyling("temp")}
+                  />
+                </td>
+              );
+            })}
           </tr>
         </tbody>
       </table>
