@@ -920,8 +920,8 @@ export function calculateTOLDForMultipleAirports(
   aircraftModel: string,
   inputs: {
     weight: number;
-    pressureAltitudes: [number, number, number];
-    temperatures: [number, number, number];
+    pressureAltitudes: [number | null, number | null];
+    temperatures: [number | null, number | null];
     runwayLengths: [number | null, number | null];
   }
 ): {
@@ -950,10 +950,10 @@ export function calculateTOLDForMultipleAirports(
   const allExtrapolationWarnings: TOLDError[] = [];
   const allErrors: TOLDError[] = [];
 
-  // Calculate for departure airport
+  // Calculate for departure airport when PA and temp are available
   let departureResults: ReturnType<typeof calculateAllTOLDDistances> | null =
     null;
-  if (inputs.runwayLengths[0] !== null) {
+  if (inputs.pressureAltitudes[0] !== null && inputs.temperatures[0] !== null) {
     const departureParams: TOLDCalculationParams = {
       weight: inputs.weight,
       pressureAltitude: inputs.pressureAltitudes[0],
@@ -973,10 +973,10 @@ export function calculateTOLDForMultipleAirports(
     allErrors.push(...departureResult.errors);
   }
 
-  // Calculate for arrival airport
+  // Calculate for arrival airport when PA and temp are available
   let arrivalResults: ReturnType<typeof calculateAllTOLDDistances> | null =
     null;
-  if (inputs.runwayLengths[1] !== null) {
+  if (inputs.pressureAltitudes[1] !== null && inputs.temperatures[1] !== null) {
     const arrivalParams: TOLDCalculationParams = {
       weight: inputs.weight,
       pressureAltitude: inputs.pressureAltitudes[1],
