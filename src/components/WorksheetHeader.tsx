@@ -94,7 +94,7 @@ export default function WorksheetHeader({
 }: WorksheetHeaderProps) {
   return (
     <header className="w-full bg-slate-900 text-white shadow-md">
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-4 md:px-6">
+      <div className="mx-auto flex w-full max-w-5xl flex-col gap-4 px-4 py-4 md:px-6">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <h1 className="text-3xl font-bold tracking-tight">
             Mountain Flying Worksheet

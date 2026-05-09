@@ -258,6 +258,7 @@ export default function WeatherInfo({
           winds
         </a>
       </p>
+      <div className="overflow-x-auto">
       <table className="w-full border-collapse">
         <thead>
           <tr className="bg-gray-100 dark:bg-gray-800">
@@ -271,7 +272,10 @@ export default function WeatherInfo({
         </thead>
         <tbody>
           <tr>
-            <td className="border p-2">Wind Direction (Degrees)</td>
+            <td className="border p-2">
+              <span className="hidden md:inline">Wind Direction (Degrees)</span>
+              <span className="md:hidden">Wnd Dir (°)</span>
+            </td>
             {altitudes.map((alt) => (
               <td key={alt} className="border p-2">
                 <input
@@ -292,7 +296,10 @@ export default function WeatherInfo({
             ))}
           </tr>
           <tr>
-            <td className="border p-2">Wind Velocity (Knots)</td>
+            <td className="border p-2">
+              <span className="hidden md:inline">Wind Velocity (Knots)</span>
+              <span className="md:hidden">Wnd Vel (kt)</span>
+            </td>
             {altitudes.map((alt) => (
               <td key={alt} className="border p-2">
                 <input
@@ -313,7 +320,10 @@ export default function WeatherInfo({
             ))}
           </tr>
           <tr>
-            <td className="border p-2">Temperature (°{useFahrenheit ? "F" : "C"})</td>
+            <td className="border p-2">
+              <span className="hidden md:inline">Temperature (°{useFahrenheit ? "F" : "C"})</span>
+              <span className="md:hidden">Temp (°{useFahrenheit ? "F" : "C"})</span>
+            </td>
             {altitudes.map((alt) => {
               const idx = altitudes.indexOf(alt);
               const rawVal = displayData.wind?.[2]?.[idx];
@@ -338,6 +348,7 @@ export default function WeatherInfo({
           </tr>
         </tbody>
       </table>
+      </div>
 
       <div className="mt-4 space-y-2">
         <div className="flex items-center gap-2">
