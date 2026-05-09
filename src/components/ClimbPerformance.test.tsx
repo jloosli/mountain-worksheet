@@ -170,4 +170,49 @@ describe("ClimbPerformance Component", () => {
 
     expect(departureCell).toHaveClass("text-right");
   });
+
+  describe("Service Ceiling display", () => {
+    const getServiceCeilingRow = () =>
+      screen.getByText("Service Ceiling (300 ft/min ROC)").closest("tr");
+
+    test("shows '-' for all columns when all OATs are null", () => {
+      render(
+        <ClimbPerformance
+          {...defaultProps}
+          OATs={[null, null, null] as unknown as [number, number, number]}
+        />
+      );
+      const cells = getServiceCeilingRow()?.querySelectorAll("td");
+      expect(cells?.[1]).toHaveTextContent("-");
+      expect(cells?.[2]).toHaveTextContent("-");
+      expect(cells?.[3]).toHaveTextContent("-");
+    });
+
+    test("shows '-' only for operating column when operating OAT is null", () => {
+      render(
+        <ClimbPerformance
+          {...defaultProps}
+          OATs={[20, null, 20] as unknown as [number, number, number]}
+        />
+      );
+      const cells = getServiceCeilingRow()?.querySelectorAll("td");
+      expect(cells?.[1].textContent).toMatch(/ft$/);
+      expect(cells?.[2]).toHaveTextContent("-");
+      expect(cells?.[3].textContent).toMatch(/ft$/);
+    });
+
+    test("shows computed ft values when all OATs are valid numbers", () => {
+      render(<ClimbPerformance {...defaultProps} OATs={[20, 10, 5]} />);
+      const cells = getServiceCeilingRow()?.querySelectorAll("td");
+      expect(cells?.[1].textContent).toMatch(/ft$/);
+      expect(cells?.[2].textContent).toMatch(/ft$/);
+      expect(cells?.[3].textContent).toMatch(/ft$/);
+    });
+
+    test("departure and arrival show the same ceiling for the same OAT", () => {
+      render(<ClimbPerformance {...defaultProps} OATs={[20, null, 20] as unknown as [number, number, number]} />);
+      const cells = getServiceCeilingRow()?.querySelectorAll("td");
+      expect(cells?.[1].textContent).toBe(cells?.[3].textContent);
+    });
+  });
 });
