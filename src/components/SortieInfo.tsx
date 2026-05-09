@@ -140,7 +140,15 @@ export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
     const localHours = String(sortieUtc.getHours()).padStart(2, "0");
     const localMinutes = String(sortieUtc.getMinutes()).padStart(2, "0");
 
-    const localDisplay = `${localMonth}/${localDay}/${localYear} ${localHours}${localMinutes} local`;
+    const offsetTotalMinutes = -sortieUtc.getTimezoneOffset();
+    const offsetSign = offsetTotalMinutes >= 0 ? "+" : "-";
+    const offsetHours = Math.floor(Math.abs(offsetTotalMinutes) / 60);
+    const offsetMins = Math.abs(offsetTotalMinutes) % 60;
+    const utcOffset = offsetMins === 0
+      ? `UTC${offsetSign}${offsetHours}`
+      : `UTC${offsetSign}${offsetHours}:${String(offsetMins).padStart(2, "0")}`;
+
+    const localDisplay = `${localMonth}/${localDay}/${localYear} ${localHours}${localMinutes} local (${utcOffset})`;
 
     const diffMinutes = Math.round(
       (sortieUtc.getTime() - currentTime.getTime()) / 60000
