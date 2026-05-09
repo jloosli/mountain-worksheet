@@ -261,6 +261,12 @@ export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
           </select>
         </div>
 
+        {sortieLocalTiming && (
+          <div className="sm:col-span-2 text-xs text-gray-600 dark:text-gray-400">
+            {sortieLocalTiming}
+          </div>
+        )}
+
         <div className="space-y-2">
           <label htmlFor="duration" className="block text-sm font-medium">
             Expected Duration (hrs)
@@ -280,12 +286,6 @@ export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
             ))}
           </select>
         </div>
-
-        {sortieLocalTiming && (
-          <div className="sm:col-span-2 text-xs text-gray-600 dark:text-gray-400">
-            {sortieLocalTiming}
-          </div>
-        )}
 
         <div className="space-y-2">
           <label htmlFor="tailN" className="block text-sm font-medium">
