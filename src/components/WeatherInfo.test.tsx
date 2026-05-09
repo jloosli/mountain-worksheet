@@ -31,19 +31,39 @@ describe("WeatherInfo", () => {
     expect(screen.getByText("Temperature (°C)")).toBeInTheDocument();
   });
 
-  it("renders abbreviated row labels for mobile screens", () => {
+  it("abbreviated row labels carry md:hidden class so they hide on desktop", () => {
     render(<WeatherInfo {...defaultProps} />);
 
-    expect(screen.getByText("Wnd Dir (°)")).toBeInTheDocument();
-    expect(screen.getByText("Wnd Vel (kt)")).toBeInTheDocument();
-    expect(screen.getByText("Temp (°C)")).toBeInTheDocument();
+    expect(screen.getByText("Wnd Dir (°)")).toHaveClass("md:hidden");
+    expect(screen.getByText("Wnd Vel (kt)")).toHaveClass("md:hidden");
+    expect(screen.getByText("Temp (°C)")).toHaveClass("md:hidden");
   });
 
-  it("renders abbreviated temperature label matching useFahrenheit prop", () => {
+  it("full row labels carry hidden and md:inline classes so they show on desktop", () => {
+    render(<WeatherInfo {...defaultProps} />);
+
+    const fullWndDir = screen.getByText("Wind Direction (Degrees)");
+    expect(fullWndDir).toHaveClass("hidden");
+    expect(fullWndDir).toHaveClass("md:inline");
+
+    const fullWndVel = screen.getByText("Wind Velocity (Knots)");
+    expect(fullWndVel).toHaveClass("hidden");
+    expect(fullWndVel).toHaveClass("md:inline");
+
+    const fullTemp = screen.getByText("Temperature (°C)");
+    expect(fullTemp).toHaveClass("hidden");
+    expect(fullTemp).toHaveClass("md:inline");
+  });
+
+  it("abbreviated and full temperature labels reflect useFahrenheit prop", () => {
     render(<WeatherInfo {...defaultProps} useFahrenheit={true} />);
 
-    expect(screen.getByText("Temp (°F)")).toBeInTheDocument();
-    expect(screen.getByText("Temperature (°F)")).toBeInTheDocument();
+    const abbrTemp = screen.getByText("Temp (°F)");
+    expect(abbrTemp).toHaveClass("md:hidden");
+
+    const fullTemp = screen.getByText("Temperature (°F)");
+    expect(fullTemp).toHaveClass("hidden");
+    expect(fullTemp).toHaveClass("md:inline");
   });
 
   it("should show API-populated styling when worksheetData has API data", () => {
