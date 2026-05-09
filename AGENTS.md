@@ -1,183 +1,59 @@
 # CAP Mountain Flying Worksheet - AI Agent Instructions
 
-This document provides essential context for AI agents working with this codebase. It outlines key architectural decisions, workflows, and patterns specific to this project.
+A Next.js 16.x web application (App Router, TypeScript, Tailwind CSS v4, Vercel) that helps Civil Air Patrol pilots plan mountain flying operations by computing density altitude, takeoff/landing distances, maneuvering speeds, and climb performance from aircraft POH data.
 
-## Project Overview
+## Key Architecture
 
-A Next.js web application designed to help Civil Air Patrol (CAP) pilots plan and execute mountain flying operations safely. It takes information about the aircraft being flown and the weather conditions for the flight to give insights on the conditions to expect and whether or not the mission should proceed. It is built with:
+- `src/app/` — App Router pages and layouts
+- `src/components/` — UI components; `AppContainer` owns all state, `AppInputs` owns user inputs, `Calculations` renders results
+- `src/utils/types.ts` — Core types: `WorksheetData`, `Aircraft`, `TOLDResults`, `TOLDInputs`
+- `src/data/aircraft.json` — POH performance tables indexed by weight × altitude × temperature
+- `src/utils/interpolation.ts` — Trilinear interpolation across POH tables
+- `src/utils/toldCalculations.ts`, `maneuveringCalculations.ts`, `formulas.ts` — Calculations
+- `src/app/api/aviation-weather/route.ts` — Proxy to `aviationweather.gov` (avoids CORS)
 
-- Next.js 15.5+ (App Router)
-- TypeScript
-- Tailwind CSS
-- Vercel deployment
+## URL State Management
 
-## Key Architecture Points
+State is persisted to URL query strings via `src/utils/urlState.ts` + `src/utils/useUrlState.ts` using the `qs` library.
 
-### App Structure
+**Format rules (non-obvious):**
+- Arrays → comma-separated (`?numbers=1,2,3`)
+- Booleans → `"1"` / `"0"`
+- 2D arrays → `||` row separator (`?wind=,90,180||5,10,15`)
+- Null elements within arrays → preserved as empty slots (`,90,180` means `[null, 90, 180]`); omitted only for top-level null values
+- Spaces → `+` (not `%20`)
+- `initialState` is used as type hints during deserialization to restore correct types
 
-- Uses Next.js App Router pattern (`src/app/` directory)
-- Page components in `page.tsx` files
-- Layout components in `layout.tsx` files
-- Shared components in `src/components/` (when added)
-- Most components are stateless and use props to update the state
-- Calculations are done in the `Calculations` component
-- Inputs are done in the `AppInputs` component
+**Wind null semantics:** `null` ≠ `0` in the wind field. `0` is a valid direction/velocity; `null` means no data for that altitude. Use `??` not `||` when reading for display.
 
-### Styling
+## Input Component State Pattern
 
-- Tailwind CSS for styling
-- Custom fonts: Geist Sans and Geist Mono via `next/font/google`
-- Dark mode support built into component styles
+`AircraftPerformance` receives both `initialData` (its owned fields) and `worksheetData` (full state) — both recreated on every `onUpdate`. A `useEffect` watching either prop will fire on every keystroke, not just external changes, causing feedback loops that clear fields mid-entry.
 
-### URL State Management
+**Correct pattern:**
+- Keep a local string state for the raw input display value
+- Track last-pushed value in a `useRef`
+- In prop-watching `useEffect`s, only sync local state when incoming value differs from the last-pushed value
+- `min`/`max` on `<input type="number">` do not block state — validate in `onChange` before calling `onUpdate`
 
-The application uses URL query strings to persist application state, allowing users to bookmark and share worksheet configurations.
-
-**Key Files:**
-- `src/utils/urlState.ts` - Serialization/deserialization logic
-- `src/utils/useUrlState.ts` - React hook for URL state management
-
-**Serialization Approach:**
-- Uses the `qs` library (https://github.com/ljharb/qs) for query string handling
-- Query strings are optimized for compactness and human-readability
-- Configuration: `{arrayFormat: 'comma', encode: true, skipNulls: true}` with a custom encoder that converts spaces to `+`
-
-**Format Details:**
-- **Arrays**: Comma-separated values (e.g., `?numbers=1,2,3`)
-- **Booleans**: Serialized as "1" or "0" (e.g., `?turb=1`)
-- **Nested Arrays (2D)**: Custom format with `||` separator (e.g., `?wind=,90,180||5,10,15`). Null positions are preserved as empty slots (e.g. `[null, 90, 180]` → `,90,180`).
-- **Empty values**: Null/undefined top-level values and fully-empty arrays are omitted. However, null elements *within* any array (simple or nested) are preserved as empty slots so that array indices are stable across round-trips. Deserialization restores empty slots back to `null`.
-- **Spaces**: Encoded as `+` for readability (e.g., `?pilot=John+Doe` not `?pilot=John%20Doe`)
-
-**Wind data null semantics:** The `wind` field uses `null` (not `0`) to represent missing data for an altitude. A value of `0` is a legitimate wind direction or velocity. This distinction matters in both the URL (`wind=,255,257` means null at 3,000ft, not zero) and in rendering (`??` not `||` must be used when reading values for display).
-
-**Type Hints:**
-- Deserialization uses `initialState` as type hints to properly convert strings back to numbers, booleans, etc.
-- This ensures type safety when reading from URL parameters
-
-**Usage Example:**
-```typescript
-const [state, setState] = useUrlState({
-  pilot: "",
-  altitude: [0, 0, 0],
-  turb: false,
-});
-// State is automatically synced with URL query string
-```
-
-### Input Components and State Flow
-
-`AircraftPerformance` receives **two props that both reflect the same parent `state` object** from `AppContainer`:
-
-- `initialData` — a subset of `WorksheetData` (the fields this component owns)
-- `worksheetData` — the full `WorksheetData`
-
-Both props are re-created on every `onUpdate` call (because `AppContainer` calls `setState`). This means **any `useEffect` depending on either prop fires on every keystroke**, not only on genuine external changes like API population.
-
-If a component calls `onUpdate` and also syncs local display state from a prop in a `useEffect`, this creates a feedback loop that clears the field mid-entry. The correct pattern to avoid this:
-
-- Keep a **local string state** for the raw display value of the input field.
-- Track the **last value pushed upstream** in a `useRef`.
-- In prop-watching `useEffect`s, only sync local display state when the incoming value **differs from what was last pushed** (i.e., it is a genuine external change, not a keystroke round-trip).
-- **HTML `min`/`max` attributes on `<input type="number">` do not block state updates** — input validation must happen in the `onChange` handler before calling `onUpdate`.
-
-### Performance Calculations
-
-Aircraft performance tables (from POH data) are stored in `src/data/aircraft.json` indexed by weight × altitude × temperature. Calculations use trilinear interpolation (`src/utils/interpolation.ts`) to find values between table entries.
-
-Key calculation files:
-- `src/utils/toldCalculations.ts` — takeoff/landing distance calculations
-- `src/utils/maneuveringCalculations.ts` — maneuvering speed calculations
-- `src/utils/formulas.ts` — density altitude and other aviation formulas
-
-**Null values in performance tables:** Some aircraft have `null` entries at extreme altitudes or temperatures where POH data does not exist (e.g. C206 climb performance at 24,000 ft). `trilinearInterpolate` handles nulls gracefully via a fallback average; callers of `bilinearInterpolate`/`bilinearInterpolateFlexible` should wrap calls in `try/catch` or validate that inputs fall within table bounds before calling.
-
-### Type Definitions
-
-All core types are in `src/utils/types.ts`:
-- `WorksheetData` — the complete form state
-- `Aircraft` — aircraft model with performance tables
-- `TOLDResults`, `TOLDInputs` — takeoff/landing calculation I/O
-
-### API Route
-
-`src/app/api/aviation-weather/route.ts` proxies requests to the AviationWeather.gov API (`https://aviationweather.gov/api/data`) to avoid CORS issues.
-
-## Development Workflow
-
-### Commands
+## Development
 
 ```bash
-npm install          # Install dependencies
-npm run dev          # Development server (Turbopack)
+npm run dev          # Dev server (Turbopack)
 npm run build        # Production build
 npm run lint         # ESLint
-npm test             # Run tests once
-npm run test:watch   # Tests in watch mode
-npm run test:coverage # Coverage report
+npm test             # Run all tests
+npx jest src/path/to/file.test.ts  # Single test file
 ```
 
-To run a single test file:
-```bash
-npx jest src/utils/__tests__/interpolation.test.ts
-npx jest src/components/__tests__/AppContainer.test.tsx
-```
+## Testing (Required)
 
-### Testing
+**Every code change must include new or updated tests.** No exceptions.
 
-Jest + React Testing Library. Next.js navigation (`useRouter`, `useSearchParams`, `usePathname`) is mocked in `jest.setup.ts`. Tests live alongside source in `__tests__/` subdirectories.
+- New utilities → unit tests in `src/utils/__tests__/`
+- New/modified components → tests co-located as `ComponentName.test.tsx`
+- Bug fixes → regression test that would have caught the bug
 
-**Every code change must include corresponding new or updated tests — see [Testing under Conventions](#testing-1).**
+Jest + React Testing Library. Next.js navigation hooks are mocked in `jest.setup.ts`. Custom render wrapper in `src/test-utils/test-utils.ts`. CI runs tests, lint, and build on every push/PR to `main`.
 
-CI runs tests, lint, and build on every push/PR to `main`.
-
-### Deployment
-
-- Automatically deploys to Vercel on push to `main` branch
-- Preview deployments created for pull requests
-
-## Conventions
-
-### Components
-
-- Use TypeScript for all components
-- Implement proper type definitions for props
-- Follow Next.js App Router patterns for layouts and pages
-- Most components are stateless and use props to update the state
-
-### Styles
-
-- Use Tailwind utility classes directly in components
-- Dark mode classes prefixed with `dark:`
-- Responsive design using Tailwind breakpoints (`sm:`, `md:`, etc.)
-
-### File Structure
-
-- Keep page components in `src/app/` directory
-- Place reusable components in `src/components/`
-- Static assets in `public/` directory
-
-### Testing
-
-**Tests are required whenever code changes are made.** This is not optional.
-
-- **New utility functions or calculations** → add unit tests in `src/utils/__tests__/` (or co-located `*.test.ts` next to the source file)
-- **New or modified components** → add or update component tests co-located in `src/components/` as `ComponentName.test.tsx`
-- **Bug fixes** → add a regression test that would have caught the bug
-- **Refactors** → ensure existing tests still pass; add tests for any behavior not already covered
-
-Use Jest + React Testing Library. See `src/test-utils/test-utils.ts` for the custom render wrapper. Mock external data (e.g. `aircraft.json`) and child components as shown in existing tests.
-
-Do not submit a change that touches source files without a corresponding test file change (new or updated tests).
-
-## Common Tasks
-
-### Adding an aircraft
-
-- Update the aircraft data from aircraft POH information in `src/data/aircraft.json`
-
-### Styling Updates
-
-- Add Tailwind classes directly to components
-- Update global styles in `src/app/globals.css`
-- Configure Tailwind in `tailwind.config.js`
+**POH null values:** Some aircraft have `null` entries at extreme altitudes/temperatures. `trilinearInterpolate` handles nulls via fallback average; callers of `bilinearInterpolate` variants should validate inputs are within table bounds or wrap in `try/catch`.
