@@ -225,7 +225,7 @@ export default function ClimbPerformance({
                 const titleText = scDA !== null
                   ? `Pressure Alt: ${scPARounded.toLocaleString()} ft\nDensity Alt: ${scDA.toLocaleString()} ft`
                   : `Pressure Alt: ${scPARounded.toLocaleString()} ft`;
-                const displayValue = altimeter !== null
+                const displayValue = altimeter !== null && altimeter >= 28
                   ? `${Math.round(scPA + (altimeter - 29.92) * 1000).toLocaleString()} ft`
                   : `${scPARounded.toLocaleString()} ft (PA)`;
                 return (

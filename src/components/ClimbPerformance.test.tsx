@@ -260,6 +260,18 @@ describe("ClimbPerformance Component", () => {
       expect(title).toMatch(/Density Alt:/);
     });
 
+    test("shows PA with '(PA)' suffix when altimeter is -1 sentinel", () => {
+      render(
+        <ClimbPerformance
+          {...defaultProps}
+          OATs={[20, null, null] as unknown as [number, number, number]}
+          altimeters={[-1, null, null]}
+        />
+      );
+      const cells = getServiceCeilingRow()?.querySelectorAll("td");
+      expect(cells?.[1].textContent).toMatch(/ft \(PA\)$/);
+    });
+
     test("departure and arrival show the same MSL ceiling for the same OAT and altimeter", () => {
       render(
         <ClimbPerformance
