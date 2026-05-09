@@ -31,6 +31,21 @@ describe("WeatherInfo", () => {
     expect(screen.getByText("Temperature (°C)")).toBeInTheDocument();
   });
 
+  it("renders abbreviated row labels for mobile screens", () => {
+    render(<WeatherInfo {...defaultProps} />);
+
+    expect(screen.getByText("Wnd Dir (°)")).toBeInTheDocument();
+    expect(screen.getByText("Wnd Vel (kt)")).toBeInTheDocument();
+    expect(screen.getByText("Temp (°C)")).toBeInTheDocument();
+  });
+
+  it("renders abbreviated temperature label matching useFahrenheit prop", () => {
+    render(<WeatherInfo {...defaultProps} useFahrenheit={true} />);
+
+    expect(screen.getByText("Temp (°F)")).toBeInTheDocument();
+    expect(screen.getByText("Temperature (°F)")).toBeInTheDocument();
+  });
+
   it("should show API-populated styling when worksheetData has API data", () => {
     const worksheetDataWithApi: WorksheetData = {
       ...defaultProps.initialData,

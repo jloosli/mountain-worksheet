@@ -21,4 +21,19 @@ describe("WorksheetHeader", () => {
     expect(screen.getByText("Current Time")).toBeInTheDocument();
     expect(screen.queryByText("Current UTC")).not.toBeInTheDocument();
   });
+
+  it("header inner container uses max-w-5xl consistent with main content width", () => {
+    const { container } = render(
+      <WorksheetHeader
+        onReset={jest.fn()}
+        onShare={jest.fn()}
+        worksheetData={{}}
+        onWeatherDataUpdate={jest.fn()}
+        onWeatherTimestampUpdate={jest.fn()}
+      />
+    );
+
+    expect(container.querySelector(".max-w-6xl")).not.toBeInTheDocument();
+    expect(container.querySelector(".max-w-5xl")).toBeInTheDocument();
+  });
 });
