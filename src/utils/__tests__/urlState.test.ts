@@ -396,6 +396,18 @@ describe("deserializeState", () => {
     expect(restored.temp).toEqual([null, 5, -2]);
   });
 
+  it("should deserialize numeric values with null initial hint as numbers not strings", () => {
+    // Regression: fields initialized as null (e.g. weight, duration) must round-trip
+    // as numbers when a numeric value is present in the URL.
+    const initialState = { weight: null as number | null, duration: null as number | null };
+    const params = new URLSearchParams("weight=2800&duration=2.5");
+    const result = deserializeState(params, initialState);
+    expect(result.weight).toBe(2800);
+    expect(typeof result.weight).toBe("number");
+    expect(result.duration).toBe(2.5);
+    expect(typeof result.duration).toBe("number");
+  });
+
   it("should round-trip nested arrays with null and zero values", () => {
     // Regression test for issue #41: null and 0 must be distinguishable after
     // serialization and deserialization. null → empty slot, 0 → "0".
