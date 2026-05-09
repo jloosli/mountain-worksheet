@@ -178,7 +178,7 @@ describe("Calculations", () => {
     render(<Calculations state={mockWorksheetData} />);
     
     await waitFor(() => {
-      expect(screen.getByText("Maneuver/Canyon Turn Speed (kts) (C182T)")).toBeInTheDocument();
+      expect(screen.getByText("Minimum Maneuver/Canyon Turn Speed (kts) (C182T)")).toBeInTheDocument();
     });
   });
 
@@ -218,7 +218,7 @@ describe("Calculations", () => {
     render(<Calculations state={stateWithUnknownAircraft} />);
     
     // Should render ManeuveringPerformance but with TBD values
-    expect(screen.getByText("Maneuver/Canyon Turn Speed (kts) (UNKNOWN)")).toBeInTheDocument();
+    expect(screen.getByText("Minimum Maneuver/Canyon Turn Speed (kts) (UNKNOWN)")).toBeInTheDocument();
     
     // Should show TBD for all cells since aircraft not found
     const tbdElements = screen.getAllByText("TBD");
