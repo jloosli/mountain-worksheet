@@ -382,25 +382,23 @@ export function findInverseXgivenYandZ(
   const firstZ = zValuesAtY[0];
   const lastZ = zValuesAtY[zValuesAtY.length - 1];
 
+  if (validXAxis.length < 2) {
+    return validXAxis[0];
+  }
+
   if (targetZ < Math.min(firstZ, lastZ)) {
-    // Target is below the data range, extrapolate using first two points
-    if (validXAxis.length < 2) {
-      // Not enough points for extrapolation
-      return validXAxis[0];
-    }
-    const t = (targetZ - zValuesAtY[0]) / (zValuesAtY[1] - zValuesAtY[0]);
-    return validXAxis[0] + t * (validXAxis[1] - validXAxis[0]);
-  } else if (targetZ > Math.max(firstZ, lastZ)) {
-    // Target is above the data range, extrapolate using last two points
-    if (validXAxis.length < 2) {
-      // Not enough points for extrapolation
-      return validXAxis[0];
-    }
+    // Target is beyond the high-X end of the data (e.g. service ceiling above max table altitude).
+    // For a decreasing series (ROC drops with altitude), extrapolate from the last two points.
     const last = validXAxis.length - 1;
     const t =
       (targetZ - zValuesAtY[last - 1]) /
       (zValuesAtY[last] - zValuesAtY[last - 1]);
     return validXAxis[last - 1] + t * (validXAxis[last] - validXAxis[last - 1]);
+  } else if (targetZ > Math.max(firstZ, lastZ)) {
+    // Target is beyond the low-X end of the data (e.g. service ceiling below min table altitude).
+    // For a decreasing series, extrapolate from the first two points.
+    const t = (targetZ - zValuesAtY[0]) / (zValuesAtY[1] - zValuesAtY[0]);
+    return validXAxis[0] + t * (validXAxis[1] - validXAxis[0]);
   } else {
     // This should never happen if the data is properly sorted
     throw new Error("Could not find matching climb rate");

@@ -272,6 +272,33 @@ describe("Interpolation Functions", () => {
         findInverseXgivenYandZ(dataAllNulls, xAxisAllNulls, yAxisAllNulls, 500, 30);
       }).toThrow("all data points are null");
     });
+
+    describe("extrapolation direction in non-linear decreasing series", () => {
+      // Data that is NOT collinear: steep drop early, then levels off.
+      // This is the real-world pattern for aircraft climb rates (ROC drops faster at low altitude).
+      // Only non-linear data exposes the bug: with linear data, both ends extrapolate identically.
+      const xAxisNL = [0, 5000, 10000, 15000];
+      const yAxisNL = [0];
+      const dataNL = [[800], [500], [400], [350]]; // steep early drop, then leveling off
+
+      it("extrapolates beyond max altitude from last two points when target is below all values", () => {
+        // Target 100 fpm is below the minimum (350 fpm at 15000 ft).
+        // Service ceiling is above the table — must extrapolate from the TOP of the data (last two points).
+        // last two: x=10000 (z=400) and x=15000 (z=350)
+        // t = (100 - 400) / (350 - 400) = 6.0  →  result = 10000 + 6×5000 = 40000 ft
+        const result = findInverseXgivenYandZ(dataNL, xAxisNL, yAxisNL, 100, 0);
+        expect(result).toBeCloseTo(40000, -2);
+      });
+
+      it("extrapolates below min altitude from first two points when target is above all values", () => {
+        // Target 1000 fpm is above the maximum (800 fpm at 0 ft).
+        // Service ceiling is below the table — must extrapolate from the BOTTOM of the data (first two points).
+        // first two: x=0 (z=800) and x=5000 (z=500)
+        // t = (1000 - 800) / (500 - 800) ≈ -0.6667  →  result = 0 + (-0.6667)×5000 ≈ -3333 ft
+        const result = findInverseXgivenYandZ(dataNL, xAxisNL, yAxisNL, 1000, 0);
+        expect(result).toBeCloseTo(-3333, -2);
+      });
+    });
   });
 
   describe("createInterpolationTable", () => {
