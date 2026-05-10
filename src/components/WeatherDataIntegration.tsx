@@ -121,10 +121,8 @@ export default function WeatherDataIntegration({
           includeMETAR: true,
           includeTAF: true,
           includeAirport: true,
-          includeWindTemp: true,
           metarHours: 1,
           tafHours: 6,
-          altitudes: [3000, 6000, 9000, 12000, 15000],
         });
 
         // Compute mid-time and op position fallback inputs

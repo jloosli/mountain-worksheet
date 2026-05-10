@@ -129,7 +129,6 @@ describe("WeatherDataIntegration", () => {
       metar: [],
       taf: [],
       airport: [],
-      windTemp: [],
     });
 
     render(<WeatherDataIntegration {...defaultProps} />);
