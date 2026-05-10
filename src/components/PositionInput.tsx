@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { parsePosition } from "@/utils/positionParser";
+import { parsePosition, type ParsedPosition } from "@/utils/positionParser";
+import { geodesicDestination } from "@/utils/positionMath";
+import { magneticVariation } from "@/utils/magvar";
+import { getAirportInfo, getNavaidInfo } from "@/utils/aviationWeatherApi";
 
 interface PositionInputProps {
   rawValue: string;
@@ -11,6 +14,46 @@ interface PositionInputProps {
 
 const formatLatLon = (lat: number, lon: number): string =>
   `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+const round4 = (n: number): number => Math.round(n * 10000) / 10000;
+
+// Module-scoped session cache: id -> {lat, lon}.
+const stationCache = new Map<string, { lat: number; lon: number }>();
+
+async function resolveStation(
+  parsed: Extract<ParsedPosition, { kind: "airport-rd" | "vor-rd" }>
+): Promise<{ lat: number; lon: number }> {
+  const cached = stationCache.get(parsed.stationId);
+  if (cached) return cached;
+
+  if (parsed.kind === "airport-rd") {
+    const [a] = await getAirportInfo([parsed.stationId]);
+    if (!a) throw new Error("not found");
+    const coords = { lat: a.lat, lon: a.lon };
+    stationCache.set(parsed.stationId, coords);
+    return coords;
+  } else {
+    const [n] = await getNavaidInfo([parsed.stationId]);
+    if (!n) throw new Error("not found");
+    const coords = { lat: n.lat, lon: n.lon };
+    stationCache.set(parsed.stationId, coords);
+    return coords;
+  }
+}
+
+function resolveRadialDistance(
+  parsed: Extract<ParsedPosition, { kind: "airport-rd" | "vor-rd" }>,
+  station: { lat: number; lon: number }
+): { lat: number; lon: number } {
+  const variation = magneticVariation(station.lat, station.lon);
+  const trueBearing = parsed.radial + variation;
+  const dest = geodesicDestination(
+    station.lat,
+    station.lon,
+    trueBearing,
+    parsed.distanceNm
+  );
+  return { lat: round4(dest.lat), lon: round4(dest.lon) };
+}
 
 export default function PositionInput({
   rawValue,
@@ -19,13 +62,13 @@ export default function PositionInput({
 }: PositionInputProps) {
   const [localRaw, setLocalRaw] = useState(rawValue);
   const lastPushed = useRef(rawValue);
+  const requestId = useRef(0);
   const [hint, setHint] = useState<{ type: "ok" | "warn"; text: string } | null>(
     cachedPosition[0] !== null && cachedPosition[1] !== null
       ? { type: "ok", text: `→ ${formatLatLon(cachedPosition[0]!, cachedPosition[1]!)}` }
       : null
   );
 
-  // Sync incoming prop changes only when external (per AGENTS.md last-pushed pattern)
   useEffect(() => {
     if (rawValue !== lastPushed.current) {
       setLocalRaw(rawValue);
@@ -40,11 +83,11 @@ export default function PositionInput({
     }
   }, [rawValue, cachedPosition]);
 
-  // Debounced parse on local edits
   useEffect(() => {
     if (localRaw === lastPushed.current) return;
 
     const handle = setTimeout(() => {
+      const myId = ++requestId.current;
       const parsed = parsePosition(localRaw);
       lastPushed.current = localRaw;
 
@@ -57,16 +100,42 @@ export default function PositionInput({
       if (parsed.kind === "decimal" || parsed.kind === "dms" || parsed.kind === "ddm") {
         setHint({ type: "ok", text: `→ ${formatLatLon(parsed.lat, parsed.lon)}` });
         onChange(localRaw, [parsed.lat, parsed.lon]);
-      } else if (parsed.kind === "unrecognized") {
+        return;
+      }
+
+      if (parsed.kind === "unrecognized") {
         setHint({
           type: "warn",
           text: "⚠ Unrecognized format — saved as free text",
         });
         onChange(localRaw, [null, null]);
-      } else {
-        // airport-rd / vor-rd handled in Task 11
-        onChange(localRaw, [null, null]);
+        return;
       }
+
+      // airport-rd or vor-rd
+      setHint({
+        type: "ok",
+        text: `→ looking up ${parsed.stationId}…`,
+      });
+
+      resolveStation(parsed)
+        .then((station) => {
+          if (myId !== requestId.current) return; // stale
+          const dest = resolveRadialDistance(parsed, station);
+          setHint({
+            type: "ok",
+            text: `→ ${formatLatLon(dest.lat, dest.lon)} (${parsed.raw})`,
+          });
+          onChange(localRaw, [dest.lat, dest.lon]);
+        })
+        .catch(() => {
+          if (myId !== requestId.current) return; // stale
+          setHint({
+            type: "warn",
+            text: `⚠ Could not find ${parsed.stationId}`,
+          });
+          onChange(localRaw, [null, null]);
+        });
     }, 300);
 
     return () => clearTimeout(handle);

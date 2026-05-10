@@ -1,5 +1,10 @@
 import { render, screen, fireEvent, act } from "@testing-library/react";
 import PositionInput from "./PositionInput";
+import { getAirportInfo, getNavaidInfo } from "@/utils/aviationWeatherApi";
+import { magneticVariation } from "@/utils/magvar";
+
+jest.mock("@/utils/aviationWeatherApi");
+jest.mock("@/utils/magvar");
 
 describe("PositionInput - synchronous paths", () => {
   it("renders empty input with no hint when value is empty", () => {
@@ -55,5 +60,132 @@ describe("PositionInput - synchronous paths", () => {
     );
     expect(screen.getByRole("textbox")).toHaveValue("KOGD/285/34");
     expect(screen.getByText(/41\.4321, -112\.7042/)).toBeInTheDocument();
+  });
+});
+
+describe("PositionInput - async lookup paths", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    (magneticVariation as jest.Mock).mockReturnValue(12); // east declination
+  });
+
+  it("shows loading hint then resolved coords for airport-rd", async () => {
+    (getAirportInfo as jest.Mock).mockResolvedValueOnce([
+      { icaoId: "KOGD", lat: 41.2, lon: -112.01 },
+    ]);
+    const onChange = jest.fn();
+    jest.useFakeTimers();
+    render(
+      <PositionInput rawValue="" cachedPosition={[null, null]} onChange={onChange} />
+    );
+    fireEvent.change(screen.getByRole("textbox"), {
+      target: { value: "KOGD/285/34" },
+    });
+    act(() => {
+      jest.advanceTimersByTime(350);
+    });
+    expect(screen.getByText(/looking up KOGD/)).toBeInTheDocument();
+
+    jest.useRealTimers();
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(getAirportInfo).toHaveBeenCalledWith(["KOGD"]);
+    expect(onChange).toHaveBeenLastCalledWith(
+      "KOGD/285/34",
+      expect.arrayContaining([expect.any(Number), expect.any(Number)])
+    );
+    expect(screen.getByText(/\(KOGD\/285\/34\)/)).toBeInTheDocument();
+  });
+
+  it("calls getNavaidInfo for 3-letter station ids", async () => {
+    (getNavaidInfo as jest.Mock).mockResolvedValueOnce([
+      { id: "OGD", lat: 41.5, lon: -112.76 },
+    ]);
+    const onChange = jest.fn();
+    jest.useFakeTimers();
+    render(
+      <PositionInput rawValue="" cachedPosition={[null, null]} onChange={onChange} />
+    );
+    fireEvent.change(screen.getByRole("textbox"), {
+      target: { value: "OGD/285/34" },
+    });
+    act(() => {
+      jest.advanceTimersByTime(350);
+    });
+
+    jest.useRealTimers();
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(getNavaidInfo).toHaveBeenCalledWith(["OGD"]);
+  });
+
+  it("shows error hint when lookup fails", async () => {
+    (getAirportInfo as jest.Mock).mockRejectedValueOnce(new Error("not found"));
+    const onChange = jest.fn();
+    jest.useFakeTimers();
+    render(
+      <PositionInput rawValue="" cachedPosition={[null, null]} onChange={onChange} />
+    );
+    fireEvent.change(screen.getByRole("textbox"), {
+      target: { value: "KZZZ/285/34" },
+    });
+    act(() => {
+      jest.advanceTimersByTime(350);
+    });
+    jest.useRealTimers();
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(screen.getByText(/Could not find KZZZ/)).toBeInTheDocument();
+    expect(onChange).toHaveBeenLastCalledWith("KZZZ/285/34", [null, null]);
+  });
+
+  it("ignores stale lookup results when input changes mid-flight (race protection)", async () => {
+    let resolveFirst: (v: unknown) => void = () => {};
+    (getAirportInfo as jest.Mock)
+      .mockImplementationOnce(
+        () => new Promise((resolve) => { resolveFirst = resolve; })
+      )
+      .mockResolvedValueOnce([{ icaoId: "KSLC", lat: 40.79, lon: -111.97 }]);
+
+    const onChange = jest.fn();
+    jest.useFakeTimers();
+    render(
+      <PositionInput rawValue="" cachedPosition={[null, null]} onChange={onChange} />
+    );
+
+    fireEvent.change(screen.getByRole("textbox"), {
+      target: { value: "KOGD/285/34" },
+    });
+    act(() => {
+      jest.advanceTimersByTime(350);
+    });
+
+    fireEvent.change(screen.getByRole("textbox"), {
+      target: { value: "KSLC/090/10" },
+    });
+    act(() => {
+      jest.advanceTimersByTime(350);
+    });
+
+    jest.useRealTimers();
+    // Resolve the stale (first) lookup AFTER the second was issued
+    resolveFirst([{ icaoId: "KOGD", lat: 41.2, lon: -112.01 }]);
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    // Final hint should reference KSLC, not KOGD
+    expect(screen.queryByText(/KOGD/)).not.toBeInTheDocument();
+    expect(screen.getByText(/KSLC/)).toBeInTheDocument();
   });
 });
