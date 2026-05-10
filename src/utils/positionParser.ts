@@ -100,10 +100,28 @@ const tryDmsMinus = (s: string): { lat: number; lon: number } | null => {
   return { lat: round4(lat), lon: round4(lon) };
 };
 
+const tryRadialDistance = (
+  s: string
+): { kind: "airport-rd" | "vor-rd"; stationId: string; radial: number; distanceNm: number } | null => {
+  // Letters 3 or 4, slash, exactly 3-digit radial, slash, distance (int or decimal)
+  const m = s.match(/^([A-Z]{3,4})\/(\d{3})\/(\d+(?:\.\d+)?)$/);
+  if (!m) return null;
+  const stationId = m[1];
+  const radial = Number(m[2]);
+  const distanceNm = Number(m[3]);
+  if (radial < 0 || radial > 360) return null;
+  if (distanceNm < 0 || distanceNm > 500) return null;
+  const kind = stationId.length === 4 ? "airport-rd" : "vor-rd";
+  return { kind, stationId, radial, distanceNm };
+};
+
 export function parsePosition(input: string): ParsedPosition {
   const raw = input;
   const s = input.trim().toUpperCase();
   if (s === "") return { kind: "unrecognized", raw };
+
+  const rd = tryRadialDistance(s);
+  if (rd) return { ...rd, raw };
 
   const dmsL = tryDmsLetters(s);
   if (dmsL) return { kind: "dms", raw, ...dmsL };

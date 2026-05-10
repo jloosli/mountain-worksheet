@@ -136,3 +136,74 @@ describe("parsePosition - DMS (degree-minute-second)", () => {
     expect(result.kind).toBe("unrecognized");
   });
 });
+
+describe("parsePosition - radial-distance", () => {
+  it("parses 4-letter ID as airport-rd", () => {
+    const result = parsePosition("KOGD/285/34");
+    expect(result.kind).toBe("airport-rd");
+    if (result.kind === "airport-rd") {
+      expect(result.stationId).toBe("KOGD");
+      expect(result.radial).toBe(285);
+      expect(result.distanceNm).toBe(34);
+    }
+  });
+
+  it("parses 3-letter ID as vor-rd", () => {
+    const result = parsePosition("OGD/285/34");
+    expect(result.kind).toBe("vor-rd");
+    if (result.kind === "vor-rd") {
+      expect(result.stationId).toBe("OGD");
+      expect(result.radial).toBe(285);
+      expect(result.distanceNm).toBe(34);
+    }
+  });
+
+  it("uppercases lowercase station id", () => {
+    const result = parsePosition("kogd/285/34");
+    expect(result.kind).toBe("airport-rd");
+    if (result.kind === "airport-rd") {
+      expect(result.stationId).toBe("KOGD");
+    }
+  });
+
+  it("accepts decimal distance", () => {
+    const result = parsePosition("KOGD/285/34.5");
+    expect(result.kind).toBe("airport-rd");
+    if (result.kind === "airport-rd") {
+      expect(result.distanceNm).toBe(34.5);
+    }
+  });
+
+  it("rejects radial of fewer than 3 digits", () => {
+    const result = parsePosition("KOGD/85/34");
+    expect(result.kind).toBe("unrecognized");
+  });
+
+  it("rejects radial > 360", () => {
+    const result = parsePosition("KOGD/400/34");
+    expect(result.kind).toBe("unrecognized");
+  });
+
+  it("rejects distance > 500 nm", () => {
+    const result = parsePosition("KOGD/285/600");
+    expect(result.kind).toBe("unrecognized");
+  });
+
+  it("rejects negative distance", () => {
+    const result = parsePosition("KOGD/285/-5");
+    expect(result.kind).toBe("unrecognized");
+  });
+
+  it("accepts zero distance", () => {
+    const result = parsePosition("KOGD/285/0");
+    expect(result.kind).toBe("airport-rd");
+    if (result.kind === "airport-rd") {
+      expect(result.distanceNm).toBe(0);
+    }
+  });
+
+  it("ignores 5-letter station id", () => {
+    const result = parsePosition("ABCDE/285/34");
+    expect(result.kind).toBe("unrecognized");
+  });
+});
