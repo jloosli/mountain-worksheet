@@ -173,7 +173,12 @@ describe("ClimbPerformance Component", () => {
 
   describe("Service Ceiling display", () => {
     const getServiceCeilingRow = () =>
-      screen.getByText("Service Ceiling (300 ft/min ROC)").closest("tr");
+      screen.getByText(/Service Ceiling \(300 ft\/min ROC, MSL\)/).closest("tr");
+
+    test("label reads 'Service Ceiling (300 ft/min ROC, MSL)'", () => {
+      render(<ClimbPerformance {...defaultProps} />);
+      expect(screen.getByText("Service Ceiling (300 ft/min ROC, MSL)")).toBeInTheDocument();
+    });
 
     test("shows '-' for all columns when all OATs are null", () => {
       render(
@@ -188,29 +193,93 @@ describe("ClimbPerformance Component", () => {
       expect(cells?.[3]).toHaveTextContent("-");
     });
 
-    test("shows '-' only for operating column when operating OAT is null", () => {
+    test("shows PA with '(PA)' suffix when altimeter is null", () => {
       render(
         <ClimbPerformance
           {...defaultProps}
           OATs={[20, null, 20] as unknown as [number, number, number]}
+          altimeters={[null, null, null]}
+        />
+      );
+      const cells = getServiceCeilingRow()?.querySelectorAll("td");
+      expect(cells?.[1].textContent).toMatch(/ft \(PA\)$/);
+      expect(cells?.[2]).toHaveTextContent("-");
+      expect(cells?.[3].textContent).toMatch(/ft \(PA\)$/);
+    });
+
+    test("shows MSL without '(PA)' suffix when altimeter is provided", () => {
+      render(
+        <ClimbPerformance
+          {...defaultProps}
+          OATs={[20, null, 20] as unknown as [number, number, number]}
+          altimeters={[29.92, null, 29.92]}
         />
       );
       const cells = getServiceCeilingRow()?.querySelectorAll("td");
       expect(cells?.[1].textContent).toMatch(/ft$/);
-      expect(cells?.[2]).toHaveTextContent("-");
+      expect(cells?.[1].textContent).not.toMatch(/\(PA\)/);
       expect(cells?.[3].textContent).toMatch(/ft$/);
+      expect(cells?.[3].textContent).not.toMatch(/\(PA\)/);
     });
 
-    test("shows computed ft values when all OATs are valid numbers", () => {
-      render(<ClimbPerformance {...defaultProps} OATs={[20, 10, 5]} />);
+    test("MSL is 1000 ft higher than PA when altimeter is 30.92", () => {
+      const { rerender } = render(
+        <ClimbPerformance
+          {...defaultProps}
+          OATs={[20, null, null] as unknown as [number, number, number]}
+          altimeters={[29.92, null, null]}
+        />
+      );
+      const baseRow = getServiceCeilingRow();
+      const baseMSL = parseInt(baseRow?.querySelectorAll("td")?.[1].textContent?.replace(/[^0-9]/g, "") ?? "0");
+
+      rerender(
+        <ClimbPerformance
+          {...defaultProps}
+          OATs={[20, null, null] as unknown as [number, number, number]}
+          altimeters={[30.92, null, null]}
+        />
+      );
+      const highRow = getServiceCeilingRow();
+      const highMSL = parseInt(highRow?.querySelectorAll("td")?.[1].textContent?.replace(/[^0-9]/g, "") ?? "0");
+
+      expect(highMSL - baseMSL).toBe(1000);
+    });
+
+    test("cell has title attribute with Pressure Alt and Density Alt when value is computed", () => {
+      render(
+        <ClimbPerformance
+          {...defaultProps}
+          OATs={[20, null, null] as unknown as [number, number, number]}
+          altimeters={[29.92, null, null]}
+        />
+      );
       const cells = getServiceCeilingRow()?.querySelectorAll("td");
-      expect(cells?.[1].textContent).toMatch(/ft$/);
-      expect(cells?.[2].textContent).toMatch(/ft$/);
-      expect(cells?.[3].textContent).toMatch(/ft$/);
+      const title = cells?.[1].getAttribute("title") ?? "";
+      expect(title).toMatch(/Pressure Alt:/);
+      expect(title).toMatch(/Density Alt:/);
     });
 
-    test("departure and arrival show the same ceiling for the same OAT", () => {
-      render(<ClimbPerformance {...defaultProps} OATs={[20, null, 20] as unknown as [number, number, number]} />);
+    test("shows PA with '(PA)' suffix when altimeter is -1 sentinel", () => {
+      render(
+        <ClimbPerformance
+          {...defaultProps}
+          OATs={[20, null, null] as unknown as [number, number, number]}
+          altimeters={[-1, null, null]}
+        />
+      );
+      const cells = getServiceCeilingRow()?.querySelectorAll("td");
+      expect(cells?.[1].textContent).toMatch(/ft \(PA\)$/);
+    });
+
+    test("departure and arrival show the same MSL ceiling for the same OAT and altimeter", () => {
+      render(
+        <ClimbPerformance
+          {...defaultProps}
+          OATs={[20, null, 20] as unknown as [number, number, number]}
+          altimeters={[29.92, null, 29.92]}
+        />
+      );
       const cells = getServiceCeilingRow()?.querySelectorAll("td");
       expect(cells?.[1].textContent).toBe(cells?.[3].textContent);
     });

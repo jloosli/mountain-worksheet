@@ -6,7 +6,7 @@ import {
   findInverseXgivenYandZ,
   FlexibleInterpolationTable,
 } from "@/utils/interpolation";
-import { calculateVra, calculateVx } from "@/utils/formulas";
+import { calculateVra, calculateVx, pressureAltitudeToDensityAltitude } from "@/utils/formulas";
 import { Aircraft } from "@/utils/types";
 
 interface ClimbPerformanceProps {
@@ -14,6 +14,7 @@ interface ClimbPerformanceProps {
   weight?: number | null;
   OATs?: [number | null, number | null, number | null];
   PAs?: [number | null, number | null, number | null];
+  altimeters?: [number | null, number | null, number | null];
 }
 
 export default function ClimbPerformance({
@@ -21,6 +22,7 @@ export default function ClimbPerformance({
   weight,
   OATs,
   PAs,
+  altimeters,
 }: ClimbPerformanceProps) {
   const [ratesOfClimb, setRatesOfClimb] = useState<[number | null, number | null, number | null]>([
     null, null, null,
@@ -210,12 +212,25 @@ export default function ClimbPerformance({
               <td className="py-2 px-4 text-right"></td>
             </tr>
             <tr className="border-b dark:border-gray-700">
-              <td className="py-2 px-4">Service Ceiling (300 ft/min ROC)</td>
+              <td className="py-2 px-4">Service Ceiling (300 ft/min ROC, MSL)</td>
               {([0, 1, 2] as const).map((i) => {
-                const sc = serviceCeiling(OATs?.[i] ?? null);
+                const scPA = serviceCeiling(OATs?.[i] ?? null);
+                if (scPA === null) {
+                  return <td key={i} className="py-2 px-4 text-right">-</td>;
+                }
+                const oat = OATs?.[i] ?? null;
+                const altimeter = altimeters?.[i] ?? null;
+                const scPARounded = Math.round(scPA);
+                const scDA = oat !== null ? Math.round(pressureAltitudeToDensityAltitude(scPA, oat)) : null;
+                const titleText = scDA !== null
+                  ? `Pressure Alt: ${scPARounded.toLocaleString()} ft\nDensity Alt: ${scDA.toLocaleString()} ft`
+                  : `Pressure Alt: ${scPARounded.toLocaleString()} ft`;
+                const displayValue = altimeter !== null && altimeter >= 28
+                  ? `${Math.round(scPA + (altimeter - 29.92) * 1000).toLocaleString()} ft`
+                  : `${scPARounded.toLocaleString()} ft (PA)`;
                 return (
-                  <td key={i} className="py-2 px-4 text-right">
-                    {sc !== null ? `${Math.round(sc).toLocaleString()} ft` : "-"}
+                  <td key={i} className="py-2 px-4 text-right" title={titleText}>
+                    {displayValue}
                   </td>
                 );
               })}
