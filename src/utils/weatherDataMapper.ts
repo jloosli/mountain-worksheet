@@ -12,6 +12,7 @@ import type {
   AirportResponse,
   WindTempResponse,
 } from "./aviationWeatherApi";
+import { selectAirportWeather } from "./airportTimeWeather";
 
 // Target altitudes for wind/temperature data mapping
 export const TARGET_ALTITUDES = [3000, 6000, 9000, 12000, 15000]; // feet
@@ -36,6 +37,7 @@ export interface WeatherMappingResult {
 export interface WeatherMappingOptions {
   flightDate?: string; // ISO date string
   flightTime?: string; // HH:MM format
+  durationHours?: number | null;
   departureAirport?: string;
   arrivalAirport?: string;
   validateData?: boolean;
@@ -91,217 +93,65 @@ export function mapWindTempData(
 }
 
 /**
- * Extract temperature and pressure data from METAR/TAF responses
- */
-export function mapTemperaturePressureData(
-  metarData: METARResponse[],
-  tafData: TAFResponse[],
-  options: WeatherMappingOptions = {}
-): Partial<WorksheetData> {
-  const result: Partial<WorksheetData> = {
-    temp: [null, null, null],
-    altimeter: [null, null, null],
-  };
-
-  // Process METAR data for current conditions
-  if (metarData.length > 0) {
-    const metar = metarData[0]; // Use first METAR
-
-    if (metar.temp !== undefined) {
-      const temp = Math.round(metar.temp);
-      if (!options.validateData || isValidTemperature(temp)) {
-        result.temp = [temp, temp, temp]; // Same temp for all phases
-      }
-    }
-
-    if (metar.altim !== undefined) {
-      const altimeter = metar.altim;
-      if (!options.validateData || isValidAltimeter(altimeter)) {
-        result.altimeter = [altimeter, altimeter, altimeter]; // Same pressure for all phases
-      }
-    }
-  }
-
-  // Process TAF data for forecast conditions
-  if (tafData.length > 0 && options.flightDate && options.flightTime) {
-    const selectedTAF = selectTAFForFlightTime(
-      tafData,
-      options.flightDate,
-      options.flightTime
-    );
-
-    if (selectedTAF) {
-      if (selectedTAF.temp !== undefined) {
-        const temp = Math.round(selectedTAF.temp);
-        if (!options.validateData || isValidTemperature(temp)) {
-          result.temp = [temp, temp, temp];
-        }
-      }
-
-      if (selectedTAF.altim !== undefined) {
-        const altimeter = selectedTAF.altim;
-        if (!options.validateData || isValidAltimeter(altimeter)) {
-          result.altimeter = [altimeter, altimeter, altimeter];
-        }
-      }
-    }
-  }
-
-  return result;
-}
-
-/**
  * Map airport-specific temperature and pressure data for departure and arrival airports
- * Operating values are not updated (manual entry only)
+ * using per-airport requested time. Operating values are not updated (manual entry only).
  */
 export function mapAirportSpecificWeatherData(
   metarData: METARResponse[],
   tafData: TAFResponse[],
   options: WeatherMappingOptions = {}
-): Partial<WorksheetData> {
+): { data: Partial<WorksheetData>; warnings: string[] } {
   const result: Partial<WorksheetData> = {};
+  const warnings: string[] = [];
 
-  // Ensure metarData and tafData are arrays
-  const safeMetarData = Array.isArray(metarData) ? metarData : [];
-  const safeTafData = Array.isArray(tafData) ? tafData : [];
+  const safeMetar = Array.isArray(metarData) ? metarData : [];
+  const safeTaf = Array.isArray(tafData) ? tafData : [];
 
-  // Process departure airport weather
-  if (options.departureAirport) {
-    const departureMetar = safeMetarData.find(
-      (metar) => metar.icaoId === options.departureAirport
-    );
-
-    const departureTAF = safeTafData.find(
-      (taf) => taf.icaoId === options.departureAirport
-    );
-
-    // Prefer TAF if available and flight is in the future, otherwise use METAR
-    let departureTemp: number | undefined;
-    let departureAltimeter: number | undefined;
-
-    // First, try to get values from METAR (current conditions)
-    if (departureMetar) {
-      if (departureMetar.temp !== undefined) {
-        departureTemp = departureMetar.temp;
-      }
-      if (departureMetar.altim !== undefined) {
-        // Convert from hectopascals to inches of mercury, rounded to 2 decimal places
-        departureAltimeter =
-          Math.round(departureMetar.altim * 0.0295299 * 100) / 100;
-      }
-    }
-
-    // Then, try TAF if available and flight is in the future
-    if (departureTAF && options.flightDate && options.flightTime) {
-      const selectedTAF = selectTAFForFlightTime(
-        [departureTAF],
-        options.flightDate,
-        options.flightTime
-      );
-
-      if (selectedTAF) {
-        // Only use TAF values if they are defined (TAF values are optional)
-        if (selectedTAF.temp !== undefined) {
-          departureTemp = selectedTAF.temp;
-        }
-        if (selectedTAF.altim !== undefined) {
-          departureAltimeter = selectedTAF.altim;
-        }
-      }
-    }
-
-    // Update departure values if available
-    if (departureTemp !== undefined) {
-      const temp = Math.round(departureTemp);
-      if (!options.validateData || isValidTemperature(temp)) {
-        if (!result.temp) {
-          result.temp = [-1, -1, -1]; // Initialize with placeholders
-        }
-        result.temp[0] = temp; // departure
-      }
-    }
-
-    if (departureAltimeter !== undefined) {
-      if (!options.validateData || isValidAltimeter(departureAltimeter)) {
-        // Only create the array if it doesn't exist, but don't set all defaults
-        if (!result.altimeter) {
-          // Create array with -1 as placeholder for positions we don't have data for
-          result.altimeter = [-1, -1, -1];
-        }
-        result.altimeter[0] = departureAltimeter; // departure
-      }
-    }
+  if (!options.flightDate || !options.flightTime) {
+    return { data: result, warnings };
   }
 
-  // Process arrival airport weather
-  if (options.arrivalAirport) {
-    const arrivalMetar = safeMetarData.find(
-      (metar) => metar.icaoId === options.arrivalAirport
-    );
-
-    const arrivalTAF = safeTafData.find(
-      (taf) => taf.icaoId === options.arrivalAirport
-    );
-
-    // Prefer TAF if available and flight is in the future, otherwise use METAR
-    let arrivalTemp: number | undefined;
-    let arrivalAltimeter: number | undefined;
-
-    // First, try to get values from METAR (current conditions)
-    if (arrivalMetar) {
-      if (arrivalMetar.temp !== undefined) {
-        arrivalTemp = arrivalMetar.temp;
-      }
-      if (arrivalMetar.altim !== undefined) {
-        // Convert from hectopascals to inches of mercury, rounded to 2 decimal places
-        arrivalAltimeter =
-          Math.round(arrivalMetar.altim * 0.0295299 * 100) / 100;
-      }
-    }
-
-    // Then, try TAF if available and flight is in the future
-    if (arrivalTAF && options.flightDate && options.flightTime) {
-      const selectedTAF = selectTAFForFlightTime(
-        [arrivalTAF],
-        options.flightDate,
-        options.flightTime
-      );
-
-      if (selectedTAF) {
-        // Only use TAF values if they are defined (TAF values are optional)
-        if (selectedTAF.temp !== undefined) {
-          arrivalTemp = selectedTAF.temp;
-        }
-        if (selectedTAF.altim !== undefined) {
-          arrivalAltimeter = selectedTAF.altim;
-        }
-      }
-    }
-
-    // Update arrival values if available
-    if (arrivalTemp !== undefined) {
-      const temp = Math.round(arrivalTemp);
-      if (!options.validateData || isValidTemperature(temp)) {
-        if (!result.temp) {
-          result.temp = [-1, -1, -1]; // Initialize with placeholders
-        }
-        result.temp[2] = temp; // arrival
-      }
-    }
-
-    if (arrivalAltimeter !== undefined) {
-      if (!options.validateData || isValidAltimeter(arrivalAltimeter)) {
-        // Only create the array if it doesn't exist, but don't set all defaults
-        if (!result.altimeter) {
-          // Create array with -1 as placeholder for positions we don't have data for
-          result.altimeter = [-1, -1, -1];
-        }
-        result.altimeter[2] = arrivalAltimeter; // arrival
-      }
-    }
+  const depTime = new Date(`${options.flightDate}T${options.flightTime}:00Z`);
+  if (Number.isNaN(depTime.getTime())) {
+    return { data: result, warnings };
   }
+  const durationHours =
+    typeof options.durationHours === "number" && options.durationHours > 0
+      ? options.durationHours
+      : 0;
+  const arrTime = new Date(depTime.getTime() + durationHours * 3600 * 1000);
 
-  return result;
+  const apply = (
+    airportCode: string | undefined,
+    requestedTime: Date,
+    tempIndex: 0 | 2,
+    altIndex: 0 | 2
+  ): void => {
+    if (!airportCode) return;
+    const code = airportCode.toUpperCase();
+    const metar = safeMetar.find((m) => m.icaoId?.toUpperCase() === code);
+    const taf = safeTaf.find((t) => t.icaoId?.toUpperCase() === code);
+    const sel = selectAirportWeather(metar, taf, requestedTime);
+    warnings.push(...sel.warnings);
+    if (sel.temp !== null) {
+      const temp = sel.temp;
+      if (!options.validateData || isValidTemperature(temp)) {
+        if (!result.temp) result.temp = [-1, -1, -1];
+        result.temp[tempIndex] = temp;
+      }
+    }
+    if (sel.altimeter !== null) {
+      if (!options.validateData || isValidAltimeter(sel.altimeter)) {
+        if (!result.altimeter) result.altimeter = [-1, -1, -1];
+        result.altimeter[altIndex] = sel.altimeter;
+      }
+    }
+  };
+
+  apply(options.departureAirport, depTime, 0, 0);
+  apply(options.arrivalAirport, arrTime, 2, 2);
+
+  return { data: result, warnings };
 }
 
 /**
@@ -447,12 +297,10 @@ export function mapWeatherDataToWorksheet(
 
     // Map airport-specific temperature and pressure data
     if (metarData.length > 0 || tafData.length > 0) {
-      const airportWeatherData = mapAirportSpecificWeatherData(
-        metarData,
-        tafData,
-        options
-      );
+      const { data: airportWeatherData, warnings: airportWarnings } =
+        mapAirportSpecificWeatherData(metarData, tafData, options);
       result.data = { ...result.data, ...airportWeatherData };
+      result.warnings.push(...airportWarnings);
     } else {
       result.warnings.push(
         "No METAR/TAF data available for airport-specific temperature/pressure"
@@ -571,40 +419,6 @@ function findClosestAltitudeData(
 
   // Only return data if it's within 2000 feet of target altitude
   return minDifference <= 2000 ? closest : null;
-}
-
-/**
- * Select appropriate TAF data based on flight time
- */
-function selectTAFForFlightTime(
-  tafData: TAFResponse[],
-  flightDate: string,
-  flightTime: string
-): TAFResponse | null {
-  if (tafData.length === 0) return null;
-
-  try {
-    const flightDateTime = new Date(`${flightDate}T${flightTime}:00`);
-
-    // Find TAF that covers the flight time
-    for (const taf of tafData) {
-      const validTime = new Date(taf.validTime);
-      const validTimeEnd = taf.validTimeEnd ? new Date(taf.validTimeEnd) : null;
-
-      if (
-        flightDateTime >= validTime &&
-        (!validTimeEnd || flightDateTime <= validTimeEnd)
-      ) {
-        return taf;
-      }
-    }
-
-    // If no exact match, return the most recent TAF
-    return tafData[tafData.length - 1];
-  } catch (error) {
-    console.warn("Error parsing flight date/time:", error);
-    return tafData[0]; // Return first TAF as fallback
-  }
 }
 
 /**

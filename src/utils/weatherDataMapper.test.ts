@@ -4,7 +4,7 @@
 
 import {
   mapWindTempData,
-  mapTemperaturePressureData,
+  mapAirportSpecificWeatherData,
   mapRunwayData,
   mapWeatherDataToWorksheet,
   isApiPopulatedData,
@@ -135,103 +135,6 @@ describe("Weather Data Mapper", () => {
       expect(result.wind![0][0]).toBe(null); // Should remain null due to validation
       expect(result.wind![1][0]).toBe(null); // Should remain null due to validation
       expect(result.wind![2][0]).toBe(null); // Should remain null due to validation
-    });
-  });
-
-  describe("mapTemperaturePressureData", () => {
-    const mockMETARData: METARResponse[] = [
-      {
-        icaoId: "KORD",
-        obsTime: "2024-01-15T12:00:00Z",
-        report: "METAR KORD 151200Z 27015KT 10SM FEW250 21/12 A2992",
-        temp: 21,
-        dewp: 12,
-        wdir: 270,
-        wspd: 15,
-        visib: 10,
-        altim: 29.92,
-        qcField: 1,
-        metarType: "METAR",
-        rawOb: "KORD 151200Z 27015KT 10SM FEW250 21/12 A2992",
-      },
-    ];
-
-    const mockTAFData: TAFResponse[] = [
-      {
-        icaoId: "KORD",
-        issueTime: "2024-01-15T06:00:00Z",
-        validTime: "2024-01-15T06:00:00Z",
-        validTimeEnd: "2024-01-15T18:00:00Z",
-        rawTAF: "TAF KORD 150600Z 1506/1518 27015KT P6SM FEW250 21/12 A2992",
-        lat: 41.9786,
-        lon: -87.9048,
-        elev: 672,
-        temp: 18,
-        altim: 29.85,
-        fcstType: "TAF",
-      },
-    ];
-
-    it("should map METAR temperature and pressure data", () => {
-      const result = mapTemperaturePressureData(mockMETARData, []);
-
-      expect(result.temp).toEqual([21, 21, 21]);
-      expect(result.altimeter).toEqual([29.92, 29.92, 29.92]);
-    });
-
-    it("should map TAF data when flight time is provided", () => {
-      const options: WeatherMappingOptions = {
-        flightDate: "2024-01-15",
-        flightTime: "12:00",
-      };
-
-      const result = mapTemperaturePressureData([], mockTAFData, options);
-
-      expect(result.temp).toEqual([18, 18, 18]);
-      expect(result.altimeter).toEqual([29.85, 29.85, 29.85]);
-    });
-
-    it("should prefer METAR over TAF when both are available", () => {
-      const options: WeatherMappingOptions = {
-        flightDate: "2024-01-15",
-        flightTime: "12:00",
-      };
-
-      const result = mapTemperaturePressureData(
-        mockMETARData,
-        mockTAFData,
-        options
-      );
-
-      // Note: Current implementation processes TAF after METAR, so TAF overwrites METAR
-      // This test verifies the current behavior - in a real implementation,
-      // METAR should take precedence for current conditions
-      expect(result.temp).toEqual([18, 18, 18]); // From TAF (current behavior)
-      expect(result.altimeter).toEqual([29.85, 29.85, 29.85]); // From TAF (current behavior)
-    });
-
-    it("should use null values when no data is available", () => {
-      const result = mapTemperaturePressureData([], []);
-
-      expect(result.temp).toEqual([null, null, null]); // No default values
-      expect(result.altimeter).toEqual([null, null, null]); // No default values
-    });
-
-    it("should validate temperature and pressure data", () => {
-      const invalidMETARData: METARResponse[] = [
-        {
-          ...mockMETARData[0],
-          temp: 100, // Invalid temperature
-          altim: 50.0, // Invalid altimeter
-        },
-      ];
-
-      const result = mapTemperaturePressureData(invalidMETARData, [], {
-        validateData: true,
-      });
-
-      expect(result.temp).toEqual([null, null, null]); // Should use null when validation fails
-      expect(result.altimeter).toEqual([null, null, null]); // Should use null when validation fails
     });
   });
 
@@ -596,6 +499,9 @@ describe("Weather Data Mapper", () => {
       const options: WeatherMappingOptions = {
         departureAirport: "KORD",
         arrivalAirport: "KORD",
+        // Match the METAR obsTime so the observation is "fresh"
+        flightDate: "2024-01-15",
+        flightTime: "12:00",
       };
 
       const result = mapWeatherDataToWorksheet(mockApiData, options);
@@ -707,6 +613,9 @@ describe("Weather Data Mapper", () => {
       const options: WeatherMappingOptions = {
         departureAirport: "KORD",
         arrivalAirport: "KLAX",
+        // flightDate/flightTime match the METAR obsTime so both METARs are "fresh"
+        flightDate: "2024-01-15",
+        flightTime: "12:00",
       };
 
       const result = mapWeatherDataToWorksheet(
@@ -898,6 +807,98 @@ describe("Weather Data Mapper", () => {
     });
   });
 
+  describe("dep/arr time-aware weather", () => {
+    it("uses different TAF periods for departure and arrival", () => {
+      // obsTime is >90 min before dep (13:00Z vs 15:00Z dep) so METARs are stale
+      // and selectAirportWeather will fall through to TAF periods
+      const metar = [
+        {
+          icaoId: "KPVU",
+          obsTime: "2026-05-12T13:00:00Z",
+          temp: 16,
+          altim: 1015,
+          rawOb: "",
+          report: "",
+          dewp: 0,
+          wdir: 0,
+          wspd: 0,
+          visib: 10,
+          qcField: 0,
+          metarType: "METAR",
+        },
+        {
+          icaoId: "KSGU",
+          obsTime: "2026-05-12T13:00:00Z",
+          temp: 22,
+          altim: 1015,
+          rawOb: "",
+          report: "",
+          dewp: 0,
+          wdir: 0,
+          wspd: 0,
+          visib: 10,
+          qcField: 0,
+          metarType: "METAR",
+        },
+      ];
+      const fcsts15to18 = {
+        timeFrom: Math.floor(Date.parse("2026-05-12T15:00:00Z") / 1000),
+        timeTo: Math.floor(Date.parse("2026-05-12T18:00:00Z") / 1000),
+        temp: 18,
+        altim: 30.0,
+      };
+      const fcsts18to21 = {
+        timeFrom: Math.floor(Date.parse("2026-05-12T18:00:00Z") / 1000),
+        timeTo: Math.floor(Date.parse("2026-05-12T21:00:00Z") / 1000),
+        temp: 25,
+        altim: 30.05,
+      };
+      const taf = [
+        {
+          icaoId: "KPVU",
+          validTime: "2026-05-12T15:00:00Z",
+          validTimeEnd: "2026-05-12T21:00:00Z",
+          rawTAF: "",
+          issueTime: "",
+          lat: 0,
+          lon: 0,
+          elev: 0,
+          fcstType: "TAF",
+          fcsts: [fcsts15to18, fcsts18to21],
+        },
+        {
+          icaoId: "KSGU",
+          validTime: "2026-05-12T15:00:00Z",
+          validTimeEnd: "2026-05-12T21:00:00Z",
+          rawTAF: "",
+          issueTime: "",
+          lat: 0,
+          lon: 0,
+          elev: 0,
+          fcstType: "TAF",
+          fcsts: [fcsts15to18, fcsts18to21],
+        },
+      ];
+
+      const result = mapAirportSpecificWeatherData(
+        metar as unknown as METARResponse[],
+        taf as unknown as TAFResponse[],
+        {
+          flightDate: "2026-05-12",
+          flightTime: "15:00", // dep
+          durationHours: 3, // arr at 18:00
+          departureAirport: "KPVU",
+          arrivalAirport: "KSGU",
+        }
+      );
+
+      // dep at 15:00 → TAF period 15-18 → temp 18
+      expect(result.data.temp?.[0]).toBe(18);
+      // arr at 18:00 → TAF period 18-21 → temp 25
+      expect(result.data.temp?.[2]).toBe(25);
+    });
+  });
+
   describe("Constants", () => {
     it("should have correct target altitudes", () => {
       expect(TARGET_ALTITUDES).toEqual([3000, 6000, 9000, 12000, 15000]);
@@ -936,34 +937,20 @@ describe("Weather Data Mapper", () => {
       // Should handle gracefully without crashing
     });
 
-    it("should handle malformed date/time strings", () => {
-      const tafDataWithInvalidTime: TAFResponse[] = [
-        {
-          icaoId: "KORD",
-          issueTime: "invalid-date",
-          validTime: "invalid-date",
-          rawTAF: "TAF KORD 150600Z 1506/1518 27015KT P6SM FEW250",
-          lat: 41.9786,
-          lon: -87.9048,
-          elev: 672,
-          fcstType: "TAF",
-        },
-      ];
-
+    it("should handle malformed date/time strings gracefully via mapAirportSpecificWeatherData", () => {
       const options: WeatherMappingOptions = {
         flightDate: "invalid-date",
         flightTime: "invalid-time",
+        departureAirport: "KORD",
       };
 
-      const result = mapTemperaturePressureData(
-        [],
-        tafDataWithInvalidTime,
-        options
-      );
+      // Should not crash; data is empty because there is no METAR/TAF input
+      const { data, warnings } = mapAirportSpecificWeatherData([], [], options);
 
-      // Should not crash and should return null values
-      expect(result.temp).toEqual([null, null, null]);
-      expect(result.altimeter).toEqual([null, null, null]);
+      expect(data.temp).toBeUndefined();
+      expect(data.altimeter).toBeUndefined();
+      // Warnings may be emitted (e.g. "no data available") but no crash
+      expect(Array.isArray(warnings)).toBe(true);
     });
 
     it("should handle empty arrays in API responses", () => {
