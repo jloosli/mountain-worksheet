@@ -6,6 +6,7 @@ import {
   getMETAR,
   getTAF,
   getAirportInfo,
+  getNavaidInfo,
   getWindTemp,
   getWeatherDataBatch,
   debouncedRequest,
@@ -13,6 +14,7 @@ import {
   type METARResponse,
   type TAFResponse,
   type AirportResponse,
+  type NavaidResponse,
   type WindTempResponse,
 } from "./aviationWeatherApi";
 
@@ -95,7 +97,7 @@ describe("Aviation Weather API", () => {
       });
 
       await expect(getMETAR(["INVALID"], 1, 0)).rejects.toThrow(
-        "Not Found - Airport or data not available"
+        "Not Found - Resource or data not available"
       );
     });
   });
@@ -199,6 +201,58 @@ describe("Aviation Weather API", () => {
       );
 
       expect(result).toEqual(mockAirportResponse);
+    });
+  });
+
+  describe("getNavaidInfo", () => {
+    const mockNavaidResponse: NavaidResponse[] = [
+      {
+        id: "OGD",
+        name: "Ogden VOR",
+        lat: 41.5,
+        lon: -112.76,
+        type: "VOR-DME",
+        magvar: 11.5,
+      },
+    ];
+
+    it("calls the navaid endpoint with comma-joined ids", async () => {
+      (fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockNavaidResponse,
+      });
+
+      const result = await getNavaidInfo(["OGD", "DTA"]);
+
+      expect(fetch).toHaveBeenCalledWith(
+        expect.stringContaining("/api/aviation-weather?endpoint=navaid"),
+        expect.objectContaining({
+          method: "GET",
+          headers: {
+            Accept: "application/json",
+            "User-Agent": "Mountain-Worksheet/1.0",
+          },
+        })
+      );
+
+      const calledUrl = (fetch as jest.Mock).mock.calls[0][0] as string;
+      expect(calledUrl).toContain("ids=OGD%2CDTA");
+      expect(result).toEqual(mockNavaidResponse);
+    });
+
+    it("propagates 404 as APIError with code 404", async () => {
+      (fetch as jest.Mock).mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+        text: async () => "Not Found",
+      });
+
+      // Assert on type and code rather than message text, since the error
+      // text is shared across endpoints and may change over time.
+      await expect(getNavaidInfo(["XXX"])).rejects.toMatchObject({
+        name: "APIError",
+        code: 404,
+      });
     });
   });
 
@@ -394,7 +448,7 @@ describe("Aviation Weather API", () => {
       });
 
       await expect(getMETAR(["INVALID"], 1, 0)).rejects.toThrow(
-        "Not Found - Airport or data not available"
+        "Not Found - Resource or data not available"
       );
       expect(fetch).toHaveBeenCalledTimes(1);
     });

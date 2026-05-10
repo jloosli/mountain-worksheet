@@ -41,6 +41,7 @@ export default function AppContainer() {
     tailN: "",
     airport: ["", ""] as [string, string],
     route: "",
+    position: [null, null] as [number | null, number | null],
 
     // Weather Information
     wind: [

@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, act } from "@testing-library/react";
 import SortieInfo from "./SortieInfo";
 import type { WorksheetData } from "@/utils/types";
 
@@ -11,6 +11,7 @@ const defaultInitialData: WorksheetData = {
   tailN: "",
   airport: ["", ""],
   route: "",
+  position: [null, null],
   weight: null,
   altitude: [null, null, null],
   wind: [Array(5).fill(null), Array(5).fill(null), Array(5).fill(null)],
@@ -111,5 +112,37 @@ describe("SortieInfo", () => {
     const select = screen.getByLabelText(/Expected Duration/i);
     fireEvent.change(select, { target: { value: "" } });
     expect(mockOnUpdate).toHaveBeenCalledWith(expect.objectContaining({ duration: null }));
+  });
+});
+
+describe("SortieInfo - position field wiring", () => {
+  it("calls onUpdate with both route and position when valid coords are entered", async () => {
+    jest.useFakeTimers();
+    const onUpdate = jest.fn();
+    render(<SortieInfo onUpdate={onUpdate} />);
+    const input = screen.getByLabelText(/Area of Operations/i) as HTMLInputElement;
+    fireEvent.change(input, { target: { value: "36.01N/75.50W" } });
+    act(() => {
+      jest.advanceTimersByTime(350);
+    });
+    const lastCall = onUpdate.mock.calls[onUpdate.mock.calls.length - 1][0];
+    expect(lastCall.route).toBe("36.01N/75.50W");
+    expect(lastCall.position).toEqual([36.01, -75.5]);
+    jest.useRealTimers();
+  });
+
+  it("hydrates initial position from initialData without re-parsing", () => {
+    const initialData = {
+      route: "KOGD/285/34",
+      position: [41.4321, -112.7042] as [number | null, number | null],
+    };
+    render(
+      <SortieInfo
+        initialData={initialData as never}
+        onUpdate={() => {}}
+      />
+    );
+    expect(screen.getByDisplayValue("KOGD/285/34")).toBeInTheDocument();
+    expect(screen.getByText(/41\.4321, -112\.7042/)).toBeInTheDocument();
   });
 });

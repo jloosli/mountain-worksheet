@@ -1,8 +1,9 @@
 "use client";
 
-import { ChangeEvent, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, useCallback, useEffect, useMemo, useState } from "react";
 import aircraftData from "@/data/aircraft.json";
 import type { WorksheetData } from "@/utils/types";
+import PositionInput from "@/components/PositionInput";
 
 interface SortieInfoProps {
   initialData?: WorksheetData;
@@ -19,6 +20,7 @@ type SortieInfoData = Pick<
   | "tailN"
   | "airport"
   | "route"
+  | "position"
   | "weight"
   | "altitude"
 >;
@@ -33,6 +35,7 @@ export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
     tailN: "",
     airport: ["", ""],
     route: "",
+    position: [null, null],
     weight: null,
     altitude: [null, null, null],
   });
@@ -127,6 +130,16 @@ export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
     setFormData(updatedData);
     onUpdate({ duration: value });
   };
+
+  // Stable identity prevents the 60s currentTime ticker from cancelling
+  // PositionInput's pending debounce on every re-render.
+  const handlePositionChange = useCallback(
+    (route: string, position: [number | null, number | null]) => {
+      setFormData((prev) => ({ ...prev, route, position }));
+      onUpdate({ route, position });
+    },
+    [onUpdate]
+  );
 
   const sortieLocalTiming = useMemo(() => {
     if (!formData.date || !formData.time || !formData.time.includes(":")) {
@@ -317,19 +330,11 @@ export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
           />
         </div>
 
-        <div className="space-y-2">
-          <label htmlFor="route" className="block text-sm font-medium">
-            Area of Operations (position)
-          </label>
-          <input
-            type="text"
-            id="route"
-            name="route"
-            value={formData.route || ""}
-            onChange={handleInputChange}
-            className="w-full px-3 py-2 border rounded-md dark:bg-black/[.15] dark:border-white/[.145]"
-          />
-        </div>
+        <PositionInput
+          rawValue={formData.route || ""}
+          cachedPosition={formData.position ?? [null, null]}
+          onChange={handlePositionChange}
+        />
 
         <div className="space-y-2">
           <label htmlFor="operatingAltitude" className="block text-sm font-medium">
