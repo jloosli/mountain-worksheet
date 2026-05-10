@@ -102,7 +102,7 @@ jest.mock("./MountainQuals", () => {
 
 describe("AppInputs", () => {
   const mockOnStateUpdate = jest.fn();
-  const defaultState = {
+  const defaultState: WorksheetData = {
     pilot: "",
     date: "",
     time: "",
