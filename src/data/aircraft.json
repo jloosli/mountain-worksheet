@@ -451,7 +451,7 @@
     },
     "stallSpeeds": {
       "flaps": [0, 30],
-      "Vso": [59, 47]
+      "Vso": [63, 47]
     },
     "climbPerformance": {
       "pressureAltitudes": [
