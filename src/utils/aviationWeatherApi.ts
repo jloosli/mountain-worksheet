@@ -139,16 +139,6 @@ export interface NavaidResponse {
   magvar?: number; // station declination, if exposed
 }
 
-export interface WindTempResponse {
-  icaoId: string;
-  validTime: string;
-  altitude: number;
-  wdir: number;
-  wspd: number;
-  temp: number;
-  pressure: number;
-}
-
 export class APIError extends Error {
   code: number;
   message: string;
@@ -354,24 +344,6 @@ export async function getNavaidInfo(
 }
 
 /**
- * Get wind and temperature data for specified altitudes
- * Uses regional data to get SLC windtemp information
- */
-export async function getWindTemp(
-  airports: string[],
-  _altitudes: number[] = [3000, 6000, 9000, 12000, 15000]
-): Promise<WindTempResponse[]> {
-  const params = {
-    region: "us",
-    level: "low",
-    fcst: "06",
-    format: "json",
-  };
-
-  return makeApiRequest<WindTempResponse[]>("windtemp", params);
-}
-
-/**
  * Batch multiple API requests efficiently
  */
 export async function getWeatherDataBatch(
@@ -380,30 +352,23 @@ export async function getWeatherDataBatch(
     includeMETAR?: boolean;
     includeTAF?: boolean;
     includeAirport?: boolean;
-    includeWindTemp?: boolean;
     metarHours?: number;
     tafHours?: number;
-    altitudes?: number[];
   } = {}
 ): Promise<{
   metar?: METARResponse[];
   taf?: TAFResponse[];
   airport?: AirportResponse[];
-  windTemp?: WindTempResponse[];
 }> {
   const {
     includeMETAR = true,
     includeTAF = true,
     includeAirport = true,
-    includeWindTemp = true,
     metarHours = 1,
     tafHours = 24,
-    altitudes = [3000, 6000, 9000, 12000, 15000],
   } = options;
 
-  const promises: Promise<
-    METARResponse[] | TAFResponse[] | AirportResponse[] | WindTempResponse[]
-  >[] = [];
+  const promises: Promise<METARResponse[] | TAFResponse[] | AirportResponse[]>[] = [];
 
   if (includeMETAR) {
     promises.push(getMETAR(airports, metarHours));
@@ -414,9 +379,6 @@ export async function getWeatherDataBatch(
   if (includeAirport) {
     promises.push(getAirportInfo(airports));
   }
-  if (includeWindTemp) {
-    promises.push(getWindTemp(airports, altitudes));
-  }
 
   const results = await Promise.allSettled(promises);
 
@@ -424,7 +386,6 @@ export async function getWeatherDataBatch(
     metar?: METARResponse[];
     taf?: TAFResponse[];
     airport?: AirportResponse[];
-    windTemp?: WindTempResponse[];
   } = {};
   let resultIndex = 0;
 
@@ -447,14 +408,6 @@ export async function getWeatherDataBatch(
     response.airport =
       results[resultIndex].status === "fulfilled"
         ? (results[resultIndex] as PromiseFulfilledResult<AirportResponse[]>)
-            .value
-        : [];
-    resultIndex++;
-  }
-  if (includeWindTemp) {
-    response.windTemp =
-      results[resultIndex].status === "fulfilled"
-        ? (results[resultIndex] as PromiseFulfilledResult<WindTempResponse[]>)
             .value
         : [];
     resultIndex++;

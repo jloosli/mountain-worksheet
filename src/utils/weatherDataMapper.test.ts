@@ -3,13 +3,11 @@
  */
 
 import {
-  mapWindTempData,
   mapAirportSpecificWeatherData,
   mapRunwayData,
   mapWeatherDataToWorksheet,
   isApiPopulatedData,
   mergeWeatherData,
-  TARGET_ALTITUDES,
   VALIDATION_RANGES,
   type WeatherMappingOptions,
 } from "./weatherDataMapper";
@@ -18,126 +16,9 @@ import type {
   METARResponse,
   TAFResponse,
   AirportResponse,
-  WindTempResponse,
 } from "./aviationWeatherApi";
 
 describe("Weather Data Mapper", () => {
-  describe("mapWindTempData", () => {
-    const mockWindTempData: WindTempResponse[] = [
-      {
-        icaoId: "KORD",
-        validTime: "2024-01-15T12:00:00Z",
-        altitude: 3000,
-        wdir: 270,
-        wspd: 25,
-        temp: 15,
-        pressure: 26.92,
-      },
-      {
-        icaoId: "KORD",
-        validTime: "2024-01-15T12:00:00Z",
-        altitude: 6000,
-        wdir: 280,
-        wspd: 30,
-        temp: 10,
-        pressure: 24.92,
-      },
-      {
-        icaoId: "KORD",
-        validTime: "2024-01-15T12:00:00Z",
-        altitude: 9000,
-        wdir: 290,
-        wspd: 35,
-        temp: 5,
-        pressure: 22.92,
-      },
-    ];
-
-    it("should map wind/temperature data to worksheet format", () => {
-      const result = mapWindTempData(mockWindTempData);
-
-      expect(result.wind).toBeDefined();
-      expect(result.wind![0]).toEqual([270, 280, 290, null, null]); // Wind direction
-      expect(result.wind![1]).toEqual([25, 30, 35, null, null]); // Wind speed
-      expect(result.wind![2]).toEqual([15, 10, 5, null, null]); // Temperature
-    });
-
-    it("should handle empty wind/temperature data", () => {
-      const result = mapWindTempData([]);
-
-      expect(result.wind).toBeDefined();
-      expect(result.wind![0]).toEqual([null, null, null, null, null]);
-      expect(result.wind![1]).toEqual([null, null, null, null, null]);
-      expect(result.wind![2]).toEqual([null, null, null, null, null]);
-    });
-
-    it("should find closest altitude data within 2000 feet", () => {
-      const dataWithCloseAltitudes: WindTempResponse[] = [
-        {
-          icaoId: "KORD",
-          validTime: "2024-01-15T12:00:00Z",
-          altitude: 3200, // Close to 3000
-          wdir: 270,
-          wspd: 25,
-          temp: 15,
-          pressure: 26.92,
-        },
-        {
-          icaoId: "KORD",
-          validTime: "2024-01-15T12:00:00Z",
-          altitude: 5000, // Close to 6000
-          wdir: 280,
-          wspd: 30,
-          temp: 10,
-          pressure: 24.92,
-        },
-      ];
-
-      const result = mapWindTempData(dataWithCloseAltitudes);
-
-      expect(result.wind![0][0]).toBe(270); // 3000ft mapped from 3200ft
-      expect(result.wind![0][1]).toBe(280); // 6000ft mapped from 5000ft
-    });
-
-    it("should not map data that is too far from target altitude", () => {
-      const dataWithFarAltitudes: WindTempResponse[] = [
-        {
-          icaoId: "KORD",
-          validTime: "2024-01-15T12:00:00Z",
-          altitude: 500, // Too far from 3000 (2500 feet difference)
-          wdir: 270,
-          wspd: 25,
-          temp: 15,
-          pressure: 26.92,
-        },
-      ];
-
-      const result = mapWindTempData(dataWithFarAltitudes);
-
-      expect(result.wind![0][0]).toBe(null); // Should remain null (no data)
-    });
-
-    it("should validate data when validation is enabled", () => {
-      const invalidData: WindTempResponse[] = [
-        {
-          icaoId: "KORD",
-          validTime: "2024-01-15T12:00:00Z",
-          altitude: 3000,
-          wdir: 400, // Invalid wind direction
-          wspd: 200, // Invalid wind speed
-          temp: 100, // Invalid temperature
-          pressure: 26.92,
-        },
-      ];
-
-      const result = mapWindTempData(invalidData, { validateData: true });
-
-      expect(result.wind![0][0]).toBe(null); // Should remain null due to validation
-      expect(result.wind![1][0]).toBe(null); // Should remain null due to validation
-      expect(result.wind![2][0]).toBe(null); // Should remain null due to validation
-    });
-  });
-
   describe("mapRunwayData", () => {
     const mockAirportData: AirportResponse[] = [
       {
@@ -482,17 +363,6 @@ describe("Weather Data Mapper", () => {
           ],
         },
       ],
-      windTemp: [
-        {
-          icaoId: "KORD",
-          validTime: "2024-01-15T12:00:00Z",
-          altitude: 3000,
-          wdir: 270,
-          wspd: 25,
-          temp: 15,
-          pressure: 26.92,
-        },
-      ],
     };
 
     it("should map all weather data successfully", () => {
@@ -507,7 +377,6 @@ describe("Weather Data Mapper", () => {
       const result = mapWeatherDataToWorksheet(mockApiData, null, options);
 
       expect(result.success).toBe(true);
-      expect(result.data.wind).toBeDefined();
       expect(result.data.temp).toBeDefined();
       expect(result.data.altimeter).toBeDefined();
       expect(result.data.rwy).toBeDefined();
@@ -530,44 +399,21 @@ describe("Weather Data Mapper", () => {
     });
 
     it("should validate data when validation is enabled", () => {
-      const invalidApiData = {
-        windTemp: [
-          {
-            icaoId: "KORD",
-            validTime: "2024-01-15T12:00:00Z",
-            altitude: 3000,
-            wdir: 400, // Invalid wind direction
-            wspd: 200, // Invalid wind speed
-            temp: 100, // Invalid temperature
-            pressure: 26.92,
-          },
-        ],
-      };
-
-      const result = mapWeatherDataToWorksheet(invalidApiData, null, {
+      const result = mapWeatherDataToWorksheet({}, null, {
         validateData: true,
       });
 
       expect(result.success).toBe(true);
-      // The validation happens in individual mapping functions, so errors are caught there
-      // The main function should still succeed but with warnings
+      // No areaOfOps → wind warning is emitted
       expect(result.warnings.length).toBeGreaterThan(0);
     });
 
     it("should handle mapping errors", () => {
       // Test with malformed data that would cause errors
       const malformedApiData = {
-        windTemp: [
-          {
-            icaoId: "KORD",
-            validTime: "2024-01-15T12:00:00Z",
-            altitude: 3000,
-            wdir: null as unknown as number, // This should cause issues
-            wspd: undefined as unknown as number,
-            temp: "invalid" as unknown as number,
-            pressure: 26.92,
-          },
-        ],
+        metar: null as unknown as [],
+        taf: "bad" as unknown as [],
+        airport: 42 as unknown as [],
       };
 
       const result = mapWeatherDataToWorksheet(malformedApiData, null);
@@ -951,10 +797,6 @@ describe("Weather Data Mapper", () => {
   });
 
   describe("Constants", () => {
-    it("should have correct target altitudes", () => {
-      expect(TARGET_ALTITUDES).toEqual([3000, 6000, 9000, 12000, 15000]);
-    });
-
     it("should have correct validation ranges", () => {
       expect(VALIDATION_RANGES.windDirection).toEqual({ min: 0, max: 359 });
       expect(VALIDATION_RANGES.windSpeed).toEqual({ min: 0, max: 150 });
@@ -966,21 +808,7 @@ describe("Weather Data Mapper", () => {
 
   describe("Edge Cases", () => {
     it("should handle null and undefined values gracefully", () => {
-      const dataWithNulls = {
-        windTemp: [
-          {
-            icaoId: "KORD",
-            validTime: "2024-01-15T12:00:00Z",
-            altitude: 3000,
-            wdir: null as unknown as number, // Invalid wind direction
-            wspd: undefined as unknown as number, // Invalid wind speed
-            temp: "invalid" as unknown as number, // Invalid temperature
-            pressure: 26.92,
-          },
-        ],
-      };
-
-      const result = mapWeatherDataToWorksheet(dataWithNulls, null, {
+      const result = mapWeatherDataToWorksheet({}, null, {
         validateData: true,
       });
 
@@ -1009,7 +837,6 @@ describe("Weather Data Mapper", () => {
         metar: [],
         taf: [],
         airport: [],
-        windTemp: [],
       };
 
       const result = mapWeatherDataToWorksheet(emptyApiData, null);

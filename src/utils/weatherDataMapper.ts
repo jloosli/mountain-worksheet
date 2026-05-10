@@ -10,13 +10,9 @@ import type {
   METARResponse,
   TAFResponse,
   AirportResponse,
-  WindTempResponse,
 } from "./aviationWeatherApi";
 import { selectAirportWeather } from "./airportTimeWeather";
 import type { AreaOfOpsWeather } from "./areaOfOpsWeather";
-
-// Target altitudes for wind/temperature data mapping
-export const TARGET_ALTITUDES = [3000, 6000, 9000, 12000, 15000]; // feet
 
 // Validation ranges
 export const VALIDATION_RANGES = {
@@ -44,55 +40,6 @@ export interface WeatherMappingOptions {
   position?: [number | null, number | null];
   opAltitudeFt?: number | null;
   validateData?: boolean;
-}
-
-/**
- * Convert wind/temperature API data to worksheet format
- */
-export function mapWindTempData(
-  windTempData: WindTempResponse[],
-  options: WeatherMappingOptions = {}
-): Partial<WorksheetData> {
-  const result: Partial<WorksheetData> = {
-    wind: [Array(5).fill(null), Array(5).fill(null), Array(5).fill(null)],
-  };
-
-  // Group data by altitude
-  const altitudeData = new Map<number, WindTempResponse>();
-  windTempData.forEach((item) => {
-    altitudeData.set(item.altitude, item);
-  });
-
-  // Map to target altitudes
-  TARGET_ALTITUDES.forEach((targetAlt, index) => {
-    // Find closest altitude data
-    const closestData = findClosestAltitudeData(altitudeData, targetAlt);
-
-    if (closestData) {
-      const windDir = closestData.wdir;
-      const windVel = closestData.wspd;
-      const temp = closestData.temp;
-
-      // Validate data if requested
-      if (options.validateData) {
-        if (isValidWindDirection(windDir)) {
-          (result.wind![0] as number[])[index] = windDir;
-        }
-        if (isValidWindSpeed(windVel)) {
-          (result.wind![1] as number[])[index] = windVel;
-        }
-        if (isValidTemperature(temp)) {
-          (result.wind![2] as number[])[index] = temp;
-        }
-      } else {
-        (result.wind![0] as number[])[index] = windDir;
-        (result.wind![1] as number[])[index] = windVel;
-        (result.wind![2] as number[])[index] = temp;
-      }
-    }
-  });
-
-  return result;
 }
 
 /**
@@ -273,8 +220,6 @@ export function mapWeatherDataToWorksheet(
     metar?: METARResponse[];
     taf?: TAFResponse[];
     airport?: AirportResponse[];
-    // windTemp temporarily still allowed during transition; B5 will remove it
-    windTemp?: WindTempResponse[];
   },
   areaOfOps: AreaOfOpsWeather | null,
   options: WeatherMappingOptions = {}
@@ -288,16 +233,12 @@ export function mapWeatherDataToWorksheet(
 
   try {
     // Ensure all data types are arrays before processing
-    const windTempData = Array.isArray(apiData.windTemp) ? apiData.windTemp : [];
     const metarData = Array.isArray(apiData.metar) ? apiData.metar : [];
     const tafData = Array.isArray(apiData.taf) ? apiData.taf : [];
     const airportData = Array.isArray(apiData.airport) ? apiData.airport : [];
-    
-    // Map wind/temperature data
-    if (windTempData.length > 0) {
-      const windData = mapWindTempData(windTempData, options);
-      result.data = { ...result.data, ...windData };
-    } else {
+
+    // Wind/temperature data is now supplied exclusively via areaOfOps (Open-Meteo)
+    if (!areaOfOps) {
       result.warnings.push("No wind/temperature data available");
     }
 
@@ -327,7 +268,7 @@ export function mapWeatherDataToWorksheet(
       result.data = { ...result.data, ...elevationData };
     }
 
-    // Apply area-of-ops weather (Open-Meteo) — overrides windTemp winds if available
+    // Apply area-of-ops weather (Open-Meteo) winds and operating conditions
     if (areaOfOps) {
       if (areaOfOps.windsAloft.direction.some((v) => v !== null)) {
         result.data.wind = [
@@ -363,88 +304,6 @@ export function mapWeatherDataToWorksheet(
   }
 
   return result;
-}
-
-/**
- * Helper function to find closest altitude data with interpolation support
- */
-function findClosestAltitudeData(
-  altitudeData: Map<number, WindTempResponse>,
-  targetAltitude: number
-): WindTempResponse | null {
-  const altitudes = Array.from(altitudeData.keys()).sort((a, b) => a - b);
-
-  // Find the two closest altitudes
-  let lowerAltitude: number | null = null;
-  let upperAltitude: number | null = null;
-
-  for (const alt of altitudes) {
-    if (alt <= targetAltitude) {
-      lowerAltitude = alt;
-    } else if (alt > targetAltitude && upperAltitude === null) {
-      upperAltitude = alt;
-      break;
-    }
-  }
-
-  // If we have both lower and upper altitudes, interpolate
-  if (lowerAltitude !== null && upperAltitude !== null) {
-    const lowerData = altitudeData.get(lowerAltitude)!;
-    const upperData = altitudeData.get(upperAltitude)!;
-
-    // Calculate interpolation factor (0 = lower altitude, 1 = upper altitude)
-    const factor =
-      (targetAltitude - lowerAltitude) / (upperAltitude - lowerAltitude);
-
-    // Interpolate wind direction (handle wraparound at 360 degrees)
-    const lowerWdir = lowerData.wdir;
-    const upperWdir = upperData.wdir;
-    let interpolatedWdir: number;
-
-    if (Math.abs(upperWdir - lowerWdir) > 180) {
-      // Handle wraparound case
-      if (upperWdir > lowerWdir) {
-        interpolatedWdir =
-          ((lowerWdir + 360) * (1 - factor) + upperWdir * factor) % 360;
-      } else {
-        interpolatedWdir =
-          (lowerWdir * (1 - factor) + (upperWdir + 360) * factor) % 360;
-      }
-    } else {
-      interpolatedWdir = lowerWdir * (1 - factor) + upperWdir * factor;
-    }
-
-    // Interpolate wind speed and temperature (linear)
-    const interpolatedWspd =
-      lowerData.wspd * (1 - factor) + upperData.wspd * factor;
-    const interpolatedTemp =
-      lowerData.temp * (1 - factor) + upperData.temp * factor;
-
-    return {
-      icaoId: lowerData.icaoId,
-      altitude: targetAltitude,
-      wdir: Math.round(interpolatedWdir),
-      wspd: Math.round(interpolatedWspd),
-      temp: Math.round(interpolatedTemp),
-      pressure: lowerData.pressure, // Use lower altitude pressure
-      validTime: lowerData.validTime, // Use lower altitude validTime
-    };
-  }
-
-  // Fallback to closest altitude if interpolation isn't possible
-  let closest: WindTempResponse | null = null;
-  let minDifference = Infinity;
-
-  for (const [altitude, data] of altitudeData) {
-    const difference = Math.abs(altitude - targetAltitude);
-    if (difference < minDifference) {
-      minDifference = difference;
-      closest = data;
-    }
-  }
-
-  // Only return data if it's within 2000 feet of target altitude
-  return minDifference <= 2000 ? closest : null;
 }
 
 /**
@@ -526,7 +385,7 @@ function validateMappedData(data: Partial<WorksheetData>): {
     data.wind[0].forEach((dir, index) => {
       if (dir !== null && dir !== undefined && !isValidWindDirection(dir)) {
         errors.push(
-          `Invalid wind direction at altitude ${TARGET_ALTITUDES[index]}ft: ${dir}`
+          `Invalid wind direction at column ${index}: ${dir}`
         );
       }
     });
@@ -534,7 +393,7 @@ function validateMappedData(data: Partial<WorksheetData>): {
     data.wind[1].forEach((speed, index) => {
       if (speed !== null && speed !== undefined && !isValidWindSpeed(speed)) {
         errors.push(
-          `Invalid wind speed at altitude ${TARGET_ALTITUDES[index]}ft: ${speed}`
+          `Invalid wind speed at column ${index}: ${speed}`
         );
       }
     });
@@ -542,7 +401,7 @@ function validateMappedData(data: Partial<WorksheetData>): {
     data.wind[2].forEach((temp, index) => {
       if (temp !== null && temp !== undefined && !isValidTemperature(temp)) {
         errors.push(
-          `Invalid temperature at altitude ${TARGET_ALTITUDES[index]}ft: ${temp}`
+          `Invalid temperature at column ${index}: ${temp}`
         );
       }
     });
