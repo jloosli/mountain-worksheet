@@ -130,4 +130,29 @@ describe("classifyAirmets", () => {
     );
     expect(r.warnings.some((w) => /1000 ft \/ 3 sm/i.test(w))).toBe(false);
   });
+
+  it("clears flags to false when response has no TURB/IFR/MTN OBSC features", () => {
+    // e.g. only ICE / LLWS hazards present, or empty array. The fetch succeeded
+    // so we should clear stale flags rather than leave them via null sentinel.
+    const iceAirmet: GAirmetFeature = { ...turbAirmet, hazard: "ICE" };
+    const r = classifyAirmets(
+      [iceAirmet],
+      [41, -112],
+      new Date("2026-05-12T16:00:00Z")
+    );
+    expect(r.turb).toBe(false);
+    expect(r.cielVis).toBe(false);
+    expect(r.mtnObsc).toBe(false);
+  });
+
+  it("clears flags to false on an empty G-AIRMET response", () => {
+    const r = classifyAirmets(
+      [],
+      [41, -112],
+      new Date("2026-05-12T16:00:00Z")
+    );
+    expect(r.turb).toBe(false);
+    expect(r.cielVis).toBe(false);
+    expect(r.mtnObsc).toBe(false);
+  });
 });

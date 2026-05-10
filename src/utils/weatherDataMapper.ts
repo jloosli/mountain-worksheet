@@ -578,16 +578,12 @@ export function mergeWeatherData(
     }
   }
 
-  // AIRMET boolean flags: null means fetch failed (leave alone), true/false both overwrite
-  if (apiData.turb !== undefined && apiData.turb !== null) {
-    result.turb = apiData.turb as boolean;
-  }
-  if (apiData.cielVis !== undefined && apiData.cielVis !== null) {
-    result.cielVis = apiData.cielVis as boolean;
-  }
-  if (apiData.mtnObsc !== undefined && apiData.mtnObsc !== null) {
-    result.mtnObsc = apiData.mtnObsc as boolean;
-  }
+  // AIRMET boolean flags: only overwrite when the API supplied an explicit
+  // boolean. Anything else (undefined / null sentinel for "data unavailable")
+  // leaves the existing value alone.
+  if (typeof apiData.turb === "boolean") result.turb = apiData.turb;
+  if (typeof apiData.cielVis === "boolean") result.cielVis = apiData.cielVis;
+  if (typeof apiData.mtnObsc === "boolean") result.mtnObsc = apiData.mtnObsc;
 
   return result;
 }

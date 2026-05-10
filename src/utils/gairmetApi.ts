@@ -66,11 +66,12 @@ export function classifyAirmets(
   const eligible = features.filter((f) =>
     ["TURB", "IFR", "MTN OBSC"].includes(f.hazard)
   );
+  // Fetch succeeded but the response carries no TURB/IFR/MTN OBSC features at
+  // all → no relevant hazards. Clear the flags rather than leaving stale state.
+  // (Genuine unavailability — fetch failure or no features in the time window
+  // — is signaled with null sentinels below.)
   if (eligible.length === 0) {
-    warnings.push(
-      `G-AIRMET data unavailable for ${midTime.toISOString()}; turb / cielVis / mtnObsc flags not updated`
-    );
-    return { turb: null, cielVis: null, mtnObsc: null, warnings };
+    return { turb: false, cielVis: false, mtnObsc: false, warnings };
   }
 
   // Group by hazard
