@@ -129,9 +129,9 @@ export function selectAirportWeather(
     let temp = fcstTempValue(covering, requestedTime);
     if (temp == null && metar?.temp != null) {
       temp = metar.temp;
-      const obsMs = metar.obsTime ? Date.parse(metar.obsTime) : NaN;
-      const delta = Number.isFinite(obsMs)
-        ? fmtDelta(Math.abs(requestedTime.getTime() - obsMs))
+      const tempObsMs = parseObsTimeMs(metar.obsTime);
+      const delta = Number.isFinite(tempObsMs)
+        ? fmtDelta(Math.abs(requestedTime.getTime() - tempObsMs))
         : "unknown";
       warnings.push(
         `${metar.icaoId}: forecast period has no temperature; using current observation (Δt = ${delta})`
