@@ -109,6 +109,47 @@ describe("selectAirportWeather", () => {
     expect(result.warnings.some((w) => /could not be parsed/i.test(w))).toBe(true);
   });
 
+  it("falls back to METAR altimeter when nearest TAF period has null altim (real-world API shape)", () => {
+    // Real AviationWeather TAF responses populate fcsts[].altim as `null`,
+    // not `undefined`, when the period has no altimeter forecast. Treat
+    // null and undefined the same — fall through to METAR's hPa altim.
+    const tafWithNullAltim: TAFResponse = {
+      ...baseTaf,
+      fcsts: [
+        {
+          timeFrom: Math.floor(Date.parse("2026-05-12T15:00:00Z") / 1000),
+          timeTo: Math.floor(Date.parse("2026-05-12T18:00:00Z") / 1000),
+          temp: 22,
+          altim: null as unknown as undefined, // mimics real API null
+        },
+      ],
+    };
+    // Requested time falls outside TAF coverage → "taf-nearest" branch
+    const requested = new Date("2026-06-02T18:00:00Z");
+    const result = selectAirportWeather(baseMetar, tafWithNullAltim, requested);
+    expect(result.source).toBe("taf-nearest");
+    // METAR altim is 1015 hPa → ~29.97 inHg, NOT NaN from null * 0.0295
+    expect(result.altimeter).toBeCloseTo(29.97, 2);
+  });
+
+  it("falls back to METAR altimeter when covering TAF period has null altim", () => {
+    const tafWithNullAltim: TAFResponse = {
+      ...baseTaf,
+      fcsts: [
+        {
+          timeFrom: Math.floor(Date.parse("2026-05-12T15:00:00Z") / 1000),
+          timeTo: Math.floor(Date.parse("2026-05-12T21:00:00Z") / 1000),
+          temp: 22,
+          altim: null as unknown as undefined,
+        },
+      ],
+    };
+    const requested = new Date("2026-05-12T17:00:00Z"); // covered, METAR stale (>90 min)
+    const result = selectAirportWeather(baseMetar, tafWithNullAltim, requested);
+    expect(result.source).toBe("taf-fcst");
+    expect(result.altimeter).toBeCloseTo(29.97, 2);
+  });
+
   it("picks the temporally closest sfcTemp from a TAF array-form temp", () => {
     const arrayTempFcsts: TAFForecast[] = [
       {

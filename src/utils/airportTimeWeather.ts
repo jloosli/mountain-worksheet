@@ -16,8 +16,10 @@ export interface AirportWeatherAtTime {
   warnings: string[];
 }
 
-function metarAltimeterInHg(altim: number | undefined): number | null {
-  if (altim === undefined) return null;
+function metarAltimeterInHg(altim: number | null | undefined): number | null {
+  // The live AviationWeather API can return null for altim despite the typed shape;
+  // treat null and undefined the same.
+  if (altim == null) return null;
   return Math.round(altim * HPA_TO_INHG * 100) / 100;
 }
 
@@ -48,8 +50,8 @@ function findCoveringFcst(
   const reqEpoch = Math.floor(requested.getTime() / 1000);
   return fcsts.find(
     (f) =>
-      f.timeFrom !== undefined &&
-      f.timeTo !== undefined &&
+      f.timeFrom != null &&
+      f.timeTo != null &&
       reqEpoch >= f.timeFrom &&
       reqEpoch < f.timeTo
   );
@@ -63,7 +65,7 @@ function findClosestFcst(
   const reqMs = requested.getTime();
   let best: { fcst: TAFForecast; deltaMs: number } | undefined;
   for (const f of fcsts) {
-    if (f.timeFrom === undefined || f.timeTo === undefined) continue;
+    if (f.timeFrom == null || f.timeTo == null) continue;
     const fromMs = f.timeFrom * 1000;
     const toMs = f.timeTo * 1000;
     const delta =
@@ -97,7 +99,7 @@ export function selectAirportWeather(
       );
     } else if (Math.abs(requestedTime.getTime() - obsMs) <= METAR_FRESHNESS_MS) {
       return {
-        temp: metar.temp !== undefined ? Math.round(metar.temp) : null,
+        temp: metar.temp != null ? Math.round(metar.temp) : null,
         altimeter: metarAltimeterInHg(metar.altim),
         source: "metar",
         warnings,
@@ -110,7 +112,7 @@ export function selectAirportWeather(
   const covering = findCoveringFcst(fcsts, requestedTime);
   if (covering) {
     let temp = fcstTempValue(covering, requestedTime);
-    if (temp === undefined && metar?.temp !== undefined) {
+    if (temp == null && metar?.temp != null) {
       temp = metar.temp;
       const obsMs = metar.obsTime ? Date.parse(metar.obsTime) : NaN;
       const delta = Number.isFinite(obsMs)
@@ -121,10 +123,12 @@ export function selectAirportWeather(
       );
     }
     // TAF fcst.altim is already inHg (unlike METARResponse.altim, which is hPa — see metarAltimeterInHg).
+    // Use `!= null` rather than `!== undefined` because the live API returns
+    // `altim: null` (not undefined) when the period has no altimeter forecast.
     return {
-      temp: temp !== undefined ? Math.round(temp) : null,
+      temp: temp != null ? Math.round(temp) : null,
       altimeter:
-        covering.altim !== undefined
+        covering.altim != null
           ? Math.round(covering.altim * 100) / 100
           : metarAltimeterInHg(metar?.altim),
       source: "taf-fcst",
@@ -142,12 +146,11 @@ export function selectAirportWeather(
       )})`
     );
     let temp = fcstTempValue(closest.fcst, requestedTime);
-    if (temp === undefined) temp = metar?.temp;
-    // TAF fcst.altim is already inHg (unlike METARResponse.altim, which is hPa — see metarAltimeterInHg).
+    if (temp == null) temp = metar?.temp ?? undefined;
     return {
-      temp: temp !== undefined ? Math.round(temp) : null,
+      temp: temp != null ? Math.round(temp) : null,
       altimeter:
-        closest.fcst.altim !== undefined
+        closest.fcst.altim != null
           ? Math.round(closest.fcst.altim * 100) / 100
           : metarAltimeterInHg(metar?.altim),
       source: "taf-nearest",
