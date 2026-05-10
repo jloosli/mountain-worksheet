@@ -3,6 +3,7 @@
 import { ChangeEvent, useEffect, useMemo, useState } from "react";
 import aircraftData from "@/data/aircraft.json";
 import type { WorksheetData } from "@/utils/types";
+import PositionInput from "@/components/PositionInput";
 
 interface SortieInfoProps {
   initialData?: WorksheetData;
@@ -19,6 +20,7 @@ type SortieInfoData = Pick<
   | "tailN"
   | "airport"
   | "route"
+  | "position"
   | "weight"
   | "altitude"
 >;
@@ -33,6 +35,7 @@ export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
     tailN: "",
     airport: ["", ""],
     route: "",
+    position: [null, null],
     weight: null,
     altitude: [null, null, null],
   });
@@ -317,19 +320,15 @@ export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
           />
         </div>
 
-        <div className="space-y-2">
-          <label htmlFor="route" className="block text-sm font-medium">
-            Area of Operations (position)
-          </label>
-          <input
-            type="text"
-            id="route"
-            name="route"
-            value={formData.route || ""}
-            onChange={handleInputChange}
-            className="w-full px-3 py-2 border rounded-md dark:bg-black/[.15] dark:border-white/[.145]"
-          />
-        </div>
+        <PositionInput
+          rawValue={formData.route || ""}
+          cachedPosition={formData.position ?? [null, null]}
+          onChange={(route, position) => {
+            const updated = { ...formData, route, position };
+            setFormData(updated);
+            onUpdate({ route, position });
+          }}
+        />
 
         <div className="space-y-2">
           <label htmlFor="operatingAltitude" className="block text-sm font-medium">
