@@ -24,7 +24,11 @@ let windowStart = Date.now();
 
 export interface METARResponse {
   icaoId: string;
-  obsTime: string;
+  /**
+   * Observation time. Live API returns Unix epoch seconds (number); some
+   * legacy fixtures use an ISO 8601 string. Consumers should accept both.
+   */
+  obsTime: string | number;
   report: string;
   /** Temperature in degrees Celsius. */
   temp: number;

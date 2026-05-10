@@ -101,6 +101,42 @@ describe("selectAirportWeather", () => {
     expect(result.warnings.length).toBeGreaterThan(0);
   });
 
+  it("parses numeric obsTime (Unix epoch seconds) — live API shape", () => {
+    const epochMetar: METARResponse = {
+      ...baseMetar,
+      // Live API returns Unix epoch seconds (number), not an ISO string
+      obsTime: Math.floor(Date.parse("2026-05-12T15:00:00Z") / 1000),
+    };
+    const requested = new Date("2026-05-12T15:30:00Z"); // within 90 min
+    const result = selectAirportWeather(epochMetar, baseTaf, requested);
+    expect(result.source).toBe("metar");
+    expect(result.temp).toBe(18);
+  });
+
+  it("falls back to stale METAR when no TAF is available (airports without TAF service)", () => {
+    // KTVY-style scenario: METAR exists but airport has no TAF and the
+    // requested time is too far from obsTime for the METAR-fresh path.
+    const ktvyMetar: METARResponse = {
+      ...baseMetar,
+      icaoId: "KTVY",
+      temp: 19,
+      altim: 1022.4, // hPa → ~30.19 inHg
+      obsTime: Math.floor(Date.parse("2026-05-10T15:22:00Z") / 1000),
+    };
+    const requested = new Date("2026-05-10T20:30:00Z"); // arrival 5 h later
+    const result = selectAirportWeather(ktvyMetar, undefined, requested);
+    expect(result.source).toBe("metar-stale");
+    expect(result.temp).toBe(19);
+    expect(result.altimeter).toBeCloseTo(30.19, 2);
+    expect(result.warnings.some((w) => /no TAF available/i.test(w))).toBe(true);
+  });
+
+  it("returns 'none' only when no METAR data exists either", () => {
+    const requested = new Date("2026-05-12T15:00:00Z");
+    const result = selectAirportWeather(undefined, undefined, requested);
+    expect(result.source).toBe("none");
+  });
+
   it("warns when METAR obsTime is unparseable but still attempts TAF", () => {
     const broken = { ...baseMetar, obsTime: "INVALID" };
     const requested = new Date("2026-05-12T19:30:00Z");

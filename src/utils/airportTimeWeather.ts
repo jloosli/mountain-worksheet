@@ -7,13 +7,25 @@ import type {
 const HPA_TO_INHG = 0.0295299;
 const METAR_FRESHNESS_MS = 90 * 60 * 1000;
 
-export type AirportWeatherSource = "metar" | "taf-fcst" | "taf-nearest" | "none";
+export type AirportWeatherSource =
+  | "metar"
+  | "taf-fcst"
+  | "taf-nearest"
+  | "metar-stale"
+  | "none";
 
 export interface AirportWeatherAtTime {
   temp: number | null;
   altimeter: number | null;
   source: AirportWeatherSource;
   warnings: string[];
+}
+
+function parseObsTimeMs(obsTime: string | number | undefined): number {
+  // Live API returns Unix epoch seconds (number); some fixtures use ISO strings.
+  if (obsTime == null) return NaN;
+  if (typeof obsTime === "number") return obsTime * 1000;
+  return Date.parse(obsTime);
 }
 
 function metarAltimeterInHg(altim: number | null | undefined): number | null {
@@ -90,21 +102,24 @@ export function selectAirportWeather(
   const warnings: string[] = [];
   const requestedIso = requestedTime.toISOString();
 
-  // 1) METAR if recent
-  if (metar?.obsTime) {
-    const obsMs = Date.parse(metar.obsTime);
-    if (!Number.isFinite(obsMs)) {
-      warnings.push(
-        `${metar.icaoId}: obsTime "${metar.obsTime}" could not be parsed; METAR skipped`
-      );
-    } else if (Math.abs(requestedTime.getTime() - obsMs) <= METAR_FRESHNESS_MS) {
-      return {
-        temp: metar.temp != null ? Math.round(metar.temp) : null,
-        altimeter: metarAltimeterInHg(metar.altim),
-        source: "metar",
-        warnings,
-      };
-    }
+  // 1) METAR if fresh
+  const obsMs = parseObsTimeMs(metar?.obsTime);
+  const metarFresh =
+    metar != null &&
+    Number.isFinite(obsMs) &&
+    Math.abs(requestedTime.getTime() - obsMs) <= METAR_FRESHNESS_MS;
+  if (metar?.obsTime != null && !Number.isFinite(obsMs)) {
+    warnings.push(
+      `${metar.icaoId}: obsTime "${metar.obsTime}" could not be parsed`
+    );
+  }
+  if (metarFresh && metar) {
+    return {
+      temp: metar.temp != null ? Math.round(metar.temp) : null,
+      altimeter: metarAltimeterInHg(metar.altim),
+      source: "metar",
+      warnings,
+    };
   }
 
   // 2) TAF period covering requested time
@@ -158,7 +173,25 @@ export function selectAirportWeather(
     };
   }
 
-  // 4) Nothing
+  // 4) Stale METAR as last-resort fallback (better than nothing for airports
+  //    without TAF service — small / uncontrolled fields).
+  if (metar != null && (metar.temp != null || metar.altim != null)) {
+    const id = metar.icaoId ?? "airport";
+    const delta = Number.isFinite(obsMs)
+      ? fmtDelta(Math.abs(requestedTime.getTime() - obsMs))
+      : "unknown";
+    warnings.push(
+      `${id}: no TAF available; using current METAR observation as fallback (Δt = ${delta})`
+    );
+    return {
+      temp: metar.temp != null ? Math.round(metar.temp) : null,
+      altimeter: metarAltimeterInHg(metar.altim),
+      source: "metar-stale",
+      warnings,
+    };
+  }
+
+  // 5) Nothing
   warnings.push(
     `No METAR or TAF data available for requested time ${requestedIso}`
   );
