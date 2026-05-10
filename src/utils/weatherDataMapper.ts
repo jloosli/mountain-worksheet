@@ -223,6 +223,7 @@ export function mapWeatherDataToWorksheet(
     airport?: AirportResponse[];
   },
   areaOfOps: AreaOfOpsWeather | null,
+  airmets: import("./gairmetApi").AirmetClassification | null,
   options: WeatherMappingOptions = {}
 ): WeatherMappingResult {
   const result: WeatherMappingResult = {
@@ -299,6 +300,17 @@ export function mapWeatherDataToWorksheet(
         }
       }
       result.warnings.push(...areaOfOps.warnings);
+    }
+
+    // Apply G-AIRMET classification results
+    if (airmets) {
+      if (airmets.turb !== null)
+        (result.data as Partial<WorksheetData>).turb = airmets.turb;
+      if (airmets.cielVis !== null)
+        (result.data as Partial<WorksheetData>).cielVis = airmets.cielVis;
+      if (airmets.mtnObsc !== null)
+        (result.data as Partial<WorksheetData>).mtnObsc = airmets.mtnObsc;
+      result.warnings.push(...airmets.warnings);
     }
 
     // Validate mapped data
@@ -565,6 +577,13 @@ export function mergeWeatherData(
       result.altitude = apiData.altitude;
     }
   }
+
+  // AIRMET boolean flags: only overwrite when the API supplied an explicit
+  // boolean. Anything else (undefined / null sentinel for "data unavailable")
+  // leaves the existing value alone.
+  if (typeof apiData.turb === "boolean") result.turb = apiData.turb;
+  if (typeof apiData.cielVis === "boolean") result.cielVis = apiData.cielVis;
+  if (typeof apiData.mtnObsc === "boolean") result.mtnObsc = apiData.mtnObsc;
 
   return result;
 }
