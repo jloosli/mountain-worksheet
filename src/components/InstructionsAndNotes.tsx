@@ -6,13 +6,13 @@ const positionFormats: Array<{
 }> = [
   {
     format: "DD.dd (with letters)",
-    example: "36.01°N / 75.50°W",
+    example: "36°00'36\"N / 75°30'00\"W",
     entry: "36.01N/75.50W",
     decimal: "36.01/-75.50",
   },
   {
     format: "DD.dd (with a minus)",
-    example: "36.01°N / 75.50°W",
+    example: "36°00'36\"N / 75°30'00\"W",
     entry: "36.01/-75.50",
     decimal: "36.01/-75.50",
   },
