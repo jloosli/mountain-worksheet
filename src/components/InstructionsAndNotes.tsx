@@ -57,15 +57,20 @@ const positionFormats: Array<{
 const usingTheToolNotes: string[] = [
   "All times are entered in UTC. The local-time conversion shows below the time selector.",
   "Sortie date and time drive the weather lookup — departure and arrival METAR/TAF are matched to your sortie time, not the current time.",
-  "Use Copy Link to save or share the worksheet — the URL captures every field, so the recipient (e.g., your FRO) sees the same values.",
-  "Reset Worksheet clears every input. Copy the link first if you want to keep the current state.",
-  "Toggle °C/°F at any time using the temperature unit button in the header. All temperature inputs and outputs update together.",
+  "Use Copy Link to save or share the worksheet — the URL captures the worksheet inputs and fetched weather/performance values. UI preferences such as the °C/°F unit are stored locally in your browser and are not shared via the link.",
+  "Reset Worksheet clears the worksheet inputs from the URL and reloads with defaults — the date and time reset to the next top-of-hour in UTC, and the °C/°F preference is preserved. Copy the link first if you want to keep the current state.",
+  "Toggle °C/°F at any time using the temperature unit button in the header. The setting is saved locally in your browser so it persists across sessions on the same device.",
   "Operating Altitude drives the in-flight density-altitude and maneuvering-speed calculations. Set it to the planned altitude you'll be operating at over the area.",
   "Review the Mountain Flying Checklist (at the bottom of the page) before flight in addition to the worksheet values.",
 ];
 
-const operationalNotes: string[] = [
-  "This tool is for reference purposes only. It is up to the PIC and FRO to responsibly evaluate risks prior to release or departure. If risks cannot be reduced to an acceptable level, a no-go decision should be considered.",
+type OperationalNote = string | { emphasis: string; body: string };
+
+const operationalNotes: OperationalNote[] = [
+  {
+    emphasis: "This tool is for reference purposes only.",
+    body: " It is up to the PIC and FRO to responsibly evaluate risks prior to release or departure. If risks cannot be reduced to an acceptable level, a no-go decision should be considered.",
+  },
   "Warnings are highlighted in red/yellow, but the worksheet does not cover all the risks involved.",
   "Complete and upload this document to 'Sortie Files' for a mountain flight.",
   "If computations reveal that a particular performance item is marginal, consult the POH prior to flight.",
@@ -84,7 +89,10 @@ export default function InstructionsAndNotes() {
       <details>
         <summary className="text-2xl font-bold p-6 cursor-pointer list-none flex items-center justify-between select-none">
           Instructions and Notes
-          <span className="text-gray-400 dark:text-gray-500 text-base font-normal ml-2">
+          <span
+            aria-hidden="true"
+            className="text-gray-400 dark:text-gray-500 text-base font-normal ml-2"
+          >
             ▼
           </span>
         </summary>
@@ -180,20 +188,17 @@ export default function InstructionsAndNotes() {
               Notes
             </h3>
             <ul className="list-disc list-outside ml-5 space-y-1">
-              {operationalNotes.map((note) => (
-                <li key={note}>
-                  {note.startsWith("This tool is for reference") ? (
-                    <>
-                      <span className="font-semibold">
-                        This tool is for reference purposes only.
-                      </span>{" "}
-                      {note.replace("This tool is for reference purposes only. ", "")}
-                    </>
-                  ) : (
-                    note
-                  )}
-                </li>
-              ))}
+              {operationalNotes.map((note) => {
+                if (typeof note === "string") {
+                  return <li key={note}>{note}</li>;
+                }
+                return (
+                  <li key={note.emphasis}>
+                    <span className="font-semibold">{note.emphasis}</span>
+                    {note.body}
+                  </li>
+                );
+              })}
             </ul>
           </section>
         </div>

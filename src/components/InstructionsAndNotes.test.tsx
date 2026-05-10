@@ -54,4 +54,21 @@ describe("InstructionsAndNotes", () => {
     expect(screen.getByText(/All times are entered in UTC/i)).toBeInTheDocument();
     expect(screen.getByText(/Copy Link/i)).toBeInTheDocument();
   });
+
+  it("clarifies that the °C/°F preference is local and not part of the share link", () => {
+    render(<InstructionsAndNotes />);
+    expect(
+      screen.getByText(/UI preferences such as the °C\/°F unit are stored locally/i)
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/the °C\/°F preference is preserved/i)
+    ).toBeInTheDocument();
+  });
+
+  it("marks the decorative chevron as aria-hidden", () => {
+    const { container } = render(<InstructionsAndNotes />);
+    const chevron = container.querySelector('span[aria-hidden="true"]');
+    expect(chevron).not.toBeNull();
+    expect(chevron).toHaveTextContent("▼");
+  });
 });
