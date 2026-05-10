@@ -374,7 +374,7 @@ describe("Weather Data Mapper", () => {
         flightTime: "12:00",
       };
 
-      const result = mapWeatherDataToWorksheet(mockApiData, null, options);
+      const result = mapWeatherDataToWorksheet(mockApiData, null, null, options);
 
       expect(result.success).toBe(true);
       expect(result.data.temp).toBeDefined();
@@ -386,7 +386,7 @@ describe("Weather Data Mapper", () => {
     it("should handle missing data gracefully", () => {
       const emptyApiData = {};
 
-      const result = mapWeatherDataToWorksheet(emptyApiData, null);
+      const result = mapWeatherDataToWorksheet(emptyApiData, null, null);
 
       expect(result.success).toBe(true);
       expect(result.warnings).toContain("No wind/temperature data available");
@@ -399,7 +399,7 @@ describe("Weather Data Mapper", () => {
     });
 
     it("should validate data when validation is enabled", () => {
-      const result = mapWeatherDataToWorksheet({}, null, {
+      const result = mapWeatherDataToWorksheet({}, null, null, {
         validateData: true,
       });
 
@@ -416,7 +416,7 @@ describe("Weather Data Mapper", () => {
         airport: 42 as unknown as [],
       };
 
-      const result = mapWeatherDataToWorksheet(malformedApiData, null);
+      const result = mapWeatherDataToWorksheet(malformedApiData, null, null);
 
       // Should handle gracefully
       expect(result.success).toBe(true);
@@ -467,6 +467,7 @@ describe("Weather Data Mapper", () => {
       const result = mapWeatherDataToWorksheet(
         apiDataWithMultipleAirports,
         null,
+        null,
         options
       );
 
@@ -494,7 +495,7 @@ describe("Weather Data Mapper", () => {
         warnings: ["test warning from areaOfOps"],
       };
 
-      const result = mapWeatherDataToWorksheet({}, mockAreaOfOps);
+      const result = mapWeatherDataToWorksheet({}, mockAreaOfOps, null);
 
       // Wind should be taken from areaOfOps
       expect(result.data.wind).toBeDefined();
@@ -751,6 +752,30 @@ describe("Weather Data Mapper", () => {
       expect(result.altimeter![0]).toBe(29.85); // API data should overwrite
       expect(result.rwy![0]).toBe(10000); // API data should overwrite
     });
+
+    it("overwrites turb/cielVis/mtnObsc to false when API explicitly says false", () => {
+      const existing = { turb: true, cielVis: true, mtnObsc: true };
+      const apiData = { turb: false, cielVis: false, mtnObsc: false };
+      const merged = mergeWeatherData(existing, apiData, true);
+      expect(merged.turb).toBe(false);
+      expect(merged.cielVis).toBe(false);
+      expect(merged.mtnObsc).toBe(false);
+    });
+
+    it("leaves turb/cielVis/mtnObsc untouched when API value is null", () => {
+      const existing = { turb: true, cielVis: false, mtnObsc: true };
+      const apiData = { turb: null, cielVis: null, mtnObsc: null } as Partial<
+        Record<"turb" | "cielVis" | "mtnObsc", boolean | null>
+      >;
+      const merged = mergeWeatherData(
+        existing,
+        apiData as Partial<typeof existing>,
+        true
+      );
+      expect(merged.turb).toBe(true);
+      expect(merged.cielVis).toBe(false);
+      expect(merged.mtnObsc).toBe(true);
+    });
   });
 
   describe("dep/arr time-aware weather", () => {
@@ -857,7 +882,7 @@ describe("Weather Data Mapper", () => {
 
   describe("Edge Cases", () => {
     it("should handle null and undefined values gracefully", () => {
-      const result = mapWeatherDataToWorksheet({}, null, {
+      const result = mapWeatherDataToWorksheet({}, null, null, {
         validateData: true,
       });
 
@@ -888,7 +913,7 @@ describe("Weather Data Mapper", () => {
         airport: [],
       };
 
-      const result = mapWeatherDataToWorksheet(emptyApiData, null);
+      const result = mapWeatherDataToWorksheet(emptyApiData, null, null);
 
       expect(result.success).toBe(true);
       expect(result.warnings.length).toBeGreaterThan(0);

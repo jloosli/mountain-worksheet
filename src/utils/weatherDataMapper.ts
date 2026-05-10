@@ -223,6 +223,7 @@ export function mapWeatherDataToWorksheet(
     airport?: AirportResponse[];
   },
   areaOfOps: AreaOfOpsWeather | null,
+  airmets: import("./gairmetApi").AirmetClassification | null,
   options: WeatherMappingOptions = {}
 ): WeatherMappingResult {
   const result: WeatherMappingResult = {
@@ -299,6 +300,17 @@ export function mapWeatherDataToWorksheet(
         }
       }
       result.warnings.push(...areaOfOps.warnings);
+    }
+
+    // Apply G-AIRMET classification results
+    if (airmets) {
+      if (airmets.turb !== null)
+        (result.data as Partial<WorksheetData>).turb = airmets.turb;
+      if (airmets.cielVis !== null)
+        (result.data as Partial<WorksheetData>).cielVis = airmets.cielVis;
+      if (airmets.mtnObsc !== null)
+        (result.data as Partial<WorksheetData>).mtnObsc = airmets.mtnObsc;
+      result.warnings.push(...airmets.warnings);
     }
 
     // Validate mapped data
@@ -564,6 +576,17 @@ export function mergeWeatherData(
     } else {
       result.altitude = apiData.altitude;
     }
+  }
+
+  // AIRMET boolean flags: null means fetch failed (leave alone), true/false both overwrite
+  if (apiData.turb !== undefined && apiData.turb !== null) {
+    result.turb = apiData.turb as boolean;
+  }
+  if (apiData.cielVis !== undefined && apiData.cielVis !== null) {
+    result.cielVis = apiData.cielVis as boolean;
+  }
+  if (apiData.mtnObsc !== undefined && apiData.mtnObsc !== null) {
+    result.mtnObsc = apiData.mtnObsc as boolean;
   }
 
   return result;

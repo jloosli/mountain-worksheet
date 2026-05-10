@@ -13,6 +13,7 @@ jest.mock("@/utils/aviationWeatherApi");
 jest.mock("@/utils/weatherDataMapper");
 jest.mock("@/utils/openMeteoApi");
 jest.mock("@/utils/areaOfOpsWeather");
+jest.mock("@/utils/gairmetApi");
 
 // Mock functions are available but not used in simplified tests
 const mockIsApiPopulatedData = isApiPopulatedData as jest.MockedFunction<

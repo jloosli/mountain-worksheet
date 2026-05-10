@@ -19,6 +19,11 @@ import {
   type AreaOfOpsWeather,
 } from "@/utils/areaOfOpsWeather";
 import {
+  fetchGAirmets,
+  classifyAirmets,
+  type AirmetClassification,
+} from "@/utils/gairmetApi";
+import {
   WeatherErrorModal,
   WeatherLoadingModal,
   AirportNotFoundModal,
@@ -184,15 +189,31 @@ export default function WeatherDataIntegration({
           }
         }
 
+        // Fetch and classify G-AIRMETs
+        let airmets: AirmetClassification | null = null;
+        if (opPos) {
+          try {
+            const features = await fetchGAirmets();
+            airmets = classifyAirmets(features, opPos, midTime);
+          } catch (err) {
+            console.warn("G-AIRMET fetch failed:", err);
+          }
+        }
+
         // Map API data to worksheet format
-        const mappingResult = mapWeatherDataToWorksheet(apiData, areaOfOps, {
-          flightDate: worksheetData.date!,
-          flightTime: worksheetData.time!,
-          durationHours: worksheetData.duration ?? null,
-          departureAirport,
-          arrivalAirport,
-          validateData: true,
-        });
+        const mappingResult = mapWeatherDataToWorksheet(
+          apiData,
+          areaOfOps,
+          airmets,
+          {
+            flightDate: worksheetData.date!,
+            flightTime: worksheetData.time!,
+            durationHours: worksheetData.duration ?? null,
+            departureAirport,
+            arrivalAirport,
+            validateData: true,
+          }
+        );
 
         if (!mappingResult.success) {
           throw new Error(
