@@ -156,7 +156,7 @@ describe("selectAirportWeather", () => {
           timeFrom: Math.floor(Date.parse("2026-05-12T15:00:00Z") / 1000),
           timeTo: Math.floor(Date.parse("2026-05-12T18:00:00Z") / 1000),
           temp: 22,
-          altim: null as unknown as undefined, // mimics real API null
+          altim: null,
         },
       ],
     };
@@ -176,7 +176,7 @@ describe("selectAirportWeather", () => {
           timeFrom: Math.floor(Date.parse("2026-05-12T15:00:00Z") / 1000),
           timeTo: Math.floor(Date.parse("2026-05-12T21:00:00Z") / 1000),
           temp: 22,
-          altim: null as unknown as undefined,
+          altim: null,
         },
       ],
     };

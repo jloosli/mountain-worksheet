@@ -180,8 +180,12 @@ export function selectAirportWeather(
     const delta = Number.isFinite(obsMs)
       ? fmtDelta(Math.abs(requestedTime.getTime() - obsMs))
       : "unknown";
+    const reason =
+      taf == null
+        ? "no TAF available"
+        : "no usable TAF forecast period";
     warnings.push(
-      `${id}: no TAF available; using current METAR observation as fallback (Δt = ${delta})`
+      `${id}: ${reason}; using current METAR observation as fallback (Δt = ${delta})`
     );
     return {
       temp: metar.temp != null ? Math.round(metar.temp) : null,
@@ -192,8 +196,9 @@ export function selectAirportWeather(
   }
 
   // 5) Nothing
+  const id = taf?.icaoId ?? metar?.icaoId ?? "airport";
   warnings.push(
-    `No METAR or TAF data available for requested time ${requestedIso}`
+    `${id}: no METAR or TAF data available for requested time ${requestedIso}`
   );
   return { temp: null, altimeter: null, source: "none", warnings };
 }

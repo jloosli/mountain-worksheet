@@ -37,8 +37,11 @@ export interface METARResponse {
   wspd: number;
   wgst?: number;
   visib: number;
-  /** Altimeter setting in hectopascals (hPa). Convert to inHg with × 0.0295299. */
-  altim: number;
+  /**
+   * Altimeter setting in hectopascals (hPa). Convert to inHg with × 0.0295299.
+   * The live API can return null for stations that don't report it.
+   */
+  altim: number | null;
   slp?: number;
   qcField: number;
   wxString?: string;
@@ -64,12 +67,16 @@ export interface TAFForecast {
   /** Period end, Unix epoch seconds. */
   timeTo?: number;
   /**
-   * Surface temperature for this period. Either a single °C value, or a sparse
-   * array of `{ validTime, sfcTemp }` samples within the period.
+   * Surface temperature for this period. Either a single °C value, a sparse
+   * array of `{ validTime, sfcTemp }` samples within the period, or null when
+   * the period has no temp forecast.
    */
-  temp?: number | { sfcTemp?: number; validTime?: number }[];
-  /** Altimeter setting in inHg. (Note: METAR `altim` is in hPa — different unit.) */
-  altim?: number;
+  temp?: number | { sfcTemp?: number; validTime?: number }[] | null;
+  /**
+   * Altimeter setting in inHg. (Note: METAR `altim` is in hPa — different unit.)
+   * Live API often returns null for periods without an altimeter forecast.
+   */
+  altim?: number | null;
   wdir?: number;
   wspd?: number;
 }
