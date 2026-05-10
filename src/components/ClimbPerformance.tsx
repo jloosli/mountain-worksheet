@@ -126,16 +126,18 @@ export default function ClimbPerformance({
     return calculateVx(aircraft, pa);
   };
 
-  const serviceCeiling = (oat: number | null): number | null => {
+  const serviceCeiling = (oat: number | null): number | "exceeds_table" | null => {
     if (oat === null || !aircraft) return null;
     try {
-      return findInverseXgivenYandZ(
+      const alts = aircraft.climbPerformance.pressureAltitudes;
+      const computed = findInverseXgivenYandZ(
         aircraft.climbPerformance.data,
-        aircraft.climbPerformance.pressureAltitudes,
+        alts,
         aircraft.climbPerformance.temperatures,
         300,
         oat
       );
+      return computed > alts[alts.length - 1] ? "exceeds_table" : computed;
     } catch {
       return null;
     }
@@ -214,19 +216,28 @@ export default function ClimbPerformance({
             <tr className="border-b dark:border-gray-700">
               <td className="py-2 px-4">Service Ceiling (300 ft/min ROC, MSL)</td>
               {([0, 1, 2] as const).map((i) => {
-                const scPA = serviceCeiling(OATs?.[i] ?? null);
-                if (scPA === null) {
+                const sc = serviceCeiling(OATs?.[i] ?? null);
+                if (sc === null) {
                   return <td key={i} className="py-2 px-4 text-right">-</td>;
+                }
+                const alts = aircraft?.climbPerformance.pressureAltitudes;
+                const maxTableAlt = alts ? alts[alts.length - 1] : null;
+                if (sc === "exceeds_table") {
+                  return (
+                    <td key={i} className="py-2 px-4 text-right">
+                      {`> ${maxTableAlt?.toLocaleString()} ft`}
+                    </td>
+                  );
                 }
                 const oat = OATs?.[i] ?? null;
                 const altimeter = altimeters?.[i] ?? null;
-                const scPARounded = Math.round(scPA);
-                const scDA = oat !== null ? Math.round(pressureAltitudeToDensityAltitude(scPA, oat)) : null;
+                const scPARounded = Math.round(sc);
+                const scDA = oat !== null ? Math.round(pressureAltitudeToDensityAltitude(sc, oat)) : null;
                 const titleText = scDA !== null
                   ? `Pressure Alt: ${scPARounded.toLocaleString()} ft\nDensity Alt: ${scDA.toLocaleString()} ft`
                   : `Pressure Alt: ${scPARounded.toLocaleString()} ft`;
                 const displayValue = altimeter !== null && altimeter >= 28
-                  ? `${Math.round(scPA + (altimeter - 29.92) * 1000).toLocaleString()} ft`
+                  ? `${Math.round(sc + (altimeter - 29.92) * 1000).toLocaleString()} ft`
                   : `${scPARounded.toLocaleString()} ft (PA)`;
                 return (
                   <td key={i} className="py-2 px-4 text-right" title={titleText}>

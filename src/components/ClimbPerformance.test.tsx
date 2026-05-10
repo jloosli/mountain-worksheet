@@ -20,13 +20,14 @@ jest.mock("../data/aircraft.json", () => [
       Vso: [51, 41],
     },
     climbPerformance: {
-      pressureAltitudes: [0, 2000, 4000],
-      climbSpeeds: [80, 79, 78],
+      pressureAltitudes: [0, 2000, 4000, 6000],
+      climbSpeeds: [80, 79, 78, 77],
       temperatures: [-20, 0, 20],
       data: [
         [1055, 980, 905],
         [945, 875, 805],
         [840, 770, 705],
+        [400, 350, 280], // drops below 300 fpm at 20°C; at -20°C still 400 fpm (exceeds table)
       ],
     },
     Vx: {
@@ -270,6 +271,21 @@ describe("ClimbPerformance Component", () => {
       );
       const cells = getServiceCeilingRow()?.querySelectorAll("td");
       expect(cells?.[1].textContent).toMatch(/ft \(PA\)$/);
+    });
+
+    test("shows '> X ft' when 300 fpm ROC is never reached within the table", () => {
+      // At -20°C the mock data tops out at 6,000 ft with 400 fpm — ceiling exceeds the table.
+      // Display "> 6,000 ft" rather than an unreliable extrapolated altitude.
+      render(
+        <ClimbPerformance
+          {...defaultProps}
+          OATs={[-20, -20, -20]}
+        />
+      );
+      const cells = getServiceCeilingRow()?.querySelectorAll("td");
+      expect(cells?.[1].textContent).toBe("> 6,000 ft");
+      expect(cells?.[2].textContent).toBe("> 6,000 ft");
+      expect(cells?.[3].textContent).toBe("> 6,000 ft");
     });
 
     test("departure and arrival show the same MSL ceiling for the same OAT and altimeter", () => {

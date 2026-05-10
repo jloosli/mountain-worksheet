@@ -281,18 +281,18 @@ describe("Interpolation Functions", () => {
       const yAxisNL = [0];
       const dataNL = [[800], [500], [400], [350]]; // steep early drop, then leveling off
 
-      it("extrapolates beyond max altitude from last two points when target is below all values", () => {
+      it("extrapolates from the end closer to the target when target is below all values", () => {
         // Target 100 fpm is below the minimum (350 fpm at 15000 ft).
-        // Service ceiling is above the table — must extrapolate from the TOP of the data (last two points).
+        // lastZ=350 is closer to 100 than firstZ=800, so extrapolate from the last two points.
         // last two: x=10000 (z=400) and x=15000 (z=350)
         // t = (100 - 400) / (350 - 400) = 6.0  →  result = 10000 + 6×5000 = 40000 ft
         const result = findInverseXgivenYandZ(dataNL, xAxisNL, yAxisNL, 100, 0);
         expect(result).toBeCloseTo(40000, -2);
       });
 
-      it("extrapolates below min altitude from first two points when target is above all values", () => {
+      it("extrapolates from the end closer to the target when target is above all values", () => {
         // Target 1000 fpm is above the maximum (800 fpm at 0 ft).
-        // Service ceiling is below the table — must extrapolate from the BOTTOM of the data (first two points).
+        // firstZ=800 is closer to 1000 than lastZ=350, so extrapolate from the first two points.
         // first two: x=0 (z=800) and x=5000 (z=500)
         // t = (1000 - 800) / (500 - 800) ≈ -0.6667  →  result = 0 + (-0.6667)×5000 ≈ -3333 ft
         const result = findInverseXgivenYandZ(dataNL, xAxisNL, yAxisNL, 1000, 0);
