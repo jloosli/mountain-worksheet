@@ -139,4 +139,137 @@ describe("WeatherDataIntegration", () => {
       expect(screen.getByText(/forecast unavailable/i)).toBeInTheDocument();
     });
   });
+
+  it("emits skipped warning when opPos is unavailable", async () => {
+    const { mapWeatherDataToWorksheet, mergeWeatherData, isApiPopulatedData } =
+      jest.requireMock("@/utils/weatherDataMapper");
+    let capturedAreaOfOps: unknown = null;
+    mapWeatherDataToWorksheet.mockImplementation(
+      (_apiData: unknown, areaOfOps: unknown) => {
+        capturedAreaOfOps = areaOfOps;
+        return { success: true, data: {}, errors: [], warnings: [] };
+      }
+    );
+    mergeWeatherData.mockImplementation((existing: object, api: object) => ({
+      ...existing,
+      ...api,
+    }));
+    isApiPopulatedData.mockReturnValue({
+      wind: false,
+      temperature: false,
+      pressure: false,
+      runway: false,
+      altitude: false,
+    });
+    const { getWeatherDataBatch } = jest.requireMock("@/utils/aviationWeatherApi");
+    getWeatherDataBatch.mockResolvedValue({
+      metar: [],
+      taf: [],
+      airport: [],
+    });
+
+    const propsWithoutPosition = {
+      ...defaultProps,
+      worksheetData: { ...defaultProps.worksheetData, position: [null, null] as [number | null, number | null] },
+    };
+    render(<WeatherDataIntegration {...propsWithoutPosition} />);
+    fireEvent.click(screen.getByText("Fetch Weather"));
+
+    await waitFor(() => {
+      expect(mapWeatherDataToWorksheet).toHaveBeenCalled();
+    });
+    expect(capturedAreaOfOps).toMatchObject({
+      positionSource: "none",
+      warnings: expect.arrayContaining([
+        expect.stringMatching(/skipped/i),
+      ]),
+    });
+  });
+
+  it("continues pipeline when Open-Meteo fetch fails", async () => {
+    const { fetchPointForecast } = jest.requireMock("@/utils/openMeteoApi");
+    fetchPointForecast.mockRejectedValue(new Error("network down"));
+    const { mapWeatherDataToWorksheet, mergeWeatherData, isApiPopulatedData } =
+      jest.requireMock("@/utils/weatherDataMapper");
+    mapWeatherDataToWorksheet.mockReturnValue({
+      success: true,
+      data: { temp: [20, null, 22] },
+      errors: [],
+      warnings: [],
+    });
+    mergeWeatherData.mockImplementation((existing: object, api: object) => ({
+      ...existing,
+      ...api,
+    }));
+    isApiPopulatedData.mockReturnValue({
+      wind: false,
+      temperature: false,
+      pressure: false,
+      runway: false,
+      altitude: false,
+    });
+    const { getWeatherDataBatch } = jest.requireMock("@/utils/aviationWeatherApi");
+    getWeatherDataBatch.mockResolvedValue({
+      metar: [{ icaoId: "KORD", temp: 20, altim: 1015 }],
+      taf: [],
+      airport: [
+        { icaoId: "KORD", lat: 41.97, lon: -87.91 },
+        { icaoId: "KLAX", lat: 33.94, lon: -118.40 },
+      ],
+    });
+
+    const onDataUpdate = jest.fn();
+    render(<WeatherDataIntegration {...defaultProps} onDataUpdate={onDataUpdate} />);
+    fireEvent.click(screen.getByText("Fetch Weather"));
+
+    await waitFor(() => {
+      expect(onDataUpdate).toHaveBeenCalled();
+    });
+    // Pipeline ran despite Open-Meteo failure
+    expect(mapWeatherDataToWorksheet).toHaveBeenCalled();
+  });
+
+  it("continues pipeline when G-AIRMET fetch fails", async () => {
+    const { fetchGAirmets } = jest.requireMock("@/utils/gairmetApi");
+    fetchGAirmets.mockRejectedValue(new Error("gairmet network down"));
+    const { mapWeatherDataToWorksheet, mergeWeatherData, isApiPopulatedData } =
+      jest.requireMock("@/utils/weatherDataMapper");
+    let capturedAirmets: unknown = "unset";
+    mapWeatherDataToWorksheet.mockImplementation(
+      (_apiData: unknown, _areaOfOps: unknown, airmets: unknown) => {
+        capturedAirmets = airmets;
+        return { success: true, data: {}, errors: [], warnings: [] };
+      }
+    );
+    mergeWeatherData.mockImplementation((existing: object, api: object) => ({
+      ...existing,
+      ...api,
+    }));
+    isApiPopulatedData.mockReturnValue({
+      wind: false,
+      temperature: false,
+      pressure: false,
+      runway: false,
+      altitude: false,
+    });
+    const { getWeatherDataBatch } = jest.requireMock("@/utils/aviationWeatherApi");
+    getWeatherDataBatch.mockResolvedValue({
+      metar: [],
+      taf: [],
+      airport: [
+        { icaoId: "KORD", lat: 41.97, lon: -87.91 },
+        { icaoId: "KLAX", lat: 33.94, lon: -118.40 },
+      ],
+    });
+    const { fetchPointForecast } = jest.requireMock("@/utils/openMeteoApi");
+    fetchPointForecast.mockResolvedValue({ hourly: { time: [] } });
+
+    render(<WeatherDataIntegration {...defaultProps} />);
+    fireEvent.click(screen.getByText("Fetch Weather"));
+
+    await waitFor(() => {
+      expect(mapWeatherDataToWorksheet).toHaveBeenCalled();
+    });
+    expect(capturedAirmets).toBeNull();
+  });
 });

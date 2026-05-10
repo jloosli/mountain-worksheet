@@ -169,35 +169,47 @@ export default function WeatherDataIntegration({
             : null;
 
         let areaOfOps: AreaOfOpsWeather | null = null;
+        let airmets: AirmetClassification | null = null;
         if (opPos) {
           const win = {
             start: new Date(midTime.getTime() - 24 * 3600 * 1000),
             end: new Date(midTime.getTime() + 24 * 3600 * 1000),
           };
-          try {
-            const raw = await fetchPointForecast(opPos[0], opPos[1], win);
+          const [pointResult, gairmetResult] = await Promise.allSettled([
+            fetchPointForecast(opPos[0], opPos[1], win),
+            fetchGAirmets(),
+          ]);
+          if (pointResult.status === "fulfilled") {
             areaOfOps = buildAreaOfOpsWeather({
               position: worksheetData.position ?? [null, null],
               depAirportLatLon,
               arrAirportLatLon,
               midTime,
               opAltitudeFt: worksheetData.altitude?.[1] ?? null,
-              raw,
+              raw: pointResult.value,
             });
-          } catch (err) {
-            console.warn("Open-Meteo fetch failed:", err);
+          } else {
+            console.warn("Open-Meteo fetch failed:", pointResult.reason);
+          }
+          if (gairmetResult.status === "fulfilled") {
+            airmets = classifyAirmets(gairmetResult.value, opPos, midTime);
+          } else {
+            console.warn("G-AIRMET fetch failed:", gairmetResult.reason);
           }
         }
 
-        // Fetch and classify G-AIRMETs
-        let airmets: AirmetClassification | null = null;
-        if (opPos) {
-          try {
-            const features = await fetchGAirmets();
-            airmets = classifyAirmets(features, opPos, midTime);
-          } catch (err) {
-            console.warn("G-AIRMET fetch failed:", err);
-          }
+        if (!opPos) {
+          // Build a minimal areaOfOps that only carries the warning, so it surfaces in the panel
+          areaOfOps = {
+            position: null,
+            positionSource: "none",
+            windsAloft: { direction: [null, null, null, null, null], speed: [null, null, null, null, null], temp: [null, null, null, null, null] },
+            opTemp: null,
+            opAltimeter: null,
+            warnings: [
+              "Operating area weather skipped: position and airport coordinates unavailable",
+            ],
+          };
         }
 
         // Map API data to worksheet format
