@@ -3,6 +3,7 @@
 import { useState } from "react";
 import AppInputs from "@/components/AppInputs";
 import Calculations from "@/components/Calculations";
+import InstructionsAndNotes from "@/components/InstructionsAndNotes";
 import MountainFlyingChecklist from "@/components/MountainFlyingChecklist";
 import WorksheetHeader from "@/components/WorksheetHeader";
 import { useUrlState } from "@/utils/useUrlState";
@@ -124,6 +125,7 @@ export default function AppContainer() {
       />
       <main className="flex-1 w-full flex justify-center px-2 md:px-8 pb-20">
         <div className="w-full max-w-5xl flex flex-col gap-16 items-center">
+          <InstructionsAndNotes />
           <AppInputs
             state={state}
             onStateUpdate={handleUpdate}
