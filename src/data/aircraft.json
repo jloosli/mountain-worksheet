@@ -146,7 +146,7 @@
     }
   },
   {
-    "id": "C172SP",
+    "id": "C172S",
     "name": "Cessna 172SP",
     "emptyWeight": 1663,
     "maxGrossWeight": 2558,
@@ -434,7 +434,7 @@
     }
   },
   {
-    "id": "C206",
+    "id": "T206H",
     "name": "Cessna 206",
     "emptyWeight": 2314,
     "maxGrossWeight": 3600,
