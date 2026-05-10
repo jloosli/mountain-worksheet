@@ -429,4 +429,32 @@ describe("deserializeState", () => {
     const restored = deserializeState(serialized, initialState);
     expect(restored.wind).toEqual(originalState.wind);
   });
+
+  describe("position field", () => {
+    it("should round-trip position field as length-2 number array", () => {
+      const initial = {
+        route: "",
+        position: [null, null] as [number | null, number | null],
+      };
+      const state = {
+        ...initial,
+        route: "KOGD/285/34",
+        position: [41.4321, -112.7042] as [number | null, number | null],
+      };
+      const serialized = serializeState(state);
+      const deserialized = deserializeState(serialized, initial);
+      expect(deserialized.position).toEqual([41.4321, -112.7042]);
+      expect(deserialized.route).toBe("KOGD/285/34");
+    });
+
+    it("should omit position field from URL when both values are null", () => {
+      const initial = {
+        route: "",
+        position: [null, null] as [number | null, number | null],
+      };
+      const state = { ...initial, position: [null, null] as [number | null, number | null] };
+      const serialized = serializeState(state);
+      expect(serialized).not.toContain("position");
+    });
+  });
 });

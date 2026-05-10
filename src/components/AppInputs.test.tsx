@@ -111,6 +111,7 @@ describe("AppInputs", () => {
     tailN: "",
     airport: ["", ""],
     route: "",
+    position: [null, null],
     wind: [Array(5).fill(0), Array(5).fill(0), Array(5).fill(0)],
     turb: false,
     cielVis: false,

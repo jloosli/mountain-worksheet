@@ -11,6 +11,7 @@ const defaultInitialData: WorksheetData = {
   tailN: "",
   airport: ["", ""],
   route: "",
+  position: [null, null],
   weight: null,
   altitude: [null, null, null],
   wind: [Array(5).fill(null), Array(5).fill(null), Array(5).fill(null)],

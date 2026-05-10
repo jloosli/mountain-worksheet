@@ -156,6 +156,7 @@ describe("Calculations", () => {
     duration: null,
     acType: "C182T",
     route: "",
+    position: [null, null],
     tailN: "N12345",
     wind: [[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]],
     turb: false,

@@ -11,6 +11,7 @@ export interface WorksheetData {
   tailN: string;
   airport: [string, string]; // [departure, arrival]
   route: string; // Area of Operations/Route
+  position: [number | null, number | null]; // [lat, lon] in DD.dddd; [null, null] when unset
 
   // Weather Information
   wind: [(number | null)[], (number | null)[], (number | null)[]]; // [wDir, wVel, temp] arrays for each altitude
