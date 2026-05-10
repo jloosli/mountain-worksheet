@@ -65,7 +65,8 @@ describe("classifyAirmets", () => {
     expect(r.turb).toBe(true);
     expect(r.mtnObsc).toBe(true);
     expect(r.cielVis).toBe(true);
-    expect(r.warnings).toEqual([]);
+    // IFR threshold-mismatch note is always emitted when IFR is within threshold
+    expect(r.warnings.some((w) => /1000 ft \/ 3 sm/i.test(w))).toBe(true);
   });
 
   it("does not flag hazards whose polygon excludes the position", () => {
@@ -110,5 +111,23 @@ describe("classifyAirmets", () => {
       new Date("2026-06-01T00:00:00Z")
     );
     expect(r.warnings.some((w) => /unavailable/i.test(w))).toBe(true);
+  });
+
+  it("emits the IFR threshold-mismatch note whenever IFR was classified", () => {
+    const r = classifyAirmets(
+      [ifrAirmet],
+      [41, -112],
+      new Date("2026-05-12T16:00:00Z")
+    );
+    expect(r.warnings.some((w) => /1000 ft \/ 3 sm/i.test(w))).toBe(true);
+  });
+
+  it("does not emit the IFR threshold-mismatch note when no IFR AIRMET was within threshold", () => {
+    const r = classifyAirmets(
+      [turbAirmet],
+      [41, -112],
+      new Date("2026-05-12T16:00:00Z")
+    );
+    expect(r.warnings.some((w) => /1000 ft \/ 3 sm/i.test(w))).toBe(false);
   });
 });

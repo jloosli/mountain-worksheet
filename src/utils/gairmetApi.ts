@@ -89,6 +89,7 @@ export function classifyAirmets(
   };
 
   let anyWithinThreshold = false;
+  let ifrWithinThreshold = false;
   for (const [hazard, list] of byHazard.entries()) {
     // Sort by abs delta from midTime; pick closest validTime
     const sorted = [...list].sort(
@@ -99,6 +100,7 @@ export function classifyAirmets(
     const bestDelta = Math.abs(Date.parse(sorted[0].validTime) - targetMs);
     if (bestDelta > VALID_TIME_THRESHOLD_MS) continue;
     anyWithinThreshold = true;
+    if (hazard === "IFR") ifrWithinThreshold = true;
 
     const bestTime = sorted[0].validTime;
     const atBestTime = list.filter((f) => f.validTime === bestTime);
@@ -108,6 +110,12 @@ export function classifyAirmets(
     if (hazard === "TURB") result.turb = hit;
     if (hazard === "MTN OBSC") result.mtnObsc = hit;
     if (hazard === "IFR") result.cielVis = hit;
+  }
+
+  if (ifrWithinThreshold) {
+    result.warnings.push(
+      "AIRMET IFR auto-flag uses 1000 ft / 3 sm threshold, not the worksheet's 2000 ft / 10 sm threshold"
+    );
   }
 
   if (!anyWithinThreshold) {
