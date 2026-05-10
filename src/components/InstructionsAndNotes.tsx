@@ -42,13 +42,13 @@ const positionFormats: Array<{
   },
   {
     format: "Airport ID / Radial / Distance",
-    example: "41.43 / -112.70",
+    example: "41°25'48\"N / 112°42'00\"W",
     entry: "KOGD/285/34",
     decimal: "41.43/-112.70",
   },
   {
     format: "VOR ID / Radial / Distance",
-    example: "41.50 / -112.76",
+    example: "41°30'00\"N / 112°45'36\"W",
     entry: "OGD/285/34",
     decimal: "41.50/-112.76",
   },
@@ -140,10 +140,10 @@ export default function InstructionsAndNotes() {
                       Format
                     </th>
                     <th className="border border-gray-300 dark:border-gray-600 px-2 py-1 font-semibold">
-                      Equivalent Lat/Long
+                      How It Is Entered
                     </th>
                     <th className="border border-gray-300 dark:border-gray-600 px-2 py-1 font-semibold">
-                      How It Is Entered
+                      Equivalent Lat/Long
                     </th>
                     <th className="border border-gray-300 dark:border-gray-600 px-2 py-1 font-semibold">
                       Converted Decimal Format
@@ -156,11 +156,11 @@ export default function InstructionsAndNotes() {
                       <td className="border border-gray-300 dark:border-gray-600 px-2 py-1">
                         {row.format}
                       </td>
-                      <td className="border border-gray-300 dark:border-gray-600 px-2 py-1 whitespace-nowrap">
-                        {row.example}
-                      </td>
                       <td className="border border-gray-300 dark:border-gray-600 px-2 py-1 font-mono whitespace-nowrap">
                         {row.entry}
+                      </td>
+                      <td className="border border-gray-300 dark:border-gray-600 px-2 py-1 whitespace-nowrap">
+                        {row.example}
                       </td>
                       <td className="border border-gray-300 dark:border-gray-600 px-2 py-1 font-mono whitespace-nowrap">
                         {row.decimal}
