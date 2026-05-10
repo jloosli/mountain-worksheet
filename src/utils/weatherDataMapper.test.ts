@@ -504,7 +504,7 @@ describe("Weather Data Mapper", () => {
         flightTime: "12:00",
       };
 
-      const result = mapWeatherDataToWorksheet(mockApiData, options);
+      const result = mapWeatherDataToWorksheet(mockApiData, null, options);
 
       expect(result.success).toBe(true);
       expect(result.data.wind).toBeDefined();
@@ -517,7 +517,7 @@ describe("Weather Data Mapper", () => {
     it("should handle missing data gracefully", () => {
       const emptyApiData = {};
 
-      const result = mapWeatherDataToWorksheet(emptyApiData);
+      const result = mapWeatherDataToWorksheet(emptyApiData, null);
 
       expect(result.success).toBe(true);
       expect(result.warnings).toContain("No wind/temperature data available");
@@ -544,7 +544,7 @@ describe("Weather Data Mapper", () => {
         ],
       };
 
-      const result = mapWeatherDataToWorksheet(invalidApiData, {
+      const result = mapWeatherDataToWorksheet(invalidApiData, null, {
         validateData: true,
       });
 
@@ -570,7 +570,7 @@ describe("Weather Data Mapper", () => {
         ],
       };
 
-      const result = mapWeatherDataToWorksheet(malformedApiData);
+      const result = mapWeatherDataToWorksheet(malformedApiData, null);
 
       // Should handle gracefully
       expect(result.success).toBe(true);
@@ -620,17 +620,46 @@ describe("Weather Data Mapper", () => {
 
       const result = mapWeatherDataToWorksheet(
         apiDataWithMultipleAirports,
+        null,
         options
       );
 
       expect(result.success).toBe(true);
       expect(result.data.altimeter).toBeDefined();
       expect(result.data.altimeter![0]).toBeCloseTo(29.9, 2); // Departure (converted from 1012.4 hPa)
-      expect(result.data.altimeter![1]).toBe(-1); // Operating (placeholder, won't overwrite)
+      expect(result.data.altimeter![1]).toBe(-1); // Operating (placeholder, won't overwrite when areaOfOps is null)
       expect(result.data.altimeter![2]).toBeCloseTo(29.95, 2); // Arrival (converted from 1014.2 hPa)
       expect(result.data.temp).toBeDefined();
       expect(result.data.temp![0]).toBe(21); // Departure
       expect(result.data.temp![2]).toBe(25); // Arrival
+    });
+
+    it("applies areaOfOps opTemp and opAltimeter to index 1", () => {
+      const mockAreaOfOps = {
+        position: [40.0, -111.0] as [number, number],
+        positionSource: "midpoint" as const,
+        windsAloft: {
+          direction: [270, 280, 290, 300, 310],
+          speed: [15, 20, 25, 30, 35],
+          temp: [10, 5, 0, -5, -10],
+        },
+        opTemp: 8,
+        opAltimeter: 30.05,
+        warnings: ["test warning from areaOfOps"],
+      };
+
+      const result = mapWeatherDataToWorksheet({}, mockAreaOfOps);
+
+      // Wind should be taken from areaOfOps
+      expect(result.data.wind).toBeDefined();
+      expect(result.data.wind![0]).toEqual([270, 280, 290, 300, 310]);
+      expect(result.data.wind![1]).toEqual([15, 20, 25, 30, 35]);
+      expect(result.data.wind![2]).toEqual([10, 5, 0, -5, -10]);
+      // opTemp and opAltimeter go to index 1
+      expect(result.data.temp![1]).toBe(8);
+      expect(result.data.altimeter![1]).toBe(30.05);
+      // Warnings from areaOfOps are propagated
+      expect(result.warnings).toContain("test warning from areaOfOps");
     });
   });
 
@@ -773,6 +802,28 @@ describe("Weather Data Mapper", () => {
       expect(result.temp![0]).toBe(18); // API data should overwrite user data
       expect(result.altimeter![0]).toBe(29.85); // API data should overwrite user data
       expect(result.rwy![0]).toBe(10000); // API data should overwrite user data
+    });
+
+    it("writes operating temp[1] and altimeter[1] when API provides them", () => {
+      const existing = {
+        temp: [10, 12, 14] as [number | null, number | null, number | null],
+        altimeter: [29.92, 29.92, 29.92] as [
+          number | null,
+          number | null,
+          number | null
+        ],
+      };
+      const apiData = {
+        temp: [20, 22, 24] as [number | null, number | null, number | null],
+        altimeter: [30.0, 30.05, 30.1] as [
+          number | null,
+          number | null,
+          number | null
+        ],
+      };
+      const merged = mergeWeatherData(existing, apiData, true);
+      expect(merged.temp).toEqual([20, 22, 24]);
+      expect(merged.altimeter).toEqual([30.0, 30.05, 30.1]);
     });
 
     it("should overwrite user data when preserveUserData is false", () => {
@@ -929,7 +980,7 @@ describe("Weather Data Mapper", () => {
         ],
       };
 
-      const result = mapWeatherDataToWorksheet(dataWithNulls, {
+      const result = mapWeatherDataToWorksheet(dataWithNulls, null, {
         validateData: true,
       });
 
@@ -961,7 +1012,7 @@ describe("Weather Data Mapper", () => {
         windTemp: [],
       };
 
-      const result = mapWeatherDataToWorksheet(emptyApiData);
+      const result = mapWeatherDataToWorksheet(emptyApiData, null);
 
       expect(result.success).toBe(true);
       expect(result.warnings.length).toBeGreaterThan(0);

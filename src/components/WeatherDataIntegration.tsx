@@ -12,6 +12,11 @@ import {
   mergeWeatherData,
   isApiPopulatedData,
 } from "@/utils/weatherDataMapper";
+import { fetchPointForecast } from "@/utils/openMeteoApi";
+import {
+  buildAreaOfOpsWeather,
+  type AreaOfOpsWeather,
+} from "@/utils/areaOfOpsWeather";
 import {
   WeatherErrorModal,
   WeatherLoadingModal,
@@ -122,8 +127,67 @@ export default function WeatherDataIntegration({
           altitudes: [3000, 6000, 9000, 12000, 15000],
         });
 
+        // Compute mid-time and op position fallback inputs
+        const depDate = new Date(`${worksheetData.date!}T${worksheetData.time!}:00Z`);
+        const durationHours = worksheetData.duration ?? 0;
+        const midTime = new Date(
+          depDate.getTime() + (durationHours / 2) * 3600 * 1000
+        );
+        const apiAirports = (apiData.airport ?? []) as Array<{
+          icaoId: string;
+          lat: number;
+          lon: number;
+        }>;
+        const findAirport = (code: string) =>
+          apiAirports.find((a) => a.icaoId?.toUpperCase() === code);
+        const depAirport = findAirport(departureAirport);
+        const arrAirport = findAirport(arrivalAirport);
+        const depAirportLatLon: [number, number] | null =
+          depAirport && typeof depAirport.lat === "number" && typeof depAirport.lon === "number"
+            ? [depAirport.lat, depAirport.lon]
+            : null;
+        const arrAirportLatLon: [number, number] | null =
+          arrAirport && typeof arrAirport.lat === "number" && typeof arrAirport.lon === "number"
+            ? [arrAirport.lat, arrAirport.lon]
+            : null;
+
+        // opPos for the Open-Meteo lat/lon (user position if set, else airport midpoint)
+        const opPos: [number, number] | null =
+          worksheetData.position?.[0] !== null &&
+          worksheetData.position?.[0] !== undefined &&
+          worksheetData.position?.[1] !== null &&
+          worksheetData.position?.[1] !== undefined
+            ? [worksheetData.position[0], worksheetData.position[1]]
+            : depAirportLatLon && arrAirportLatLon
+            ? [
+                (depAirportLatLon[0] + arrAirportLatLon[0]) / 2,
+                (depAirportLatLon[1] + arrAirportLatLon[1]) / 2,
+              ]
+            : null;
+
+        let areaOfOps: AreaOfOpsWeather | null = null;
+        if (opPos) {
+          const win = {
+            start: new Date(midTime.getTime() - 24 * 3600 * 1000),
+            end: new Date(midTime.getTime() + 24 * 3600 * 1000),
+          };
+          try {
+            const raw = await fetchPointForecast(opPos[0], opPos[1], win);
+            areaOfOps = buildAreaOfOpsWeather({
+              position: worksheetData.position ?? [null, null],
+              depAirportLatLon,
+              arrAirportLatLon,
+              midTime,
+              opAltitudeFt: worksheetData.altitude?.[1] ?? null,
+              raw,
+            });
+          } catch (err) {
+            console.warn("Open-Meteo fetch failed:", err);
+          }
+        }
+
         // Map API data to worksheet format
-        const mappingResult = mapWeatherDataToWorksheet(apiData, {
+        const mappingResult = mapWeatherDataToWorksheet(apiData, areaOfOps, {
           flightDate: worksheetData.date!,
           flightTime: worksheetData.time!,
           durationHours: worksheetData.duration ?? null,

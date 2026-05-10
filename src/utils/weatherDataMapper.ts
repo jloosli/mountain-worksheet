@@ -13,6 +13,7 @@ import type {
   WindTempResponse,
 } from "./aviationWeatherApi";
 import { selectAirportWeather } from "./airportTimeWeather";
+import type { AreaOfOpsWeather } from "./areaOfOpsWeather";
 
 // Target altitudes for wind/temperature data mapping
 export const TARGET_ALTITUDES = [3000, 6000, 9000, 12000, 15000]; // feet
@@ -40,6 +41,8 @@ export interface WeatherMappingOptions {
   durationHours?: number | null;
   departureAirport?: string;
   arrivalAirport?: string;
+  position?: [number | null, number | null];
+  opAltitudeFt?: number | null;
   validateData?: boolean;
 }
 
@@ -270,8 +273,10 @@ export function mapWeatherDataToWorksheet(
     metar?: METARResponse[];
     taf?: TAFResponse[];
     airport?: AirportResponse[];
+    // windTemp temporarily still allowed during transition; B5 will remove it
     windTemp?: WindTempResponse[];
   },
+  areaOfOps: AreaOfOpsWeather | null,
   options: WeatherMappingOptions = {}
 ): WeatherMappingResult {
   const result: WeatherMappingResult = {
@@ -320,6 +325,26 @@ export function mapWeatherDataToWorksheet(
     if (airportData.length > 0) {
       const elevationData = mapAirportElevationData(airportData, options);
       result.data = { ...result.data, ...elevationData };
+    }
+
+    // Apply area-of-ops weather (Open-Meteo) — overrides windTemp winds if available
+    if (areaOfOps) {
+      if (areaOfOps.windsAloft.direction.some((v) => v !== null)) {
+        result.data.wind = [
+          areaOfOps.windsAloft.direction,
+          areaOfOps.windsAloft.speed,
+          areaOfOps.windsAloft.temp,
+        ];
+      }
+      if (areaOfOps.opTemp !== null) {
+        if (!result.data.temp) result.data.temp = [-1, -1, -1];
+        result.data.temp[1] = areaOfOps.opTemp;
+      }
+      if (areaOfOps.opAltimeter !== null) {
+        if (!result.data.altimeter) result.data.altimeter = [-1, -1, -1];
+        result.data.altimeter[1] = areaOfOps.opAltimeter;
+      }
+      result.warnings.push(...areaOfOps.warnings);
     }
 
     // Validate mapped data
@@ -617,53 +642,21 @@ export function mergeWeatherData(
   }
 
   if (apiData.temp) {
-    // Only update departure (index 0) and arrival (index 2) temperatures, preserve operating (index 1)
-    if (result.temp && apiData.temp) {
-      // Preserve existing operating temperature
-      const existingOperatingTemp = result.temp[1];
-
-      // Update only departure and arrival temperatures (ignore placeholder -1)
-      if (apiData.temp[0] !== undefined && apiData.temp[0] !== -1) {
-        result.temp[0] = apiData.temp[0]; // departure
+    if (!result.temp) result.temp = [null, null, null];
+    apiData.temp.forEach((val, i) => {
+      if (val !== undefined && val !== -1) {
+        result.temp![i] = val;
       }
-      if (apiData.temp[2] !== undefined && apiData.temp[2] !== -1) {
-        result.temp[2] = apiData.temp[2]; // arrival
-      }
-
-      // Ensure operating temperature is preserved (manual entry only)
-      // Only restore if it wasn't a placeholder
-      if (existingOperatingTemp !== -1) {
-        result.temp[1] = existingOperatingTemp;
-      }
-    } else {
-      result.temp = apiData.temp;
-    }
+    });
   }
 
   if (apiData.altimeter) {
-    // Only update departure (index 0) and arrival (index 2) altimeters, preserve operating (index 1)
-    if (result.altimeter && apiData.altimeter) {
-      // Preserve existing operating altimeter
-      const existingOperatingAltimeter = result.altimeter[1];
-
-      // Update only departure and arrival altimeters (ignore placeholder -1)
-      if (apiData.altimeter[0] !== undefined && apiData.altimeter[0] !== -1) {
-        result.altimeter[0] = apiData.altimeter[0]; // departure
+    if (!result.altimeter) result.altimeter = [null, null, null];
+    apiData.altimeter.forEach((val, i) => {
+      if (val !== undefined && val !== -1) {
+        result.altimeter![i] = val;
       }
-      if (apiData.altimeter[2] !== undefined && apiData.altimeter[2] !== -1) {
-        result.altimeter[2] = apiData.altimeter[2]; // arrival
-      }
-
-      // Ensure operating altimeter is preserved (manual entry only)
-      // Only restore if it wasn't a placeholder
-      if (existingOperatingAltimeter !== -1) {
-        result.altimeter[1] = existingOperatingAltimeter;
-      }
-    } else {
-      // No existing altimeter data, use API data as-is (including placeholders)
-      // The operating altimeter (index 1) will be a placeholder -1 if not provided
-      result.altimeter = apiData.altimeter;
-    }
+    });
   }
 
   if (apiData.rwy) {
