@@ -32,4 +32,16 @@ describe("geodesicDestination", () => {
     expect(lat).toBeCloseTo(41.46, 1);
     expect(lon).toBeCloseTo(-112.69, 1);
   });
+
+  it("returns finite latitude even when sinLat2 would round outside [-1, 1]", () => {
+    // Travelling 0° (due north) from (89.99, 0) for 90nm crosses the pole.
+    // Spherical formula puts sinLat2 right at +1 and floating-point error
+    // can push it past 1, which would make Math.asin return NaN without
+    // the clamp.
+    const { lat, lon } = geodesicDestination(89.99, 0, 0, 90);
+    expect(Number.isFinite(lat)).toBe(true);
+    expect(Number.isFinite(lon)).toBe(true);
+    expect(lat).toBeLessThanOrEqual(90);
+    expect(lat).toBeGreaterThanOrEqual(-90);
+  });
 });

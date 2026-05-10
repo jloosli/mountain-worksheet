@@ -213,7 +213,7 @@ async function makeApiRequest<T>(
         case 404:
           throw new APIError({
             code: 404,
-            message: "Not Found - Airport or data not available",
+            message: "Not Found - Resource or data not available",
             details: await response.text(),
           });
         case 429:

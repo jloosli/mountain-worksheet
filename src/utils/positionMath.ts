@@ -18,9 +18,12 @@ export function geodesicDestination(
   const lon1 = toRad(startLon);
   const brng = toRad(trueBearingDeg);
 
-  const sinLat2 =
+  const sinLat2Raw =
     Math.sin(lat1) * Math.cos(angularDistance) +
     Math.cos(lat1) * Math.sin(angularDistance) * Math.cos(brng);
+  // Clamp to [-1, 1] to absorb floating-point drift that would otherwise
+  // make Math.asin return NaN near the poles or for long legs.
+  const sinLat2 = Math.max(-1, Math.min(1, sinLat2Raw));
   const lat2 = Math.asin(sinLat2);
 
   const y = Math.sin(brng) * Math.sin(angularDistance) * Math.cos(lat1);

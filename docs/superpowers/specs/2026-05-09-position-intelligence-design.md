@@ -47,14 +47,16 @@ The `route` field in `SortieInfo` (labeled "Area of Operations (position)") is c
 // existing
 route: string;                       // raw input (unchanged)
 // new
-position: [number, number] | null;   // [lat, lon] in DD.dddd, or null when unparsed/unrecognized
+position: [number | null, number | null];   // [lat, lon] in DD.dddd; [null, null] means unset
 ```
 
 `route` remains the source of truth. `position` is an advisory cache — it is recomputed from `route` whenever `route` changes. It is never edited independently. A reloaded URL with both fields skips re-resolution and renders immediately.
 
+The implementation uses a fixed-length tuple with null sentinels (`[null, null]` = unset) rather than `[number, number] | null`, so the field plugs directly into the existing URL-state machinery. That machinery uses initial-state values as per-element type hints; tuple-of-nulls fits that pattern, where `null` as a primitive does not.
+
 ### URL state
 
-`position` serializes via the existing `qs`-based mechanism in `src/utils/urlState.ts` as a length-2 number array. When `null`, omitted entirely. URL grows by ~24 chars only when present.
+`position` serializes via the existing `qs`-based mechanism in `src/utils/urlState.ts` as a length-2 number array. When both elements are null, the field is omitted entirely (the `filterEmpty` filter drops arrays whose values are all empty). URL grows by ~24 chars only when present.
 
 ## Parser Pipeline
 
