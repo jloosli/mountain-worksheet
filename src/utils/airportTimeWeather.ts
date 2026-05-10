@@ -12,7 +12,7 @@ export interface AirportWeatherAtTime {
   warnings: string[];
 }
 
-interface TafFcst {
+export interface TafFcst {
   timeFrom?: number;
   timeTo?: number;
   temp?: number | { sfcTemp?: number; validTime?: number }[];
@@ -94,10 +94,11 @@ export function selectAirportWeather(
   // 1) METAR if recent
   if (metar?.obsTime) {
     const obsMs = Date.parse(metar.obsTime);
-    if (
-      Number.isFinite(obsMs) &&
-      Math.abs(requestedTime.getTime() - obsMs) <= METAR_FRESHNESS_MS
-    ) {
+    if (!Number.isFinite(obsMs)) {
+      warnings.push(
+        `${metar.icaoId}: obsTime "${metar.obsTime}" could not be parsed; METAR skipped`
+      );
+    } else if (Math.abs(requestedTime.getTime() - obsMs) <= METAR_FRESHNESS_MS) {
       return {
         temp: metar.temp !== undefined ? Math.round(metar.temp) : null,
         altimeter: metarAltimeterInHg(metar.altim),
@@ -108,6 +109,7 @@ export function selectAirportWeather(
   }
 
   // 2) TAF period covering requested time
+  // TAFResponse type from aviationWeatherApi.ts omits fcsts[]; the live API returns it.
   const fcsts = (taf as unknown as { fcsts?: TafFcst[] } | undefined)?.fcsts;
   const covering = findCoveringFcst(fcsts, requestedTime);
   if (covering) {
@@ -122,6 +124,7 @@ export function selectAirportWeather(
         `${metar.icaoId}: forecast period has no temperature; using current observation (Δt = ${delta})`
       );
     }
+    // TAF fcst.altim is already inHg (unlike METARResponse.altim, which is hPa — see metarAltimeterInHg).
     return {
       temp: temp !== undefined ? Math.round(temp) : null,
       altimeter:
@@ -144,6 +147,7 @@ export function selectAirportWeather(
     );
     let temp = fcstTempValue(closest.fcst, requestedTime);
     if (temp === undefined) temp = metar?.temp;
+    // TAF fcst.altim is already inHg (unlike METARResponse.altim, which is hPa — see metarAltimeterInHg).
     return {
       temp: temp !== undefined ? Math.round(temp) : null,
       altimeter:
