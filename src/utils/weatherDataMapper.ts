@@ -116,16 +116,17 @@ export function mapAirportSpecificWeatherData(
     return { data: result, warnings };
   }
   const durationHours =
-    typeof options.durationHours === "number" && options.durationHours > 0
+    typeof options.durationHours === "number" &&
+    Number.isFinite(options.durationHours) &&
+    options.durationHours > 0
       ? options.durationHours
       : 0;
   const arrTime = new Date(depTime.getTime() + durationHours * 3600 * 1000);
 
-  const apply = (
+  const applyAirportWeather = (
     airportCode: string | undefined,
     requestedTime: Date,
-    tempIndex: 0 | 2,
-    altIndex: 0 | 2
+    index: 0 | 2
   ): void => {
     if (!airportCode) return;
     const code = airportCode.toUpperCase();
@@ -137,19 +138,19 @@ export function mapAirportSpecificWeatherData(
       const temp = sel.temp;
       if (!options.validateData || isValidTemperature(temp)) {
         if (!result.temp) result.temp = [-1, -1, -1];
-        result.temp[tempIndex] = temp;
+        result.temp[index] = temp;
       }
     }
     if (sel.altimeter !== null) {
       if (!options.validateData || isValidAltimeter(sel.altimeter)) {
         if (!result.altimeter) result.altimeter = [-1, -1, -1];
-        result.altimeter[altIndex] = sel.altimeter;
+        result.altimeter[index] = sel.altimeter;
       }
     }
   };
 
-  apply(options.departureAirport, depTime, 0, 0);
-  apply(options.arrivalAirport, arrTime, 2, 2);
+  applyAirportWeather(options.departureAirport, depTime, 0);
+  applyAirportWeather(options.arrivalAirport, arrTime, 2);
 
   return { data: result, warnings };
 }
