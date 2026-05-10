@@ -11,6 +11,8 @@ import type { WorksheetData } from "@/utils/types";
 // Mock the API functions
 jest.mock("@/utils/aviationWeatherApi");
 jest.mock("@/utils/weatherDataMapper");
+jest.mock("@/utils/openMeteoApi");
+jest.mock("@/utils/areaOfOpsWeather");
 
 // Mock functions are available but not used in simplified tests
 const mockIsApiPopulatedData = isApiPopulatedData as jest.MockedFunction<
