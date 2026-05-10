@@ -26,6 +26,7 @@
 .DS_Store
 .claude/
 *.pem
+poh/
 
 # debug
 npm-debug.log*
