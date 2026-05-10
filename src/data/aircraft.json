@@ -300,7 +300,7 @@
     },
     "stallSpeeds": {
       "flaps": [0, 30],
-      "Vso": [54, 49]
+      "Vso": [51, 41]
     },
     "climbPerformance": {
       "pressureAltitudes": [
@@ -321,6 +321,10 @@
         [755, 665, 575, 495],
         [705, 610, 530, 450]
       ]
+    },
+    "Vx": {
+      "speeds": [64, 68],
+      "altitudes": [0, 20000]
     },
     "shortFieldTakeoff": {
       "weights": [2300, 2700, 3100],
