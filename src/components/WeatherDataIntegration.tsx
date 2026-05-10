@@ -17,6 +17,7 @@ import {
   WeatherLoadingModal,
   AirportNotFoundModal,
 } from "./WeatherModal";
+import WeatherWarningsPanel from "./WeatherWarningsPanel";
 import type { WorksheetData } from "@/utils/types";
 
 interface WeatherDataIntegrationProps {
@@ -43,6 +44,7 @@ interface WeatherApiState {
   airportNotFound: string | null;
   lastUpdated: Date | null;
   isRetrying: boolean;
+  warnings: string[];
 }
 
 export default function WeatherDataIntegration({
@@ -59,6 +61,7 @@ export default function WeatherDataIntegration({
     airportNotFound: null,
     lastUpdated: null,
     isRetrying: false,
+    warnings: [],
   });
 
   const canFetchWeather = useCallback(() => {
@@ -91,6 +94,7 @@ export default function WeatherDataIntegration({
         error: null,
         airportNotFound: null,
         isRetrying: isRetry,
+        warnings: [],
       }));
 
       try {
@@ -122,6 +126,7 @@ export default function WeatherDataIntegration({
         const mappingResult = mapWeatherDataToWorksheet(apiData, {
           flightDate: worksheetData.date!,
           flightTime: worksheetData.time!,
+          durationHours: worksheetData.duration ?? null,
           departureAirport,
           arrivalAirport,
           validateData: true,
@@ -174,6 +179,7 @@ export default function WeatherDataIntegration({
           isLoading: false,
           lastUpdated: updateTime,
           isRetrying: false,
+          warnings: mappingResult.warnings,
         }));
 
         // Pass timestamp to parent
@@ -252,64 +258,67 @@ export default function WeatherDataIntegration({
   return (
     <>
       {!hideBox && (
-        <div className="flex items-center justify-between p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-          <div className="flex items-center space-x-3">
-            <CloudArrowDownIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-            <div>
-              <h3 className="text-sm font-medium text-blue-900 dark:text-blue-100">
-                Aviation Weather Data
-              </h3>
-              <p className="text-xs text-blue-700 dark:text-blue-300">
-                {isApiDataPopulated.wind ||
-                isApiDataPopulated.temperature ||
-                isApiDataPopulated.pressure ||
-                isApiDataPopulated.runway
-                  ? "Data populated from AviationWeather.gov"
-                  : "No weather data loaded"}
-              </p>
-              {apiState.lastUpdated && (
-                <p className="text-xs text-blue-600 dark:text-blue-400">
-                  Last updated: {apiState.lastUpdated.toLocaleTimeString()}
+        <>
+          <div className="flex items-center justify-between p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+            <div className="flex items-center space-x-3">
+              <CloudArrowDownIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+              <div>
+                <h3 className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                  Aviation Weather Data
+                </h3>
+                <p className="text-xs text-blue-700 dark:text-blue-300">
+                  {isApiDataPopulated.wind ||
+                  isApiDataPopulated.temperature ||
+                  isApiDataPopulated.pressure ||
+                  isApiDataPopulated.runway
+                    ? "Data populated from AviationWeather.gov"
+                    : "No weather data loaded"}
                 </p>
+                {apiState.lastUpdated && (
+                  <p className="text-xs text-blue-600 dark:text-blue-400">
+                    Last updated: {apiState.lastUpdated.toLocaleTimeString()}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              {isApiDataPopulated.wind ||
+              isApiDataPopulated.temperature ||
+              isApiDataPopulated.pressure ||
+              isApiDataPopulated.runway ? (
+                <div className="flex items-center space-x-1 text-xs text-green-600 dark:text-green-400">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span>Data Available</span>
+                </div>
+              ) : (
+                <div className="flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-400">
+                  <ExclamationTriangleIcon className="w-4 h-4" />
+                  <span>Manual Entry Required</span>
+                </div>
               )}
+
+              <button
+                type="button"
+                onClick={buttonProps.onClick}
+                disabled={buttonProps.disabled}
+                className={`px-4 py-2 rounded transition-colors flex items-center gap-2 ${
+                  canFetch && !apiState.isLoading
+                    ? "bg-green-500 text-white hover:bg-green-600"
+                    : "bg-gray-300 text-gray-500 cursor-not-allowed dark:bg-gray-600 dark:text-gray-400"
+                }`}
+              >
+                {apiState.isLoading ? (
+                  <ArrowPathIcon className="h-5 w-5 animate-spin" />
+                ) : (
+                  <CloudArrowDownIcon className="h-5 w-5" />
+                )}
+                {apiState.isLoading ? "Loading..." : "Fetch Weather"}
+              </button>
             </div>
           </div>
-
-          <div className="flex items-center space-x-2">
-            {isApiDataPopulated.wind ||
-            isApiDataPopulated.temperature ||
-            isApiDataPopulated.pressure ||
-            isApiDataPopulated.runway ? (
-              <div className="flex items-center space-x-1 text-xs text-green-600 dark:text-green-400">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span>Data Available</span>
-              </div>
-            ) : (
-              <div className="flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-400">
-                <ExclamationTriangleIcon className="w-4 h-4" />
-                <span>Manual Entry Required</span>
-              </div>
-            )}
-
-            <button
-              type="button"
-              onClick={buttonProps.onClick}
-              disabled={buttonProps.disabled}
-              className={`px-4 py-2 rounded transition-colors flex items-center gap-2 ${
-                canFetch && !apiState.isLoading
-                  ? "bg-green-500 text-white hover:bg-green-600"
-                  : "bg-gray-300 text-gray-500 cursor-not-allowed dark:bg-gray-600 dark:text-gray-400"
-              }`}
-            >
-              {apiState.isLoading ? (
-                <ArrowPathIcon className="h-5 w-5 animate-spin" />
-              ) : (
-                <CloudArrowDownIcon className="h-5 w-5" />
-              )}
-              {apiState.isLoading ? "Loading..." : "Fetch Weather"}
-            </button>
-          </div>
-        </div>
+          <WeatherWarningsPanel warnings={apiState.warnings} />
+        </>
       )}
 
       {renderButton && renderButton(buttonProps)}

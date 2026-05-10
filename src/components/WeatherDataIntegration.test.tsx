@@ -2,7 +2,7 @@
  * Unit tests for Weather Data Integration Component
  */
 
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import WeatherDataIntegration from "./WeatherDataIntegration";
 import { isApiPopulatedData } from "@/utils/weatherDataMapper";
@@ -96,5 +96,45 @@ describe("WeatherDataIntegration", () => {
 
     const fetchButton = screen.getByText("Fetch Weather");
     expect(fetchButton).toBeDisabled();
+  });
+
+  it("renders WeatherWarningsPanel with mapping warnings after successful fetch", async () => {
+    const { mapWeatherDataToWorksheet, mergeWeatherData, isApiPopulatedData } =
+      jest.requireMock("@/utils/weatherDataMapper");
+    mapWeatherDataToWorksheet.mockReturnValue({
+      success: true,
+      data: { temp: [20, null, 22] },
+      errors: [],
+      warnings: [
+        "KPVU: forecast unavailable for 2026-05-20T17:00Z; using nearest TAF period (Δt = 5.0 d)",
+      ],
+    });
+    mergeWeatherData.mockImplementation((existing: object, api: object) => ({
+      ...existing,
+      ...api,
+    }));
+    isApiPopulatedData.mockReturnValue({
+      wind: false,
+      temperature: false,
+      pressure: false,
+      runway: false,
+      altitude: false,
+    });
+    const { getWeatherDataBatch } = jest.requireMock(
+      "@/utils/aviationWeatherApi"
+    );
+    getWeatherDataBatch.mockResolvedValue({
+      metar: [],
+      taf: [],
+      airport: [],
+      windTemp: [],
+    });
+
+    render(<WeatherDataIntegration {...defaultProps} />);
+    fireEvent.click(screen.getByText("Fetch Weather"));
+
+    await waitFor(() => {
+      expect(screen.getByText(/forecast unavailable/i)).toBeInTheDocument();
+    });
   });
 });
