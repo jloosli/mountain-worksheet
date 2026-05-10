@@ -98,6 +98,15 @@ export interface RunwayInfo {
   closed: boolean;
 }
 
+export interface NavaidResponse {
+  id: string;
+  name?: string;
+  lat: number;
+  lon: number;
+  type?: string; // e.g., "VOR", "VOR-DME", "VORTAC", "NDB"
+  magvar?: number; // station declination, if exposed
+}
+
 export interface WindTempResponse {
   icaoId: string;
   validTime: string;
@@ -296,6 +305,20 @@ export async function getAirportInfo(
   };
 
   return makeApiRequest<AirportResponse[]>("airport", params);
+}
+
+/**
+ * Get navaid (VOR/NDB/etc.) information by ID.
+ */
+export async function getNavaidInfo(
+  ids: string[]
+): Promise<NavaidResponse[]> {
+  const params = {
+    ids: ids.join(","),
+    format: "json",
+  };
+
+  return makeApiRequest<NavaidResponse[]>("navaid", params);
 }
 
 /**
