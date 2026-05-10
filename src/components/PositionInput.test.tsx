@@ -148,6 +148,9 @@ describe("PositionInput - async lookup paths", () => {
   });
 
   it("ignores stale lookup results when input changes mid-flight (race protection)", async () => {
+    // PAMC is uncached (KOGD is cached by the prior test); we need both
+    // stations to actually trigger a network fetch so the slow-promise
+    // mock is consumed and the race is real.
     let resolveFirst: (v: unknown) => void = () => {};
     (getAirportInfo as jest.Mock)
       .mockImplementationOnce(
@@ -162,7 +165,7 @@ describe("PositionInput - async lookup paths", () => {
     );
 
     fireEvent.change(screen.getByRole("textbox"), {
-      target: { value: "KOGD/285/34" },
+      target: { value: "PAMC/285/34" },
     });
     act(() => {
       jest.advanceTimersByTime(350);
@@ -177,15 +180,15 @@ describe("PositionInput - async lookup paths", () => {
 
     jest.useRealTimers();
     // Resolve the stale (first) lookup AFTER the second was issued
-    resolveFirst([{ icaoId: "KOGD", lat: 41.2, lon: -112.01 }]);
+    resolveFirst([{ icaoId: "PAMC", lat: 62.95, lon: -155.6 }]);
     await act(async () => {
       await Promise.resolve();
       await Promise.resolve();
       await Promise.resolve();
     });
 
-    // Final hint should reference KSLC, not KOGD
-    expect(screen.queryByText(/KOGD/)).not.toBeInTheDocument();
+    // Final hint should reference KSLC, not PAMC
+    expect(screen.queryByText(/PAMC/)).not.toBeInTheDocument();
     expect(screen.getByText(/KSLC/)).toBeInTheDocument();
   });
 });

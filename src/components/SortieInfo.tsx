@@ -1,6 +1,6 @@
 "use client";
 
-import { ChangeEvent, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, useCallback, useEffect, useMemo, useState } from "react";
 import aircraftData from "@/data/aircraft.json";
 import type { WorksheetData } from "@/utils/types";
 import PositionInput from "@/components/PositionInput";
@@ -130,6 +130,16 @@ export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
     setFormData(updatedData);
     onUpdate({ duration: value });
   };
+
+  // Stable identity prevents the 60s currentTime ticker from cancelling
+  // PositionInput's pending debounce on every re-render.
+  const handlePositionChange = useCallback(
+    (route: string, position: [number | null, number | null]) => {
+      setFormData((prev) => ({ ...prev, route, position }));
+      onUpdate({ route, position });
+    },
+    [onUpdate]
+  );
 
   const sortieLocalTiming = useMemo(() => {
     if (!formData.date || !formData.time || !formData.time.includes(":")) {
@@ -323,11 +333,7 @@ export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
         <PositionInput
           rawValue={formData.route || ""}
           cachedPosition={formData.position ?? [null, null]}
-          onChange={(route, position) => {
-            const updated = { ...formData, route, position };
-            setFormData(updated);
-            onUpdate({ route, position });
-          }}
+          onChange={handlePositionChange}
         />
 
         <div className="space-y-2">

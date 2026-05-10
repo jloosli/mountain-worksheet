@@ -72,13 +72,19 @@ export default function PositionInput({
   useEffect(() => {
     if (rawValue !== lastPushed.current) {
       setLocalRaw(rawValue);
-      if (cachedPosition[0] !== null && cachedPosition[1] !== null) {
+      const hasCachedCoords =
+        cachedPosition[0] !== null && cachedPosition[1] !== null;
+      if (hasCachedCoords) {
         setHint({
           type: "ok",
           text: `→ ${formatLatLon(cachedPosition[0]!, cachedPosition[1]!)}`,
         });
+        // Trust the URL-cached coordinates; suppress the second effect's
+        // re-parse so we don't refetch airport/VOR lookups on hydration.
+        lastPushed.current = rawValue;
       } else if (rawValue === "") {
         setHint(null);
+        lastPushed.current = rawValue;
       }
     }
   }, [rawValue, cachedPosition]);
