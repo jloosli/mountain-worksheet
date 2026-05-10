@@ -99,3 +99,40 @@ describe("parsePosition - DDM (degree-decimal-minutes)", () => {
     expect(result.kind).toBe("unrecognized");
   });
 });
+
+describe("parsePosition - DMS (degree-minute-second)", () => {
+  it("parses DMS with letters", () => {
+    const result = parsePosition("360051N/0753004W");
+    expect(result.kind).toBe("dms");
+    if (result.kind === "dms") {
+      // 36 + 0/60 + 51/3600 = 36.01416...  → 36.0142
+      expect(result.lat).toBe(36.0142);
+      // -(75 + 30/60 + 4/3600) = -75.50111... → -75.5011
+      expect(result.lon).toBe(-75.5011);
+    }
+  });
+
+  it("parses DMS with minus", () => {
+    const result = parsePosition("360051/-0753004");
+    expect(result.kind).toBe("dms");
+    if (result.kind === "dms") {
+      expect(result.lat).toBe(36.0142);
+      expect(result.lon).toBe(-75.5011);
+    }
+  });
+
+  it("rejects DMS with seconds >= 60", () => {
+    const result = parsePosition("360060N/0753004W");
+    expect(result.kind).toBe("unrecognized");
+  });
+
+  it("rejects DMS with minutes >= 60", () => {
+    const result = parsePosition("366000N/0753004W");
+    expect(result.kind).toBe("unrecognized");
+  });
+
+  it("rejects DMS with latitude > 90", () => {
+    const result = parsePosition("910000N/0753004W");
+    expect(result.kind).toBe("unrecognized");
+  });
+});

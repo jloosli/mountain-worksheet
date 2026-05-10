@@ -65,10 +65,51 @@ const tryDdmMinus = (s: string): { lat: number; lon: number } | null => {
   return { lat: round4(lat), lon: round4(lon) };
 };
 
+const dmsFromParts = (degStr: string, minStr: string, secStr: string): number | null => {
+  const deg = Number(degStr);
+  const min = Number(minStr);
+  const sec = Number(secStr);
+  if (!Number.isFinite(deg) || !Number.isFinite(min) || !Number.isFinite(sec)) return null;
+  if (min < 0 || min >= 60) return null;
+  if (sec < 0 || sec >= 60) return null;
+  return deg + min / 60 + sec / 3600;
+};
+
+const tryDmsLetters = (s: string): { lat: number; lon: number } | null => {
+  // DDMMSS for lat (6 digits), DDDMMSS for lon (7 digits)
+  const m = s.match(/^(\d{2})(\d{2})(\d{2})([NS])\/(\d{3})(\d{2})(\d{2})([EW])$/);
+  if (!m) return null;
+  const latVal = dmsFromParts(m[1], m[2], m[3]);
+  const lonVal = dmsFromParts(m[5], m[6], m[7]);
+  if (latVal === null || lonVal === null) return null;
+  const lat = latVal * (m[4] === "S" ? -1 : 1);
+  const lon = lonVal * (m[8] === "W" ? -1 : 1);
+  if (!inRange(lat, lon)) return null;
+  return { lat: round4(lat), lon: round4(lon) };
+};
+
+const tryDmsMinus = (s: string): { lat: number; lon: number } | null => {
+  const m = s.match(/^(\d{2})(\d{2})(\d{2})\/(-?)(\d{3})(\d{2})(\d{2})$/);
+  if (!m) return null;
+  const latVal = dmsFromParts(m[1], m[2], m[3]);
+  const lonVal = dmsFromParts(m[5], m[6], m[7]);
+  if (latVal === null || lonVal === null) return null;
+  const lat = latVal;
+  const lon = lonVal * (m[4] === "-" ? -1 : 1);
+  if (!inRange(lat, lon)) return null;
+  return { lat: round4(lat), lon: round4(lon) };
+};
+
 export function parsePosition(input: string): ParsedPosition {
   const raw = input;
   const s = input.trim().toUpperCase();
   if (s === "") return { kind: "unrecognized", raw };
+
+  const dmsL = tryDmsLetters(s);
+  if (dmsL) return { kind: "dms", raw, ...dmsL };
+
+  const dmsM = tryDmsMinus(s);
+  if (dmsM) return { kind: "dms", raw, ...dmsM };
 
   const ddmL = tryDdmLetters(s);
   if (ddmL) return { kind: "ddm", raw, ...ddmL };
