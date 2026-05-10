@@ -435,7 +435,7 @@ describe("Weather Data Mapper", () => {
           wdir: 270,
           wspd: 15,
           visib: 10,
-          altim: 29.92,
+          altim: 1013.2, // hPa (≈ 29.92 inHg)
           qcField: 1,
           metarType: "METAR",
           rawOb: "KORD 151200Z 27015KT 10SM FEW250 21/12 A2992",

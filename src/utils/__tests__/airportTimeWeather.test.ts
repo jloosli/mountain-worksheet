@@ -1,5 +1,9 @@
-import { selectAirportWeather, type TafFcst } from "../airportTimeWeather";
-import type { METARResponse, TAFResponse } from "../aviationWeatherApi";
+import { selectAirportWeather } from "../airportTimeWeather";
+import type {
+  METARResponse,
+  TAFForecast,
+  TAFResponse,
+} from "../aviationWeatherApi";
 
 const baseMetar: METARResponse = {
   icaoId: "KSLC",
@@ -16,7 +20,7 @@ const baseMetar: METARResponse = {
   rawOb: "",
 };
 
-const tafFcsts = [
+const tafFcsts: TAFForecast[] = [
   {
     timeFrom: Math.floor(Date.parse("2026-05-12T15:00:00Z") / 1000),
     timeTo: Math.floor(Date.parse("2026-05-12T18:00:00Z") / 1000),
@@ -33,7 +37,7 @@ const tafFcsts = [
     wdir: 0,
     wspd: 0,
   },
-] as unknown as TafFcst[];
+];
 
 const baseTaf: TAFResponse = {
   icaoId: "KSLC",
@@ -46,7 +50,7 @@ const baseTaf: TAFResponse = {
   elev: 1300,
   fcstType: "TAF",
   fcsts: tafFcsts,
-} as unknown as TAFResponse;
+};
 
 describe("selectAirportWeather", () => {
   it("uses METAR when requested time is within ~90 min of obsTime", () => {
@@ -68,13 +72,10 @@ describe("selectAirportWeather", () => {
   });
 
   it("falls back to METAR temp when matched TAF period has no temp", () => {
-    const tafNoTemp = {
+    const tafNoTemp: TAFResponse = {
       ...baseTaf,
-      fcsts: [
-        { ...tafFcsts[0], temp: undefined },
-        tafFcsts[1],
-      ],
-    } as unknown as TAFResponse;
+      fcsts: [{ ...tafFcsts[0], temp: undefined }, tafFcsts[1]],
+    };
     const requested = new Date("2026-05-12T17:00:00Z"); // > 90 min from METAR, in fcst[0]
     const result = selectAirportWeather(baseMetar, tafNoTemp, requested);
     expect(result.source).toBe("taf-fcst");
@@ -109,7 +110,7 @@ describe("selectAirportWeather", () => {
   });
 
   it("picks the temporally closest sfcTemp from a TAF array-form temp", () => {
-    const arrayTempFcsts = [
+    const arrayTempFcsts: TAFForecast[] = [
       {
         timeFrom: Math.floor(Date.parse("2026-05-12T15:00:00Z") / 1000),
         timeTo: Math.floor(Date.parse("2026-05-12T21:00:00Z") / 1000),
@@ -125,8 +126,8 @@ describe("selectAirportWeather", () => {
           },
         ],
       },
-    ] as unknown as TafFcst[];
-    const tafArray = { ...baseTaf, fcsts: arrayTempFcsts } as unknown as TAFResponse;
+    ];
+    const tafArray: TAFResponse = { ...baseTaf, fcsts: arrayTempFcsts };
     // Requested time near 19:00 (closer to sfcTemp 26)
     const requested = new Date("2026-05-12T18:45:00Z");
     const result = selectAirportWeather(baseMetar, tafArray, requested);

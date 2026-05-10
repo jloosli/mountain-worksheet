@@ -1,4 +1,8 @@
-import type { METARResponse, TAFResponse } from "./aviationWeatherApi";
+import type {
+  METARResponse,
+  TAFForecast,
+  TAFResponse,
+} from "./aviationWeatherApi";
 
 const HPA_TO_INHG = 0.0295299;
 const METAR_FRESHNESS_MS = 90 * 60 * 1000;
@@ -12,19 +16,12 @@ export interface AirportWeatherAtTime {
   warnings: string[];
 }
 
-export interface TafFcst {
-  timeFrom?: number;
-  timeTo?: number;
-  temp?: number | { sfcTemp?: number; validTime?: number }[];
-  altim?: number;
-}
-
 function metarAltimeterInHg(altim: number | undefined): number | null {
   if (altim === undefined) return null;
   return Math.round(altim * HPA_TO_INHG * 100) / 100;
 }
 
-function fcstTempValue(fcst: TafFcst, requested: Date): number | undefined {
+function fcstTempValue(fcst: TAFForecast, requested: Date): number | undefined {
   // TAF temp may be a number or an array of {validTime, sfcTemp}; handle both
   if (typeof fcst.temp === "number") return fcst.temp;
   if (Array.isArray(fcst.temp) && fcst.temp.length > 0) {
@@ -44,9 +41,9 @@ function fcstTempValue(fcst: TafFcst, requested: Date): number | undefined {
 }
 
 function findCoveringFcst(
-  fcsts: TafFcst[] | undefined,
+  fcsts: TAFForecast[] | undefined,
   requested: Date
-): TafFcst | undefined {
+): TAFForecast | undefined {
   if (!fcsts || fcsts.length === 0) return undefined;
   const reqEpoch = Math.floor(requested.getTime() / 1000);
   return fcsts.find(
@@ -59,12 +56,12 @@ function findCoveringFcst(
 }
 
 function findClosestFcst(
-  fcsts: TafFcst[] | undefined,
+  fcsts: TAFForecast[] | undefined,
   requested: Date
-): { fcst: TafFcst; deltaMs: number } | undefined {
+): { fcst: TAFForecast; deltaMs: number } | undefined {
   if (!fcsts || fcsts.length === 0) return undefined;
   const reqMs = requested.getTime();
-  let best: { fcst: TafFcst; deltaMs: number } | undefined;
+  let best: { fcst: TAFForecast; deltaMs: number } | undefined;
   for (const f of fcsts) {
     if (f.timeFrom === undefined || f.timeTo === undefined) continue;
     const fromMs = f.timeFrom * 1000;
@@ -109,8 +106,7 @@ export function selectAirportWeather(
   }
 
   // 2) TAF period covering requested time
-  // TAFResponse type from aviationWeatherApi.ts omits fcsts[]; the live API returns it.
-  const fcsts = (taf as unknown as { fcsts?: TafFcst[] } | undefined)?.fcsts;
+  const fcsts = taf?.fcsts;
   const covering = findCoveringFcst(fcsts, requestedTime);
   if (covering) {
     let temp = fcstTempValue(covering, requestedTime);

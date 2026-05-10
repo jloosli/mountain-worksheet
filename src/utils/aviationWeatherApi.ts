@@ -26,12 +26,14 @@ export interface METARResponse {
   icaoId: string;
   obsTime: string;
   report: string;
+  /** Temperature in degrees Celsius. */
   temp: number;
   dewp: number;
   wdir: number;
   wspd: number;
   wgst?: number;
   visib: number;
+  /** Altimeter setting in hectopascals (hPa). Convert to inHg with × 0.0295299. */
   altim: number;
   slp?: number;
   qcField: number;
@@ -49,6 +51,23 @@ export interface METARResponse {
   vertVis?: number;
   metarType: string;
   rawOb: string;
+}
+
+/** A single TAF forecast period entry from `TAFResponse.fcsts`. */
+export interface TAFForecast {
+  /** Period start, Unix epoch seconds. */
+  timeFrom?: number;
+  /** Period end, Unix epoch seconds. */
+  timeTo?: number;
+  /**
+   * Surface temperature for this period. Either a single °C value, or a sparse
+   * array of `{ validTime, sfcTemp }` samples within the period.
+   */
+  temp?: number | { sfcTemp?: number; validTime?: number }[];
+  /** Altimeter setting in inHg. (Note: METAR `altim` is in hPa — different unit.) */
+  altim?: number;
+  wdir?: number;
+  wspd?: number;
 }
 
 export interface TAFResponse {
@@ -69,6 +88,8 @@ export interface TAFResponse {
   validTimeEnd?: string;
   prob?: number;
   fcstType: string;
+  /** Per-period forecast entries. Live API returns these even though older fixtures may omit them. */
+  fcsts?: TAFForecast[];
 }
 
 export interface AirportResponse {
