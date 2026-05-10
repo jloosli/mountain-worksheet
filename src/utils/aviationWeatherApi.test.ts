@@ -7,7 +7,6 @@ import {
   getTAF,
   getAirportInfo,
   getNavaidInfo,
-  getWindTemp,
   getWeatherDataBatch,
   debouncedRequest,
   APIError,
@@ -15,7 +14,6 @@ import {
   type TAFResponse,
   type AirportResponse,
   type NavaidResponse,
-  type WindTempResponse,
 } from "./aviationWeatherApi";
 
 // Mock fetch globally
@@ -256,42 +254,6 @@ describe("Aviation Weather API", () => {
     });
   });
 
-  describe("getWindTemp", () => {
-    const mockWindTempResponse: WindTempResponse[] = [
-      {
-        icaoId: "KORD",
-        validTime: "2024-01-15T12:00:00Z",
-        altitude: 3000,
-        wdir: 270,
-        wspd: 25,
-        temp: 15,
-        pressure: 26.92,
-      },
-    ];
-
-    it("should fetch wind/temperature data successfully", async () => {
-      (fetch as jest.Mock).mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockWindTempResponse,
-      });
-
-      const result = await getWindTemp(["KORD"], [3000, 6000, 9000]);
-
-      expect(fetch).toHaveBeenCalledWith(
-        expect.stringContaining("/api/aviation-weather?endpoint=windtemp"),
-        expect.objectContaining({
-          method: "GET",
-          headers: {
-            Accept: "application/json",
-            "User-Agent": "Mountain-Worksheet/1.0",
-          },
-        })
-      );
-
-      expect(result).toEqual(mockWindTempResponse);
-    });
-  });
-
   describe("getWeatherDataBatch", () => {
     const mockBatchResponse = {
       metar: [
@@ -339,17 +301,6 @@ describe("Aviation Weather API", () => {
           taaf: true,
         },
       ],
-      windTemp: [
-        {
-          icaoId: "KORD",
-          validTime: "2024-01-15T12:00:00Z",
-          altitude: 3000,
-          wdir: 270,
-          wspd: 25,
-          temp: 15,
-          pressure: 26.92,
-        },
-      ],
     };
 
     it("should fetch all weather data types in batch", async () => {
@@ -365,15 +316,11 @@ describe("Aviation Weather API", () => {
         .mockResolvedValueOnce({
           ok: true,
           json: async () => mockBatchResponse.airport,
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => mockBatchResponse.windTemp,
         });
 
       const result = await getWeatherDataBatch(["KORD"]);
 
-      expect(fetch).toHaveBeenCalledTimes(4);
+      expect(fetch).toHaveBeenCalledTimes(3);
       expect(result).toEqual(mockBatchResponse);
     });
 
@@ -386,23 +333,17 @@ describe("Aviation Weather API", () => {
         .mockResolvedValueOnce({
           ok: true,
           json: async () => mockBatchResponse.airport,
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => mockBatchResponse.windTemp,
         });
 
       const result = await getWeatherDataBatch(["KORD"], {
         includeMETAR: true,
         includeTAF: false,
         includeAirport: true,
-        includeWindTemp: true,
       });
 
       expect(result.metar).toEqual(mockBatchResponse.metar);
       expect(result.taf).toBeUndefined();
       expect(result.airport).toEqual(mockBatchResponse.airport);
-      expect(result.windTemp).toEqual(mockBatchResponse.windTemp);
     });
 
     it("should respect include options", async () => {
@@ -415,14 +356,12 @@ describe("Aviation Weather API", () => {
         includeMETAR: true,
         includeTAF: false,
         includeAirport: false,
-        includeWindTemp: false,
       });
 
       expect(fetch).toHaveBeenCalledTimes(1);
       expect(result.metar).toEqual(mockBatchResponse.metar);
       expect(result.taf).toBeUndefined();
       expect(result.airport).toBeUndefined();
-      expect(result.windTemp).toBeUndefined();
     });
   });
 

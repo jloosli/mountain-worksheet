@@ -3,13 +3,11 @@
  */
 
 import {
-  mapWindTempData,
   mapAirportSpecificWeatherData,
   mapRunwayData,
   mapWeatherDataToWorksheet,
   isApiPopulatedData,
   mergeWeatherData,
-  TARGET_ALTITUDES,
   VALIDATION_RANGES,
   type WeatherMappingOptions,
 } from "./weatherDataMapper";
@@ -18,126 +16,9 @@ import type {
   METARResponse,
   TAFResponse,
   AirportResponse,
-  WindTempResponse,
 } from "./aviationWeatherApi";
 
 describe("Weather Data Mapper", () => {
-  describe("mapWindTempData", () => {
-    const mockWindTempData: WindTempResponse[] = [
-      {
-        icaoId: "KORD",
-        validTime: "2024-01-15T12:00:00Z",
-        altitude: 3000,
-        wdir: 270,
-        wspd: 25,
-        temp: 15,
-        pressure: 26.92,
-      },
-      {
-        icaoId: "KORD",
-        validTime: "2024-01-15T12:00:00Z",
-        altitude: 6000,
-        wdir: 280,
-        wspd: 30,
-        temp: 10,
-        pressure: 24.92,
-      },
-      {
-        icaoId: "KORD",
-        validTime: "2024-01-15T12:00:00Z",
-        altitude: 9000,
-        wdir: 290,
-        wspd: 35,
-        temp: 5,
-        pressure: 22.92,
-      },
-    ];
-
-    it("should map wind/temperature data to worksheet format", () => {
-      const result = mapWindTempData(mockWindTempData);
-
-      expect(result.wind).toBeDefined();
-      expect(result.wind![0]).toEqual([270, 280, 290, null, null]); // Wind direction
-      expect(result.wind![1]).toEqual([25, 30, 35, null, null]); // Wind speed
-      expect(result.wind![2]).toEqual([15, 10, 5, null, null]); // Temperature
-    });
-
-    it("should handle empty wind/temperature data", () => {
-      const result = mapWindTempData([]);
-
-      expect(result.wind).toBeDefined();
-      expect(result.wind![0]).toEqual([null, null, null, null, null]);
-      expect(result.wind![1]).toEqual([null, null, null, null, null]);
-      expect(result.wind![2]).toEqual([null, null, null, null, null]);
-    });
-
-    it("should find closest altitude data within 2000 feet", () => {
-      const dataWithCloseAltitudes: WindTempResponse[] = [
-        {
-          icaoId: "KORD",
-          validTime: "2024-01-15T12:00:00Z",
-          altitude: 3200, // Close to 3000
-          wdir: 270,
-          wspd: 25,
-          temp: 15,
-          pressure: 26.92,
-        },
-        {
-          icaoId: "KORD",
-          validTime: "2024-01-15T12:00:00Z",
-          altitude: 5000, // Close to 6000
-          wdir: 280,
-          wspd: 30,
-          temp: 10,
-          pressure: 24.92,
-        },
-      ];
-
-      const result = mapWindTempData(dataWithCloseAltitudes);
-
-      expect(result.wind![0][0]).toBe(270); // 3000ft mapped from 3200ft
-      expect(result.wind![0][1]).toBe(280); // 6000ft mapped from 5000ft
-    });
-
-    it("should not map data that is too far from target altitude", () => {
-      const dataWithFarAltitudes: WindTempResponse[] = [
-        {
-          icaoId: "KORD",
-          validTime: "2024-01-15T12:00:00Z",
-          altitude: 500, // Too far from 3000 (2500 feet difference)
-          wdir: 270,
-          wspd: 25,
-          temp: 15,
-          pressure: 26.92,
-        },
-      ];
-
-      const result = mapWindTempData(dataWithFarAltitudes);
-
-      expect(result.wind![0][0]).toBe(null); // Should remain null (no data)
-    });
-
-    it("should validate data when validation is enabled", () => {
-      const invalidData: WindTempResponse[] = [
-        {
-          icaoId: "KORD",
-          validTime: "2024-01-15T12:00:00Z",
-          altitude: 3000,
-          wdir: 400, // Invalid wind direction
-          wspd: 200, // Invalid wind speed
-          temp: 100, // Invalid temperature
-          pressure: 26.92,
-        },
-      ];
-
-      const result = mapWindTempData(invalidData, { validateData: true });
-
-      expect(result.wind![0][0]).toBe(null); // Should remain null due to validation
-      expect(result.wind![1][0]).toBe(null); // Should remain null due to validation
-      expect(result.wind![2][0]).toBe(null); // Should remain null due to validation
-    });
-  });
-
   describe("mapRunwayData", () => {
     const mockAirportData: AirportResponse[] = [
       {
@@ -482,17 +363,6 @@ describe("Weather Data Mapper", () => {
           ],
         },
       ],
-      windTemp: [
-        {
-          icaoId: "KORD",
-          validTime: "2024-01-15T12:00:00Z",
-          altitude: 3000,
-          wdir: 270,
-          wspd: 25,
-          temp: 15,
-          pressure: 26.92,
-        },
-      ],
     };
 
     it("should map all weather data successfully", () => {
@@ -504,10 +374,9 @@ describe("Weather Data Mapper", () => {
         flightTime: "12:00",
       };
 
-      const result = mapWeatherDataToWorksheet(mockApiData, options);
+      const result = mapWeatherDataToWorksheet(mockApiData, null, options);
 
       expect(result.success).toBe(true);
-      expect(result.data.wind).toBeDefined();
       expect(result.data.temp).toBeDefined();
       expect(result.data.altimeter).toBeDefined();
       expect(result.data.rwy).toBeDefined();
@@ -517,7 +386,7 @@ describe("Weather Data Mapper", () => {
     it("should handle missing data gracefully", () => {
       const emptyApiData = {};
 
-      const result = mapWeatherDataToWorksheet(emptyApiData);
+      const result = mapWeatherDataToWorksheet(emptyApiData, null);
 
       expect(result.success).toBe(true);
       expect(result.warnings).toContain("No wind/temperature data available");
@@ -530,47 +399,24 @@ describe("Weather Data Mapper", () => {
     });
 
     it("should validate data when validation is enabled", () => {
-      const invalidApiData = {
-        windTemp: [
-          {
-            icaoId: "KORD",
-            validTime: "2024-01-15T12:00:00Z",
-            altitude: 3000,
-            wdir: 400, // Invalid wind direction
-            wspd: 200, // Invalid wind speed
-            temp: 100, // Invalid temperature
-            pressure: 26.92,
-          },
-        ],
-      };
-
-      const result = mapWeatherDataToWorksheet(invalidApiData, {
+      const result = mapWeatherDataToWorksheet({}, null, {
         validateData: true,
       });
 
       expect(result.success).toBe(true);
-      // The validation happens in individual mapping functions, so errors are caught there
-      // The main function should still succeed but with warnings
+      // No areaOfOps → wind warning is emitted
       expect(result.warnings.length).toBeGreaterThan(0);
     });
 
     it("should handle mapping errors", () => {
       // Test with malformed data that would cause errors
       const malformedApiData = {
-        windTemp: [
-          {
-            icaoId: "KORD",
-            validTime: "2024-01-15T12:00:00Z",
-            altitude: 3000,
-            wdir: null as unknown as number, // This should cause issues
-            wspd: undefined as unknown as number,
-            temp: "invalid" as unknown as number,
-            pressure: 26.92,
-          },
-        ],
+        metar: null as unknown as [],
+        taf: "bad" as unknown as [],
+        airport: 42 as unknown as [],
       };
 
-      const result = mapWeatherDataToWorksheet(malformedApiData);
+      const result = mapWeatherDataToWorksheet(malformedApiData, null);
 
       // Should handle gracefully
       expect(result.success).toBe(true);
@@ -620,17 +466,95 @@ describe("Weather Data Mapper", () => {
 
       const result = mapWeatherDataToWorksheet(
         apiDataWithMultipleAirports,
+        null,
         options
       );
 
       expect(result.success).toBe(true);
       expect(result.data.altimeter).toBeDefined();
       expect(result.data.altimeter![0]).toBeCloseTo(29.9, 2); // Departure (converted from 1012.4 hPa)
-      expect(result.data.altimeter![1]).toBe(-1); // Operating (placeholder, won't overwrite)
+      expect(result.data.altimeter![1]).toBe(-1); // Operating (placeholder, won't overwrite when areaOfOps is null)
       expect(result.data.altimeter![2]).toBeCloseTo(29.95, 2); // Arrival (converted from 1014.2 hPa)
       expect(result.data.temp).toBeDefined();
       expect(result.data.temp![0]).toBe(21); // Departure
       expect(result.data.temp![2]).toBe(25); // Arrival
+    });
+
+    it("applies areaOfOps opTemp and opAltimeter to index 1", () => {
+      const mockAreaOfOps = {
+        position: [40.0, -111.0] as [number, number],
+        positionSource: "midpoint" as const,
+        windsAloft: {
+          direction: [270, 280, 290, 300, 310],
+          speed: [15, 20, 25, 30, 35],
+          temp: [10, 5, 0, -5, -10],
+        },
+        opTemp: 8,
+        opAltimeter: 30.05,
+        warnings: ["test warning from areaOfOps"],
+      };
+
+      const result = mapWeatherDataToWorksheet({}, mockAreaOfOps);
+
+      // Wind should be taken from areaOfOps
+      expect(result.data.wind).toBeDefined();
+      expect(result.data.wind![0]).toEqual([270, 280, 290, 300, 310]);
+      expect(result.data.wind![1]).toEqual([15, 20, 25, 30, 35]);
+      expect(result.data.wind![2]).toEqual([10, 5, 0, -5, -10]);
+      // opTemp and opAltimeter go to index 1
+      expect(result.data.temp![1]).toBe(8);
+      expect(result.data.altimeter![1]).toBe(30.05);
+      // Warnings from areaOfOps are propagated
+      expect(result.warnings).toContain("test warning from areaOfOps");
+    });
+
+    it("skips out-of-range opTemp and opAltimeter when validateData is on", () => {
+      const mockAreaOfOps = {
+        position: [40.0, -111.0] as [number, number],
+        positionSource: "midpoint" as const,
+        windsAloft: {
+          direction: [null, null, null, null, null],
+          speed: [null, null, null, null, null],
+          temp: [null, null, null, null, null],
+        },
+        opTemp: 200, // out of range (max 50)
+        opAltimeter: 99, // out of range (max 31.0)
+        warnings: [],
+      };
+
+      const result = mapWeatherDataToWorksheet({}, mockAreaOfOps, {
+        validateData: true,
+      });
+
+      expect(result.data.temp).toBeUndefined();
+      expect(result.data.altimeter).toBeUndefined();
+      expect(
+        result.warnings.some((w) => /Operating temperature.*out of valid range/.test(w))
+      ).toBe(true);
+      expect(
+        result.warnings.some((w) => /Operating altimeter.*out of valid range/.test(w))
+      ).toBe(true);
+    });
+
+    it("includes altitude labels in wind validation errors", () => {
+      const mockAreaOfOps = {
+        position: [40.0, -111.0] as [number, number],
+        positionSource: "midpoint" as const,
+        windsAloft: {
+          direction: [999, 280, 290, 300, 310], // 999 invalid at 3000 ft
+          speed: [15, 20, 25, 30, 35],
+          temp: [10, 5, 0, -5, -10],
+        },
+        opTemp: null,
+        opAltimeter: null,
+        warnings: [],
+      };
+      const result = mapWeatherDataToWorksheet({}, mockAreaOfOps, {
+        validateData: true,
+      });
+      expect(
+        result.errors.some((e) => /Invalid wind direction at 3000 ft/.test(e))
+      ).toBe(true);
     });
   });
 
@@ -775,6 +699,28 @@ describe("Weather Data Mapper", () => {
       expect(result.rwy![0]).toBe(10000); // API data should overwrite user data
     });
 
+    it("writes operating temp[1] and altimeter[1] when API provides them", () => {
+      const existing = {
+        temp: [10, 12, 14] as [number | null, number | null, number | null],
+        altimeter: [29.92, 29.92, 29.92] as [
+          number | null,
+          number | null,
+          number | null
+        ],
+      };
+      const apiData = {
+        temp: [20, 22, 24] as [number | null, number | null, number | null],
+        altimeter: [30.0, 30.05, 30.1] as [
+          number | null,
+          number | null,
+          number | null
+        ],
+      };
+      const merged = mergeWeatherData(existing, apiData, true);
+      expect(merged.temp).toEqual([20, 22, 24]);
+      expect(merged.altimeter).toEqual([30.0, 30.05, 30.1]);
+    });
+
     it("should overwrite user data when preserveUserData is false", () => {
       const existingData = {
         wind: [
@@ -900,10 +846,6 @@ describe("Weather Data Mapper", () => {
   });
 
   describe("Constants", () => {
-    it("should have correct target altitudes", () => {
-      expect(TARGET_ALTITUDES).toEqual([3000, 6000, 9000, 12000, 15000]);
-    });
-
     it("should have correct validation ranges", () => {
       expect(VALIDATION_RANGES.windDirection).toEqual({ min: 0, max: 359 });
       expect(VALIDATION_RANGES.windSpeed).toEqual({ min: 0, max: 150 });
@@ -915,21 +857,7 @@ describe("Weather Data Mapper", () => {
 
   describe("Edge Cases", () => {
     it("should handle null and undefined values gracefully", () => {
-      const dataWithNulls = {
-        windTemp: [
-          {
-            icaoId: "KORD",
-            validTime: "2024-01-15T12:00:00Z",
-            altitude: 3000,
-            wdir: null as unknown as number, // Invalid wind direction
-            wspd: undefined as unknown as number, // Invalid wind speed
-            temp: "invalid" as unknown as number, // Invalid temperature
-            pressure: 26.92,
-          },
-        ],
-      };
-
-      const result = mapWeatherDataToWorksheet(dataWithNulls, {
+      const result = mapWeatherDataToWorksheet({}, null, {
         validateData: true,
       });
 
@@ -958,10 +886,9 @@ describe("Weather Data Mapper", () => {
         metar: [],
         taf: [],
         airport: [],
-        windTemp: [],
       };
 
-      const result = mapWeatherDataToWorksheet(emptyApiData);
+      const result = mapWeatherDataToWorksheet(emptyApiData, null);
 
       expect(result.success).toBe(true);
       expect(result.warnings.length).toBeGreaterThan(0);

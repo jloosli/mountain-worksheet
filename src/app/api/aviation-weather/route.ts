@@ -4,7 +4,6 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { parseWindTempData } from "@/utils/windTempParser";
 
 const AVIATION_WEATHER_BASE_URL = "https://aviationweather.gov/api/data";
 
@@ -98,26 +97,12 @@ export async function GET(request: NextRequest) {
         );
       }
     } else {
-      // Handle plain text response (like windtemp data)
+      // Plain text response: best-effort JSON parse, otherwise return raw
       const textData = await response.text();
-
-      // For windtemp endpoint, parse the plain text data
-      if (endpoint === "windtemp") {
-        try {
-          const parsedData = parseWindTempData(textData);
-          data = parsedData.data; // Return just the data array to match expected format
-        } catch (parseError) {
-          console.error("Error parsing windtemp data:", parseError);
-          data = []; // Return empty array if parsing fails
-        }
-      } else {
-        // Try to parse as JSON, fallback to text
-        try {
-          data = JSON.parse(textData);
-        } catch {
-          // Return the raw text data
-          data = { raw: textData };
-        }
+      try {
+        data = JSON.parse(textData);
+      } catch {
+        data = { raw: textData };
       }
     }
 
