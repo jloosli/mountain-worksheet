@@ -523,7 +523,7 @@ describe("Weather Data Mapper", () => {
         warnings: [],
       };
 
-      const result = mapWeatherDataToWorksheet({}, mockAreaOfOps, {
+      const result = mapWeatherDataToWorksheet({}, mockAreaOfOps, null, {
         validateData: true,
       });
 
@@ -550,7 +550,7 @@ describe("Weather Data Mapper", () => {
         opAltimeter: null,
         warnings: [],
       };
-      const result = mapWeatherDataToWorksheet({}, mockAreaOfOps, {
+      const result = mapWeatherDataToWorksheet({}, mockAreaOfOps, null, {
         validateData: true,
       });
       expect(
