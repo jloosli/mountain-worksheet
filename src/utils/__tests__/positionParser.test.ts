@@ -67,3 +67,35 @@ describe("parsePosition - decimal formats", () => {
     expect(result.raw).toBe("Cache Valley");
   });
 });
+
+describe("parsePosition - DDM (degree-decimal-minutes)", () => {
+  it("parses DDM with letters", () => {
+    const result = parsePosition("3600.86N/07530.07W");
+    expect(result.kind).toBe("ddm");
+    if (result.kind === "ddm") {
+      // 36 + 0.86/60 = 36.0143...
+      expect(result.lat).toBe(36.0143);
+      // 75 + 30.07/60 = 75.5012... (negated)
+      expect(result.lon).toBe(-75.5012);
+    }
+  });
+
+  it("parses DDM with minus", () => {
+    const result = parsePosition("3600.86/-07530.07");
+    expect(result.kind).toBe("ddm");
+    if (result.kind === "ddm") {
+      expect(result.lat).toBe(36.0143);
+      expect(result.lon).toBe(-75.5012);
+    }
+  });
+
+  it("rejects DDM with minutes >= 60", () => {
+    const result = parsePosition("3660.00N/07530.07W");
+    expect(result.kind).toBe("unrecognized");
+  });
+
+  it("rejects DDM with degrees out of range", () => {
+    const result = parsePosition("9100.00N/07530.07W");
+    expect(result.kind).toBe("unrecognized");
+  });
+});
