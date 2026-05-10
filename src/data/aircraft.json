@@ -293,7 +293,7 @@
     "maxGrossWeight": 3100,
     "fuelCapacity": 87,
     "fuelWeightPerGallon": 6,
-    "serviceCeiling": 12000,
+    "serviceCeiling": 20000,
     "maneuvering": {
       "weights": [2100, 2600, 3100],
       "Va": [91, 101, 110]
