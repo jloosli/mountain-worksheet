@@ -122,6 +122,7 @@ export default function WeatherDataIntegration({
         const mappingResult = mapWeatherDataToWorksheet(apiData, {
           flightDate: worksheetData.date!,
           flightTime: worksheetData.time!,
+          durationHours: worksheetData.duration ?? null,
           departureAirport,
           arrivalAirport,
           validateData: true,
