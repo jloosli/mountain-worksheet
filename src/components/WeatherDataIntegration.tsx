@@ -15,6 +15,7 @@ import {
 import { fetchPointForecast } from "@/utils/openMeteoApi";
 import {
   buildAreaOfOpsWeather,
+  greatCircleMidpoint,
   type AreaOfOpsWeather,
 } from "@/utils/areaOfOpsWeather";
 import {
@@ -149,7 +150,9 @@ export default function WeatherDataIntegration({
             ? [arrAirport.lat, arrAirport.lon]
             : null;
 
-        // opPos for the Open-Meteo lat/lon (user position if set, else airport midpoint)
+        // opPos for the Open-Meteo lat/lon (user position if set, else airport midpoint).
+        // Use the same great-circle midpoint that buildAreaOfOpsWeather will pick — an
+        // arithmetic mean would fetch a different point than what we display to the user.
         const opPos: [number, number] | null =
           worksheetData.position?.[0] !== null &&
           worksheetData.position?.[0] !== undefined &&
@@ -157,10 +160,7 @@ export default function WeatherDataIntegration({
           worksheetData.position?.[1] !== undefined
             ? [worksheetData.position[0], worksheetData.position[1]]
             : depAirportLatLon && arrAirportLatLon
-            ? [
-                (depAirportLatLon[0] + arrAirportLatLon[0]) / 2,
-                (depAirportLatLon[1] + arrAirportLatLon[1]) / 2,
-              ]
+            ? greatCircleMidpoint(depAirportLatLon, arrAirportLatLon)
             : null;
 
         let areaOfOps: AreaOfOpsWeather | null = null;

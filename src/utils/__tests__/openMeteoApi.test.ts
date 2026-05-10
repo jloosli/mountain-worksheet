@@ -1,6 +1,7 @@
 import {
   fetchPointForecast,
   interpolateAtAltitude,
+  pickClosestTimeIdx,
   PRESSURE_LEVELS,
   M_TO_FT,
 } from "../openMeteoApi";
@@ -101,6 +102,79 @@ describe("openMeteoApi", () => {
 
     it("converts metres to feet via M_TO_FT", () => {
       expect(M_TO_FT).toBeCloseTo(3.28084, 4);
+    });
+
+    it("returns nulls (not NaN) when sample has no finite heights", () => {
+      const empty = {
+        timeIdx: 0,
+        heightsFtByLevel: {
+          925: NaN, 900: NaN, 850: NaN, 800: NaN, 700: NaN, 600: NaN, 500: NaN,
+        },
+        tempByLevel: {
+          925: NaN, 900: NaN, 850: NaN, 800: NaN, 700: NaN, 600: NaN, 500: NaN,
+        },
+        wspdByLevel: {
+          925: NaN, 900: NaN, 850: NaN, 800: NaN, 700: NaN, 600: NaN, 500: NaN,
+        },
+        wdirByLevel: {
+          925: NaN, 900: NaN, 850: NaN, 800: NaN, 700: NaN, 600: NaN, 500: NaN,
+        },
+      };
+      const r = interpolateAtAltitude(9000, empty);
+      expect(r.temp).toBeNull();
+      expect(r.wspd).toBeNull();
+      expect(r.wdir).toBeNull();
+    });
+
+    it("returns nulls when bracketing-level temps/winds are non-finite", () => {
+      const partial = {
+        ...sample,
+        tempByLevel: { ...sample.tempByLevel, 850: NaN, 700: NaN },
+        wspdByLevel: { ...sample.wspdByLevel, 850: NaN, 700: NaN },
+        wdirByLevel: { ...sample.wdirByLevel, 850: NaN, 700: NaN },
+      };
+      const r = interpolateAtAltitude(9000, partial);
+      expect(r.temp).toBeNull();
+      expect(r.wspd).toBeNull();
+      expect(r.wdir).toBeNull();
+    });
+
+    it("does not divide by zero when two levels share a geopotential height", () => {
+      const collapsed = {
+        ...sample,
+        heightsFtByLevel: { ...sample.heightsFtByLevel, 850: 5000, 800: 5000 },
+      };
+      const r = interpolateAtAltitude(5000, collapsed);
+      expect(Number.isFinite(r.temp as number)).toBe(true);
+      expect(Number.isFinite(r.wspd as number)).toBe(true);
+      expect(Number.isFinite(r.wdir as number)).toBe(true);
+    });
+  });
+
+  describe("pickClosestTimeIdx", () => {
+    it("handles naive ISO8601 (no timezone) by assuming UTC", () => {
+      const raw = {
+        hourly: { time: ["2026-05-12T15:00", "2026-05-12T16:00", "2026-05-12T17:00"] },
+      };
+      const r = pickClosestTimeIdx(raw, new Date("2026-05-12T16:10:00Z"));
+      expect(r.idx).toBe(1);
+    });
+
+    it("handles timestamps that already include 'Z' without double-appending", () => {
+      const raw = {
+        hourly: { time: ["2026-05-12T15:00Z", "2026-05-12T16:00Z"] },
+      };
+      const r = pickClosestTimeIdx(raw, new Date("2026-05-12T16:00:00Z"));
+      expect(r.idx).toBe(1);
+      expect(Number.isFinite(r.deltaMs)).toBe(true);
+    });
+
+    it("handles timestamps with +HH:MM offsets", () => {
+      const raw = {
+        hourly: { time: ["2026-05-12T08:00-07:00", "2026-05-12T09:00-07:00"] },
+      };
+      const r = pickClosestTimeIdx(raw, new Date("2026-05-12T16:00:00Z"));
+      expect(r.idx).toBe(1);
     });
   });
 });

@@ -507,6 +507,55 @@ describe("Weather Data Mapper", () => {
       // Warnings from areaOfOps are propagated
       expect(result.warnings).toContain("test warning from areaOfOps");
     });
+
+    it("skips out-of-range opTemp and opAltimeter when validateData is on", () => {
+      const mockAreaOfOps = {
+        position: [40.0, -111.0] as [number, number],
+        positionSource: "midpoint" as const,
+        windsAloft: {
+          direction: [null, null, null, null, null],
+          speed: [null, null, null, null, null],
+          temp: [null, null, null, null, null],
+        },
+        opTemp: 200, // out of range (max 50)
+        opAltimeter: 99, // out of range (max 31.0)
+        warnings: [],
+      };
+
+      const result = mapWeatherDataToWorksheet({}, mockAreaOfOps, {
+        validateData: true,
+      });
+
+      expect(result.data.temp).toBeUndefined();
+      expect(result.data.altimeter).toBeUndefined();
+      expect(
+        result.warnings.some((w) => /Operating temperature.*out of valid range/.test(w))
+      ).toBe(true);
+      expect(
+        result.warnings.some((w) => /Operating altimeter.*out of valid range/.test(w))
+      ).toBe(true);
+    });
+
+    it("includes altitude labels in wind validation errors", () => {
+      const mockAreaOfOps = {
+        position: [40.0, -111.0] as [number, number],
+        positionSource: "midpoint" as const,
+        windsAloft: {
+          direction: [999, 280, 290, 300, 310], // 999 invalid at 3000 ft
+          speed: [15, 20, 25, 30, 35],
+          temp: [10, 5, 0, -5, -10],
+        },
+        opTemp: null,
+        opAltimeter: null,
+        warnings: [],
+      };
+      const result = mapWeatherDataToWorksheet({}, mockAreaOfOps, {
+        validateData: true,
+      });
+      expect(
+        result.errors.some((e) => /Invalid wind direction at 3000 ft/.test(e))
+      ).toBe(true);
+    });
   });
 
   describe("isApiPopulatedData", () => {

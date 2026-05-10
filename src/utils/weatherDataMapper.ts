@@ -13,6 +13,7 @@ import type {
 } from "./aviationWeatherApi";
 import { selectAirportWeather } from "./airportTimeWeather";
 import type { AreaOfOpsWeather } from "./areaOfOpsWeather";
+import { TARGET_ALTITUDES_FT } from "./areaOfOpsWeather";
 
 // Validation ranges
 export const VALIDATION_RANGES = {
@@ -278,12 +279,24 @@ export function mapWeatherDataToWorksheet(
         ];
       }
       if (areaOfOps.opTemp !== null) {
-        if (!result.data.temp) result.data.temp = [-1, -1, -1];
-        result.data.temp[1] = areaOfOps.opTemp;
+        if (!options.validateData || isValidTemperature(areaOfOps.opTemp)) {
+          if (!result.data.temp) result.data.temp = [-1, -1, -1];
+          result.data.temp[1] = areaOfOps.opTemp;
+        } else {
+          result.warnings.push(
+            `Operating temperature ${areaOfOps.opTemp}°C out of valid range; skipped`
+          );
+        }
       }
       if (areaOfOps.opAltimeter !== null) {
-        if (!result.data.altimeter) result.data.altimeter = [-1, -1, -1];
-        result.data.altimeter[1] = areaOfOps.opAltimeter;
+        if (!options.validateData || isValidAltimeter(areaOfOps.opAltimeter)) {
+          if (!result.data.altimeter) result.data.altimeter = [-1, -1, -1];
+          result.data.altimeter[1] = areaOfOps.opAltimeter;
+        } else {
+          result.warnings.push(
+            `Operating altimeter ${areaOfOps.opAltimeter} inHg out of valid range; skipped`
+          );
+        }
       }
       result.warnings.push(...areaOfOps.warnings);
     }
@@ -382,10 +395,15 @@ function validateMappedData(data: Partial<WorksheetData>): {
 
   // Validate wind data
   if (data.wind) {
+    const altLabel = (index: number): string => {
+      const ft = TARGET_ALTITUDES_FT[index];
+      return ft ? `${ft} ft` : `column ${index}`;
+    };
+
     data.wind[0].forEach((dir, index) => {
       if (dir !== null && dir !== undefined && !isValidWindDirection(dir)) {
         errors.push(
-          `Invalid wind direction at column ${index}: ${dir}`
+          `Invalid wind direction at ${altLabel(index)}: ${dir}`
         );
       }
     });
@@ -393,7 +411,7 @@ function validateMappedData(data: Partial<WorksheetData>): {
     data.wind[1].forEach((speed, index) => {
       if (speed !== null && speed !== undefined && !isValidWindSpeed(speed)) {
         errors.push(
-          `Invalid wind speed at column ${index}: ${speed}`
+          `Invalid wind speed at ${altLabel(index)}: ${speed}`
         );
       }
     });
@@ -401,7 +419,7 @@ function validateMappedData(data: Partial<WorksheetData>): {
     data.wind[2].forEach((temp, index) => {
       if (temp !== null && temp !== undefined && !isValidTemperature(temp)) {
         errors.push(
-          `Invalid temperature at column ${index}: ${temp}`
+          `Invalid temperature at ${altLabel(index)}: ${temp}`
         );
       }
     });
