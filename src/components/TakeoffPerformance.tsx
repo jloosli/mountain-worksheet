@@ -1,48 +1,12 @@
 import React from "react";
 import TOLDErrorDisplay from "./TOLDErrorDisplay";
 import TOLDFallbackDisplay from "./TOLDFallbackDisplay";
-import type { TOLDError } from "@/utils/types";
+import type { TOLDViewModel } from "@/utils/derived";
 
 interface TakeoffPerformanceProps {
   aircraftModel?: string;
   airports: [string, string]; // [departure, arrival]
-  toldData?: {
-    results: {
-      takeoffGroundRoll: { departure: number | null; arrival: number | null };
-      takeoff50ftObstacle: { departure: number | null; arrival: number | null };
-      landingGroundRoll: { departure: number | null; arrival: number | null };
-      landing50ftObstacle: { departure: number | null; arrival: number | null };
-      availableRunwayRemainingTakeoffGroundRoll: {
-        departure: number | null;
-        arrival: number | null;
-      };
-      availableRunwayRemainingTakeoff50ft: {
-        departure: number | null;
-        arrival: number | null;
-      };
-    } | null;
-    status: string;
-    errors: TOLDError[];
-    warnings: TOLDError[];
-    extrapolationWarnings: TOLDError[];
-    isCalculating: boolean;
-    errorSummary: {
-      count: number;
-      critical: number;
-      warnings: number;
-      messages: string[];
-    } | null;
-    warningSummary: {
-      count: number;
-      validation: number;
-      extrapolation: number;
-      messages: string[];
-    } | null;
-    hasErrors: boolean;
-    hasWarnings: boolean;
-    retryCalculation: () => void;
-    clearErrors: () => void;
-  };
+  toldData?: TOLDViewModel;
 }
 
 export default function TakeoffPerformance({
@@ -102,7 +66,6 @@ export default function TakeoffPerformance({
         aircraftModel={aircraftModel}
         airports={airports}
         reason={getFallbackReason()}
-        onRetry={toldData?.retryCalculation}
       />
     );
   }
@@ -115,13 +78,11 @@ export default function TakeoffPerformance({
     return value.toLocaleString();
   };
 
-  // Helper function to get display value with loading/error states
+  // Helper function to get display value with error states
   const getDisplayValue = (
     value: number | null | undefined,
-    isCalculating: boolean,
-    hasErrors: boolean
+    hasErrors: boolean,
   ): string => {
-    if (isCalculating) return "Calculating...";
     if (hasErrors) return "Error";
     return formatNumber(value);
   };
@@ -129,11 +90,9 @@ export default function TakeoffPerformance({
   // Helper function to get CSS classes for conditional styling
   const getCellClasses = (
     value: number | null | undefined,
-    isCalculating: boolean,
-    hasErrors: boolean
+    hasErrors: boolean,
   ): string => {
     const baseClasses = "py-2 px-4 text-right";
-    if (isCalculating) return `${baseClasses} text-blue-600 dark:text-blue-400`;
     if (hasErrors) return `${baseClasses} text-red-600 dark:text-red-400`;
     if (value === null || value === undefined)
       return `${baseClasses} text-gray-500 dark:text-gray-400`;
@@ -144,22 +103,18 @@ export default function TakeoffPerformance({
   // Shows red text for negative values
   const getAvailableRunwayCellClasses = (
     value: number | null | undefined,
-    isCalculating: boolean,
-    hasErrors: boolean
+    hasErrors: boolean,
   ): string => {
     const baseClasses = "py-2 px-4 text-right";
-    if (isCalculating) return `${baseClasses} text-blue-600 dark:text-blue-400`;
     if (hasErrors) return `${baseClasses} text-red-600 dark:text-red-400`;
     if (value === null || value === undefined)
       return `${baseClasses} text-gray-500 dark:text-gray-400`;
-    // Show red text for negative values (available runway remaining)
     if (value < 0) return `${baseClasses} text-red-600 dark:text-red-400`;
     return baseClasses;
   };
 
   // Extract TOLD data
   const results = toldData?.results;
-  const isCalculating = toldData?.isCalculating || false;
   const hasErrors = toldData?.hasErrors || false;
 
   return (
@@ -174,8 +129,6 @@ export default function TakeoffPerformance({
           errors={toldData.errors}
           warnings={toldData.warnings}
           extrapolationWarnings={toldData.extrapolationWarnings}
-          onRetry={toldData.retryCalculation}
-          onClear={toldData.clearErrors}
         />
       )}
 
@@ -215,14 +168,12 @@ export default function TakeoffPerformance({
                 className={
                   getCellClasses(
                     results?.takeoffGroundRoll.departure,
-                    isCalculating,
                     hasErrors
                   ) + " border-r-0 dark:border-gray-700"
                 }
               >
                 {getDisplayValue(
                   results?.takeoffGroundRoll.departure,
-                  isCalculating,
                   hasErrors
                 )}
               </td>
@@ -230,14 +181,12 @@ export default function TakeoffPerformance({
                 className={
                   getCellClasses(
                     results?.takeoffGroundRoll.arrival,
-                    isCalculating,
                     hasErrors
                   ) + " border-r dark:border-gray-700"
                 }
               >
                 {getDisplayValue(
                   results?.takeoffGroundRoll.arrival,
-                  isCalculating,
                   hasErrors
                 )}
               </td>
@@ -245,27 +194,23 @@ export default function TakeoffPerformance({
                 className={
                   getCellClasses(
                     results?.takeoff50ftObstacle.departure,
-                    isCalculating,
                     hasErrors
                   ) + " border-r-0 dark:border-gray-700"
                 }
               >
                 {getDisplayValue(
                   results?.takeoff50ftObstacle.departure,
-                  isCalculating,
                   hasErrors
                 )}
               </td>
               <td
                 className={getCellClasses(
                   results?.takeoff50ftObstacle.arrival,
-                  isCalculating,
                   hasErrors
                 )}
               >
                 {getDisplayValue(
                   results?.takeoff50ftObstacle.arrival,
-                  isCalculating,
                   hasErrors
                 )}
               </td>
@@ -276,14 +221,12 @@ export default function TakeoffPerformance({
                 className={
                   getCellClasses(
                     results?.landingGroundRoll.departure,
-                    isCalculating,
                     hasErrors
                   ) + " border-r-0 dark:border-gray-700"
                 }
               >
                 {getDisplayValue(
                   results?.landingGroundRoll.departure,
-                  isCalculating,
                   hasErrors
                 )}
               </td>
@@ -291,14 +234,12 @@ export default function TakeoffPerformance({
                 className={
                   getCellClasses(
                     results?.landingGroundRoll.arrival,
-                    isCalculating,
                     hasErrors
                   ) + " border-r dark:border-gray-700"
                 }
               >
                 {getDisplayValue(
                   results?.landingGroundRoll.arrival,
-                  isCalculating,
                   hasErrors
                 )}
               </td>
@@ -306,27 +247,23 @@ export default function TakeoffPerformance({
                 className={
                   getCellClasses(
                     results?.landing50ftObstacle.departure,
-                    isCalculating,
                     hasErrors
                   ) + " border-r-0 dark:border-gray-700"
                 }
               >
                 {getDisplayValue(
                   results?.landing50ftObstacle.departure,
-                  isCalculating,
                   hasErrors
                 )}
               </td>
               <td
                 className={getCellClasses(
                   results?.landing50ftObstacle.arrival,
-                  isCalculating,
                   hasErrors
                 )}
               >
                 {getDisplayValue(
                   results?.landing50ftObstacle.arrival,
-                  isCalculating,
                   hasErrors
                 )}
               </td>
@@ -338,14 +275,12 @@ export default function TakeoffPerformance({
                   getAvailableRunwayCellClasses(
                     results?.availableRunwayRemainingTakeoffGroundRoll
                       .departure,
-                    isCalculating,
                     hasErrors
                   ) + " border-r-0 dark:border-gray-700"
                 }
               >
                 {getDisplayValue(
                   results?.availableRunwayRemainingTakeoffGroundRoll.departure,
-                  isCalculating,
                   hasErrors
                 )}
               </td>
@@ -353,14 +288,12 @@ export default function TakeoffPerformance({
                 className={
                   getAvailableRunwayCellClasses(
                     results?.availableRunwayRemainingTakeoffGroundRoll.arrival,
-                    isCalculating,
                     hasErrors
                   ) + " border-r dark:border-gray-700"
                 }
               >
                 {getDisplayValue(
                   results?.availableRunwayRemainingTakeoffGroundRoll.arrival,
-                  isCalculating,
                   hasErrors
                 )}
               </td>
@@ -368,27 +301,23 @@ export default function TakeoffPerformance({
                 className={
                   getAvailableRunwayCellClasses(
                     results?.availableRunwayRemainingTakeoff50ft.departure,
-                    isCalculating,
                     hasErrors
                   ) + " border-r-0 dark:border-gray-700"
                 }
               >
                 {getDisplayValue(
                   results?.availableRunwayRemainingTakeoff50ft.departure,
-                  isCalculating,
                   hasErrors
                 )}
               </td>
               <td
                 className={getAvailableRunwayCellClasses(
                   results?.availableRunwayRemainingTakeoff50ft.arrival,
-                  isCalculating,
                   hasErrors
                 )}
               >
                 {getDisplayValue(
                   results?.availableRunwayRemainingTakeoff50ft.arrival,
-                  isCalculating,
                   hasErrors
                 )}
               </td>

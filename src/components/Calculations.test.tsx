@@ -283,4 +283,65 @@ describe("Calculations", () => {
       expect(numericCells.length).toBeGreaterThan(0);
     });
   });
+
+  it("updates operating Density Altitude immediately when operating temperature changes (issue #98)", () => {
+    const initial: WorksheetData = {
+      ...mockWorksheetData,
+      altitude: [4472, 10000, 4321],
+      altimeter: [29.92, 29.92, 29.92],
+      temp: [20, 20, 20],
+    };
+    const { rerender } = render(<Calculations state={initial} />);
+
+    const firstDA = screen
+      .getByText("Density Altitude (feet)")
+      .closest("tr")!
+      .querySelectorAll("td")[2].textContent;
+
+    const updated: WorksheetData = {
+      ...initial,
+      temp: [20, 35, 20], // operating column hotter
+    };
+    rerender(<Calculations state={updated} />);
+
+    const secondDA = screen
+      .getByText("Density Altitude (feet)")
+      .closest("tr")!
+      .querySelectorAll("td")[2].textContent;
+
+    expect(secondDA).not.toBe(firstDA);
+    expect(secondDA).not.toBe("-");
+  });
+
+  it("updates operating Rate of Climb when operating PA changes (issue #98)", () => {
+    const initial: WorksheetData = {
+      ...mockWorksheetData,
+      altitude: [4472, 6000, 4321],
+      altimeter: [29.92, 29.92, 29.92],
+      temp: [20, 20, 20],
+      weight: 2700,
+    };
+    const { rerender } = render(<Calculations state={initial} />);
+
+    const firstROC = screen
+      .getByText("Rate of Climb (MGW)")
+      .closest("tr")!
+      .querySelectorAll("td")[2].textContent;
+
+    rerender(
+      <Calculations
+        state={{
+          ...initial,
+          altitude: [4472, 12000, 4321], // raise operating altitude
+        }}
+      />
+    );
+
+    const secondROC = screen
+      .getByText("Rate of Climb (MGW)")
+      .closest("tr")!
+      .querySelectorAll("td")[2].textContent;
+
+    expect(secondROC).not.toBe(firstROC);
+  });
 });

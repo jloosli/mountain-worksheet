@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import aircraftData from "@/data/aircraft.json";
 import {
   bilinearInterpolate,
@@ -6,7 +5,11 @@ import {
   findInverseXgivenYandZ,
   FlexibleInterpolationTable,
 } from "@/utils/interpolation";
-import { calculateVra, calculateVx, pressureAltitudeToDensityAltitude } from "@/utils/formulas";
+import {
+  calculateVra,
+  calculateVx,
+  pressureAltitudeToDensityAltitude,
+} from "@/utils/formulas";
 import { Aircraft } from "@/utils/types";
 
 interface ClimbPerformanceProps {
@@ -24,59 +27,34 @@ export default function ClimbPerformance({
   PAs,
   altimeters,
 }: ClimbPerformanceProps) {
-  const [ratesOfClimb, setRatesOfClimb] = useState<[number | null, number | null, number | null]>([
-    null, null, null,
-  ]);
-  const [percentMGW, setPercentMGW] = useState<number | null>(null);
-  const [aircraft, setAircraft] = useState<Aircraft | null>(null);
+  if (!aircraftModel) return null;
 
-  useEffect(() => {
-    if (aircraftModel) {
-      const airplane = aircraftData.find((a) => a.id === aircraftModel);
-      if (airplane) {
-        setAircraft(airplane);
-      }
-    }
-  }, [aircraftModel]);
+  const aircraft: Aircraft | null =
+    (aircraftData.find((a) => a.id === aircraftModel) as Aircraft | undefined) ?? null;
 
-  useEffect(() => {
-    if (!aircraftModel) return;
-    const aircraft = aircraftData.find((a) => a.id === aircraftModel);
-    if (!aircraft) return;
-
-    const climbPerformance: FlexibleInterpolationTable = aircraft.climbPerformance;
-    const options = {
-      xAxisName: "pressureAltitudes",
-      yAxisName: "temperatures",
-    };
-
-    const newRates: [number | null, number | null, number | null] = [null, null, null];
+  const ratesOfClimb: [number | null, number | null, number | null] = [null, null, null];
+  if (aircraft) {
+    const climbTable: FlexibleInterpolationTable = aircraft.climbPerformance;
+    const options = { xAxisName: "pressureAltitudes", yAxisName: "temperatures" };
     for (let i = 0; i < 3; i++) {
       const pa = PAs?.[i];
       const oat = OATs?.[i];
       if (pa != null && oat != null) {
         try {
-          newRates[i] = Math.round(
-            bilinearInterpolateFlexible(climbPerformance, pa, oat, options)
+          ratesOfClimb[i] = Math.round(
+            bilinearInterpolateFlexible(climbTable, pa, oat, options)
           );
         } catch {
-          newRates[i] = null;
+          ratesOfClimb[i] = null;
         }
       }
     }
-    setRatesOfClimb(newRates);
-  }, [OATs, PAs, aircraftModel]);
+  }
 
-  useEffect(() => {
-    if (weight && aircraft?.maxGrossWeight) {
-      const percent = Math.round((weight / aircraft.maxGrossWeight) * 100);
-      setPercentMGW(percent);
-    } else {
-      setPercentMGW(null);
-    }
-  }, [weight, aircraft]);
-
-  if (!aircraftModel) return null;
+  const percentMGW: number | null =
+    weight && aircraft?.maxGrossWeight
+      ? Math.round((weight / aircraft.maxGrossWeight) * 100)
+      : null;
 
   // Helper function to determine cell styling based on value
   const getPercentageStyle = (percent: number | null) => {

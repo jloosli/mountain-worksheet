@@ -1,181 +1,44 @@
-import { useEffect, useState } from "react";
-import {
-  altitudeToPressureAltitude,
-  pressureAltitudeToDensityAltitude,
-} from "@/utils/formulas";
+type Triple = [number | null, number | null, number | null];
 
 interface AltitudesProps {
-  altitudes: [number | null, number | null, number | null];
-  altimeters: [number | null, number | null, number | null];
-  temperatures: [number | null, number | null, number | null];
-  onPressureUpdate: (
-    pressureAltitudes: [number | null, number | null, number | null]
-  ) => void;
+  altitudes: Triple;
+  PAs: Triple;
+  DAs: Triple;
 }
 
-export default function Altitudes({
-  altitudes,
-  altimeters,
-  temperatures,
-  onPressureUpdate,
-}: AltitudesProps) {
-  const [pressures, setPressures] = useState<{
-    departurePA: number | null;
-    departureDA: number | null;
-    altitudePA: number | null;
-    altitudeDA: number | null;
-    arrivalPA: number | null;
-    arrivalDA: number | null;
-  }>({
-    departurePA: null,
-    departureDA: null,
-    altitudePA: null,
-    altitudeDA: null,
-    arrivalPA: null,
-    arrivalDA: null,
-  });
+function fmt(v: number | null): string {
+  return v === null ? "-" : Math.round(v).toLocaleString();
+}
 
-  useEffect(() => {
-    const departurePressureAltitude =
-      temperatures[0] !== null && temperatures[0] !== undefined && temperatures[0] !== -1 &&
-      altitudes[0] !== null && altitudes[0] !== undefined &&
-      altimeters[0] !== null && altimeters[0] !== undefined && altimeters[0] !== -1
-        ? altitudeToPressureAltitude(
-            Number(altitudes[0]),
-            Number(altimeters[0])
-          )
-        : null;
-    const departureDensityAltitude =
-      departurePressureAltitude !== null && departurePressureAltitude !== undefined &&
-      altitudes[0] !== null && altitudes[0] !== undefined &&
-      temperatures[0] !== null && temperatures[0] !== undefined && temperatures[0] !== -1
-        ? pressureAltitudeToDensityAltitude(
-            Number(departurePressureAltitude),
-            Number(temperatures[0])
-          )
-        : null;
-    const operatingPressureAltitude =
-      temperatures[1] !== null && temperatures[1] !== undefined && temperatures[1] !== -1 &&
-      altitudes[1] !== null && altitudes[1] !== undefined &&
-      altimeters[1] !== null && altimeters[1] !== undefined && altimeters[1] !== -1
-        ? altitudeToPressureAltitude(
-            Number(altitudes[1]),
-            Number(altimeters[1])
-          )
-        : null;
-    const operatingDensityAltitude =
-      operatingPressureAltitude !== null && operatingPressureAltitude !== undefined &&
-      altitudes[1] !== null && altitudes[1] !== undefined &&
-      temperatures[1] !== null && temperatures[1] !== undefined && temperatures[1] !== -1
-        ? pressureAltitudeToDensityAltitude(
-            Number(operatingPressureAltitude),
-            Number(temperatures[1])
-          )
-        : null;
-    const arrivalPressureAltitude =
-      temperatures[2] !== null && temperatures[2] !== undefined && temperatures[2] !== -1 &&
-      altitudes[2] !== null && altitudes[2] !== undefined &&
-      altimeters[2] !== null && altimeters[2] !== undefined && altimeters[2] !== -1
-        ? altitudeToPressureAltitude(
-            Number(altitudes[2]),
-            Number(altimeters[2])
-          )
-        : null;
-    const arrivalDensityAltitude =
-      arrivalPressureAltitude !== null && arrivalPressureAltitude !== undefined &&
-      altitudes[2] !== null && altitudes[2] !== undefined &&
-      temperatures[2] !== null && temperatures[2] !== undefined && temperatures[2] !== -1
-        ? pressureAltitudeToDensityAltitude(
-            Number(arrivalPressureAltitude),
-            Number(temperatures[2])
-          )
-        : null;
-    setPressures({
-      departurePA: departurePressureAltitude,
-      departureDA: departureDensityAltitude,
-      altitudePA: operatingPressureAltitude,
-      altitudeDA: operatingDensityAltitude,
-      arrivalPA: arrivalPressureAltitude,
-      arrivalDA: arrivalDensityAltitude,
-    });
-    onPressureUpdate([
-      departurePressureAltitude,
-      operatingPressureAltitude,
-      arrivalPressureAltitude,
-    ]);
-  }, [altitudes, altimeters, temperatures, onPressureUpdate]);
+export default function Altitudes({ altitudes, PAs, DAs }: AltitudesProps) {
   return (
     <table className="min-w-full border-collapse border border-gray-300 dark:border-gray-700">
       <thead>
         <tr>
-          <th className="border border-gray-300 dark:border-gray-700 p-2">
-            Altitudes
-          </th>
-          <th className="border border-gray-300 dark:border-gray-700 p-2">
-            Departure
-          </th>
-          <th className="border border-gray-300 dark:border-gray-700 p-2">
-            Operating
-          </th>
-          <th className="border border-gray-300 dark:border-gray-700 p-2">
-            Arrival
-          </th>
+          <th className="border border-gray-300 dark:border-gray-700 p-2">Altitudes</th>
+          <th className="border border-gray-300 dark:border-gray-700 p-2">Departure</th>
+          <th className="border border-gray-300 dark:border-gray-700 p-2">Operating</th>
+          <th className="border border-gray-300 dark:border-gray-700 p-2">Arrival</th>
         </tr>
       </thead>
       <tbody>
         <tr>
-          <td className="border border-gray-300 dark:border-gray-700 p-2">
-            Actual Altitude (feet)
-          </td>
-          <td className="border border-gray-300 dark:border-gray-700 p-2 text-right">
-            {altitudes[0] ? Math.round(altitudes[0]).toLocaleString() : "-"}
-          </td>
-          <td className="border border-gray-300 dark:border-gray-700 p-2 text-right">
-            {altitudes[1] ? Math.round(altitudes[1]).toLocaleString() : "-"}
-          </td>
-          <td className="border border-gray-300 dark:border-gray-700 p-2 text-right">
-            {altitudes[2] ? Math.round(altitudes[2]).toLocaleString() : "-"}
-          </td>
+          <td className="border border-gray-300 dark:border-gray-700 p-2">Actual Altitude (feet)</td>
+          <td className="border border-gray-300 dark:border-gray-700 p-2 text-right">{fmt(altitudes[0])}</td>
+          <td className="border border-gray-300 dark:border-gray-700 p-2 text-right">{fmt(altitudes[1])}</td>
+          <td className="border border-gray-300 dark:border-gray-700 p-2 text-right">{fmt(altitudes[2])}</td>
         </tr>
         <tr>
-          <td className="border border-gray-300 dark:border-gray-700 p-2">
-            Pressure Altitude (feet)
-          </td>
-          <td className="border border-gray-300 dark:border-gray-700 p-2 text-right">
-            {pressures.departurePA
-              ? Math.round(pressures.departurePA).toLocaleString()
-              : "-"}
-          </td>
-          <td className="border border-gray-300 dark:border-gray-700 p-2 text-right">
-            {pressures.altitudePA
-              ? Math.round(pressures.altitudePA).toLocaleString()
-              : "-"}
-          </td>
-          <td className="border border-gray-300 dark:border-gray-700 p-2 text-right">
-            {pressures.arrivalPA
-              ? Math.round(pressures.arrivalPA).toLocaleString()
-              : "-"}
-          </td>
+          <td className="border border-gray-300 dark:border-gray-700 p-2">Pressure Altitude (feet)</td>
+          <td className="border border-gray-300 dark:border-gray-700 p-2 text-right">{fmt(PAs[0])}</td>
+          <td className="border border-gray-300 dark:border-gray-700 p-2 text-right">{fmt(PAs[1])}</td>
+          <td className="border border-gray-300 dark:border-gray-700 p-2 text-right">{fmt(PAs[2])}</td>
         </tr>
         <tr>
-          <td className="border border-gray-300 dark:border-gray-700 p-2">
-            Density Altitude (feet)
-          </td>
-          <td className="border border-gray-300 dark:border-gray-700 p-2 text-right">
-            {pressures.departureDA
-              ? Math.round(pressures.departureDA).toLocaleString()
-              : "-"}
-          </td>
-          <td className="border border-gray-300 dark:border-gray-700 p-2 text-right">
-            {pressures.altitudeDA
-              ? Math.round(pressures.altitudeDA).toLocaleString()
-              : "-"}
-          </td>
-          <td className="border border-gray-300 dark:border-gray-700 p-2 text-right">
-            {pressures.arrivalDA
-              ? Math.round(pressures.arrivalDA).toLocaleString()
-              : "-"}
-          </td>
+          <td className="border border-gray-300 dark:border-gray-700 p-2">Density Altitude (feet)</td>
+          <td className="border border-gray-300 dark:border-gray-700 p-2 text-right">{fmt(DAs[0])}</td>
+          <td className="border border-gray-300 dark:border-gray-700 p-2 text-right">{fmt(DAs[1])}</td>
+          <td className="border border-gray-300 dark:border-gray-700 p-2 text-right">{fmt(DAs[2])}</td>
         </tr>
       </tbody>
     </table>

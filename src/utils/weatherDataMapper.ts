@@ -88,14 +88,22 @@ export function mapAirportSpecificWeatherData(
     if (sel.temp !== null) {
       const temp = sel.temp;
       if (!options.validateData || isValidTemperature(temp)) {
-        if (!result.temp) result.temp = [-1, -1, -1];
-        result.temp[index] = temp;
+        const next = (result.temp ? [...result.temp] : [-1, -1, -1]) as [
+          number | null,
+          number | null,
+          number | null,
+        ];
+        next[index] = temp;
+        result.temp = next;
       }
     }
     if (sel.altimeter !== null) {
       if (!options.validateData || isValidAltimeter(sel.altimeter)) {
-        if (!result.altimeter) result.altimeter = [-1, -1, -1];
-        result.altimeter[index] = sel.altimeter;
+        const next = (result.altimeter
+          ? [...result.altimeter]
+          : [-1, -1, -1]) as [number | null, number | null, number | null];
+        next[index] = sel.altimeter;
+        result.altimeter = next;
       }
     }
   };
@@ -281,8 +289,11 @@ export function mapWeatherDataToWorksheet(
       }
       if (areaOfOps.opTemp !== null) {
         if (!options.validateData || isValidTemperature(areaOfOps.opTemp)) {
-          if (!result.data.temp) result.data.temp = [-1, -1, -1];
-          result.data.temp[1] = areaOfOps.opTemp;
+          const next = (result.data.temp
+            ? [...result.data.temp]
+            : [-1, -1, -1]) as [number | null, number | null, number | null];
+          next[1] = areaOfOps.opTemp;
+          result.data.temp = next;
         } else {
           result.warnings.push(
             `Operating temperature ${areaOfOps.opTemp}°C out of valid range; skipped`
@@ -291,8 +302,11 @@ export function mapWeatherDataToWorksheet(
       }
       if (areaOfOps.opAltimeter !== null) {
         if (!options.validateData || isValidAltimeter(areaOfOps.opAltimeter)) {
-          if (!result.data.altimeter) result.data.altimeter = [-1, -1, -1];
-          result.data.altimeter[1] = areaOfOps.opAltimeter;
+          const next = (result.data.altimeter
+            ? [...result.data.altimeter]
+            : [-1, -1, -1]) as [number | null, number | null, number | null];
+          next[1] = areaOfOps.opAltimeter;
+          result.data.altimeter = next;
         } else {
           result.warnings.push(
             `Operating altimeter ${areaOfOps.opAltimeter} inHg out of valid range; skipped`
@@ -531,21 +545,27 @@ export function mergeWeatherData(
   }
 
   if (apiData.temp) {
-    if (!result.temp) result.temp = [null, null, null];
+    const next = (
+      result.temp ? [...result.temp] : [null, null, null]
+    ) as [number | null, number | null, number | null];
     apiData.temp.forEach((val, i) => {
       if (val !== undefined && val !== -1) {
-        result.temp![i] = val;
+        next[i] = val;
       }
     });
+    result.temp = next;
   }
 
   if (apiData.altimeter) {
-    if (!result.altimeter) result.altimeter = [null, null, null];
+    const next = (
+      result.altimeter ? [...result.altimeter] : [null, null, null]
+    ) as [number | null, number | null, number | null];
     apiData.altimeter.forEach((val, i) => {
       if (val !== undefined && val !== -1) {
-        result.altimeter![i] = val;
+        next[i] = val;
       }
     });
+    result.altimeter = next;
   }
 
   if (apiData.rwy) {
@@ -553,28 +573,25 @@ export function mergeWeatherData(
   }
 
   if (apiData.altitude) {
-    // Only update departure (index 0) and arrival (index 2) altitudes, preserve operating (index 1)
-    if (result.altitude && apiData.altitude) {
-      // Preserve existing operating altitude
-      const existingOperatingAltitude = result.altitude[1];
-
-      // Update only departure and arrival altitudes
-      if (apiData.altitude[0] !== undefined) {
-        result.altitude[0] = apiData.altitude[0]; // departure
+    if (result.altitude) {
+      const next = [...result.altitude] as [
+        number | null,
+        number | null,
+        number | null,
+      ];
+      if (apiData.altitude[0] !== undefined) next[0] = apiData.altitude[0];
+      if (apiData.altitude[2] !== undefined) next[2] = apiData.altitude[2];
+      // Operating slot: -1 sentinel means "don't update"; otherwise overwrite.
+      if (apiData.altitude[1] !== undefined && apiData.altitude[1] !== -1) {
+        next[1] = apiData.altitude[1];
       }
-      if (apiData.altitude[2] !== undefined) {
-        result.altitude[2] = apiData.altitude[2]; // arrival
-      }
-
-      // Don't update operating altitude if it's -1 (special value indicating "don't update")
-      if (apiData.altitude[1] !== -1) {
-        result.altitude[1] = apiData.altitude[1];
-      }
-
-      // Ensure operating altitude is preserved
-      result.altitude[1] = existingOperatingAltitude;
+      result.altitude = next;
     } else {
-      result.altitude = apiData.altitude;
+      result.altitude = [...apiData.altitude] as [
+        number | null,
+        number | null,
+        number | null,
+      ];
     }
   }
 
