@@ -1,7 +1,6 @@
 import React from "react";
 import TOLDErrorDisplay from "./TOLDErrorDisplay";
 import TOLDFallbackDisplay from "./TOLDFallbackDisplay";
-import type { TOLDError } from "@/utils/types";
 import type { TOLDViewModel } from "@/utils/derived";
 
 interface TakeoffPerformanceProps {
