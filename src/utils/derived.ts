@@ -49,7 +49,7 @@ export interface TOLDViewModel {
       arrival: number | null;
     };
   } | null;
-  status: "success" | "invalid_inputs" | "error" | "idle";
+  status: "success" | "invalid_inputs" | "error";
   errors: TOLDError[];
   warnings: TOLDError[];
   extrapolationWarnings: TOLDError[];
@@ -124,7 +124,7 @@ export function computeTOLDViewModel(
     };
   }
 
-  const errors = result.success ? result.validationErrors : result.errors;
+  const errors = result.errors;
   const warnings = result.validationWarnings;
   const extrap = result.extrapolationWarnings;
   const hasErrors = errors.length > 0;
