@@ -5,11 +5,12 @@ A Next.js 16.x web application (App Router, TypeScript, Tailwind CSS v4, Vercel)
 ## Key Architecture
 
 - `src/app/` — App Router pages and layouts
-- `src/components/` — UI components; `AppContainer` owns all state, `AppInputs` owns user inputs, `Calculations` renders results
+- `src/components/` — UI components; `AppContainer` owns all state, `AppInputs` owns user inputs, `Calculations` derives results during render
 - `src/utils/types.ts` — Core types: `WorksheetData`, `Aircraft`, `TOLDResults`, `TOLDInputs`
 - `src/data/aircraft.json` — POH performance tables indexed by weight × altitude × temperature
 - `src/utils/interpolation.ts` — Trilinear interpolation across POH tables
 - `src/utils/toldCalculations.ts`, `maneuveringCalculations.ts`, `formulas.ts` — Calculations
+- `src/utils/derived.ts` — Pure helpers (`computePressureColumns`, `computeTOLDViewModel`) used by `<Calculations>` during render
 - `src/app/api/aviation-weather/route.ts` — Proxy to `aviationweather.gov` (avoids CORS)
 
 ## URL State Management
@@ -35,6 +36,12 @@ State is persisted to URL query strings via `src/utils/urlState.ts` + `src/utils
 - Track last-pushed value in a `useRef`
 - In prop-watching `useEffect`s, only sync local state when incoming value differs from the last-pushed value
 - `min`/`max` on `<input type="number">` do not block state — validate in `onChange` before calling `onUpdate`
+
+## Derived State Pattern
+
+`<Calculations>`, `<Altitudes>`, `<ClimbPerformance>`, and `<TakeoffPerformance>` derive every display value during render via pure helpers (mostly from `src/utils/derived.ts`). Do not introduce `useState`/`useEffect` to cache derived values that can be recomputed from props — table lookups in this codebase are sub-millisecond, and the previous effect-driven chain caused issue #98 (stale calculations after weather fetch when array references were mutated in place). If you need to add a new derived value, add a pure function to `derived.ts` and call it from `<Calculations>`.
+
+Weather-data mappers in `src/utils/weatherDataMapper.ts` must also return new arrays, never mutate inputs — `setState` only triggers downstream recomputation when reference equality changes.
 
 ## Development
 
