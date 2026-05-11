@@ -88,14 +88,22 @@ export function mapAirportSpecificWeatherData(
     if (sel.temp !== null) {
       const temp = sel.temp;
       if (!options.validateData || isValidTemperature(temp)) {
-        if (!result.temp) result.temp = [-1, -1, -1];
-        result.temp[index] = temp;
+        const next = (result.temp ? [...result.temp] : [-1, -1, -1]) as [
+          number | null,
+          number | null,
+          number | null,
+        ];
+        next[index] = temp;
+        result.temp = next;
       }
     }
     if (sel.altimeter !== null) {
       if (!options.validateData || isValidAltimeter(sel.altimeter)) {
-        if (!result.altimeter) result.altimeter = [-1, -1, -1];
-        result.altimeter[index] = sel.altimeter;
+        const next = (result.altimeter
+          ? [...result.altimeter]
+          : [-1, -1, -1]) as [number | null, number | null, number | null];
+        next[index] = sel.altimeter;
+        result.altimeter = next;
       }
     }
   };
@@ -281,8 +289,11 @@ export function mapWeatherDataToWorksheet(
       }
       if (areaOfOps.opTemp !== null) {
         if (!options.validateData || isValidTemperature(areaOfOps.opTemp)) {
-          if (!result.data.temp) result.data.temp = [-1, -1, -1];
-          result.data.temp[1] = areaOfOps.opTemp;
+          const next = (result.data.temp
+            ? [...result.data.temp]
+            : [-1, -1, -1]) as [number | null, number | null, number | null];
+          next[1] = areaOfOps.opTemp;
+          result.data.temp = next;
         } else {
           result.warnings.push(
             `Operating temperature ${areaOfOps.opTemp}°C out of valid range; skipped`
@@ -291,8 +302,11 @@ export function mapWeatherDataToWorksheet(
       }
       if (areaOfOps.opAltimeter !== null) {
         if (!options.validateData || isValidAltimeter(areaOfOps.opAltimeter)) {
-          if (!result.data.altimeter) result.data.altimeter = [-1, -1, -1];
-          result.data.altimeter[1] = areaOfOps.opAltimeter;
+          const next = (result.data.altimeter
+            ? [...result.data.altimeter]
+            : [-1, -1, -1]) as [number | null, number | null, number | null];
+          next[1] = areaOfOps.opAltimeter;
+          result.data.altimeter = next;
         } else {
           result.warnings.push(
             `Operating altimeter ${areaOfOps.opAltimeter} inHg out of valid range; skipped`
