@@ -61,6 +61,17 @@ describe("computePressureColumns", () => {
     expect(PAs[2]).toBeCloseTo(5000, 5);
   });
 
+  it("treats -1 as missing for altitude as well (explicit, uniform behavior)", () => {
+    const { PAs, DAs } = computePressureColumns(
+      [-1, 5000, 5000],
+      [29.92, 29.92, 29.92],
+      [15, 15, 15]
+    );
+    expect(PAs[0]).toBeNull();
+    expect(DAs[0]).toBeNull();
+    expect(PAs[2]).toBeCloseTo(5000, 5);
+  });
+
   it("handles all three columns independently", () => {
     const { PAs, DAs } = computePressureColumns(
       [1000, 8000, 2000],

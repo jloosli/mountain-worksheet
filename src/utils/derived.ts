@@ -3,9 +3,12 @@ import {
   pressureAltitudeToDensityAltitude,
 } from "./formulas";
 
-type Triple = [number | null, number | null, number | null];
+export type Triple = [number | null, number | null, number | null];
 
-function isReal(v: number | null | undefined): v is number {
+// -1 is the legacy "no value" sentinel used by the weather mapper for
+// optional fields. Treated as missing uniformly across altitude, altimeter,
+// and temperature (the mapper strips it from altitude before commit).
+export function isReal(v: number | null | undefined): v is number {
   return v !== null && v !== undefined && v !== -1;
 }
 
