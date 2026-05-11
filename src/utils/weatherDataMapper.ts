@@ -531,21 +531,27 @@ export function mergeWeatherData(
   }
 
   if (apiData.temp) {
-    if (!result.temp) result.temp = [null, null, null];
+    const next = (
+      result.temp ? [...result.temp] : [null, null, null]
+    ) as [number | null, number | null, number | null];
     apiData.temp.forEach((val, i) => {
       if (val !== undefined && val !== -1) {
-        result.temp![i] = val;
+        next[i] = val;
       }
     });
+    result.temp = next;
   }
 
   if (apiData.altimeter) {
-    if (!result.altimeter) result.altimeter = [null, null, null];
+    const next = (
+      result.altimeter ? [...result.altimeter] : [null, null, null]
+    ) as [number | null, number | null, number | null];
     apiData.altimeter.forEach((val, i) => {
       if (val !== undefined && val !== -1) {
-        result.altimeter![i] = val;
+        next[i] = val;
       }
     });
+    result.altimeter = next;
   }
 
   if (apiData.rwy) {
@@ -553,28 +559,25 @@ export function mergeWeatherData(
   }
 
   if (apiData.altitude) {
-    // Only update departure (index 0) and arrival (index 2) altitudes, preserve operating (index 1)
-    if (result.altitude && apiData.altitude) {
-      // Preserve existing operating altitude
-      const existingOperatingAltitude = result.altitude[1];
-
-      // Update only departure and arrival altitudes
-      if (apiData.altitude[0] !== undefined) {
-        result.altitude[0] = apiData.altitude[0]; // departure
+    if (result.altitude) {
+      const next = [...result.altitude] as [
+        number | null,
+        number | null,
+        number | null,
+      ];
+      if (apiData.altitude[0] !== undefined) next[0] = apiData.altitude[0];
+      if (apiData.altitude[2] !== undefined) next[2] = apiData.altitude[2];
+      // Operating slot: -1 sentinel means "don't update"; otherwise overwrite.
+      if (apiData.altitude[1] !== undefined && apiData.altitude[1] !== -1) {
+        next[1] = apiData.altitude[1];
       }
-      if (apiData.altitude[2] !== undefined) {
-        result.altitude[2] = apiData.altitude[2]; // arrival
-      }
-
-      // Don't update operating altitude if it's -1 (special value indicating "don't update")
-      if (apiData.altitude[1] !== -1) {
-        result.altitude[1] = apiData.altitude[1];
-      }
-
-      // Ensure operating altitude is preserved
-      result.altitude[1] = existingOperatingAltitude;
+      result.altitude = next;
     } else {
-      result.altitude = apiData.altitude;
+      result.altitude = [...apiData.altitude] as [
+        number | null,
+        number | null,
+        number | null,
+      ];
     }
   }
 

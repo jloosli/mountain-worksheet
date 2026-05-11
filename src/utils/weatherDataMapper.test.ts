@@ -919,4 +919,61 @@ describe("Weather Data Mapper", () => {
       expect(result.warnings.length).toBeGreaterThan(0);
     });
   });
+
+  describe("mergeWeatherData immutability (issue #98 regression)", () => {
+    it("does not mutate the existing temp array when merging in API temp values", () => {
+      const existing = {
+        temp: [25, 12, 26] as [number | null, number | null, number | null],
+      };
+      const originalTempRef = existing.temp;
+      const merged = mergeWeatherData(existing, {
+        temp: [22, 9, 24] as [number | null, number | null, number | null],
+      });
+      expect(merged.temp).not.toBe(originalTempRef);
+      expect(existing.temp).toEqual([25, 12, 26]); // unchanged
+      expect(merged.temp).toEqual([22, 9, 24]);
+    });
+
+    it("does not mutate the existing altimeter array when merging", () => {
+      const existing = {
+        altimeter: [30.12, 29.85, 30.11] as [
+          number | null,
+          number | null,
+          number | null,
+        ],
+      };
+      const originalRef = existing.altimeter;
+      const merged = mergeWeatherData(existing, {
+        altimeter: [30.0, 29.9, 30.0] as [
+          number | null,
+          number | null,
+          number | null,
+        ],
+      });
+      expect(merged.altimeter).not.toBe(originalRef);
+      expect(existing.altimeter).toEqual([30.12, 29.85, 30.11]);
+    });
+
+    it("does not mutate the existing altitude array; honors -1 sentinel for operating slot", () => {
+      const existing = {
+        altitude: [4472, 10000, 4321] as [
+          number | null,
+          number | null,
+          number | null,
+        ],
+      };
+      const originalRef = existing.altitude;
+      const merged = mergeWeatherData(existing, {
+        altitude: [5000, -1, 5000] as [
+          number | null,
+          number | null,
+          number | null,
+        ],
+      });
+      expect(merged.altitude).not.toBe(originalRef);
+      // departure + arrival updated, operating preserved because -1 means "don't update"
+      expect(merged.altitude).toEqual([5000, 10000, 5000]);
+      expect(existing.altitude).toEqual([4472, 10000, 4321]);
+    });
+  });
 });
