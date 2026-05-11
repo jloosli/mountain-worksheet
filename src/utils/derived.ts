@@ -7,9 +7,12 @@ import { calculateTOLDForMultipleAirports } from "./toldCalculations";
 
 export type Triple = [number | null, number | null, number | null];
 
-// -1 is the legacy "no value" sentinel used by the weather mapper for
-// optional fields. Treated as missing uniformly across altitude, altimeter,
-// and temperature (the mapper strips it from altitude before commit).
+// -1 is the legacy "no value" sentinel used by the weather mapper. For
+// temp/altimeter the mapper writes -1 directly into freshly-created arrays;
+// for altitude it doubles as a "don't update" marker for the operating slot
+// inside mergeWeatherData. Treated as missing uniformly here so any -1 that
+// does reach state (e.g. from a fresh weather fetch when no altitude is set
+// yet) is rendered as missing rather than as a real altitude of -1 ft.
 export function isReal(v: number | null | undefined): v is number {
   return v !== null && v !== undefined && v !== -1;
 }

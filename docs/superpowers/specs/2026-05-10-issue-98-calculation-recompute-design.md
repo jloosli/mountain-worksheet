@@ -85,11 +85,10 @@ export interface TOLDViewModel {
     availableRunwayRemainingTakeoffGroundRoll: { departure: number | null; arrival: number | null };
     availableRunwayRemainingTakeoff50ft: { departure: number | null; arrival: number | null };
   } | null;
-  status: 'success' | 'invalid_inputs' | 'error' | 'idle';
+  status: 'success' | 'invalid_inputs' | 'error';
   errors: TOLDError[];
   warnings: TOLDError[];
   extrapolationWarnings: TOLDError[];
-  isCalculating: false; // always false now; kept for prop compatibility
   errorSummary: { count: number; critical: number; warnings: number; messages: string[] } | null;
   warningSummary: { count: number; validation: number; extrapolation: number; messages: string[] } | null;
   hasErrors: boolean;
