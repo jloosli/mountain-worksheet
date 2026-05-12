@@ -35,7 +35,13 @@ export default function AppInputs({
       >
         <SortieInfo onUpdate={handleUpdate} initialData={state} />
       </StepShell>
-      <section id="step-weather" className="flex flex-col gap-8 scroll-mt-[60px]">
+      <StepShell
+        id="step-weather"
+        number={2}
+        status="pending"
+        title="Weather"
+        subtitle="Winds aloft, terminal conditions, and advisories"
+      >
         <WeatherInfo
           onUpdate={handleUpdate}
           initialData={state}
@@ -48,7 +54,7 @@ export default function AppInputs({
           worksheetData={state}
           useFahrenheit={useFahrenheit}
         />
-      </section>
+      </StepShell>
     </div>
   );
 }

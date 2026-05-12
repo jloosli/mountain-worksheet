@@ -238,7 +238,7 @@ export default function WeatherInfo({
   };
 
   return (
-    <div className="w-full max-w-4xl">
+    <div>
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-bold">Weather Information</h2>
         {lastUpdated && (

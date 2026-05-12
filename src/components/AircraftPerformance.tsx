@@ -253,7 +253,7 @@ export default function AircraftPerformance({
   };
 
   return (
-    <div className="w-full max-w-4xl">
+    <div>
       <h2 className="text-xl font-bold mb-4">Aircraft Performance</h2>
       <p className="mb-4">
         Obtain from aviationweather.gov{" "}
