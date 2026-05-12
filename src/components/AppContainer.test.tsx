@@ -28,4 +28,12 @@ describe("AppContainer", () => {
     expect(instructionsIdx).toBeGreaterThan(-1);
     expect(instructionsIdx).toBeGreaterThan(checklistIdx);
   });
+
+  it("renders the sticky ActionBar region", () => {
+    render(<AppContainer />);
+    // ActionBar always renders a Fetch weather button (disabled in incomplete state)
+    expect(
+      screen.getByRole("button", { name: /Fetch weather/i })
+    ).toBeInTheDocument();
+  });
 });

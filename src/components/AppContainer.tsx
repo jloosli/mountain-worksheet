@@ -1,22 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import ActionBar from "@/components/ActionBar";
 import AppInputs from "@/components/AppInputs";
 import Calculations from "@/components/Calculations";
 import InstructionsAndNotes from "@/components/InstructionsAndNotes";
 import MountainFlyingChecklist from "@/components/MountainFlyingChecklist";
 import Stepper, { type StepperStep } from "@/components/Stepper";
 import StepShell from "@/components/StepShell";
+import WeatherDataIntegration from "@/components/WeatherDataIntegration";
 import WorksheetHeader from "@/components/WorksheetHeader";
-import { useUrlState } from "@/utils/useUrlState";
+import { deriveActionBarState } from "@/utils/actionBarState";
+import { deriveStepStatuses } from "@/utils/stepStatuses";
 import { useTempUnit } from "@/utils/useTempUnit";
+import { useUrlState } from "@/utils/useUrlState";
 import type { WorksheetData } from "@/utils/types";
-
-const WORKSHEET_STEPS: StepperStep[] = [
-  { id: "step-sortie", number: 1, label: "Sortie Details", status: "active" },
-  { id: "step-weather", number: 2, label: "Weather", status: "pending" },
-  { id: "step-decision", number: 3, label: "Decision", status: "pending" },
-];
 
 const getDefaultSortieDateTime = () => {
   const now = new Date();
@@ -89,6 +87,25 @@ export default function AppContainer() {
     null
   );
 
+  const stepStatuses = useMemo(
+    () => deriveStepStatuses(state, weatherLastUpdated),
+    [state, weatherLastUpdated]
+  );
+
+  const actionBarState = useMemo(
+    () => deriveActionBarState(state, weatherLastUpdated),
+    [state, weatherLastUpdated]
+  );
+
+  const steps = useMemo<StepperStep[]>(
+    () => [
+      { id: "step-sortie", number: 1, label: "Sortie Details", status: stepStatuses.sortie },
+      { id: "step-weather", number: 2, label: "Weather", status: stepStatuses.weather },
+      { id: "step-decision", number: 3, label: "Decision", status: stepStatuses.decision },
+    ],
+    [stepStatuses]
+  );
+
   const handleUpdate = (updates: Partial<WorksheetData>) => {
     setState((prev: WorksheetData) => {
       const merged = { ...prev, ...updates } as WorksheetData;
@@ -124,14 +141,26 @@ export default function AppContainer() {
       <WorksheetHeader
         onReset={handleReset}
         onShare={handleShare}
-        worksheetData={state}
-        onWeatherDataUpdate={handleWeatherDataUpdate}
-        onWeatherTimestampUpdate={handleWeatherTimestampUpdate}
-        weatherLastUpdated={weatherLastUpdated ?? undefined}
         useFahrenheit={useFahrenheit}
         onToggleTempUnit={toggleTempUnit}
       />
-      <Stepper steps={WORKSHEET_STEPS} />
+      <Stepper steps={steps} />
+      <WeatherDataIntegration
+        worksheetData={state}
+        onDataUpdate={handleWeatherDataUpdate}
+        onTimestampUpdate={handleWeatherTimestampUpdate}
+        hideBox
+        renderButton={({ onClick, disabled, isLoading }) => (
+          <ActionBar
+            state={actionBarState}
+            worksheetData={state}
+            weatherLastUpdated={weatherLastUpdated ?? undefined}
+            onFetch={onClick}
+            fetchDisabled={disabled}
+            isFetching={isLoading}
+          />
+        )}
+      />
       <main className="flex-1 w-full flex justify-center pb-20">
         <div className="w-full max-w-5xl flex flex-col space-y-6 px-4 md:px-6">
           <AppInputs
@@ -141,15 +170,15 @@ export default function AppContainer() {
             useFahrenheit={useFahrenheit}
           />
           <StepShell
-              id="step-decision"
-              number={3}
-              status="pending"
-              title="Decision"
-              subtitle="Go / no-go summary, with detailed calculations below"
-              showSpine={false}
-            >
-              <Calculations state={state} />
-            </StepShell>
+            id="step-decision"
+            number={3}
+            status={stepStatuses.decision}
+            title="Decision"
+            subtitle="Go / no-go summary, with detailed calculations below"
+            showSpine={false}
+          >
+            <Calculations state={state} />
+          </StepShell>
           <MountainFlyingChecklist />
           <InstructionsAndNotes />
         </div>
