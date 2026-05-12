@@ -29,7 +29,7 @@ export default function Calculations({ state }: CalculationsProps) {
 
   return (
     <div className="w-full">
-      <h2 className="text-2xl font-bold mb-4">Calculations</h2>
+      <h3 className="text-2xl font-bold mb-4">Calculations</h3>
 
       {!state.acType && (
         <p className="text-sm text-yellow-600 dark:text-yellow-400 mb-2">

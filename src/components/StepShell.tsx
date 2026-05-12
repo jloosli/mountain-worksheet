@@ -54,25 +54,27 @@ export default function StepShell({
         aria-hidden="true"
       >
         <div
-          className={`flex h-10 w-10 items-center justify-center rounded-full font-mono font-bold text-base shadow ring-4 ring-slate-100 ${circleBg[status]} ${circleText[status]}`}
+          className={`flex h-10 w-10 items-center justify-center rounded-full font-mono font-bold text-base shadow ring-4 ring-slate-100 dark:ring-slate-900 ${circleBg[status]} ${circleText[status]}`}
         >
           {number}
         </div>
         {showSpine && (
           <div
             data-testid="step-spine"
-            className="mt-2 w-px flex-1 bg-slate-300"
+            className="mt-2 w-px flex-1 bg-slate-300 dark:bg-slate-700"
           />
         )}
       </div>
-      <article className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-        <header className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
+      <article className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden dark:border-slate-700 dark:bg-slate-900">
+        <header className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4 dark:border-slate-700">
           <div>
-            <h2 className="text-xl font-bold tracking-tight text-slate-900">
+            <h2 className="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
               {title}
             </h2>
             {subtitle && (
-              <p className="text-sm text-slate-500 mt-0.5">{subtitle}</p>
+              <p className="text-sm text-slate-500 mt-0.5 dark:text-slate-400">
+                {subtitle}
+              </p>
             )}
           </div>
           {badge && (

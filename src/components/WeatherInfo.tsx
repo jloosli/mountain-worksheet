@@ -240,7 +240,7 @@ export default function WeatherInfo({
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-bold">Weather Information</h2>
+        <h3 className="text-xl font-bold">Weather Information</h3>
         {lastUpdated && (
           <div className="text-sm text-gray-600 dark:text-gray-400">
             Last updated: {lastUpdated.toLocaleTimeString()}
