@@ -5,6 +5,7 @@ import AppInputs from "@/components/AppInputs";
 import Calculations from "@/components/Calculations";
 import InstructionsAndNotes from "@/components/InstructionsAndNotes";
 import MountainFlyingChecklist from "@/components/MountainFlyingChecklist";
+import Stepper from "@/components/Stepper";
 import WorksheetHeader from "@/components/WorksheetHeader";
 import { useUrlState } from "@/utils/useUrlState";
 import { useTempUnit } from "@/utils/useTempUnit";
@@ -123,17 +124,26 @@ export default function AppContainer() {
         useFahrenheit={useFahrenheit}
         onToggleTempUnit={toggleTempUnit}
       />
+      <Stepper
+        steps={[
+          { id: "step-sortie",   number: 1, label: "Sortie Details", status: "active" },
+          { id: "step-weather",  number: 2, label: "Weather",        status: "pending" },
+          { id: "step-decision", number: 3, label: "Decision",       status: "pending" },
+        ]}
+      />
       <main className="flex-1 w-full flex justify-center px-2 md:px-8 pb-20">
         <div className="w-full max-w-5xl flex flex-col gap-16 items-center">
-          <InstructionsAndNotes />
           <AppInputs
             state={state}
             onStateUpdate={handleUpdate}
             weatherLastUpdated={weatherLastUpdated ?? undefined}
             useFahrenheit={useFahrenheit}
           />
-          <Calculations state={state} />
+          <section id="step-decision" className="w-full flex justify-center scroll-mt-[60px]">
+            <Calculations state={state} />
+          </section>
           <MountainFlyingChecklist />
+          <InstructionsAndNotes />
         </div>
       </main>
       <footer className="w-full py-4 px-2 md:px-8 text-center text-sm text-gray-600 dark:text-gray-400 border-t border-gray-200 dark:border-gray-800">
