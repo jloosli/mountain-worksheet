@@ -61,8 +61,6 @@ jest.mock("./WeatherSection", () => {
   };
 });
 
-
-
 describe("AppInputs", () => {
   const mockOnStateUpdate = jest.fn();
   const defaultState: WorksheetData = {
@@ -105,7 +103,7 @@ describe("AppInputs", () => {
     expect(screen.getByTestId("weather-section")).toBeInTheDocument();
   });
 
-  it("passes worksheet data to WeatherSection", () => {
+  it("renders WeatherSection with non-default state", () => {
     const testState = {
       ...defaultState,
       wind: [
@@ -151,7 +149,7 @@ describe("AppInputs", () => {
       ],
     });
 
-    // Test AircraftPerformance update
+    // Test WeatherSection performance update
     const updatePerformanceButton = screen.getByTestId(
       "update-performance-btn"
     );
