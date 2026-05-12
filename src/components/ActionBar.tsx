@@ -6,6 +6,7 @@ import {
   ArrowRightIcon,
   CheckCircleIcon,
   ChevronDownIcon,
+  ClipboardDocumentCheckIcon,
   CloudArrowDownIcon,
   ExclamationCircleIcon,
   PrinterIcon,
@@ -21,6 +22,7 @@ interface ActionBarProps {
   onFetch: () => void;
   fetchDisabled: boolean;
   isFetching: boolean;
+  onOpenChecklist: () => void;
 }
 
 const formatHhMmZ = (time: string): string =>
@@ -40,6 +42,7 @@ export default function ActionBar({
   onFetch,
   fetchDisabled,
   isFetching,
+  onOpenChecklist,
 }: ActionBarProps) {
   return (
     <div className="sticky top-[44px] z-10 border-b border-slate-200 bg-white shadow-[0_1px_0_rgba(15,23,42,0.04),0_4px_8px_-6px_rgba(15,23,42,0.18)] dark:border-slate-700 dark:bg-slate-900">
@@ -143,6 +146,17 @@ export default function ActionBar({
             </div>
           </>
         )}
+        <div className="shrink-0 pl-2.5 ml-0.5 border-l border-slate-200 dark:border-slate-700 flex items-center">
+          <button
+            type="button"
+            onClick={onOpenChecklist}
+            title="Open Mountain Flying Checklist"
+            className="flex items-center gap-1.5 rounded-md border border-slate-300 px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+          >
+            <ClipboardDocumentCheckIcon className="h-3.5 w-3.5" />
+            Checklist
+          </button>
+        </div>
       </div>
     </div>
   );

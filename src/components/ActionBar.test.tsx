@@ -35,6 +35,7 @@ const baseProps = {
   onFetch: jest.fn(),
   fetchDisabled: false,
   isFetching: false,
+  onOpenChecklist: jest.fn(),
 };
 
 beforeEach(() => {
@@ -155,5 +156,28 @@ describe("ActionBar — isFetching", () => {
       />
     );
     expect(screen.getByText(/Loading/i)).toBeInTheDocument();
+  });
+});
+
+describe("ActionBar — Checklist trigger", () => {
+  it("renders a Checklist button visible across all states", () => {
+    for (const state of ["incomplete", "ready", "fetched", "all-done"] as const) {
+      const { unmount } = render(
+        <ActionBar
+          {...baseProps}
+          state={state}
+        />
+      );
+      expect(
+        screen.getByRole("button", { name: /Checklist/i })
+      ).toBeInTheDocument();
+      unmount();
+    }
+  });
+
+  it("calls onOpenChecklist when the Checklist button is clicked", () => {
+    render(<ActionBar {...baseProps} state="incomplete" fetchDisabled={true} />);
+    fireEvent.click(screen.getByRole("button", { name: /Checklist/i }));
+    expect(baseProps.onOpenChecklist).toHaveBeenCalled();
   });
 });
