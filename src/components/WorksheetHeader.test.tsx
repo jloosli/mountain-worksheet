@@ -1,17 +1,9 @@
 import { render, screen } from "../test-utils/test-utils";
 import WorksheetHeader from "./WorksheetHeader";
 
-jest.mock("./WeatherDataIntegration", () => ({
-  __esModule: true,
-  default: () => null,
-}));
-
 const defaultProps = {
   onReset: jest.fn(),
   onShare: jest.fn(),
-  worksheetData: {},
-  onWeatherDataUpdate: jest.fn(),
-  onWeatherTimestampUpdate: jest.fn(),
   useFahrenheit: false,
   onToggleTempUnit: jest.fn(),
 };
@@ -30,5 +22,12 @@ describe("WorksheetHeader", () => {
     const banner = screen.getByRole("banner");
     expect(banner.querySelector(".max-w-6xl")).not.toBeInTheDocument();
     expect(banner.querySelector(".max-w-5xl")).toBeInTheDocument();
+  });
+
+  it("does not render a Fetch Weather button (moved to the action bar)", () => {
+    render(<WorksheetHeader {...defaultProps} />);
+    expect(
+      screen.queryByRole("button", { name: /Fetch Weather/i })
+    ).not.toBeInTheDocument();
   });
 });

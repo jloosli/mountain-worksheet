@@ -1,18 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import WeatherDataIntegration from "@/components/WeatherDataIntegration";
-import type { WorksheetData } from "@/utils/types";
-import { LinkIcon, ArrowPathIcon } from "@heroicons/react/24/solid";
-import { CloudArrowDownIcon } from "@heroicons/react/24/outline";
+import { LinkIcon } from "@heroicons/react/24/outline";
 
 interface WorksheetHeaderProps {
   onReset: () => void;
   onShare: () => void | Promise<void>;
-  worksheetData: Partial<WorksheetData>;
-  onWeatherDataUpdate: (data: Partial<WorksheetData>) => void;
-  onWeatherTimestampUpdate: (timestamp: Date) => void;
-  weatherLastUpdated?: Date;
   useFahrenheit: boolean;
   onToggleTempUnit: () => void;
 }
@@ -46,38 +39,22 @@ const UtcClock = () => {
 
   useEffect(() => {
     setMounted(true);
-    // Update immediately on mount to ensure client and server match
     setNow(new Date());
-
-    const interval = setInterval(() => {
-      setNow(new Date());
-    }, 1000);
-
+    const interval = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(interval);
   }, []);
 
   const { dateLabel, timeLabel } = useMemo(() => formatUtcDisplay(now), [now]);
 
-  // Don't render time until after hydration to avoid mismatch
-  if (!mounted) {
-    return (
-      <div className="flex flex-col items-start text-left md:items-end md:text-right gap-0.5">
-        <span className="uppercase text-xs tracking-wide text-slate-300">
-          Current Time
-        </span>
-        <span className="font-mono text-2xl font-semibold">--:--:-- UTC</span>
-        <span className="text-sm text-slate-300">-- --- --</span>
-      </div>
-    );
-  }
-
+  // Don't render time until after hydration to avoid SSR/CSR mismatch.
+  // Wrapped in two stacked spans so it doesn't shift after mount.
   return (
-    <div className="flex flex-col items-start text-left md:items-end md:text-right gap-0.5">
-      <span className="uppercase text-xs tracking-wide text-slate-300">
-        Current Time
+    <div className="hidden flex-col items-end text-right text-xs leading-tight text-slate-300 md:flex">
+      <span className="uppercase tracking-wide">Current Time</span>
+      <span className="font-mono text-sm text-slate-200">
+        {mounted ? timeLabel : "--:--:-- UTC"}
       </span>
-      <span className="font-mono text-2xl font-semibold">{timeLabel}</span>
-      <span className="text-sm text-slate-300">{dateLabel}</span>
+      <span>{mounted ? dateLabel : "-- --- --"}</span>
     </div>
   );
 };
@@ -85,79 +62,43 @@ const UtcClock = () => {
 export default function WorksheetHeader({
   onReset,
   onShare,
-  worksheetData,
-  onWeatherDataUpdate,
-  onWeatherTimestampUpdate,
-  weatherLastUpdated,
   useFahrenheit,
   onToggleTempUnit,
 }: WorksheetHeaderProps) {
   return (
     <header className="w-full bg-slate-900 text-white shadow-md">
-      <div className="mx-auto flex w-full max-w-5xl flex-col gap-4 px-4 py-4 md:px-6">
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <h1 className="text-3xl font-bold tracking-tight">
+      <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-4 px-4 py-3.5 md:px-6">
+        <div className="flex items-baseline gap-3 min-w-0">
+          <h1 className="truncate text-2xl font-bold tracking-tight md:text-[28px]">
             Mountain Flying Worksheet
           </h1>
-          <UtcClock />
         </div>
-
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-3 shrink-0">
+          <UtcClock />
+          <div className="flex items-center gap-1.5">
             <button
               onClick={onReset}
-              className="flex items-center gap-2 rounded-md bg-red-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-600"
+              className="rounded-md border border-slate-700/60 px-2.5 py-1 text-xs text-slate-300 hover:bg-slate-800 hover:text-white"
             >
-              Reset Worksheet
+              Reset
             </button>
             <button
               onClick={onShare}
-              className="flex items-center gap-2 rounded-md bg-blue-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-600"
+              className="flex items-center gap-1.5 rounded-md border border-slate-700/60 px-2.5 py-1 text-xs text-slate-300 hover:bg-slate-800 hover:text-white"
             >
-              <LinkIcon className="h-5 w-5" />
-              Copy Link
+              <LinkIcon className="h-3 w-3" />
+              Copy link
             </button>
             <button
               onClick={onToggleTempUnit}
-              className="flex items-center gap-1 rounded-md bg-slate-700 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-slate-600"
               title="Toggle temperature unit"
+              className="flex items-center gap-1 rounded-md border border-slate-700/60 px-2.5 py-1 text-xs font-mono"
             >
-              <span className={useFahrenheit ? "text-slate-400" : "font-bold"}>°C</span>
-              <span className="text-slate-500">|</span>
-              <span className={useFahrenheit ? "font-bold" : "text-slate-400"}>°F</span>
+              <span className={useFahrenheit ? "text-slate-500" : "font-semibold text-white"}>°C</span>
+              <span className="text-slate-600">|</span>
+              <span className={useFahrenheit ? "font-semibold text-white" : "text-slate-500"}>°F</span>
             </button>
-            <WeatherDataIntegration
-              worksheetData={worksheetData}
-              onDataUpdate={onWeatherDataUpdate}
-              onTimestampUpdate={onWeatherTimestampUpdate}
-              hideBox={true}
-              renderButton={({ onClick, disabled, isLoading }) => (
-                <button
-                  type="button"
-                  onClick={onClick}
-                  disabled={disabled}
-                  className={`flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
-                    !disabled
-                      ? "bg-emerald-500 text-white hover:bg-emerald-600"
-                      : "cursor-not-allowed bg-slate-700 text-slate-400"
-                  }`}
-                >
-                  {isLoading ? (
-                    <ArrowPathIcon className="h-5 w-5 animate-spin" />
-                  ) : (
-                    <CloudArrowDownIcon className="h-5 w-5" />
-                  )}
-                  {isLoading ? "Loading..." : "Fetch Weather"}
-                </button>
-              )}
-            />
           </div>
-
-          {weatherLastUpdated && (
-            <div className="text-sm text-slate-300">
-              Weather updated at {weatherLastUpdated.toLocaleTimeString()}
-            </div>
-          )}
         </div>
       </div>
     </header>
