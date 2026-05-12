@@ -29,12 +29,16 @@ import {
   AirportNotFoundModal,
 } from "./WeatherModal";
 import WeatherWarningsPanel from "./WeatherWarningsPanel";
-import type { WorksheetData } from "@/utils/types";
+import type { RunwayOption, WorksheetData } from "@/utils/types";
 
 interface WeatherDataIntegrationProps {
   worksheetData: Partial<WorksheetData>;
   onDataUpdate: (data: Partial<WorksheetData>) => void;
   onTimestampUpdate?: (timestamp: Date) => void; // Callback to pass timestamp to parent
+  onAirportInfoUpdate?: (info: {
+    departure: RunwayOption[] | null;
+    arrival: RunwayOption[] | null;
+  }) => void;
   disabled?: boolean;
   hideBox?: boolean; // If true, don't render the box UI, only modals
   renderButton?: (props: {
@@ -62,6 +66,7 @@ export default function WeatherDataIntegration({
   worksheetData,
   onDataUpdate,
   onTimestampUpdate,
+  onAirportInfoUpdate,
   disabled = false,
   hideBox = false,
   renderButton,
@@ -146,6 +151,32 @@ export default function WeatherDataIntegration({
           apiAirports.find((a) => a.icaoId?.toUpperCase() === code);
         const depAirport = findAirport(departureAirport);
         const arrAirport = findAirport(arrivalAirport);
+
+        if (onAirportInfoUpdate) {
+          const extractRunways = (
+            airport:
+              | {
+                  runway?: Array<{
+                    id: string;
+                    length: number;
+                    alignment: number | null;
+                  }>;
+                }
+              | undefined
+          ): RunwayOption[] | null => {
+            if (!airport?.runway || airport.runway.length === 0) return null;
+            return airport.runway.map((r) => ({
+              id: r.id,
+              length: r.length,
+              alignment: r.alignment,
+            }));
+          };
+          onAirportInfoUpdate({
+            departure: extractRunways(depAirport as { runway?: Array<{ id: string; length: number; alignment: number | null }> }),
+            arrival: extractRunways(arrAirport as { runway?: Array<{ id: string; length: number; alignment: number | null }> }),
+          });
+        }
+
         const depAirportLatLon: [number, number] | null =
           depAirport && typeof depAirport.lat === "number" && typeof depAirport.lon === "number"
             ? [depAirport.lat, depAirport.lon]
@@ -321,7 +352,7 @@ export default function WeatherDataIntegration({
         }));
       }
     },
-    [worksheetData, onDataUpdate, canFetchWeather, onTimestampUpdate]
+    [worksheetData, onDataUpdate, canFetchWeather, onTimestampUpdate, onAirportInfoUpdate]
   );
 
   const handleRetry = useCallback(() => {
