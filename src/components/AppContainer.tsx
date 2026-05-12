@@ -133,7 +133,7 @@ export default function AppContainer() {
       />
       <Stepper steps={WORKSHEET_STEPS} />
       <main className="flex-1 w-full flex justify-center px-2 md:px-8 pb-20">
-        <div className="w-full max-w-5xl flex flex-col gap-16 items-center">
+        <div className="w-full max-w-4xl flex flex-col space-y-6">
           <AppInputs
             state={state}
             onStateUpdate={handleUpdate}
