@@ -313,6 +313,16 @@ describe("Calculations", () => {
     expect(secondDA).not.toBe("-");
   });
 
+  it("renders the 'For reference only' disclaimer above the calculations", () => {
+    render(<Calculations state={mockWorksheetData} />);
+    expect(
+      screen.getByText(/For reference only/i)
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/It is up to the PIC and FRO to responsibly evaluate risks/i)
+    ).toBeInTheDocument();
+  });
+
   it("updates operating Rate of Climb when operating PA changes (issue #98)", () => {
     const initial: WorksheetData = {
       ...mockWorksheetData,
