@@ -56,6 +56,7 @@ export default function WeatherSection({
     rawValue: string
   ) => {
     const num = rawValue === "" ? null : Number(rawValue);
+    if (num !== null && !Number.isFinite(num)) return;
     const stored = num !== null && useFahrenheit ? farenheitToCelcius(num) : num;
     const next = [...state.temp] as [number | null, number | null, number | null];
     next[index] = stored;

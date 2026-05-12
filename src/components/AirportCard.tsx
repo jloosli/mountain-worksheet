@@ -1,7 +1,7 @@
 // src/components/AirportCard.tsx
 "use client";
 
-import { useId } from "react";
+import { useEffect, useId, useState } from "react";
 import { ArrowUpRightIcon } from "@heroicons/react/24/outline";
 import type { RunwayOption } from "@/utils/types";
 import { celciusToFarenheit } from "@/utils/formulas";
@@ -60,12 +60,34 @@ const headerVariantLabel: Record<AirportCardVariant, string> = {
   arrival: "Arrival",
 };
 
+const altimeterDisplayValue = (altimeter: number | null): string =>
+  altimeter !== null && altimeter !== undefined ? altimeter.toString() : "";
+
 export default function AirportCard(props: AirportCardProps) {
   const variantLabel = headerVariantLabel[props.variant];
   const baseId = useId();
   const tempId = `${baseId}-temp`;
   const altId = `${baseId}-alt`;
   const rwyId = `${baseId}-rwy`;
+
+  // Local string buffers so intermediate keystrokes (e.g. "3" toward "30.05")
+  // aren't rejected by the parent's range validation and reverted by the
+  // controlled-input round-trip. When the parent accepts a valid value, the
+  // prop changes and the effect below resyncs the display.
+  const [tempStr, setTempStr] = useState<string>(() =>
+    formatTemperatureValue(props.temperature, !!props.useFahrenheit)
+  );
+  const [altStr, setAltStr] = useState<string>(() =>
+    altimeterDisplayValue(props.altimeter)
+  );
+
+  useEffect(() => {
+    setTempStr(formatTemperatureValue(props.temperature, !!props.useFahrenheit));
+  }, [props.temperature, props.useFahrenheit]);
+
+  useEffect(() => {
+    setAltStr(altimeterDisplayValue(props.altimeter));
+  }, [props.altimeter]);
 
   return (
     <div className="rounded-lg border border-slate-200 bg-white overflow-hidden dark:border-slate-700 dark:bg-slate-900">
@@ -92,8 +114,11 @@ export default function AirportCard(props: AirportCardProps) {
           <input
             id={tempId}
             type="number"
-            value={formatTemperatureValue(props.temperature, !!props.useFahrenheit)}
-            onChange={(e) => props.onTemperatureChange(e.target.value)}
+            value={tempStr}
+            onChange={(e) => {
+              setTempStr(e.target.value);
+              props.onTemperatureChange(e.target.value);
+            }}
             min={props.useFahrenheit ? "-22" : "-30"}
             max={props.useFahrenheit ? "131" : "55"}
             className={cellInputClass(props.apiPopulated.temperature)}
@@ -112,8 +137,11 @@ export default function AirportCard(props: AirportCardProps) {
             step="0.01"
             min="28.00"
             max="31.00"
-            value={props.altimeter ?? ""}
-            onChange={(e) => props.onAltimeterChange(e.target.value)}
+            value={altStr}
+            onChange={(e) => {
+              setAltStr(e.target.value);
+              props.onAltimeterChange(e.target.value);
+            }}
             className={cellInputClass(props.apiPopulated.pressure)}
           />
         </div>
@@ -179,6 +207,17 @@ function RunwayRow({
 }: RunwayRowProps) {
   // Filter helipads (alignment === null) from the list.
   const validRunways = runways?.filter((r) => r.alignment !== null) ?? null;
+
+  // If options are available but no selection is set (e.g. mapper validation
+  // rejected the shortest as out-of-range), auto-select the shortest valid
+  // runway so the <select>'s controlled value always matches an option.
+  useEffect(() => {
+    if (!onSelect || selectedLength !== null || !runways) return;
+    const valid = runways.filter((r) => r.alignment !== null);
+    if (valid.length === 0) return;
+    const shortest = valid.reduce((min, r) => (r.length < min.length ? r : min));
+    onSelect(shortest.length);
+  }, [runways, selectedLength, onSelect]);
 
   const selectClass = apiPopulatedRunway
     ? "num-mono text-right bg-blue-50 border border-blue-300 rounded px-2 py-1 text-sm dark:bg-blue-900/20 dark:border-blue-600 dark:text-slate-100"

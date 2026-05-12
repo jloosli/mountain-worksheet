@@ -263,3 +263,90 @@ describe("AirportCard — useFahrenheit", () => {
     expect(tempInput.value).toBe("68");
   });
 });
+
+describe("AirportCard — local string buffer", () => {
+  it("preserves intermediate altimeter typing when parent rejects out-of-range input", () => {
+    // Parent rejects values outside [28.00, 31.00] by no-op'ing its update.
+    // The local buffer should keep what the user typed visible regardless.
+    const onAltimeterChange = jest.fn();
+    render(
+      <AirportCard
+        {...baseProps}
+        variant="departure"
+        airportCode="KOGD"
+        altimeter={29.92}
+        onAltimeterChange={onAltimeterChange}
+      />
+    );
+    const altInput = screen.getByLabelText(/Altimeter/i) as HTMLInputElement;
+    expect(altInput.value).toBe("29.92");
+
+    fireEvent.change(altInput, { target: { value: "3" } });
+    expect(onAltimeterChange).toHaveBeenCalledWith("3");
+    // Parent returned early — props.altimeter is still 29.92 — but the
+    // local buffer holds "3" so the user sees their keystroke.
+    expect(altInput.value).toBe("3");
+  });
+
+  it("syncs the temperature display when the prop changes externally", () => {
+    const { rerender } = render(
+      <AirportCard
+        {...baseProps}
+        variant="departure"
+        airportCode="KOGD"
+        temperature={null}
+      />
+    );
+    expect((screen.getByLabelText(/Temperature/i) as HTMLInputElement).value).toBe("");
+    rerender(
+      <AirportCard
+        {...baseProps}
+        variant="departure"
+        airportCode="KOGD"
+        temperature={20}
+      />
+    );
+    expect((screen.getByLabelText(/Temperature/i) as HTMLInputElement).value).toBe("20");
+  });
+});
+
+describe("AirportCard — runway auto-default", () => {
+  it("auto-selects the shortest non-helipad runway when selectedRunwayLength is null", () => {
+    const onRunwaySelect = jest.fn();
+    const runways: RunwayOption[] = [
+      { id: "03/21", length: 8103, alignment: 30 },
+      { id: "16/34", length: 5500, alignment: 160 },
+      { id: "H1", length: 60, alignment: null },
+    ];
+    render(
+      <AirportCard
+        {...baseProps}
+        variant="departure"
+        airportCode="KOGD"
+        runways={runways}
+        selectedRunwayLength={null}
+        onRunwaySelect={onRunwaySelect}
+      />
+    );
+    expect(onRunwaySelect).toHaveBeenCalledWith(5500);
+  });
+
+  it("does not auto-select when selectedRunwayLength already matches a runway", () => {
+    const onRunwaySelect = jest.fn();
+    const runways: RunwayOption[] = [
+      { id: "16/34", length: 5500, alignment: 160 },
+      { id: "03/21", length: 8103, alignment: 30 },
+    ];
+    render(
+      <AirportCard
+        {...baseProps}
+        variant="departure"
+        airportCode="KOGD"
+        runways={runways}
+        selectedRunwayLength={8103}
+        onRunwaySelect={onRunwaySelect}
+      />
+    );
+    expect(onRunwaySelect).not.toHaveBeenCalled();
+  });
+});

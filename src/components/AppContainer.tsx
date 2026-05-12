@@ -115,6 +115,12 @@ export default function AppContainer() {
   );
 
   const handleUpdate = (updates: Partial<WorksheetData>) => {
+    // Clear stale runway options when the user edits an airport code — the
+    // dropdown options were fetched for a specific ICAO and shouldn't carry
+    // over to a different one. Re-fetch repopulates them.
+    if (updates.airport !== undefined) {
+      setAirportRunways([null, null]);
+    }
     setState((prev: WorksheetData) => {
       const merged = { ...prev, ...updates } as WorksheetData;
       return merged;
