@@ -40,9 +40,10 @@ describe("SlideOver — closed state", () => {
         <p>Hidden body</p>
       </SlideOver>
     );
-    // With static=true the DOM is mounted but should be visually hidden
-    // (off-screen via transform). Confirm the title is not announced to a
-    // screen-reader user — the Dialog has aria-hidden when closed.
+    // Headless UI either removes the dialog from the DOM when closed
+    // (in which case this test verifies absence via queryByRole returning
+    // null) or keeps it with aria-hidden="true" (in which case the
+    // attribute assertion fires). Both outcomes are acceptable.
     const dialog = screen.queryByRole("dialog");
     if (dialog) {
       expect(dialog).toHaveAttribute("aria-hidden", "true");
