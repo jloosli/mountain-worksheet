@@ -374,11 +374,7 @@ export default function AircraftPerformance({
                   className={getInputStyling("altitude", 0)}
                 />
               </td>
-              <td className="p-2">
-                <span className="text-gray-700 dark:text-gray-300">
-                  {getValue("altitude", 1) || "—"}
-                </span>
-              </td>
+              <td className="p-2"></td>
               <td className="p-2">
                 <input
                   type="number"

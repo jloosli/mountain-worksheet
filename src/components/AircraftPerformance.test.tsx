@@ -77,11 +77,10 @@ describe("AircraftPerformance", () => {
     const altimeterInputs = screen.getAllByDisplayValue("29.92");
     expect(altimeterInputs).toHaveLength(3);
 
-    // Operating altitude is now read-only text; only departure and arrival are inputs
+    // Only departure and arrival altitudes are inputs in the Aircraft Performance table.
+    // (Operating altitude is owned by SortieInfo.)
     const altitudeInputs = screen.getAllByDisplayValue("8000");
     expect(altitudeInputs).toHaveLength(2);
-    // Operating altitude shown as text
-    expect(screen.getByText("8000")).toBeInTheDocument();
 
     // Check runway inputs
     const runwayInputs = screen.getAllByDisplayValue("1000");
@@ -190,7 +189,7 @@ describe("AircraftPerformance", () => {
       />
     );
 
-    // Operating altitude is now read-only; only departure and arrival are inputs
+    // Only departure and arrival altitudes are inputs; operating altitude is owned by SortieInfo
     const altitudeInputs = screen.getAllByDisplayValue("8000");
     expect(altitudeInputs).toHaveLength(2);
 
@@ -352,8 +351,6 @@ describe("AircraftPerformance", () => {
     const arrivalAltitudeInput = screen.getByDisplayValue("4229");
     expect(arrivalAltitudeInput).toHaveClass("bg-blue-50", "border-blue-300");
 
-    // Operating altitude is now read-only text (moved to SortieInfo)
-    expect(screen.getByText("8000")).toBeInTheDocument();
   });
 
   it("applies manual styling to fields when data is not API-populated", () => {
@@ -487,9 +484,8 @@ describe("AircraftPerformance", () => {
     // Should display initialData values
     expect(screen.getAllByDisplayValue("21")).toHaveLength(3);
     expect(screen.getAllByDisplayValue("1000")).toHaveLength(2);
-    // Operating altitude is read-only text; departure and arrival remain as inputs
+    // departure and arrival remain as inputs; operating altitude is owned by SortieInfo
     expect(screen.getAllByDisplayValue("8000")).toHaveLength(2);
-    expect(screen.getByText("8000")).toBeInTheDocument();
   });
 
   it("handles partial worksheetData updates", () => {
@@ -512,8 +508,7 @@ describe("AircraftPerformance", () => {
 
     // Should display initialData for temp and altitude
     expect(screen.getAllByDisplayValue("21")).toHaveLength(3);
-    // Operating altitude is read-only text; departure and arrival remain as inputs
+    // departure and arrival remain as inputs; operating altitude is owned by SortieInfo
     expect(screen.getAllByDisplayValue("8000")).toHaveLength(2);
-    expect(screen.getByText("8000")).toBeInTheDocument();
   });
 });
