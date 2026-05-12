@@ -12,9 +12,9 @@ import WeatherDataIntegration from "@/components/WeatherDataIntegration";
 import WorksheetHeader from "@/components/WorksheetHeader";
 import { deriveActionBarState } from "@/utils/actionBarState";
 import { deriveStepStatuses } from "@/utils/stepStatuses";
+import type { AirportRunwayInfo, RunwayOption, WorksheetData } from "@/utils/types";
 import { useTempUnit } from "@/utils/useTempUnit";
 import { useUrlState } from "@/utils/useUrlState";
-import type { AirportRunwayInfo, RunwayOption, WorksheetData } from "@/utils/types";
 
 const getDefaultSortieDateTime = () => {
   const now = new Date();
