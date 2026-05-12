@@ -4,8 +4,9 @@ import { useMemo, useState } from "react";
 import ActionBar from "@/components/ActionBar";
 import AppInputs from "@/components/AppInputs";
 import Calculations from "@/components/Calculations";
-import InstructionsAndNotes from "@/components/InstructionsAndNotes";
-import MountainFlyingChecklist from "@/components/MountainFlyingChecklist";
+import ChecklistPanel from "@/components/ChecklistPanel";
+import InstructionsPanel from "@/components/InstructionsPanel";
+import SlideOver from "@/components/SlideOver";
 import Stepper, { type StepperStep } from "@/components/Stepper";
 import StepShell from "@/components/StepShell";
 import WeatherDataIntegration from "@/components/WeatherDataIntegration";
@@ -95,6 +96,13 @@ export default function AppContainer() {
     setAirportRunways([info.departure, info.arrival]);
   };
 
+  const [overlay, setOverlay] = useState<"instructions" | "checklist" | null>(
+    null
+  );
+  const handleOpenInstructions = () => setOverlay("instructions");
+  const handleOpenChecklist = () => setOverlay("checklist");
+  const handleCloseOverlay = () => setOverlay(null);
+
   const stepStatuses = useMemo(
     () => deriveStepStatuses(state, weatherLastUpdated),
     [state, weatherLastUpdated]
@@ -157,6 +165,7 @@ export default function AppContainer() {
         onShare={handleShare}
         useFahrenheit={useFahrenheit}
         onToggleTempUnit={toggleTempUnit}
+        onOpenInstructions={handleOpenInstructions}
       />
       <Stepper steps={steps} />
       <WeatherDataIntegration
@@ -173,6 +182,7 @@ export default function AppContainer() {
             onFetch={onClick}
             fetchDisabled={disabled}
             isFetching={isLoading}
+            onOpenChecklist={handleOpenChecklist}
           />
         )}
       />
@@ -194,10 +204,22 @@ export default function AppContainer() {
           >
             <Calculations state={state} />
           </StepShell>
-          <MountainFlyingChecklist />
-          <InstructionsAndNotes />
         </div>
       </main>
+      <SlideOver
+        isOpen={overlay === "instructions"}
+        onClose={handleCloseOverlay}
+        title="Instructions & Operational Notes"
+      >
+        <InstructionsPanel />
+      </SlideOver>
+      <SlideOver
+        isOpen={overlay === "checklist"}
+        onClose={handleCloseOverlay}
+        title="Mountain Flying Checklist"
+      >
+        <ChecklistPanel />
+      </SlideOver>
       <footer className="w-full py-4 px-2 md:px-8 text-center text-sm text-gray-600 dark:text-gray-400 border-t border-gray-200 dark:border-gray-800">
         Found an issue or bug?{" "}
         <a

@@ -18,15 +18,14 @@ describe("AppContainer", () => {
     expect(anchor).not.toBeNull();
   });
 
-  it("renders InstructionsAndNotes below MountainFlyingChecklist", () => {
-    const { container } = render(<AppContainer />);
-    const all = Array.from(container.querySelectorAll("details > summary"));
-    const labels = all.map((s) => s.textContent ?? "");
-    const checklistIdx = labels.findIndex((t) => t.includes("Mountain Flying Checklist"));
-    const instructionsIdx = labels.findIndex((t) => t.includes("Instructions and Notes"));
-    expect(checklistIdx).toBeGreaterThan(-1);
-    expect(instructionsIdx).toBeGreaterThan(-1);
-    expect(instructionsIdx).toBeGreaterThan(checklistIdx);
+  it("renders the slide-over triggers (instructions in header, checklist on action bar)", () => {
+    render(<AppContainer />);
+    expect(
+      screen.getByRole("button", { name: /Open instructions/i })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /Checklist/i })
+    ).toBeInTheDocument();
   });
 
   it("renders the sticky ActionBar region", () => {
