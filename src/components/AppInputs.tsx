@@ -4,7 +4,7 @@ import { type ReactNode } from "react";
 import SortieInfo from "@/components/SortieInfo";
 import WeatherInfo from "@/components/WeatherInfo";
 import AircraftPerformance from "@/components/AircraftPerformance";
-import MountainQuals from "@/components/MountainQuals";
+import StepShell from "@/components/StepShell";
 import type { WorksheetData } from "@/utils/types";
 
 interface WorksheetFormProps {
@@ -26,10 +26,15 @@ export default function AppInputs({
 
   return (
     <div className="flex w-full max-w-4xl flex-col gap-8">
-      <section id="step-sortie" className="flex flex-col gap-8 scroll-mt-[60px]">
+      <StepShell
+        id="step-sortie"
+        number={1}
+        status="active"
+        title="Sortie Details"
+        subtitle="Who's flying, when, and where"
+      >
         <SortieInfo onUpdate={handleUpdate} initialData={state} />
-        <MountainQuals onUpdate={handleUpdate} initialData={state} />
-      </section>
+      </StepShell>
       <section id="step-weather" className="flex flex-col gap-8 scroll-mt-[60px]">
         <WeatherInfo
           onUpdate={handleUpdate}

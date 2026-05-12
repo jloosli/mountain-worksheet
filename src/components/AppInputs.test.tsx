@@ -80,25 +80,6 @@ jest.mock("./AircraftPerformance", () => {
 });
 
 
-jest.mock("./MountainQuals", () => {
-  return function MockMountainQuals({
-    onUpdate,
-  }: {
-    onUpdate: (data: Partial<WorksheetData>) => void;
-  }) {
-    return (
-      <div data-testid="mountain-quals">
-        <button
-          data-testid="update-quals-btn"
-          onClick={() => onUpdate({ mtnEndorse: true })}
-        >
-          Update Quals
-        </button>
-      </div>
-    );
-  };
-});
-
 
 describe("AppInputs", () => {
   const mockOnStateUpdate = jest.fn();
@@ -137,7 +118,6 @@ describe("AppInputs", () => {
     expect(screen.getByTestId("sortie-info")).toBeInTheDocument();
     expect(screen.getByTestId("weather-info")).toBeInTheDocument();
     expect(screen.getByTestId("aircraft-performance")).toBeInTheDocument();
-    expect(screen.getByTestId("mountain-quals")).toBeInTheDocument();
   });
 
   it("passes worksheet data and timestamp to WeatherInfo", () => {
@@ -201,11 +181,6 @@ describe("AppInputs", () => {
     const updateWeightButton = screen.getByTestId("update-weight-btn");
     fireEvent.click(updateWeightButton);
     expect(mockOnStateUpdate).toHaveBeenCalledWith({ weight: 2500 });
-
-    // Test MountainQuals update
-    const updateQualsButton = screen.getByTestId("update-quals-btn");
-    fireEvent.click(updateQualsButton);
-    expect(mockOnStateUpdate).toHaveBeenCalledWith({ mtnEndorse: true });
   });
 
   it("passes weather timestamp to WeatherInfo", () => {
@@ -279,6 +254,5 @@ describe("AppInputs", () => {
     expect(screen.getByTestId("sortie-info")).toBeInTheDocument();
     expect(screen.getByTestId("weather-info")).toBeInTheDocument();
     expect(screen.getByTestId("aircraft-performance")).toBeInTheDocument();
-    expect(screen.getByTestId("mountain-quals")).toBeInTheDocument();
   });
 });
