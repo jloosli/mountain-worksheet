@@ -1,6 +1,7 @@
 // src/components/AirportCard.tsx
 "use client";
 
+import { useId } from "react";
 import { ArrowUpRightIcon } from "@heroicons/react/24/outline";
 import type { RunwayOption } from "@/utils/types";
 import { celciusToFarenheit } from "@/utils/formulas";
@@ -37,7 +38,7 @@ const formatTemperatureValue = (
   stored: number | null,
   useFahrenheit: boolean
 ): string => {
-  if (stored === null || stored === undefined) return "";
+  if (stored === null) return "";
   if (useFahrenheit) return Math.round(celciusToFarenheit(stored)).toString();
   return parseFloat(stored.toFixed(1)).toString();
 };
@@ -47,7 +48,7 @@ const formatThousands = (n: number): string =>
 
 const cellInputClass = (apiPopulated: boolean): string => {
   const base =
-    "num-mono text-right rounded px-2 py-1 w-24 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300";
+    "num-mono text-right rounded px-2 py-1 w-24 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-300 dark:text-slate-100";
   return apiPopulated
     ? `${base} bg-blue-50 border border-blue-300 dark:bg-blue-900/20 dark:border-blue-600`
     : `${base} bg-white border border-slate-300 dark:bg-slate-800 dark:border-slate-600`;
@@ -61,6 +62,10 @@ const headerVariantLabel: Record<AirportCardVariant, string> = {
 
 export default function AirportCard(props: AirportCardProps) {
   const variantLabel = headerVariantLabel[props.variant];
+  const baseId = useId();
+  const tempId = `${baseId}-temp`;
+  const altId = `${baseId}-alt`;
+  const rwyId = `${baseId}-rwy`;
 
   return (
     <div className="rounded-lg border border-slate-200 bg-white overflow-hidden dark:border-slate-700 dark:bg-slate-900">
@@ -79,13 +84,13 @@ export default function AirportCard(props: AirportCardProps) {
       <div className="px-4 py-3 space-y-2.5">
         <div className="flex items-center justify-between gap-2">
           <label
-            htmlFor={`temp-${props.variant}`}
+            htmlFor={tempId}
             className="text-[10px] font-semibold uppercase tracking-wider text-slate-500"
           >
             Temperature
           </label>
           <input
-            id={`temp-${props.variant}`}
+            id={tempId}
             type="number"
             value={formatTemperatureValue(props.temperature, !!props.useFahrenheit)}
             onChange={(e) => props.onTemperatureChange(e.target.value)}
@@ -98,13 +103,13 @@ export default function AirportCard(props: AirportCardProps) {
         </div>
         <div className="flex items-center justify-between gap-2">
           <label
-            htmlFor={`alt-${props.variant}`}
+            htmlFor={altId}
             className="text-[10px] font-semibold uppercase tracking-wider text-slate-500"
           >
             Altimeter
           </label>
           <input
-            id={`alt-${props.variant}`}
+            id={altId}
             type="number"
             step="0.01"
             min="28.00"
@@ -151,7 +156,8 @@ export default function AirportCard(props: AirportCardProps) {
               runways={props.runways ?? null}
               selectedLength={props.selectedRunwayLength ?? null}
               onSelect={props.onRunwaySelect}
-              variant={props.variant}
+              id={rwyId}
+              apiPopulatedRunway={props.apiPopulated.runway}
             />
           </>
         )}
@@ -164,22 +170,28 @@ interface RunwayRowProps {
   runways: RunwayOption[] | null;
   selectedLength: number | null;
   onSelect?: (length: number) => void;
-  variant: "departure" | "arrival";
+  id: string;
+  apiPopulatedRunway: boolean;
 }
 
 function RunwayRow({
   runways,
   selectedLength,
   onSelect,
-  variant,
+  id,
+  apiPopulatedRunway,
 }: RunwayRowProps) {
   // Filter helipads (alignment === null) from the list.
   const validRunways = runways?.filter((r) => r.alignment !== null) ?? null;
 
+  const selectClass = apiPopulatedRunway
+    ? "num-mono text-right bg-blue-50 border border-blue-300 rounded px-2 py-1 text-sm dark:bg-blue-900/20 dark:border-blue-600 dark:text-slate-100"
+    : "num-mono text-right bg-white border border-slate-300 rounded px-2 py-1 text-sm dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100";
+
   return (
     <div className="flex items-center justify-between gap-2">
       <label
-        htmlFor={`rwy-${variant}`}
+        htmlFor={id}
         className="text-[10px] font-semibold uppercase tracking-wider text-slate-500"
       >
         Runway
@@ -190,10 +202,10 @@ function RunwayRow({
         </span>
       ) : (
         <select
-          id={`rwy-${variant}`}
+          id={id}
           value={selectedLength ?? ""}
           onChange={(e) => onSelect?.(Number(e.target.value))}
-          className="num-mono text-right bg-white border border-slate-300 rounded px-2 py-1 text-sm dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
+          className={selectClass}
         >
           {validRunways.map((r) => (
             <option key={r.id} value={r.length}>

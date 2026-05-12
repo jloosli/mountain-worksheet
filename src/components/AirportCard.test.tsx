@@ -69,7 +69,7 @@ describe("AirportCard — departure variant", () => {
     expect(select).toHaveValue("5500");
   });
 
-  it("renders a 'Not fetched' placeholder when runways is null", () => {
+  it("renders 'Fetch weather to load runways' placeholder when runways is null", () => {
     render(
       <AirportCard
         {...baseProps}
@@ -106,6 +106,38 @@ describe("AirportCard — departure variant", () => {
       target: { value: "8103" },
     });
     expect(onRunwaySelect).toHaveBeenCalledWith(8103);
+  });
+
+  it("applies API-populated styling to the runway dropdown when apiPopulated.runway is true", () => {
+    const runways: RunwayOption[] = [
+      { id: "16/34", length: 5500, alignment: 160 },
+    ];
+    render(
+      <AirportCard
+        {...baseProps}
+        variant="departure"
+        airportCode="KOGD"
+        runways={runways}
+        selectedRunwayLength={5500}
+        apiPopulated={{ temperature: false, pressure: false, runway: true }}
+      />
+    );
+    expect(screen.getByRole("combobox", { name: /Runway/i })).toHaveClass("bg-blue-50");
+  });
+
+  it("renders placeholder when all runways are helipads", () => {
+    const runways: RunwayOption[] = [{ id: "H1", length: 60, alignment: null }];
+    render(
+      <AirportCard
+        {...baseProps}
+        variant="departure"
+        airportCode="KOGD"
+        runways={runways}
+        selectedRunwayLength={null}
+      />
+    );
+    expect(screen.queryByRole("combobox", { name: /Runway/i })).not.toBeInTheDocument();
+    expect(screen.getByText(/Fetch weather to load runways/i)).toBeInTheDocument();
   });
 
   it("calls onTemperatureChange and onAltimeterChange on input", () => {
@@ -174,6 +206,28 @@ describe("AirportCard — arrival variant", () => {
     expect(screen.getByText("Arrival")).toBeInTheDocument();
     expect(screen.getByText("KLGU")).toBeInTheDocument();
     expect(screen.getByText(/4,457 ft/)).toBeInTheDocument();
+  });
+
+  it("renders the runway dropdown for arrival, helipads excluded", () => {
+    const runways: RunwayOption[] = [
+      { id: "17/35", length: 5861, alignment: 170 },
+      { id: "H1", length: 60, alignment: null },
+    ];
+    render(
+      <AirportCard
+        {...baseProps}
+        variant="arrival"
+        airportCode="KLGU"
+        fieldElev={4457}
+        runways={runways}
+        selectedRunwayLength={5861}
+        onRunwaySelect={noOp}
+      />
+    );
+    const select = screen.getByRole("combobox", { name: /Runway/i });
+    const options = Array.from(select.querySelectorAll("option"));
+    expect(options).toHaveLength(1);
+    expect(options[0].textContent).toMatch(/17\/35/);
   });
 });
 
