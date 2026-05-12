@@ -28,7 +28,7 @@ This redesign turns the Mountain Worksheet from a long stack of equal-weight sec
 | Component | Phase | Responsibility |
 |---|---|---|
 | `Stepper` | 1 | Sticky 3-pill nav with scroll-spy |
-| `StepShell` | 1 | Numbered card wrapper with left-rail spine and header chip |
+| `StepShell` | 2 | Numbered card wrapper with left-rail spine and header chip |
 | `ActionBar` | 3 | Sticky state-aware action bar driven by a derived state machine |
 | `SlideOver` | 5 | Generic right-side panel built on `@headlessui/react` `Dialog` |
 | `AirportCard` | 4 | One-airport card with METAR-driven + reference fields |

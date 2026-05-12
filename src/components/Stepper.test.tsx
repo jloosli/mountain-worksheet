@@ -26,7 +26,7 @@ describe("Stepper", () => {
     expect(screen.getByRole("link", { name: /Decision/ })).toHaveAttribute("href", "#step-decision");
   });
 
-  it("uses the active-step className when activeId is explicitly set", () => {
+  it("marks the active step with data-active when activeId is explicitly set", () => {
     render(<Stepper steps={defaultSteps} activeId="step-weather" />);
     const weather = screen.getByRole("link", { name: /Weather/ });
     expect(weather).toHaveAttribute("data-active", "true");

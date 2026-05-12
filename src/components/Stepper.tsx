@@ -28,6 +28,13 @@ const circleBg: Record<StepStatus, string> = {
   warning:  "bg-amber-500",
 };
 
+const circleText: Record<StepStatus, string> = {
+  pending:  "text-slate-700",
+  active:   "text-white",
+  complete: "text-white",
+  warning:  "text-white",
+};
+
 const badgeColor: Record<StepStatus, string> = {
   pending:  "text-slate-500",
   active:   "text-slate-900",
@@ -86,7 +93,7 @@ export default function Stepper({ steps, activeId }: StepperProps) {
                     className="flex items-center gap-2 rounded-full bg-white px-3 py-1.5 transition-all data-[active]:ring-2 data-[active]:ring-slate-900 data-[active]:shadow-sm"
                   >
                     <span
-                      className={`flex h-6 w-6 items-center justify-center rounded-full ${circleBg[step.status]} font-mono text-xs font-semibold text-white`}
+                      className={`flex h-6 w-6 items-center justify-center rounded-full ${circleBg[step.status]} font-mono text-xs font-semibold ${circleText[step.status]}`}
                     >
                       {step.number}
                     </span>

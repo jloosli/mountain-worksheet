@@ -5,11 +5,17 @@ import AppInputs from "@/components/AppInputs";
 import Calculations from "@/components/Calculations";
 import InstructionsAndNotes from "@/components/InstructionsAndNotes";
 import MountainFlyingChecklist from "@/components/MountainFlyingChecklist";
-import Stepper from "@/components/Stepper";
+import Stepper, { type StepperStep } from "@/components/Stepper";
 import WorksheetHeader from "@/components/WorksheetHeader";
 import { useUrlState } from "@/utils/useUrlState";
 import { useTempUnit } from "@/utils/useTempUnit";
 import type { WorksheetData } from "@/utils/types";
+
+const WORKSHEET_STEPS: StepperStep[] = [
+  { id: "step-sortie", number: 1, label: "Sortie Details", status: "active" },
+  { id: "step-weather", number: 2, label: "Weather", status: "pending" },
+  { id: "step-decision", number: 3, label: "Decision", status: "pending" },
+];
 
 const getDefaultSortieDateTime = () => {
   const now = new Date();
@@ -124,13 +130,7 @@ export default function AppContainer() {
         useFahrenheit={useFahrenheit}
         onToggleTempUnit={toggleTempUnit}
       />
-      <Stepper
-        steps={[
-          { id: "step-sortie",   number: 1, label: "Sortie Details", status: "active" },
-          { id: "step-weather",  number: 2, label: "Weather",        status: "pending" },
-          { id: "step-decision", number: 3, label: "Decision",       status: "pending" },
-        ]}
-      />
+      <Stepper steps={WORKSHEET_STEPS} />
       <main className="flex-1 w-full flex justify-center px-2 md:px-8 pb-20">
         <div className="w-full max-w-5xl flex flex-col gap-16 items-center">
           <AppInputs
