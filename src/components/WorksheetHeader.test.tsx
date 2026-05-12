@@ -1,4 +1,4 @@
-import { render, screen } from "../test-utils/test-utils";
+import { fireEvent, render, screen } from "../test-utils/test-utils";
 import WorksheetHeader from "./WorksheetHeader";
 
 const defaultProps = {
@@ -6,6 +6,7 @@ const defaultProps = {
   onShare: jest.fn(),
   useFahrenheit: false,
   onToggleTempUnit: jest.fn(),
+  onOpenInstructions: jest.fn(),
 };
 
 describe("WorksheetHeader", () => {
@@ -29,5 +30,12 @@ describe("WorksheetHeader", () => {
     expect(
       screen.queryByRole("button", { name: /Fetch Weather/i })
     ).not.toBeInTheDocument();
+  });
+
+  it("renders an instructions trigger button and calls onOpenInstructions when clicked", () => {
+    render(<WorksheetHeader {...defaultProps} />);
+    const trigger = screen.getByRole("button", { name: /instructions/i });
+    fireEvent.click(trigger);
+    expect(defaultProps.onOpenInstructions).toHaveBeenCalled();
   });
 });

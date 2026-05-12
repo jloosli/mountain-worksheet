@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { LinkIcon } from "@heroicons/react/24/outline";
+import { LinkIcon, QuestionMarkCircleIcon } from "@heroicons/react/24/outline";
 
 interface WorksheetHeaderProps {
   onReset: () => void;
   onShare: () => void | Promise<void>;
   useFahrenheit: boolean;
   onToggleTempUnit: () => void;
+  onOpenInstructions: () => void;
 }
 
 const formatUtcDisplay = (date: Date) => {
@@ -64,6 +65,7 @@ export default function WorksheetHeader({
   onShare,
   useFahrenheit,
   onToggleTempUnit,
+  onOpenInstructions,
 }: WorksheetHeaderProps) {
   return (
     <header className="w-full bg-slate-900 text-white shadow-md">
@@ -76,6 +78,14 @@ export default function WorksheetHeader({
         <div className="flex items-center gap-3 shrink-0">
           <UtcClock />
           <div className="flex items-center gap-1.5">
+            <button
+              onClick={onOpenInstructions}
+              title="Instructions & operational notes"
+              aria-label="Open instructions"
+              className="flex items-center rounded-md border border-slate-700/60 p-1.5 text-slate-300 hover:bg-slate-800 hover:text-white"
+            >
+              <QuestionMarkCircleIcon className="h-3.5 w-3.5" />
+            </button>
             <button
               onClick={onReset}
               className="rounded-md border border-slate-700/60 px-2.5 py-1 text-xs text-slate-300 hover:bg-slate-800 hover:text-white"
