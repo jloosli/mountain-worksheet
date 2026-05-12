@@ -6,6 +6,7 @@ import Calculations from "@/components/Calculations";
 import InstructionsAndNotes from "@/components/InstructionsAndNotes";
 import MountainFlyingChecklist from "@/components/MountainFlyingChecklist";
 import Stepper, { type StepperStep } from "@/components/Stepper";
+import StepShell from "@/components/StepShell";
 import WorksheetHeader from "@/components/WorksheetHeader";
 import { useUrlState } from "@/utils/useUrlState";
 import { useTempUnit } from "@/utils/useTempUnit";
@@ -139,9 +140,16 @@ export default function AppContainer() {
             weatherLastUpdated={weatherLastUpdated ?? undefined}
             useFahrenheit={useFahrenheit}
           />
-          <section id="step-decision" className="w-full flex justify-center scroll-mt-[60px]">
-            <Calculations state={state} />
-          </section>
+          <StepShell
+              id="step-decision"
+              number={3}
+              status="pending"
+              title="Decision"
+              subtitle="Go / no-go summary, with detailed calculations below"
+              showSpine={false}
+            >
+              <Calculations state={state} />
+            </StepShell>
           <MountainFlyingChecklist />
           <InstructionsAndNotes />
         </div>
