@@ -23,6 +23,8 @@ type SortieInfoData = Pick<
   | "position"
   | "weight"
   | "altitude"
+  | "mtnEndorse"
+  | "mtnCert"
 >;
 
 export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
@@ -38,6 +40,8 @@ export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
     position: [null, null],
     weight: null,
     altitude: [null, null, null],
+    mtnEndorse: false,
+    mtnCert: false,
   });
 
   const [currentTime, setCurrentTime] = useState<Date>(() => new Date());
@@ -131,6 +135,13 @@ export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
     onUpdate({ duration: value });
   };
 
+  const handleQualChange = (field: "mtnEndorse" | "mtnCert") =>
+    (e: ChangeEvent<HTMLInputElement>) => {
+      const updatedData = { ...formData, [field]: e.target.checked };
+      setFormData(updatedData);
+      onUpdate({ [field]: e.target.checked });
+    };
+
   // Stable identity prevents the 60s currentTime ticker from cancelling
   // PositionInput's pending debounce on every re-render.
   const handlePositionChange = useCallback(
@@ -204,178 +215,220 @@ export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
   }, [formData.date, formData.time, currentTime]);
 
   return (
-    <div className="w-full max-w-4xl space-y-4 bg-white dark:bg-black/[.15] rounded-lg shadow-sm">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <label htmlFor="pilot" className="block text-sm font-medium">
-            Pilot Name
-          </label>
-          <input
-            type="text"
-            id="pilot"
-            name="pilot"
-            value={formData.pilot || ""}
-            onChange={handleInputChange}
-            className="w-full px-3 py-2 border rounded-md dark:bg-black/[.15] dark:border-white/[.145]"
-          />
-        </div>
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3">
+          Pilot &amp; Aircraft
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="space-y-2">
+            <label htmlFor="pilot" className="block text-sm font-medium">
+              Pilot Name
+            </label>
+            <input
+              type="text"
+              id="pilot"
+              name="pilot"
+              value={formData.pilot || ""}
+              onChange={handleInputChange}
+              className="w-full px-3 py-2 border rounded-md dark:bg-black/[.15] dark:border-white/[.145]"
+            />
+          </div>
 
-        <div className="space-y-2">
-          <label htmlFor="acType" className="block text-sm font-medium">
-            Aircraft Model
-          </label>
-          <select
-            id="acType"
-            name="acType"
-            value={formData.acType || ""}
-            onChange={handleInputChange}
-            className="w-full px-3 py-2 border rounded-md dark:bg-black/[.15] dark:border-white/[.145]"
-          >
-            <option value="">Select Aircraft</option>
-            {aircraftData.map((aircraft) => (
-              <option key={aircraft.id} value={aircraft.id}>
-                {aircraft.name}
-              </option>
-            ))}
-          </select>
-        </div>
+          <div className="space-y-2">
+            <label htmlFor="acType" className="block text-sm font-medium">
+              Aircraft Model
+            </label>
+            <select
+              id="acType"
+              name="acType"
+              value={formData.acType || ""}
+              onChange={handleInputChange}
+              className="w-full px-3 py-2 border rounded-md dark:bg-black/[.15] dark:border-white/[.145]"
+            >
+              <option value="">Select Aircraft</option>
+              {aircraftData.map((aircraft) => (
+                <option key={aircraft.id} value={aircraft.id}>
+                  {aircraft.name}
+                </option>
+              ))}
+            </select>
+          </div>
 
-        <div className="space-y-2">
-          <label htmlFor="date" className="block text-sm font-medium">
-            Date of Sortie
-          </label>
-          <input
-            type="date"
-            id="date"
-            name="date"
-            value={formData.date}
-            onChange={handleInputChange}
-            className="w-full px-3 py-2 border rounded-md dark:bg-black/[.15] dark:border-white/[.145]"
-          />
+          <div className="space-y-2">
+            <label htmlFor="tailN" className="block text-sm font-medium">
+              Aircraft Tail Number
+            </label>
+            <input
+              type="text"
+              id="tailN"
+              name="tailN"
+              value={formData.tailN || ""}
+              onChange={handleInputChange}
+              className="w-full px-3 py-2 border rounded-md dark:bg-black/[.15] dark:border-white/[.145]"
+            />
+          </div>
         </div>
+      </div>
 
-        <div className="space-y-2">
-          <label htmlFor="time" className="block text-sm font-medium">
-            Time of Sortie (UTC)
-          </label>
-          <select
-            id="time"
-            name="time"
-            value={formData.time}
-            onChange={handleInputChange}
-            className="w-full px-3 py-2 border rounded-md dark:bg-black/[.15] dark:border-white/[.145]"
-          >
-            <option value="">Select Time</option>
-            {utcHourOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+      <div>
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3">
+          When
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="space-y-2">
+            <label htmlFor="date" className="block text-sm font-medium">
+              Date of Sortie
+            </label>
+            <input
+              type="date"
+              id="date"
+              name="date"
+              value={formData.date}
+              onChange={handleInputChange}
+              className="w-full px-3 py-2 border rounded-md dark:bg-black/[.15] dark:border-white/[.145]"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label htmlFor="time" className="block text-sm font-medium">
+              Time of Sortie (UTC)
+            </label>
+            <select
+              id="time"
+              name="time"
+              value={formData.time}
+              onChange={handleInputChange}
+              className="w-full px-3 py-2 border rounded-md dark:bg-black/[.15] dark:border-white/[.145]"
+            >
+              <option value="">Select Time</option>
+              {utcHourOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="space-y-2">
+            <label htmlFor="duration" className="block text-sm font-medium">
+              Expected Duration (hrs)
+            </label>
+            <select
+              id="duration"
+              name="duration"
+              value={formData.duration ?? ""}
+              onChange={handleDurationChange}
+              className="w-full px-3 py-2 border rounded-md dark:bg-black/[.15] dark:border-white/[.145]"
+            >
+              <option value="">Select Duration</option>
+              {durationOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
-
         {sortieLocalTiming && (
-          <div className="sm:col-span-2 text-xs text-gray-600 dark:text-gray-400">
+          <div className="mt-3 text-xs text-gray-600 dark:text-gray-400">
             {sortieLocalTiming}
           </div>
         )}
+      </div>
 
-        <div className="space-y-2">
-          <label htmlFor="duration" className="block text-sm font-medium">
-            Expected Duration (hrs)
-          </label>
-          <select
-            id="duration"
-            name="duration"
-            value={formData.duration ?? ""}
-            onChange={handleDurationChange}
-            className="w-full px-3 py-2 border rounded-md dark:bg-black/[.15] dark:border-white/[.145]"
-          >
-            <option value="">Select Duration</option>
-            {durationOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </div>
+      <div>
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3">
+          Where
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <label
+              htmlFor="departureAirport"
+              className="block text-sm font-medium"
+            >
+              Departure Airport
+            </label>
+            <input
+              type="text"
+              id="departureAirport"
+              value={formData.airport?.[0] || ""}
+              onChange={(e) => handleAirportChange(0, e.target.value)}
+              className="w-full px-3 py-2 border rounded-md dark:bg-black/[.15] dark:border-white/[.145]"
+            />
+          </div>
 
-        <div className="space-y-2">
-          <label htmlFor="tailN" className="block text-sm font-medium">
-            Aircraft Tail Number
-          </label>
-          <input
-            type="text"
-            id="tailN"
-            name="tailN"
-            value={formData.tailN || ""}
-            onChange={handleInputChange}
-            className="w-full px-3 py-2 border rounded-md dark:bg-black/[.15] dark:border-white/[.145]"
+          <div className="space-y-2">
+            <label htmlFor="arrivalAirport" className="block text-sm font-medium">
+              Arrival Airport
+            </label>
+            <input
+              type="text"
+              id="arrivalAirport"
+              value={formData.airport?.[1] || ""}
+              onChange={(e) => handleAirportChange(1, e.target.value)}
+              className="w-full px-3 py-2 border rounded-md dark:bg-black/[.15] dark:border-white/[.145]"
+            />
+          </div>
+
+          <PositionInput
+            rawValue={formData.route || ""}
+            cachedPosition={formData.position ?? [null, null]}
+            onChange={handlePositionChange}
           />
+
+          <div className="space-y-2">
+            <label htmlFor="operatingAltitude" className="block text-sm font-medium">
+              Operating Altitude (MSL ft)
+            </label>
+            <input
+              type="number"
+              id="operatingAltitude"
+              value={formData.altitude?.[1] ?? ""}
+              onChange={handleOperatingAltitudeChange}
+              className="w-full px-3 py-2 border rounded-md dark:bg-black/[.15] dark:border-white/[.145]"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label htmlFor="weight" className="block text-sm font-medium">
+              Aircraft Takeoff Weight (lbs)
+            </label>
+            <input
+              type="number"
+              id="weight"
+              name="weight"
+              value={formData.weight ?? ""}
+              onChange={handleWeightChange}
+              min={2200}
+              max={3600}
+              className="w-full px-3 py-2 border rounded-md dark:bg-black/[.15] dark:border-white/[.145]"
+            />
+          </div>
         </div>
+      </div>
 
-        <div className="space-y-2">
-          <label
-            htmlFor="departureAirport"
-            className="block text-sm font-medium"
-          >
-            Departure Airport
+      <div>
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3">
+          Pilot Qualifications
+        </h3>
+        <div className="flex flex-col gap-2">
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={formData.mtnEndorse}
+              onChange={handleQualChange("mtnEndorse")}
+            />
+            Current CAPF 70-5 Mountain Flight Endorsement?
           </label>
-          <input
-            type="text"
-            id="departureAirport"
-            value={formData.airport?.[0] || ""}
-            onChange={(e) => handleAirportChange(0, e.target.value)}
-            className="w-full px-3 py-2 border rounded-md dark:bg-black/[.15] dark:border-white/[.145]"
-          />
-        </div>
-
-        <PositionInput
-          rawValue={formData.route || ""}
-          cachedPosition={formData.position ?? [null, null]}
-          onChange={handlePositionChange}
-        />
-
-        <div className="space-y-2">
-          <label htmlFor="operatingAltitude" className="block text-sm font-medium">
-            Operating Altitude (MSL ft)
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={formData.mtnCert}
+              onChange={handleQualChange("mtnCert")}
+            />
+            Current CAPF 70-91 and Mountain Flying Certification?
           </label>
-          <input
-            type="number"
-            id="operatingAltitude"
-            value={formData.altitude?.[1] ?? ""}
-            onChange={handleOperatingAltitudeChange}
-            className="w-full px-3 py-2 border rounded-md dark:bg-black/[.15] dark:border-white/[.145]"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <label htmlFor="arrivalAirport" className="block text-sm font-medium">
-            Arrival Airport
-          </label>
-          <input
-            type="text"
-            id="arrivalAirport"
-            value={formData.airport?.[1] || ""}
-            onChange={(e) => handleAirportChange(1, e.target.value)}
-            className="w-full px-3 py-2 border rounded-md dark:bg-black/[.15] dark:border-white/[.145]"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <label htmlFor="weight" className="block text-sm font-medium">
-            Aircraft Takeoff Weight (lbs)
-          </label>
-          <input
-            type="number"
-            id="weight"
-            name="weight"
-            value={formData.weight ?? ""}
-            onChange={handleWeightChange}
-            min={2200}
-            max={3600}
-            className="w-full px-3 py-2 border rounded-md dark:bg-black/[.15] dark:border-white/[.145]"
-          />
         </div>
       </div>
     </div>
