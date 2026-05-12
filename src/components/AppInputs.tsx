@@ -25,7 +25,7 @@ export default function AppInputs({
   };
 
   return (
-    <div className="flex w-full max-w-4xl flex-col gap-8">
+    <div className="flex w-full max-w-4xl flex-col space-y-6">
       <StepShell
         id="step-sortie"
         number={1}
