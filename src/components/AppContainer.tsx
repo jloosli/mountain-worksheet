@@ -125,8 +125,15 @@ export default function AppContainer() {
   const handleUpdate = (updates: Partial<WorksheetData>) => {
     // Clear stale runway options when the user edits an airport code — the
     // dropdown options were fetched for a specific ICAO and shouldn't carry
-    // over to a different one. Re-fetch repopulates them.
-    if (updates.airport !== undefined) {
+    // over to a different one. WeatherDataIntegration's onDataUpdate also
+    // includes airport in its merged payload, so compare values rather than
+    // just checking for the key's presence — otherwise a successful fetch
+    // would stomp the runways that just landed.
+    if (
+      updates.airport !== undefined &&
+      (updates.airport[0] !== state.airport[0] ||
+        updates.airport[1] !== state.airport[1])
+    ) {
       setAirportRunways([null, null]);
     }
     setState((prev: WorksheetData) => {
