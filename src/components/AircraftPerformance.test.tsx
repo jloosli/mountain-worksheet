@@ -350,7 +350,6 @@ describe("AircraftPerformance", () => {
     // Check that arrival altitude (4229) has API styling
     const arrivalAltitudeInput = screen.getByDisplayValue("4229");
     expect(arrivalAltitudeInput).toHaveClass("bg-blue-50", "border-blue-300");
-
   });
 
   it("applies manual styling to fields when data is not API-populated", () => {

@@ -171,9 +171,7 @@ export default function AircraftPerformance({
         ? `${baseClasses} ${apiPopulatedClasses}`
         : `${baseClasses} ${manualClasses}`;
     } else if (fieldType === "altitude") {
-      // Only apply API styling to departure (index 0) and arrival (index 2) altitudes
-      // Operating altitude (index 1) should always be manual entry (no API styling)
-      const isApiPopulated = apiPopulated.altitude && index !== 1; // Never apply API styling to operating altitude
+      const isApiPopulated = apiPopulated.altitude;
       return isApiPopulated
         ? `${baseClasses} ${apiPopulatedClasses}`
         : `${baseClasses} ${manualClasses}`;
