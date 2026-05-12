@@ -175,8 +175,8 @@ export default function AppContainer() {
           <AppInputs
             state={state}
             onStateUpdate={handleUpdate}
-            weatherLastUpdated={weatherLastUpdated ?? undefined}
             useFahrenheit={useFahrenheit}
+            airportRunways={airportRunways}
           />
           <StepShell
             id="step-decision"

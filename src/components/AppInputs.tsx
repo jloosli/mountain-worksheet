@@ -2,22 +2,21 @@
 
 import { type ReactNode } from "react";
 import SortieInfo from "@/components/SortieInfo";
-import WeatherInfo from "@/components/WeatherInfo";
-import AircraftPerformance from "@/components/AircraftPerformance";
 import StepShell from "@/components/StepShell";
-import type { WorksheetData } from "@/utils/types";
+import WeatherSection from "@/components/WeatherSection";
+import type { RunwayOption, WorksheetData } from "@/utils/types";
 
 interface WorksheetFormProps {
   state: WorksheetData;
   onStateUpdate: (updates: Partial<WorksheetData>) => void;
-  weatherLastUpdated?: Date;
+  airportRunways: [RunwayOption[] | null, RunwayOption[] | null];
   useFahrenheit?: boolean;
 }
 
 export default function AppInputs({
   state,
   onStateUpdate,
-  weatherLastUpdated,
+  airportRunways,
   useFahrenheit,
 }: WorksheetFormProps): ReactNode {
   const handleUpdate = (data: Partial<WorksheetData>) => {
@@ -42,16 +41,10 @@ export default function AppInputs({
         title="Weather"
         subtitle="Winds aloft, terminal conditions, and advisories"
       >
-        <WeatherInfo
+        <WeatherSection
+          state={state}
           onUpdate={handleUpdate}
-          initialData={state}
-          lastUpdated={weatherLastUpdated}
-          useFahrenheit={useFahrenheit}
-        />
-        <AircraftPerformance
-          onUpdate={handleUpdate}
-          initialData={state}
-          worksheetData={state}
+          airportRunways={airportRunways}
           useFahrenheit={useFahrenheit}
         />
       </StepShell>
