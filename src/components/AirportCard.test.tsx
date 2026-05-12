@@ -1,0 +1,194 @@
+// src/components/AirportCard.test.tsx
+import { render, screen, fireEvent } from "@testing-library/react";
+import AirportCard from "./AirportCard";
+import type { RunwayOption } from "@/utils/types";
+
+const noOp = () => {};
+
+const baseProps = {
+  temperature: null,
+  altimeter: null,
+  onTemperatureChange: noOp,
+  onAltimeterChange: noOp,
+  apiPopulated: { temperature: false, pressure: false, runway: false },
+  useFahrenheit: false,
+};
+
+describe("AirportCard — departure variant", () => {
+  it("renders the airport code in the header", () => {
+    render(
+      <AirportCard
+        {...baseProps}
+        variant="departure"
+        airportCode="KOGD"
+        fieldElev={4473}
+      />
+    );
+    expect(screen.getByText("Departure")).toBeInTheDocument();
+    expect(screen.getByText("KOGD")).toBeInTheDocument();
+  });
+
+  it("renders the field elevation when provided", () => {
+    render(
+      <AirportCard
+        {...baseProps}
+        variant="departure"
+        airportCode="KOGD"
+        fieldElev={4473}
+      />
+    );
+    expect(screen.getByText(/4,473 ft/)).toBeInTheDocument();
+  });
+
+  it("renders the runway dropdown with id + length options, helipads excluded", () => {
+    const runways: RunwayOption[] = [
+      { id: "16/34", length: 5500, alignment: 160 },
+      { id: "03/21", length: 8103, alignment: 30 },
+      { id: "H1", length: 60, alignment: null }, // helipad
+    ];
+    render(
+      <AirportCard
+        {...baseProps}
+        variant="departure"
+        airportCode="KOGD"
+        fieldElev={4473}
+        runways={runways}
+        selectedRunwayLength={5500}
+        onRunwaySelect={noOp}
+      />
+    );
+    const select = screen.getByRole("combobox", { name: /Runway/i });
+    const options = Array.from(
+      select.querySelectorAll("option")
+    ) as HTMLOptionElement[];
+    expect(options).toHaveLength(2);
+    expect(options[0].textContent).toMatch(/16\/34/);
+    expect(options[0].textContent).toMatch(/5,500/);
+    expect(options[1].textContent).toMatch(/03\/21/);
+    expect(options[1].textContent).toMatch(/8,103/);
+    expect(select).toHaveValue("5500");
+  });
+
+  it("renders a 'Not fetched' placeholder when runways is null", () => {
+    render(
+      <AirportCard
+        {...baseProps}
+        variant="departure"
+        airportCode="KOGD"
+        fieldElev={4473}
+        runways={null}
+        selectedRunwayLength={null}
+        onRunwaySelect={noOp}
+      />
+    );
+    expect(screen.queryByRole("combobox", { name: /Runway/i })).not.toBeInTheDocument();
+    expect(screen.getByText(/Fetch weather to load runways/i)).toBeInTheDocument();
+  });
+
+  it("calls onRunwaySelect with the chosen runway length", () => {
+    const onRunwaySelect = jest.fn();
+    const runways: RunwayOption[] = [
+      { id: "16/34", length: 5500, alignment: 160 },
+      { id: "03/21", length: 8103, alignment: 30 },
+    ];
+    render(
+      <AirportCard
+        {...baseProps}
+        variant="departure"
+        airportCode="KOGD"
+        fieldElev={4473}
+        runways={runways}
+        selectedRunwayLength={5500}
+        onRunwaySelect={onRunwaySelect}
+      />
+    );
+    fireEvent.change(screen.getByRole("combobox", { name: /Runway/i }), {
+      target: { value: "8103" },
+    });
+    expect(onRunwaySelect).toHaveBeenCalledWith(8103);
+  });
+
+  it("calls onTemperatureChange and onAltimeterChange on input", () => {
+    const onTemperatureChange = jest.fn();
+    const onAltimeterChange = jest.fn();
+    render(
+      <AirportCard
+        {...baseProps}
+        variant="departure"
+        airportCode="KOGD"
+        fieldElev={4473}
+        temperature={20}
+        altimeter={29.92}
+        onTemperatureChange={onTemperatureChange}
+        onAltimeterChange={onAltimeterChange}
+      />
+    );
+    fireEvent.change(screen.getByLabelText(/Temperature/i), {
+      target: { value: "22" },
+    });
+    expect(onTemperatureChange).toHaveBeenCalledWith("22");
+    fireEvent.change(screen.getByLabelText(/Altimeter/i), {
+      target: { value: "30.01" },
+    });
+    expect(onAltimeterChange).toHaveBeenCalledWith("30.01");
+  });
+});
+
+describe("AirportCard — operating variant", () => {
+  it("renders the operating header and altitude link to step-sortie", () => {
+    render(
+      <AirportCard
+        {...baseProps}
+        variant="operating"
+        operatingAltitude={11500}
+      />
+    );
+    expect(screen.getByText("Operating")).toBeInTheDocument();
+    const altitudeLink = screen.getByRole("link", { name: /11,500 ft/i });
+    expect(altitudeLink).toHaveAttribute("href", "#step-sortie");
+  });
+
+  it("does not render runway dropdown or field elev for operating variant", () => {
+    render(
+      <AirportCard
+        {...baseProps}
+        variant="operating"
+        operatingAltitude={11500}
+      />
+    );
+    expect(screen.queryByRole("combobox", { name: /Runway/i })).not.toBeInTheDocument();
+    expect(screen.queryByText(/Field elev/i)).not.toBeInTheDocument();
+  });
+});
+
+describe("AirportCard — arrival variant", () => {
+  it("renders the arrival header with the airport code", () => {
+    render(
+      <AirportCard
+        {...baseProps}
+        variant="arrival"
+        airportCode="KLGU"
+        fieldElev={4457}
+      />
+    );
+    expect(screen.getByText("Arrival")).toBeInTheDocument();
+    expect(screen.getByText("KLGU")).toBeInTheDocument();
+    expect(screen.getByText(/4,457 ft/)).toBeInTheDocument();
+  });
+});
+
+describe("AirportCard — useFahrenheit", () => {
+  it("displays the stored Celsius value converted to Fahrenheit", () => {
+    render(
+      <AirportCard
+        {...baseProps}
+        variant="departure"
+        airportCode="KOGD"
+        temperature={20} // 20 °C = 68 °F
+        useFahrenheit={true}
+      />
+    );
+    const tempInput = screen.getByLabelText(/Temperature/i) as HTMLInputElement;
+    expect(tempInput.value).toBe("68");
+  });
+});
