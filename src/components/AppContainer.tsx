@@ -14,7 +14,7 @@ import { deriveActionBarState } from "@/utils/actionBarState";
 import { deriveStepStatuses } from "@/utils/stepStatuses";
 import { useTempUnit } from "@/utils/useTempUnit";
 import { useUrlState } from "@/utils/useUrlState";
-import type { WorksheetData } from "@/utils/types";
+import type { AirportRunwayInfo, RunwayOption, WorksheetData } from "@/utils/types";
 
 const getDefaultSortieDateTime = () => {
   const now = new Date();
@@ -87,6 +87,14 @@ export default function AppContainer() {
     null
   );
 
+  const [airportRunways, setAirportRunways] = useState<
+    [RunwayOption[] | null, RunwayOption[] | null]
+  >([null, null]);
+
+  const handleAirportInfoUpdate = (info: AirportRunwayInfo) => {
+    setAirportRunways([info.departure, info.arrival]);
+  };
+
   const stepStatuses = useMemo(
     () => deriveStepStatuses(state, weatherLastUpdated),
     [state, weatherLastUpdated]
@@ -149,6 +157,7 @@ export default function AppContainer() {
         worksheetData={state}
         onDataUpdate={handleWeatherDataUpdate}
         onTimestampUpdate={handleWeatherTimestampUpdate}
+        onAirportInfoUpdate={handleAirportInfoUpdate}
         hideBox
         renderButton={({ onClick, disabled, isLoading }) => (
           <ActionBar
