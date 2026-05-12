@@ -54,8 +54,8 @@ body {
   }
 
   /* Don't fracture a slide-over body across pages. */
-  aside[role="dialog"] section,
-  aside[role="dialog"] table {
+  div[role="dialog"] section,
+  div[role="dialog"] table {
     page-break-inside: avoid;
   }
 }

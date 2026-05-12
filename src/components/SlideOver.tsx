@@ -30,6 +30,7 @@ export default function SlideOver({
       >
         <Transition.Child
           as={Fragment}
+          unmount={false}
           enter="ease-out duration-200"
           enterFrom="opacity-0"
           enterTo="opacity-100"
@@ -45,6 +46,7 @@ export default function SlideOver({
 
         <Transition.Child
           as={Fragment}
+          unmount={false}
           enter="ease-out duration-300"
           enterFrom="translate-x-full"
           enterTo="translate-x-0"

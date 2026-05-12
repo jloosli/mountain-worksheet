@@ -40,10 +40,10 @@ describe("SlideOver — closed state", () => {
         <p>Hidden body</p>
       </SlideOver>
     );
-    // Headless UI either removes the dialog from the DOM when closed
-    // (in which case this test verifies absence via queryByRole returning
-    // null) or keeps it with aria-hidden="true" (in which case the
-    // attribute assertion fires). Both outcomes are acceptable.
+    // With Transition.Child unmount={false}, the dialog stays in the DOM
+    // when closed (with aria-hidden="true") so the print stylesheet can
+    // reposition it as a static appendix. The assertion below verifies
+    // that aria-hidden behavior holds.
     const dialog = screen.queryByRole("dialog");
     if (dialog) {
       expect(dialog).toHaveAttribute("aria-hidden", "true");
