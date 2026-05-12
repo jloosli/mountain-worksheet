@@ -53,9 +53,26 @@ body {
     position: static !important;
   }
 
-  /* Don't fracture a slide-over body across pages. */
+  /* Don't fracture a slide-over body across pages. Modern `break-inside`
+     with `page-break-inside` retained as a fallback for older engines. */
   div[role="dialog"] section,
   div[role="dialog"] table {
     page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  /* Force-show closed slide-overs as appendices. Headless UI's Transition
+     applies `hidden` + `display: none` to a closed dialog even with
+     `unmount={false}`; override both so the panel actually renders in
+     print. The slide-over component's own `print:hidden` on the backdrop
+     keeps the dimmed overlay out of print output. */
+  div[role="dialog"][hidden],
+  div[role="dialog"] [hidden] {
+    display: block !important;
+  }
+  div[role="dialog"] {
+    visibility: visible !important;
+    transform: none !important;
+    opacity: 1 !important;
   }
 }

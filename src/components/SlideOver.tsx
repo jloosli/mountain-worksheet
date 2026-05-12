@@ -18,7 +18,7 @@ export default function SlideOver({
   children,
 }: SlideOverProps) {
   return (
-    <Transition show={isOpen} as={Fragment}>
+    <Transition show={isOpen} as={Fragment} unmount={false}>
       <Dialog
         as="div"
         onClose={onClose}
@@ -61,6 +61,7 @@ export default function SlideOver({
               dark:border-slate-700 dark:bg-slate-900
               print:static print:max-w-none print:w-full print:border-l-0
               print:shadow-none print:break-before-page
+              print:bg-white print:text-slate-900
             "
           >
             <header
@@ -82,7 +83,7 @@ export default function SlideOver({
                 <XMarkIcon className="h-4 w-4" />
               </button>
             </header>
-            <div className="flex-1 overflow-y-auto p-5 text-sm leading-relaxed text-slate-700 dark:text-slate-300 print:overflow-visible print:p-0">
+            <div className="flex-1 overflow-y-auto p-5 text-sm leading-relaxed text-slate-700 dark:text-slate-300 print:overflow-visible print:p-0 print:text-slate-900">
               {children}
             </div>
           </Dialog.Panel>

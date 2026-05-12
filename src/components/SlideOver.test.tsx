@@ -40,13 +40,15 @@ describe("SlideOver — closed state", () => {
         <p>Hidden body</p>
       </SlideOver>
     );
-    // With Transition.Child unmount={false}, the dialog stays in the DOM
-    // when closed (with aria-hidden="true") so the print stylesheet can
-    // reposition it as a static appendix. The assertion below verifies
-    // that aria-hidden behavior holds.
-    const dialog = screen.queryByRole("dialog");
-    if (dialog) {
-      expect(dialog).toHaveAttribute("aria-hidden", "true");
-    }
+    // With unmount={false} on the root Transition and its children, the
+    // dialog must stay in the DOM when closed so the print stylesheet can
+    // reposition it as a static appendix. Headless UI v2 marks the closed
+    // dialog with the `hidden` attribute (and a `display: none` inline
+    // style); the print CSS in globals.css overrides both. Assert the
+    // dialog is mounted and properly hidden on screen.
+    const title = screen.getByText("Hidden title");
+    const dialog = title.closest("[role='dialog']");
+    expect(dialog).not.toBeNull();
+    expect(dialog).toHaveAttribute("hidden");
   });
 });
