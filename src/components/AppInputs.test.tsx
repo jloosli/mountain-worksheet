@@ -239,6 +239,14 @@ describe("AppInputs", () => {
     expect(mockOnStateUpdate).toHaveBeenCalledTimes(3);
   });
 
+  it("wraps Sortie Details and Weather in semantic sections with stable anchor ids", () => {
+    const { container } = render(
+      <AppInputs state={defaultState} onStateUpdate={() => {}} />
+    );
+    expect(container.querySelector("#step-sortie")).not.toBeNull();
+    expect(container.querySelector("#step-weather")).not.toBeNull();
+  });
+
   it("renders with different initial states", () => {
     const populatedState = {
       ...defaultState,

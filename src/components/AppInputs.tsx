@@ -26,20 +26,24 @@ export default function AppInputs({
 
   return (
     <div className="flex w-full max-w-4xl flex-col gap-8">
-      <SortieInfo onUpdate={handleUpdate} initialData={state} />
-      <MountainQuals onUpdate={handleUpdate} initialData={state} />
-      <WeatherInfo
-        onUpdate={handleUpdate}
-        initialData={state}
-        lastUpdated={weatherLastUpdated}
-        useFahrenheit={useFahrenheit}
-      />
-      <AircraftPerformance
-        onUpdate={handleUpdate}
-        initialData={state}
-        worksheetData={state}
-        useFahrenheit={useFahrenheit}
-      />
+      <section id="step-sortie" className="flex flex-col gap-8 scroll-mt-[60px]">
+        <SortieInfo onUpdate={handleUpdate} initialData={state} />
+        <MountainQuals onUpdate={handleUpdate} initialData={state} />
+      </section>
+      <section id="step-weather" className="flex flex-col gap-8 scroll-mt-[60px]">
+        <WeatherInfo
+          onUpdate={handleUpdate}
+          initialData={state}
+          lastUpdated={weatherLastUpdated}
+          useFahrenheit={useFahrenheit}
+        />
+        <AircraftPerformance
+          onUpdate={handleUpdate}
+          initialData={state}
+          worksheetData={state}
+          useFahrenheit={useFahrenheit}
+        />
+      </section>
     </div>
   );
 }
