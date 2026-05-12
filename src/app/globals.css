@@ -39,3 +39,23 @@ body {
     cursor: pointer;
   }
 }
+
+@media print {
+  /* Force two-color rendering and remove dark-mode backgrounds. */
+  html, body {
+    background: #ffffff !important;
+    color: #0f172a !important;
+  }
+
+  /* Hide screen-only chrome that isn't already covered by Tailwind's
+     print:hidden utility (utility-first solutions live in components). */
+  header.sticky, nav.sticky, .sticky {
+    position: static !important;
+  }
+
+  /* Don't fracture a slide-over body across pages. */
+  aside[role="dialog"] section,
+  aside[role="dialog"] table {
+    page-break-inside: avoid;
+  }
+}
