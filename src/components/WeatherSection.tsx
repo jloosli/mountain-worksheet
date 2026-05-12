@@ -68,12 +68,13 @@ export default function WeatherSection({
   ) => {
     const num = rawValue === "" ? null : Number(rawValue);
     const isValid = num === null || (num >= 28.0 && num <= 31.0);
+    if (!isValid) return;
     const next = [...state.altimeter] as [
       number | null,
       number | null,
       number | null,
     ];
-    next[index] = isValid ? num : null;
+    next[index] = num;
     onUpdate({ altimeter: next });
   };
 
@@ -331,6 +332,8 @@ function WindsAloftBlock({
                 >
                   <input
                     type="number"
+                    min={useFahrenheit ? -58 : -50}
+                    max={useFahrenheit ? 122 : 50}
                     aria-label={`Temperature at ${alt} ft`}
                     value={displayTemp(wind[2][idx])}
                     onChange={(e) => onChange(2, idx, e.target.value)}

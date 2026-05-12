@@ -98,10 +98,17 @@ describe("WeatherSection — advisories", () => {
         airportRunways={[null, null]}
       />
     );
-    const turbCheckbox = screen.getByLabelText(/AIRMET Tango/i);
-    fireEvent.click(turbCheckbox);
-    expect(onUpdate).toHaveBeenCalledWith(
+    fireEvent.click(screen.getByLabelText(/AIRMET Tango/i));
+    expect(onUpdate).toHaveBeenLastCalledWith(
       expect.objectContaining({ turb: true })
+    );
+    fireEvent.click(screen.getByLabelText(/Ceiling \/ Vis/i));
+    expect(onUpdate).toHaveBeenLastCalledWith(
+      expect.objectContaining({ cielVis: true })
+    );
+    fireEvent.click(screen.getByLabelText(/AIRMET Sierra/i));
+    expect(onUpdate).toHaveBeenLastCalledWith(
+      expect.objectContaining({ mtnObsc: true })
     );
   });
 });
