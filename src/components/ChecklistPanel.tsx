@@ -1,3 +1,4 @@
+// src/components/ChecklistPanel.tsx
 const sections = [
   {
     title: "Basic Preflight",
@@ -59,31 +60,21 @@ const sections = [
   },
 ];
 
-export default function MountainFlyingChecklist() {
+export default function ChecklistPanel() {
   return (
-    <div className="w-full max-w-4xl bg-white dark:bg-gray-800 rounded-lg shadow-md">
-      <details>
-        <summary className="text-2xl font-bold p-6 cursor-pointer list-none flex items-center justify-between select-none">
-          Mountain Flying Checklist
-          <span className="text-gray-400 dark:text-gray-500 text-base font-normal ml-2">
-            ▼
-          </span>
-        </summary>
-        <div className="px-6 pb-6 space-y-4">
-          {sections.map((section) => (
-            <div key={section.title}>
-              <h3 className="font-semibold text-gray-800 dark:text-gray-200 mb-1">
-                {section.title}
-              </h3>
-              <ul className="list-disc list-inside space-y-1 text-sm text-gray-700 dark:text-gray-300">
-                {section.items.map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
-      </details>
+    <div className="space-y-5 text-sm leading-relaxed text-slate-700 dark:text-slate-300">
+      {sections.map((section) => (
+        <section key={section.title}>
+          <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100 mb-1.5">
+            {section.title}
+          </h3>
+          <ul className="list-disc list-outside ml-5 space-y-1">
+            {section.items.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        </section>
+      ))}
     </div>
   );
 }

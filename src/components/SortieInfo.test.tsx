@@ -113,6 +113,40 @@ describe("SortieInfo", () => {
     fireEvent.change(select, { target: { value: "" } });
     expect(mockOnUpdate).toHaveBeenCalledWith(expect.objectContaining({ duration: null }));
   });
+
+  it("renders the four sub-heading groups", () => {
+    render(<SortieInfo onUpdate={mockOnUpdate} initialData={defaultInitialData} />);
+    expect(screen.getByRole("heading", { name: "Pilot & Aircraft", level: 3 })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "When", level: 3 })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Where", level: 3 })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Pilot Qualifications", level: 3 })).toBeInTheDocument();
+  });
+
+  it("renders the mountain qualification checkboxes", () => {
+    render(<SortieInfo onUpdate={mockOnUpdate} initialData={defaultInitialData} />);
+    expect(
+      screen.getByLabelText(/Current CAPF 70-5 Mountain Flight Endorsement/i)
+    ).toBeInTheDocument();
+    expect(
+      screen.getByLabelText(/Current CAPF 70-91 and Mountain Flying Certification/i)
+    ).toBeInTheDocument();
+  });
+
+  it("calls onUpdate with mtnEndorse when the endorsement checkbox is toggled", () => {
+    render(<SortieInfo onUpdate={mockOnUpdate} initialData={defaultInitialData} />);
+    fireEvent.click(screen.getByLabelText(/Current CAPF 70-5 Mountain Flight Endorsement/i));
+    expect(mockOnUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({ mtnEndorse: true })
+    );
+  });
+
+  it("calls onUpdate with mtnCert when the certification checkbox is toggled", () => {
+    render(<SortieInfo onUpdate={mockOnUpdate} initialData={defaultInitialData} />);
+    fireEvent.click(screen.getByLabelText(/Current CAPF 70-91 and Mountain Flying Certification/i));
+    expect(mockOnUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({ mtnCert: true })
+    );
+  });
 });
 
 describe("SortieInfo - position field wiring", () => {

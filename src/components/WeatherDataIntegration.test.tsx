@@ -229,6 +229,112 @@ describe("WeatherDataIntegration", () => {
     expect(mapWeatherDataToWorksheet).toHaveBeenCalled();
   });
 
+  describe("onAirportInfoUpdate callback", () => {
+    const baseMapperMocks = () => {
+      const { mapWeatherDataToWorksheet, mergeWeatherData, isApiPopulatedData } =
+        jest.requireMock("@/utils/weatherDataMapper");
+      mapWeatherDataToWorksheet.mockReturnValue({
+        success: true,
+        data: {},
+        errors: [],
+        warnings: [],
+      });
+      mergeWeatherData.mockImplementation((existing: object, api: object) => ({
+        ...existing,
+        ...api,
+      }));
+      isApiPopulatedData.mockReturnValue({
+        wind: false,
+        temperature: false,
+        pressure: false,
+        runway: false,
+        altitude: false,
+      });
+    };
+
+    it("fires with mapped RunwayOption[] for both airports when runway data is present", async () => {
+      baseMapperMocks();
+      const { getWeatherDataBatch } = jest.requireMock("@/utils/aviationWeatherApi");
+      getWeatherDataBatch.mockResolvedValue({
+        metar: [],
+        taf: [],
+        airport: [
+          {
+            icaoId: "KORD",
+            lat: 41.97,
+            lon: -87.91,
+            runway: [
+              { id: "10/28", length: 7967, alignment: 100 },
+              { id: "4R/22L", length: 13000, alignment: 40 },
+            ],
+          },
+          {
+            icaoId: "KLAX",
+            lat: 33.94,
+            lon: -118.4,
+            runway: [
+              { id: "24L/6R", length: 8926, alignment: 240 },
+            ],
+          },
+        ],
+      });
+
+      const onAirportInfoUpdate = jest.fn();
+      render(
+        <WeatherDataIntegration
+          {...defaultProps}
+          onAirportInfoUpdate={onAirportInfoUpdate}
+        />
+      );
+      fireEvent.click(screen.getByText("Fetch Weather"));
+
+      await waitFor(() => {
+        expect(onAirportInfoUpdate).toHaveBeenCalled();
+      });
+
+      expect(onAirportInfoUpdate).toHaveBeenCalledWith({
+        departure: [
+          { id: "10/28", length: 7967, alignment: 100 },
+          { id: "4R/22L", length: 13000, alignment: 40 },
+        ],
+        arrival: [
+          { id: "24L/6R", length: 8926, alignment: 240 },
+        ],
+      });
+    });
+
+    it("fires with null for airports missing runway data", async () => {
+      baseMapperMocks();
+      const { getWeatherDataBatch } = jest.requireMock("@/utils/aviationWeatherApi");
+      getWeatherDataBatch.mockResolvedValue({
+        metar: [],
+        taf: [],
+        airport: [
+          { icaoId: "KORD", lat: 41.97, lon: -87.91 },
+          { icaoId: "KLAX", lat: 33.94, lon: -118.4 },
+        ],
+      });
+
+      const onAirportInfoUpdate = jest.fn();
+      render(
+        <WeatherDataIntegration
+          {...defaultProps}
+          onAirportInfoUpdate={onAirportInfoUpdate}
+        />
+      );
+      fireEvent.click(screen.getByText("Fetch Weather"));
+
+      await waitFor(() => {
+        expect(onAirportInfoUpdate).toHaveBeenCalled();
+      });
+
+      expect(onAirportInfoUpdate).toHaveBeenCalledWith({
+        departure: null,
+        arrival: null,
+      });
+    });
+  });
+
   it("continues pipeline when G-AIRMET fetch fails", async () => {
     const { fetchGAirmets } = jest.requireMock("@/utils/gairmetApi");
     fetchGAirmets.mockRejectedValue(new Error("gairmet network down"));

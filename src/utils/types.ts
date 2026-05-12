@@ -191,3 +191,25 @@ export interface ManeuveringSpeeds {
   flapSettings: number[];
   speeds: ManeuveringSpeedData[];
 }
+
+/**
+ * Minimal runway shape used by AirportCard's runway dropdown. A subset of
+ * AirportResponse.runway from the AviationWeather API — only what the UI
+ * needs to render the option label (id + length) and filter out helipads
+ * (alignment === null).
+ */
+export interface RunwayOption {
+  id: string;
+  length: number;
+  alignment: number | null;
+}
+
+/**
+ * Per-airport runway info handed up by WeatherDataIntegration's
+ * onAirportInfoUpdate callback. Stored in AppContainer state so the
+ * AirportCard runway dropdowns can render their options.
+ */
+export interface AirportRunwayInfo {
+  departure: RunwayOption[] | null;
+  arrival: RunwayOption[] | null;
+}

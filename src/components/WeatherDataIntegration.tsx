@@ -29,12 +29,13 @@ import {
   AirportNotFoundModal,
 } from "./WeatherModal";
 import WeatherWarningsPanel from "./WeatherWarningsPanel";
-import type { WorksheetData } from "@/utils/types";
+import type { AirportRunwayInfo, RunwayOption, WorksheetData } from "@/utils/types";
 
 interface WeatherDataIntegrationProps {
   worksheetData: Partial<WorksheetData>;
   onDataUpdate: (data: Partial<WorksheetData>) => void;
   onTimestampUpdate?: (timestamp: Date) => void; // Callback to pass timestamp to parent
+  onAirportInfoUpdate?: (info: AirportRunwayInfo) => void;
   disabled?: boolean;
   hideBox?: boolean; // If true, don't render the box UI, only modals
   renderButton?: (props: {
@@ -58,10 +59,30 @@ interface WeatherApiState {
   warnings: string[];
 }
 
+function extractRunways(
+  airport:
+    | {
+        runway?: Array<{
+          id: string;
+          length: number;
+          alignment: number | null;
+        }>;
+      }
+    | undefined
+): RunwayOption[] | null {
+  if (!airport?.runway || airport.runway.length === 0) return null;
+  return airport.runway.map((r) => ({
+    id: r.id,
+    length: r.length,
+    alignment: r.alignment,
+  }));
+}
+
 export default function WeatherDataIntegration({
   worksheetData,
   onDataUpdate,
   onTimestampUpdate,
+  onAirportInfoUpdate,
   disabled = false,
   hideBox = false,
   renderButton,
@@ -141,11 +162,20 @@ export default function WeatherDataIntegration({
           icaoId: string;
           lat: number;
           lon: number;
+          runway?: Array<{ id: string; length: number; alignment: number | null }>;
         }>;
         const findAirport = (code: string) =>
           apiAirports.find((a) => a.icaoId?.toUpperCase() === code);
         const depAirport = findAirport(departureAirport);
         const arrAirport = findAirport(arrivalAirport);
+
+        if (onAirportInfoUpdate) {
+          onAirportInfoUpdate({
+            departure: extractRunways(depAirport),
+            arrival: extractRunways(arrAirport),
+          });
+        }
+
         const depAirportLatLon: [number, number] | null =
           depAirport && typeof depAirport.lat === "number" && typeof depAirport.lon === "number"
             ? [depAirport.lat, depAirport.lon]
@@ -321,7 +351,7 @@ export default function WeatherDataIntegration({
         }));
       }
     },
-    [worksheetData, onDataUpdate, canFetchWeather, onTimestampUpdate]
+    [worksheetData, onDataUpdate, canFetchWeather, onTimestampUpdate, onAirportInfoUpdate]
   );
 
   const handleRetry = useCallback(() => {

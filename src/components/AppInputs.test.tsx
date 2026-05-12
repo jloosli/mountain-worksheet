@@ -28,19 +28,14 @@ jest.mock("./SortieInfo", () => {
   };
 });
 
-jest.mock("./WeatherInfo", () => {
-  return function MockWeatherInfo({
+jest.mock("./WeatherSection", () => {
+  return function MockWeatherSection({
     onUpdate,
-    lastUpdated,
   }: {
     onUpdate: (data: Partial<WorksheetData>) => void;
-    lastUpdated?: Date;
   }) {
     return (
-      <div data-testid="weather-info">
-        <div data-testid="last-updated">
-          {lastUpdated ? lastUpdated.toISOString() : "No timestamp"}
-        </div>
+      <div data-testid="weather-section">
         <button
           data-testid="update-weather-btn"
           onClick={() =>
@@ -55,19 +50,6 @@ jest.mock("./WeatherInfo", () => {
         >
           Update Weather
         </button>
-      </div>
-    );
-  };
-});
-
-jest.mock("./AircraftPerformance", () => {
-  return function MockAircraftPerformance({
-    onUpdate,
-  }: {
-    onUpdate: (data: Partial<WorksheetData>) => void;
-  }) {
-    return (
-      <div data-testid="aircraft-performance">
         <button
           data-testid="update-performance-btn"
           onClick={() => onUpdate({ temp: [20, 20, 20] })}
@@ -78,27 +60,6 @@ jest.mock("./AircraftPerformance", () => {
     );
   };
 });
-
-
-jest.mock("./MountainQuals", () => {
-  return function MockMountainQuals({
-    onUpdate,
-  }: {
-    onUpdate: (data: Partial<WorksheetData>) => void;
-  }) {
-    return (
-      <div data-testid="mountain-quals">
-        <button
-          data-testid="update-quals-btn"
-          onClick={() => onUpdate({ mtnEndorse: true })}
-        >
-          Update Quals
-        </button>
-      </div>
-    );
-  };
-});
-
 
 describe("AppInputs", () => {
   const mockOnStateUpdate = jest.fn();
@@ -131,16 +92,18 @@ describe("AppInputs", () => {
 
   it("renders all child components", () => {
     render(
-      <AppInputs state={defaultState} onStateUpdate={mockOnStateUpdate} />
+      <AppInputs
+        state={defaultState}
+        onStateUpdate={mockOnStateUpdate}
+        airportRunways={[null, null]}
+      />
     );
 
     expect(screen.getByTestId("sortie-info")).toBeInTheDocument();
-    expect(screen.getByTestId("weather-info")).toBeInTheDocument();
-    expect(screen.getByTestId("aircraft-performance")).toBeInTheDocument();
-    expect(screen.getByTestId("mountain-quals")).toBeInTheDocument();
+    expect(screen.getByTestId("weather-section")).toBeInTheDocument();
   });
 
-  it("passes worksheet data and timestamp to WeatherInfo", () => {
+  it("renders WeatherSection with non-default state", () => {
     const testState = {
       ...defaultState,
       wind: [
@@ -150,28 +113,24 @@ describe("AppInputs", () => {
       ],
     };
 
-    render(<AppInputs state={testState} onStateUpdate={mockOnStateUpdate} />);
+    render(
+      <AppInputs
+        state={testState}
+        onStateUpdate={mockOnStateUpdate}
+        airportRunways={[null, null]}
+      />
+    );
 
-    // WeatherInfo should receive both worksheetData and lastUpdated props
-    expect(screen.getByTestId("weather-info")).toBeInTheDocument();
-  });
-
-  it("passes worksheet data to AircraftPerformance", () => {
-    const testState = {
-      ...defaultState,
-      rwy: [8107, 12002],
-      altitude: [4471, 8000, 4229],
-    };
-
-    render(<AppInputs state={testState} onStateUpdate={mockOnStateUpdate} />);
-
-    // AircraftPerformance should receive worksheetData prop
-    expect(screen.getByTestId("aircraft-performance")).toBeInTheDocument();
+    expect(screen.getByTestId("weather-section")).toBeInTheDocument();
   });
 
   it("handles updates from child components", () => {
     render(
-      <AppInputs state={defaultState} onStateUpdate={mockOnStateUpdate} />
+      <AppInputs
+        state={defaultState}
+        onStateUpdate={mockOnStateUpdate}
+        airportRunways={[null, null]}
+      />
     );
 
     // Test SortieInfo update
@@ -179,7 +138,7 @@ describe("AppInputs", () => {
     fireEvent.click(updateSortieButton);
     expect(mockOnStateUpdate).toHaveBeenCalledWith({ pilot: "Test Pilot" });
 
-    // Test WeatherInfo update
+    // Test WeatherSection update
     const updateWeatherButton = screen.getByTestId("update-weather-btn");
     fireEvent.click(updateWeatherButton);
     expect(mockOnStateUpdate).toHaveBeenCalledWith({
@@ -190,7 +149,7 @@ describe("AppInputs", () => {
       ],
     });
 
-    // Test AircraftPerformance update
+    // Test WeatherSection performance update
     const updatePerformanceButton = screen.getByTestId(
       "update-performance-btn"
     );
@@ -201,31 +160,15 @@ describe("AppInputs", () => {
     const updateWeightButton = screen.getByTestId("update-weight-btn");
     fireEvent.click(updateWeightButton);
     expect(mockOnStateUpdate).toHaveBeenCalledWith({ weight: 2500 });
-
-    // Test MountainQuals update
-    const updateQualsButton = screen.getByTestId("update-quals-btn");
-    fireEvent.click(updateQualsButton);
-    expect(mockOnStateUpdate).toHaveBeenCalledWith({ mtnEndorse: true });
-  });
-
-  it("passes weather timestamp to WeatherInfo", () => {
-    const testTimestamp = new Date("2025-01-24T10:30:00Z");
-    render(
-      <AppInputs
-        state={defaultState}
-        onStateUpdate={mockOnStateUpdate}
-        weatherLastUpdated={testTimestamp}
-      />
-    );
-
-    expect(screen.getByTestId("last-updated")).toHaveTextContent(
-      testTimestamp.toISOString()
-    );
   });
 
   it("handles multiple rapid updates correctly", () => {
     render(
-      <AppInputs state={defaultState} onStateUpdate={mockOnStateUpdate} />
+      <AppInputs
+        state={defaultState}
+        onStateUpdate={mockOnStateUpdate}
+        airportRunways={[null, null]}
+      />
     );
 
     const updateSortieButton = screen.getByTestId("update-sortie-btn");
@@ -237,6 +180,18 @@ describe("AppInputs", () => {
     fireEvent.click(updateSortieButton);
 
     expect(mockOnStateUpdate).toHaveBeenCalledTimes(3);
+  });
+
+  it("wraps Sortie Details and Weather in semantic sections with stable anchor ids", () => {
+    const { container } = render(
+      <AppInputs
+        state={defaultState}
+        onStateUpdate={() => {}}
+        airportRunways={[null, null]}
+      />
+    );
+    expect(container.querySelector("#step-sortie")).not.toBeNull();
+    expect(container.querySelector("#step-weather")).not.toBeNull();
   });
 
   it("renders with different initial states", () => {
@@ -264,13 +219,15 @@ describe("AppInputs", () => {
     };
 
     render(
-      <AppInputs state={populatedState} onStateUpdate={mockOnStateUpdate} />
+      <AppInputs
+        state={populatedState}
+        onStateUpdate={mockOnStateUpdate}
+        airportRunways={[null, null]}
+      />
     );
 
     // Verify all child components are rendered
     expect(screen.getByTestId("sortie-info")).toBeInTheDocument();
-    expect(screen.getByTestId("weather-info")).toBeInTheDocument();
-    expect(screen.getByTestId("aircraft-performance")).toBeInTheDocument();
-    expect(screen.getByTestId("mountain-quals")).toBeInTheDocument();
+    expect(screen.getByTestId("weather-section")).toBeInTheDocument();
   });
 });
