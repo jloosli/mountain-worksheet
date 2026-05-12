@@ -72,4 +72,20 @@ describe("deriveStepStatuses", () => {
       decision: "active",
     });
   });
+
+  it("treats weather as complete when the worksheet carries weather data (e.g. shared URL) even with no timestamp", () => {
+    const withWind: WorksheetData = {
+      ...readyForWeather,
+      wind: [
+        [280, null, null, null, null] as (number | null)[],
+        Array(5).fill(null) as (number | null)[],
+        Array(5).fill(null) as (number | null)[],
+      ] as [(number | null)[], (number | null)[], (number | null)[]],
+    };
+    expect(deriveStepStatuses(withWind, null)).toEqual({
+      sortie: "complete",
+      weather: "complete",
+      decision: "active",
+    });
+  });
 });

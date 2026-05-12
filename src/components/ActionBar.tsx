@@ -54,7 +54,7 @@ export default function ActionBar({
                 </div>
               </div>
             </div>
-            <FetchButton onClick={onFetch} disabled={true} isLoading={false} />
+            <FetchButton onClick={onFetch} disabled={true} isLoading={isFetching} />
           </>
         )}
 

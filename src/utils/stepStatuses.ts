@@ -1,7 +1,7 @@
 // src/utils/stepStatuses.ts
 import type { StepStatus } from "@/components/Stepper";
 import type { WorksheetData } from "@/utils/types";
-import { canFetchWeather } from "@/utils/actionBarState";
+import { canFetchWeather, hasWeatherData } from "@/utils/actionBarState";
 
 export interface StepStatusesResult {
   sortie: StepStatus;
@@ -14,7 +14,8 @@ export interface StepStatusesResult {
  *
  * - Sortie: `complete` when the minimum fields to fetch weather are present;
  *   otherwise `active` (the user's current focus).
- * - Weather: `complete` when weather has been fetched at least once;
+ * - Weather: `complete` when this session has fetched weather OR the
+ *   worksheet already carries weather data (e.g. from a shared URL);
  *   otherwise `active` if sortie is complete (the user's next focus), else
  *   `pending`.
  * - Decision: `active` once weather is complete (next focus); otherwise
@@ -26,15 +27,16 @@ export function deriveStepStatuses(
   weatherLastUpdated: Date | null
 ): StepStatusesResult {
   const sortieReady = canFetchWeather(state);
-  const weatherFetched = weatherLastUpdated !== null;
+  const weatherComplete =
+    weatherLastUpdated !== null || hasWeatherData(state);
 
   const sortie: StepStatus = sortieReady ? "complete" : "active";
-  const weather: StepStatus = weatherFetched
+  const weather: StepStatus = weatherComplete
     ? "complete"
     : sortieReady
       ? "active"
       : "pending";
-  const decision: StepStatus = weatherFetched ? "active" : "pending";
+  const decision: StepStatus = weatherComplete ? "active" : "pending";
 
   return { sortie, weather, decision };
 }

@@ -144,4 +144,16 @@ describe("ActionBar — isFetching", () => {
     );
     expect(screen.getByText(/Loading/i)).toBeInTheDocument();
   });
+
+  it("reflects isFetching even in the incomplete state (race: fields cleared mid-fetch)", () => {
+    render(
+      <ActionBar
+        {...baseProps}
+        state="incomplete"
+        fetchDisabled={true}
+        isFetching={true}
+      />
+    );
+    expect(screen.getByText(/Loading/i)).toBeInTheDocument();
+  });
 });

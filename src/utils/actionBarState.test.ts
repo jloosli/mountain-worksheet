@@ -2,6 +2,7 @@
 import {
   canFetchWeather,
   deriveActionBarState,
+  hasWeatherData,
   type ActionBarState,
 } from "./actionBarState";
 import type { WorksheetData } from "@/utils/types";
@@ -110,5 +111,46 @@ describe("deriveActionBarState", () => {
         ts
       )
     ).toBe("fetched");
+  });
+
+  it("returns 'fetched' when the worksheet carries weather data (e.g. from a shared URL) even with no timestamp", () => {
+    const withWind = {
+      ...empty,
+      wind: [
+        [280, null, null, null, null] as (number | null)[],
+        Array(5).fill(null) as (number | null)[],
+        Array(5).fill(null) as (number | null)[],
+      ] as [(number | null)[], (number | null)[], (number | null)[]],
+    };
+    expect(deriveActionBarState(withWind, null)).toBe("fetched");
+  });
+});
+
+describe("hasWeatherData", () => {
+  it("returns false when no weather fields are populated", () => {
+    expect(hasWeatherData(empty)).toBe(false);
+  });
+
+  it("returns true when wind has any value", () => {
+    expect(
+      hasWeatherData({
+        ...empty,
+        wind: [
+          [280, null, null, null, null] as (number | null)[],
+          Array(5).fill(null) as (number | null)[],
+          Array(5).fill(null) as (number | null)[],
+        ] as [(number | null)[], (number | null)[], (number | null)[]],
+      })
+    ).toBe(true);
+  });
+
+  it("returns true when temp has any value", () => {
+    expect(hasWeatherData({ ...empty, temp: [null, 20, null] })).toBe(true);
+  });
+
+  it("returns true when altimeter has any value", () => {
+    expect(
+      hasWeatherData({ ...empty, altimeter: [29.92, null, null] })
+    ).toBe(true);
   });
 });
