@@ -191,6 +191,23 @@ describe("AirportCard — operating variant", () => {
     expect(screen.queryByRole("combobox", { name: /Runway/i })).not.toBeInTheDocument();
     expect(screen.queryByText(/Field elev/i)).not.toBeInTheDocument();
   });
+
+  it("applies API-populated styling to operating temp + altimeter when fetched", () => {
+    // Operating values come from open-meteo's area-of-ops weather, so they
+    // ARE API-fetched (despite the old AircraftPerformance excluding them).
+    render(
+      <AirportCard
+        {...baseProps}
+        variant="operating"
+        operatingAltitude={11500}
+        temperature={5}
+        altimeter={29.92}
+        apiPopulated={{ temperature: true, pressure: true, runway: false }}
+      />
+    );
+    expect(screen.getByLabelText(/Temperature/i)).toHaveClass("bg-blue-50");
+    expect(screen.getByLabelText(/Altimeter/i)).toHaveClass("bg-blue-50");
+  });
 });
 
 describe("AirportCard — arrival variant", () => {

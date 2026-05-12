@@ -96,9 +96,7 @@ export default function AirportCard(props: AirportCardProps) {
             onChange={(e) => props.onTemperatureChange(e.target.value)}
             min={props.useFahrenheit ? "-22" : "-30"}
             max={props.useFahrenheit ? "131" : "55"}
-            className={cellInputClass(
-              props.variant !== "operating" && props.apiPopulated.temperature
-            )}
+            className={cellInputClass(props.apiPopulated.temperature)}
           />
         </div>
         <div className="flex items-center justify-between gap-2">
@@ -116,9 +114,7 @@ export default function AirportCard(props: AirportCardProps) {
             max="31.00"
             value={props.altimeter ?? ""}
             onChange={(e) => props.onAltimeterChange(e.target.value)}
-            className={cellInputClass(
-              props.variant !== "operating" && props.apiPopulated.pressure
-            )}
+            className={cellInputClass(props.apiPopulated.pressure)}
           />
         </div>
 
