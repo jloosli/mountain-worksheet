@@ -12,6 +12,7 @@ import StepShell from "@/components/StepShell";
 import WeatherDataIntegration from "@/components/WeatherDataIntegration";
 import WorksheetHeader from "@/components/WorksheetHeader";
 import { deriveActionBarState } from "@/utils/actionBarState";
+import { applyOpTempForAltitudeChange } from "@/utils/areaOfOpsWeather";
 import { deriveStepStatuses } from "@/utils/stepStatuses";
 import type { AirportRunwayInfo, RunwayOption, WorksheetData } from "@/utils/types";
 import { useTempUnit } from "@/utils/useTempUnit";
@@ -138,6 +139,12 @@ export default function AppContainer() {
     }
     setState((prev: WorksheetData) => {
       const merged = { ...prev, ...updates } as WorksheetData;
+      // Issue #117: When the user changes the operating altitude, re-derive
+      // temp[1] from the persisted winds-aloft temps so it tracks the air
+      // temperature at the new altitude instead of staying frozen at the
+      // last weather fetch.
+      const nextTemp = applyOpTempForAltitudeChange(prev, updates);
+      if (nextTemp) merged.temp = nextTemp;
       return merged;
     });
   };

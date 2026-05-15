@@ -8,6 +8,97 @@ import {
 
 export const TARGET_ALTITUDES_FT = [3000, 6000, 9000, 12000, 15000];
 
+/**
+ * Re-derive the operating-area temperature from the persisted winds-aloft
+ * temperature buckets. Used when the operating altitude changes after a
+ * weather fetch so `temp[1]` tracks the air temperature at the new altitude
+ * instead of the value frozen at fetch time.
+ *
+ * Linear interpolation across `TARGET_ALTITUDES_FT` ([3k, 6k, 9k, 12k, 15k]).
+ * Null buckets are skipped — interpolation uses only the available points —
+ * and altitudes outside the available range snap to the lowest/highest
+ * *available* (non-null) bucket. So with all buckets present, the snap
+ * boundaries are 3k and 15k; with gaps at the edges, they are whichever
+ * non-null buckets are nearest the edges. Returns null only when altitude
+ * is missing or no buckets have data.
+ */
+export function interpolateOpTempFromAloft(
+  altitudeFt: number | null | undefined,
+  aloftTemps: (number | null | undefined)[] | null | undefined
+): number | null {
+  if (typeof altitudeFt !== "number" || !Number.isFinite(altitudeFt))
+    return null;
+  if (!aloftTemps || aloftTemps.length === 0) return null;
+
+  const points: { alt: number; temp: number }[] = [];
+  for (let i = 0; i < TARGET_ALTITUDES_FT.length; i++) {
+    const t = aloftTemps[i];
+    if (typeof t === "number" && Number.isFinite(t)) {
+      points.push({ alt: TARGET_ALTITUDES_FT[i], temp: t });
+    }
+  }
+  if (points.length === 0) return null;
+  if (points.length === 1) return Math.round(points[0].temp);
+
+  if (altitudeFt <= points[0].alt) return Math.round(points[0].temp);
+  const last = points[points.length - 1];
+  if (altitudeFt >= last.alt) return Math.round(last.temp);
+
+  for (let i = 0; i < points.length - 1; i++) {
+    const a = points[i];
+    const b = points[i + 1];
+    if (altitudeFt >= a.alt && altitudeFt <= b.alt) {
+      const f = (altitudeFt - a.alt) / (b.alt - a.alt);
+      return Math.round(a.temp * (1 - f) + b.temp * f);
+    }
+  }
+  return Math.round(last.temp);
+}
+
+/**
+ * When the operating altitude changes (e.g. the user edits the altitude field
+ * after a weather fetch), re-derive `temp[1]` from the persisted winds-aloft
+ * temperatures so the operating temperature tracks the new altitude. Returns
+ * the next `temp` triple, or `null` if no change should be applied.
+ *
+ * Skips when the same update already carries an explicit `temp` (a fresh
+ * weather fetch already includes the correct opTemp from Open-Meteo
+ * interpolation against the pressure-level grid).
+ */
+export function applyOpTempForAltitudeChange(
+  prev: {
+    altitude?: [number | null, number | null, number | null] | null;
+    temp?: [number | null, number | null, number | null] | null;
+    wind?: [
+      (number | null)[],
+      (number | null)[],
+      (number | null)[],
+    ] | null;
+  },
+  updates: {
+    altitude?: [number | null, number | null, number | null];
+    temp?: [number | null, number | null, number | null];
+    wind?: [
+      (number | null)[],
+      (number | null)[],
+      (number | null)[],
+    ];
+  }
+): [number | null, number | null, number | null] | null {
+  if (updates.altitude === undefined) return null;
+  if (updates.altitude[1] === prev.altitude?.[1]) return null;
+  if (updates.temp !== undefined) return null;
+
+  const aloftTemps = (updates.wind ?? prev.wind)?.[2];
+  const newOpTemp = interpolateOpTempFromAloft(updates.altitude[1], aloftTemps);
+  if (newOpTemp === null) return null;
+
+  const curTemp = prev.temp ?? [null, null, null];
+  if (newOpTemp === curTemp[1]) return null;
+
+  return [curTemp[0] ?? null, newOpTemp, curTemp[2] ?? null];
+}
+
 export type AreaOfOpsPositionSource = "user" | "midpoint" | "none";
 
 export interface AreaOfOpsWeather {
