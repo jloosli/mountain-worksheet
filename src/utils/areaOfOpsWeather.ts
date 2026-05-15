@@ -12,8 +12,15 @@ export const TARGET_ALTITUDES_FT = [3000, 6000, 9000, 12000, 15000];
  * Re-derive the operating-area temperature from the persisted winds-aloft
  * temperature buckets. Used when the operating altitude changes after a
  * weather fetch so `temp[1]` tracks the air temperature at the new altitude
- * instead of the value frozen at fetch time. Linear interp between the 5
- * fixed altitudes; snaps below 3k / above 15k.
+ * instead of the value frozen at fetch time.
+ *
+ * Linear interpolation across `TARGET_ALTITUDES_FT` ([3k, 6k, 9k, 12k, 15k]).
+ * Null buckets are skipped — interpolation uses only the available points —
+ * and altitudes outside the available range snap to the lowest/highest
+ * *available* (non-null) bucket. So with all buckets present, the snap
+ * boundaries are 3k and 15k; with gaps at the edges, they are whichever
+ * non-null buckets are nearest the edges. Returns null only when altitude
+ * is missing or no buckets have data.
  */
 export function interpolateOpTempFromAloft(
   altitudeFt: number | null | undefined,

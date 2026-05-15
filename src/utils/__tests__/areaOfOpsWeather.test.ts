@@ -186,6 +186,22 @@ describe("interpolateOpTempFromAloft", () => {
       interpolateOpTempFromAloft(10000, [null, null, 7, null, null])
     ).toBe(7);
   });
+
+  it("snaps to the lowest *available* bucket when the 3k bucket is missing", () => {
+    // 3k missing → 6k=14 is the lowest available. Altitude 4000 (below 6k)
+    // snaps to 14, not to a null 3k value.
+    expect(
+      interpolateOpTempFromAloft(4000, [null, 14, 8, 2, -10])
+    ).toBe(14);
+  });
+
+  it("snaps to the highest *available* bucket when the 15k bucket is missing", () => {
+    // 15k missing → 12k=2 is the highest available. Altitude 16000 (above 12k)
+    // snaps to 2, not to a null 15k value.
+    expect(
+      interpolateOpTempFromAloft(16000, [20, 14, 8, 2, null])
+    ).toBe(2);
+  });
 });
 
 describe("applyOpTempForAltitudeChange", () => {
