@@ -149,6 +149,59 @@ describe("SortieInfo", () => {
   });
 });
 
+describe("SortieInfo - sortie timing relative display", () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date(Date.UTC(2026, 4, 15, 0, 0)));
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it("shows hours when less than 24 hours in the future", () => {
+    const initialData = { ...defaultInitialData, date: "2026-05-15", time: "12:00" };
+    render(<SortieInfo onUpdate={jest.fn()} initialData={initialData} />);
+    expect(screen.getByText(/12 hours from now/)).toBeInTheDocument();
+  });
+
+  it("shows days when more than 24 hours and within a week in the future", () => {
+    const initialData = { ...defaultInitialData, date: "2026-05-20", time: "02:00" };
+    render(<SortieInfo onUpdate={jest.fn()} initialData={initialData} />);
+    expect(screen.getByText(/5 days from now/)).toBeInTheDocument();
+  });
+
+  it("uses singular 'day' for exactly 24 hours away", () => {
+    const initialData = { ...defaultInitialData, date: "2026-05-16", time: "00:00" };
+    render(<SortieInfo onUpdate={jest.fn()} initialData={initialData} />);
+    expect(screen.getByText(/1 day from now/)).toBeInTheDocument();
+  });
+
+  it("shows days when in the past within a week", () => {
+    const initialData = { ...defaultInitialData, date: "2026-05-12", time: "00:00" };
+    render(<SortieInfo onUpdate={jest.fn()} initialData={initialData} />);
+    expect(screen.getByText(/3 days ago/)).toBeInTheDocument();
+  });
+
+  it("shows 'more than a week from now' when more than 7 days in the future", () => {
+    const initialData = { ...defaultInitialData, date: "2026-05-23", time: "00:00" };
+    render(<SortieInfo onUpdate={jest.fn()} initialData={initialData} />);
+    expect(screen.getByText(/more than a week from now/)).toBeInTheDocument();
+  });
+
+  it("shows 'more than a week ago' when more than 7 days in the past", () => {
+    const initialData = { ...defaultInitialData, date: "2026-05-07", time: "00:00" };
+    render(<SortieInfo onUpdate={jest.fn()} initialData={initialData} />);
+    expect(screen.getByText(/more than a week ago/)).toBeInTheDocument();
+  });
+
+  it("still shows days at exactly 7 days away", () => {
+    const initialData = { ...defaultInitialData, date: "2026-05-22", time: "00:00" };
+    render(<SortieInfo onUpdate={jest.fn()} initialData={initialData} />);
+    expect(screen.getByText(/7 days from now/)).toBeInTheDocument();
+  });
+});
+
 describe("SortieInfo - position field wiring", () => {
   it("calls onUpdate with both route and position when valid coords are entered", async () => {
     jest.useFakeTimers();

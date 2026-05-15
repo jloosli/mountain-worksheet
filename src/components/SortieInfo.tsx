@@ -202,16 +202,29 @@ export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
     }
 
     const isFuture = diffMinutes > 0;
+    const suffix = isFuture ? "from now" : "ago";
+    const MINUTES_PER_DAY = 60 * 24;
+    const MINUTES_PER_WEEK = MINUTES_PER_DAY * 7;
+
+    if (absMinutes > MINUTES_PER_WEEK) {
+      return `${localDisplay}, more than a week ${suffix}`;
+    }
+
+    if (absMinutes >= MINUTES_PER_DAY) {
+      const days = Math.round(absMinutes / MINUTES_PER_DAY);
+      const dayLabel = `${days} day${days === 1 ? "" : "s"}`;
+      return `${localDisplay}, ${dayLabel} ${suffix}`;
+    }
 
     if (absMinutes < 60) {
       const minutes = absMinutes;
       const minuteLabel = `${minutes} minute${minutes === 1 ? "" : "s"}`;
-      return `${localDisplay}, ${minuteLabel} ${isFuture ? "from now" : "ago"}`;
+      return `${localDisplay}, ${minuteLabel} ${suffix}`;
     }
 
     const hours = Math.round(absMinutes / 60);
     const hourLabel = `${hours} hour${hours === 1 ? "" : "s"}`;
-    return `${localDisplay}, ${hourLabel} ${isFuture ? "from now" : "ago"}`;
+    return `${localDisplay}, ${hourLabel} ${suffix}`;
   }, [formData.date, formData.time, currentTime]);
 
   return (
