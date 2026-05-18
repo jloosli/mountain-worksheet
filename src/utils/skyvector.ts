@@ -4,7 +4,6 @@ const pad = (n: number, width: number): string =>
 export function latLonToDmsWaypoint(lat: number, lon: number): string {
   const formatComponent = (
     value: number,
-    degreeWidth: number,
     maxDeg: number
   ): { deg: number; min: number; sec: number } => {
     const abs = Math.abs(value);
@@ -24,8 +23,8 @@ export function latLonToDmsWaypoint(lat: number, lon: number): string {
     return { deg, min, sec };
   };
 
-  const latParts = formatComponent(lat, 2, 90);
-  const lonParts = formatComponent(lon, 3, 180);
+  const latParts = formatComponent(lat, 90);
+  const lonParts = formatComponent(lon, 180);
   const latSuffix = lat < 0 ? "S" : "N";
   const lonSuffix = lon < 0 ? "W" : "E";
 
