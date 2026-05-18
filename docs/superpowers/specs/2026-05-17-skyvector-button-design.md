@@ -100,7 +100,7 @@ SkyVector accepts ICAO-style coordinate waypoints in the form
 | 40.5023, -110.7456     | `403008N1104444W`       |
 | 40.0, -110.0           | `400000N1100000W`       |
 | 0, 0                   | `000000N0000000E`       |
-| -33.8688, 151.2093     | `335208S1511234E`       |
+| -33.8688, 151.2093     | `335208S1511233E`       |
 | 89.9999, 179.9999      | `900000N1800000E` (clamped) |
 
 The latitude block is `DDMMSS` (6 digits) and the longitude block is
