@@ -1,6 +1,7 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { useAirportRunways } from "./useAirportRunways";
 import { getAirportInfo } from "./aviationWeatherApi";
+import type { AirportResponse } from "./aviationWeatherApi";
 
 jest.mock("./aviationWeatherApi", () => ({
   getAirportInfo: jest.fn(),
@@ -161,7 +162,7 @@ describe("useAirportRunways", () => {
   });
 
   it("ignores a stale response when the codes change mid-flight", async () => {
-    let resolveFirst: (v: unknown) => void = () => {};
+    let resolveFirst: (v: AirportResponse[] | PromiseLike<AirportResponse[]>) => void = () => {};
     mockedGetAirportInfo.mockImplementationOnce(
       () =>
         new Promise((resolve) => {
@@ -211,7 +212,7 @@ describe("useAirportRunways", () => {
   });
 
   it("does not setRunways after unmount when fetch resolves late", async () => {
-    let resolveLate: (v: unknown) => void = () => {};
+    let resolveLate: (v: AirportResponse[] | PromiseLike<AirportResponse[]>) => void = () => {};
     mockedGetAirportInfo.mockImplementationOnce(
       () =>
         new Promise((resolve) => {
