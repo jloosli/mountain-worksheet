@@ -1,4 +1,4 @@
-import { latLonToDmsWaypoint } from "@/utils/skyvector";
+import { buildSkyvectorUrl, latLonToDmsWaypoint } from "@/utils/skyvector";
 
 describe("latLonToDmsWaypoint", () => {
   it("formats positive lat / negative lon", () => {
@@ -34,5 +34,19 @@ describe("latLonToDmsWaypoint", () => {
     // Inputs strictly above ±90 / ±180 should hit the explicit clamp branch.
     expect(latLonToDmsWaypoint(91, 181)).toBe("900000N1800000E");
     expect(latLonToDmsWaypoint(-91, -181)).toBe("900000S1800000W");
+  });
+});
+
+describe("buildSkyvectorUrl", () => {
+  it("builds a three-waypoint URL when all fields are set", () => {
+    expect(
+      buildSkyvectorUrl({
+        departure: "KPVU",
+        arrival: "KSGU",
+        operating: [40.5023, -110.7456],
+      })
+    ).toBe(
+      "https://skyvector.com/?fpl=KPVU%20403008N1104444W%20KSGU"
+    );
   });
 });

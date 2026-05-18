@@ -39,3 +39,27 @@ export function latLonToDmsWaypoint(lat: number, lon: number): string {
     lonSuffix
   );
 }
+
+export interface BuildSkyvectorUrlInput {
+  departure: string;
+  arrival: string;
+  operating: [number | null, number | null] | null;
+}
+
+export function buildSkyvectorUrl(input: BuildSkyvectorUrlInput): string | null {
+  const dep = input.departure.trim().toUpperCase();
+  const arr = input.arrival.trim().toUpperCase();
+  if (!dep || !arr) return null;
+
+  const waypoints: string[] = [dep];
+  if (
+    input.operating &&
+    input.operating[0] !== null &&
+    input.operating[1] !== null
+  ) {
+    waypoints.push(latLonToDmsWaypoint(input.operating[0], input.operating[1]));
+  }
+  waypoints.push(arr);
+
+  return `https://skyvector.com/?fpl=${waypoints.join("%20")}`;
+}
