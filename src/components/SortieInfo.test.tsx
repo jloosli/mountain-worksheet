@@ -222,6 +222,65 @@ describe("SortieInfo — SkyVector button", () => {
     const button = screen.getByRole("button", { name: /open in skyvector/i });
     expect(button).toBeDisabled();
   });
+
+  it("is enabled and opens a two-waypoint URL when only airports are set", () => {
+    const openSpy = jest.spyOn(window, "open").mockImplementation(() => null);
+    const initialData = {
+      ...defaultInitialData,
+      airport: ["KPVU", "KSGU"] as [string, string],
+    };
+    render(<SortieInfo onUpdate={jest.fn()} initialData={initialData} />);
+
+    const button = screen.getByRole("button", { name: /open in skyvector/i });
+    expect(button).not.toBeDisabled();
+
+    fireEvent.click(button);
+    expect(openSpy).toHaveBeenCalledWith(
+      "https://skyvector.com/?fpl=KPVU%20KSGU",
+      "_blank",
+      "noopener,noreferrer"
+    );
+
+    openSpy.mockRestore();
+  });
+
+  it("opens a three-waypoint URL when operating coordinates are set", () => {
+    const openSpy = jest.spyOn(window, "open").mockImplementation(() => null);
+    const initialData = {
+      ...defaultInitialData,
+      airport: ["KPVU", "KSGU"] as [string, string],
+      position: [40.5023, -110.7456] as [number | null, number | null],
+    };
+    render(<SortieInfo onUpdate={jest.fn()} initialData={initialData} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /open in skyvector/i }));
+    expect(openSpy).toHaveBeenCalledWith(
+      "https://skyvector.com/?fpl=KPVU%20403008N1104444W%20KSGU",
+      "_blank",
+      "noopener,noreferrer"
+    );
+
+    openSpy.mockRestore();
+  });
+
+  it("falls back to two-waypoint URL when operating position has nulls", () => {
+    const openSpy = jest.spyOn(window, "open").mockImplementation(() => null);
+    const initialData = {
+      ...defaultInitialData,
+      airport: ["KPVU", "KSGU"] as [string, string],
+      position: [null, null] as [number | null, number | null],
+    };
+    render(<SortieInfo onUpdate={jest.fn()} initialData={initialData} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /open in skyvector/i }));
+    expect(openSpy).toHaveBeenCalledWith(
+      "https://skyvector.com/?fpl=KPVU%20KSGU",
+      "_blank",
+      "noopener,noreferrer"
+    );
+
+    openSpy.mockRestore();
+  });
 });
 
 describe("SortieInfo - position field wiring", () => {
