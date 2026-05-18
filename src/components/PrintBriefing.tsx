@@ -276,6 +276,11 @@ export default function PrintBriefing({ state }: PrintBriefingProps) {
         </tbody>
       </table>
 
+      {!state.acType && (
+        <p className="text-[8pt] italic text-slate-700 mb-2">
+          Select an aircraft model to print performance.
+        </p>
+      )}
       {/* ---- TOLD ---- */}
       {state.acType && (
         <table className="w-full border-collapse text-[8pt] mb-2 break-inside-avoid">
@@ -449,6 +454,14 @@ export default function PrintBriefing({ state }: PrintBriefingProps) {
           </table>
         );
       })()}
+
+      <footer className="border-t border-slate-400 pt-1 mt-1 text-[7pt] text-slate-700 flex justify-between">
+        <span>
+          For reference only — PIC and FRO are responsible for the go/no-go
+          decision.
+        </span>
+        <span>mountain-worksheet.vercel.app</span>
+      </footer>
     </section>
   );
 }

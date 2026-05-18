@@ -211,3 +211,22 @@ describe("PrintBriefing — maneuvering speeds", () => {
     expect(screen.getAllByText(/60°/).length).toBeGreaterThan(0);
   });
 });
+
+describe("PrintBriefing — footer + no-aircraft fallback", () => {
+  it("renders the 'For reference only' disclaimer", () => {
+    render(<PrintBriefing state={fullState} />);
+    expect(screen.getByText(/For reference only/i)).toBeInTheDocument();
+  });
+
+  it("falls back to a notice and hides performance sections when no aircraft is selected", () => {
+    const noAC: WorksheetData = { ...fullState, acType: "" };
+    render(<PrintBriefing state={noAC} />);
+    expect(
+      screen.getByText(/Select an aircraft model to print performance/i),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/TO Ground Roll/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Maneuvering speeds/i)).not.toBeInTheDocument();
+    // Identity should still render
+    expect(screen.getByText(/Loosli/)).toBeInTheDocument();
+  });
+});
