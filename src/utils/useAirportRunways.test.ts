@@ -106,7 +106,7 @@ describe("useAirportRunways", () => {
     expect(mockedGetAirportInfo).toHaveBeenCalledWith(["KASE", "KSLC"]);
   });
 
-  it("skips invalid codes (length < 3) but fetches the valid sibling", async () => {
+  it("skips invalid dep code but still fetches valid arr code", async () => {
     mockedGetAirportInfo.mockResolvedValue([
       fakeAirport("KSLC", [{ id: "16L/34R", length: 12000, alignment: 160 }]),
     ]);
@@ -208,5 +208,41 @@ describe("useAirportRunways", () => {
     expect(result.current[0]).toEqual([
       { id: "15/33", length: 8000, alignment: 150 },
     ]);
+  });
+
+  it("does not setRunways after unmount when fetch resolves late", async () => {
+    let resolveLate: (v: unknown) => void = () => {};
+    mockedGetAirportInfo.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveLate = resolve;
+        }) as ReturnType<typeof getAirportInfo>
+    );
+
+    const errSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+
+    const { unmount } = renderHook(() => useAirportRunways(["KDEN", "KSLC"]));
+
+    act(() => {
+      jest.advanceTimersByTime(400);
+    });
+    await waitFor(() => {
+      expect(mockedGetAirportInfo).toHaveBeenCalledTimes(1);
+    });
+
+    unmount();
+
+    // Resolve the in-flight request after the hook unmounted.
+    await act(async () => {
+      resolveLate([
+        fakeAirport("KDEN", [{ id: "16L/34R", length: 12000, alignment: 160 }]),
+        fakeAirport("KSLC", [{ id: "16L/34R", length: 12000, alignment: 160 }]),
+      ]);
+    });
+
+    // React would log a "state update on unmounted component" warning via
+    // console.error if setRunways ran post-unmount. Assert it stayed quiet.
+    expect(errSpy).not.toHaveBeenCalled();
+    errSpy.mockRestore();
   });
 });

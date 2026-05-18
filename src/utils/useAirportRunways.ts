@@ -68,10 +68,11 @@ export function useAirportRunways(
     );
     const seq = ++seqRef.current;
 
+    let cancelled = false;
     const timer = setTimeout(async () => {
       try {
         const response = await getAirportInfo(codes);
-        if (seq !== seqRef.current) return;
+        if (cancelled || seq !== seqRef.current) return;
         const byCode = new Map(
           response.map((a) => [a.icaoId?.toUpperCase(), a])
         );
@@ -80,13 +81,16 @@ export function useAirportRunways(
         lastResolvedRef.current = [dep, arr];
         setRunways([depRunways, arrRunways]);
       } catch (err) {
-        if (seq !== seqRef.current) return;
+        if (cancelled || seq !== seqRef.current) return;
         console.warn("Airport lookup failed:", err);
         lastResolvedRef.current = [dep, arr];
       }
     }, DEBOUNCE_MS);
 
-    return () => clearTimeout(timer);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [dep, arr, depValid, arrValid]);
 
   return runways;
