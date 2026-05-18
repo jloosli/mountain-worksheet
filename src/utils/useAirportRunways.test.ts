@@ -246,4 +246,65 @@ describe("useAirportRunways", () => {
     expect(errSpy).not.toHaveBeenCalled();
     errSpy.mockRestore();
   });
+
+  it("preserves the unchanged slot's runways when only one code changes", async () => {
+    const kdenRunways = [{ id: "16L/34R", length: 12000, alignment: 160 }];
+    const kslcRunways = [{ id: "16L/34R", length: 12000, alignment: 160 }];
+    const kaseRunways = [{ id: "15/33", length: 8000, alignment: 150 }];
+
+    mockedGetAirportInfo.mockResolvedValueOnce([
+      fakeAirport("KDEN", kdenRunways),
+      fakeAirport("KSLC", kslcRunways),
+    ]);
+
+    const { result, rerender } = renderHook(
+      ({ airports }: { airports: [string, string] }) => useAirportRunways(airports),
+      { initialProps: { airports: ["KDEN", "KSLC"] as [string, string] } }
+    );
+
+    act(() => {
+      jest.advanceTimersByTime(400);
+    });
+    await waitFor(() => {
+      expect(result.current[0]).toEqual(kdenRunways);
+    });
+    expect(result.current[1]).toEqual(kslcRunways);
+
+    // Now queue the second response (dep changes to KASE, arr stays KSLC).
+    let resolveSecond: (v: unknown) => void = () => {};
+    mockedGetAirportInfo.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveSecond = resolve;
+        }) as ReturnType<typeof getAirportInfo>
+    );
+
+    rerender({ airports: ["KASE", "KSLC"] });
+
+    // Debounce window — dep slot should be cleared immediately, arr preserved.
+    expect(result.current[0]).toBeNull();
+    expect(result.current[1]).toEqual(kslcRunways);
+
+    act(() => {
+      jest.advanceTimersByTime(400);
+    });
+    await waitFor(() => {
+      expect(mockedGetAirportInfo).toHaveBeenCalledTimes(2);
+    });
+
+    // Fetch in flight; arr should still be preserved.
+    expect(result.current[1]).toEqual(kslcRunways);
+
+    await act(async () => {
+      resolveSecond([
+        fakeAirport("KASE", kaseRunways),
+        fakeAirport("KSLC", kslcRunways),
+      ]);
+    });
+
+    await waitFor(() => {
+      expect(result.current[0]).toEqual(kaseRunways);
+    });
+    expect(result.current[1]).toEqual(kslcRunways);
+  });
 });
