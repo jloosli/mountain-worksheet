@@ -84,3 +84,56 @@ describe("PrintBriefing — identity, route, quals", () => {
     expect(screen.getAllByText("—").length).toBeGreaterThan(0);
   });
 });
+
+const stateWithWeather: WorksheetData = {
+  ...fullState,
+  wind: [
+    [340, 320, 300, 280, 270],
+    [10, 15, 20, 25, 30],
+    [10, 5, 0, -5, -10],
+  ] as [(number | null)[], (number | null)[], (number | null)[]],
+  turb: true,
+  cielVis: false,
+  mtnObsc: true,
+};
+
+describe("PrintBriefing — weather conditions", () => {
+  it("renders a winds-aloft table with rows for 3k/6k/9k/12k/15k", () => {
+    render(<PrintBriefing state={stateWithWeather} />);
+    for (const altLabel of ["3,000", "6,000", "9,000", "12,000", "15,000"]) {
+      expect(screen.getByText(altLabel)).toBeInTheDocument();
+    }
+  });
+
+  it("renders wind direction, velocity, and temperature for each altitude", () => {
+    render(<PrintBriefing state={stateWithWeather} />);
+    expect(screen.getByText("340")).toBeInTheDocument();
+    expect(screen.getByText("270")).toBeInTheDocument();
+    // -10 °C at 15k should appear with a minus sign
+    expect(screen.getByText("-10")).toBeInTheDocument();
+  });
+
+  it("renders em-dashes for missing wind cells", () => {
+    const partial = {
+      ...stateWithWeather,
+      wind: [
+        [340, null, null, null, null],
+        [10, null, null, null, null],
+        [10, null, null, null, null],
+      ] as [(number | null)[], (number | null)[], (number | null)[]],
+    };
+    render(<PrintBriefing state={partial} />);
+    // At minimum the 6k/9k/12k/15k cells should contain em-dashes.
+    expect(screen.getAllByText("—").length).toBeGreaterThanOrEqual(12);
+  });
+
+  it("renders AIRMET chips for turb / cielVis / mtnObsc", () => {
+    render(<PrintBriefing state={stateWithWeather} />);
+    const turb = screen.getByText(/Turb/);
+    expect(turb.textContent).toMatch(/✓/);
+    const cielVis = screen.getByText(/Ceil\/Vis/);
+    expect(cielVis.textContent).toMatch(/✗/);
+    const mtnObsc = screen.getByText(/Mtn Obsc/);
+    expect(mtnObsc.textContent).toMatch(/✓/);
+  });
+});
