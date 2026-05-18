@@ -56,7 +56,7 @@ describe("PrintBriefing — identity, route, quals", () => {
   it("renders the identity line with pilot, AC/tail, UTC date+time, duration", () => {
     render(<PrintBriefing state={fullState} />);
     expect(screen.getByText(/Loosli/)).toBeInTheDocument();
-    expect(screen.getByText(/T182T/)).toBeInTheDocument();
+    expect(screen.getAllByText(/T182T/).length).toBeGreaterThan(0);
     expect(screen.getByText(/N911CP/)).toBeInTheDocument();
     expect(screen.getByText(/2026-05-17/)).toBeInTheDocument();
     expect(screen.getByText(/18:00/)).toBeInTheDocument();
@@ -64,8 +64,8 @@ describe("PrintBriefing — identity, route, quals", () => {
 
   it("renders the route line with departure → arrival, area, and position", () => {
     render(<PrintBriefing state={fullState} />);
-    expect(screen.getByText(/KOGD/)).toBeInTheDocument();
-    expect(screen.getByText(/KLGU/)).toBeInTheDocument();
+    expect(screen.getAllByText(/KOGD/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/KLGU/).length).toBeGreaterThan(0);
     expect(screen.getByText(/Wasatch Range/)).toBeInTheDocument();
     expect(screen.getByText(/41\.2/)).toBeInTheDocument();
   });
@@ -135,5 +135,56 @@ describe("PrintBriefing — weather conditions", () => {
     expect(cielVis.textContent).toMatch(/✗/);
     const mtnObsc = screen.getByText(/Mtn Obsc/);
     expect(mtnObsc.textContent).toMatch(/✓/);
+  });
+});
+
+const stateWithPerf: WorksheetData = {
+  ...fullState,
+  weight: 3000,
+  rwy: [4000, 6500],
+  temp: [20, 10, 15] as [number, number, number],
+  altimeter: [29.92, 29.92, 29.92] as [number, number, number],
+  altitude: [4000, 8000, 4500] as [number, number, number],
+};
+
+describe("PrintBriefing — per-phase environment", () => {
+  it("renders rows for Actual Altitude, OAT, Altimeter, PA, DA across dep/op/arr", () => {
+    render(<PrintBriefing state={stateWithPerf} />);
+    expect(screen.getByText(/Actual Altitude/i)).toBeInTheDocument();
+    expect(screen.getByText(/OAT/i)).toBeInTheDocument();
+    expect(screen.getByText(/Altimeter/i)).toBeInTheDocument();
+    expect(screen.getByText(/Pressure Alt/i)).toBeInTheDocument();
+    expect(screen.getByText(/Density Alt/i)).toBeInTheDocument();
+    // Three column headers
+    expect(screen.getByText(/Departure/i)).toBeInTheDocument();
+    expect(screen.getByText(/Operating/i)).toBeInTheDocument();
+    expect(screen.getByText(/Arrival/i)).toBeInTheDocument();
+  });
+
+  it("renders the entered altitudes formatted with thousands separators", () => {
+    render(<PrintBriefing state={stateWithPerf} />);
+    expect(screen.getAllByText("4,000").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("8,000").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("4,500").length).toBeGreaterThan(0);
+  });
+});
+
+describe("PrintBriefing — TOLD", () => {
+  it("renders TOLD rows when aircraft and inputs are present", () => {
+    render(<PrintBriefing state={stateWithPerf} />);
+    expect(screen.getByText(/TO Ground Roll/i)).toBeInTheDocument();
+    expect(screen.getByText(/Landing Ground Roll/i)).toBeInTheDocument();
+    expect(screen.getByText(/Runway remaining/i)).toBeInTheDocument();
+  });
+
+  it("applies the negative-margin class when runway remaining is negative", () => {
+    // Pick a tiny runway so the calculation comes back negative.
+    const tightRwy: WorksheetData = {
+      ...stateWithPerf,
+      rwy: [100, 100] as [number, number],
+    };
+    const { container } = render(<PrintBriefing state={tightRwy} />);
+    const reds = container.querySelectorAll(".print-margin-bad");
+    expect(reds.length).toBeGreaterThan(0);
   });
 });

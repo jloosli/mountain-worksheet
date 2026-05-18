@@ -1,4 +1,9 @@
 import type { WorksheetData } from "@/utils/types";
+import {
+  computePressureColumns,
+  computeTOLDViewModel,
+  type Triple,
+} from "@/utils/derived";
 
 interface PrintBriefingProps {
   state: WorksheetData;
@@ -14,6 +19,76 @@ const dash = (v: string | number | null | undefined): string => {
 
 const tick = (v: boolean): string => (v ? "✓" : "✗");
 
+const fmtFt = (v: number | null | undefined): string =>
+  v === null || v === undefined ? "—" : Math.round(v).toLocaleString();
+
+const fmtNum = (v: number | null | undefined): string =>
+  v === null || v === undefined ? "—" : v.toLocaleString();
+
+type EnvReader = (
+  s: WorksheetData,
+  PAs: Triple,
+  DAs: Triple,
+) => [number | null, number | null, number | null];
+
+const ENV_ROWS: ReadonlyArray<{
+  label: string;
+  read: EnvReader;
+  fmt: (v: number | null) => string;
+}> = [
+  {
+    label: "Actual Altitude (ft)",
+    read: (s) => s.altitude,
+    fmt: fmtFt,
+  },
+  {
+    label: "OAT (°C)",
+    read: (s) => s.temp,
+    fmt: fmtNum,
+  },
+  {
+    label: "Altimeter (inHg)",
+    read: (s) => s.altimeter,
+    fmt: (v) => (v === null ? "—" : v.toFixed(2)),
+  },
+  {
+    label: "Pressure Alt (ft)",
+    read: (_s, PAs) => PAs,
+    fmt: fmtFt,
+  },
+  {
+    label: "Density Alt (ft)",
+    read: (_s, _PAs, DAs) => DAs,
+    fmt: fmtFt,
+  },
+];
+
+function TOLDRow({
+  label,
+  dep,
+  arr,
+  colorNegative,
+}: {
+  label: string;
+  dep: number | null;
+  arr: number | null;
+  colorNegative?: boolean;
+}) {
+  const cellClass = (v: number | null) => {
+    if (colorNegative && v !== null && v < 0) {
+      return "py-0.5 text-right print-keep-color print-margin-bad text-red-700 font-semibold";
+    }
+    return "py-0.5 text-right";
+  };
+  return (
+    <tr className="border-b border-slate-200">
+      <td className="py-0.5 pr-2">{label}</td>
+      <td className={cellClass(dep) + " pr-2"}>{fmtFt(dep)}</td>
+      <td className={cellClass(arr)}>{fmtFt(arr)}</td>
+    </tr>
+  );
+}
+
 export default function PrintBriefing({ state }: PrintBriefingProps) {
   const [dep, arr] = state.airport;
   const [lat, lon] = state.position;
@@ -21,6 +96,13 @@ export default function PrintBriefing({ state }: PrintBriefingProps) {
     lat !== null && lon !== null
       ? `${lat.toFixed(2)}, ${lon.toFixed(2)}`
       : "—";
+
+  const { PAs, DAs } = computePressureColumns(
+    state.altitude,
+    state.altimeter,
+    state.temp,
+  );
+  const told = computeTOLDViewModel(state, PAs);
 
   return (
     <section
@@ -116,6 +198,78 @@ export default function PrintBriefing({ state }: PrintBriefingProps) {
           </ul>
         </div>
       </div>
+
+      {/* ---- Per-phase environment ---- */}
+      <table className="w-full border-collapse text-[8pt] mb-2 break-inside-avoid">
+        <thead>
+          <tr className="border-b border-slate-400">
+            <th className="text-left pr-2 font-medium"></th>
+            <th className="text-right pr-2 font-medium">Departure</th>
+            <th className="text-right pr-2 font-medium">Operating</th>
+            <th className="text-right font-medium">Arrival</th>
+          </tr>
+        </thead>
+        <tbody>
+          {ENV_ROWS.map((row) => (
+            <tr key={row.label} className="border-b border-slate-200">
+              <td className="py-0.5 pr-2">{row.label}</td>
+              <td className="py-0.5 pr-2 text-right">{row.fmt(row.read(state, PAs, DAs)[0])}</td>
+              <td className="py-0.5 pr-2 text-right">{row.fmt(row.read(state, PAs, DAs)[1])}</td>
+              <td className="py-0.5 text-right">{row.fmt(row.read(state, PAs, DAs)[2])}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      {/* ---- TOLD ---- */}
+      {state.acType && (
+        <table className="w-full border-collapse text-[8pt] mb-2 break-inside-avoid">
+          <thead>
+            <tr className="border-b border-slate-400">
+              <th className="text-left pr-2 font-medium" colSpan={3}>
+                Takeoff &amp; Landing ({state.acType})
+              </th>
+            </tr>
+            <tr className="border-b border-slate-300">
+              <th className="text-left pr-2 font-medium"></th>
+              <th className="text-right pr-2 font-medium">
+                {dash(state.airport[0])}
+              </th>
+              <th className="text-right font-medium">
+                {dash(state.airport[1])}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <TOLDRow
+              label="TO Ground Roll"
+              dep={told.results?.takeoffGroundRoll.departure ?? null}
+              arr={told.results?.takeoffGroundRoll.arrival ?? null}
+            />
+            <TOLDRow
+              label="TO over 50' obstacle"
+              dep={told.results?.takeoff50ftObstacle.departure ?? null}
+              arr={told.results?.takeoff50ftObstacle.arrival ?? null}
+            />
+            <TOLDRow
+              label="Landing Ground Roll"
+              dep={told.results?.landingGroundRoll.departure ?? null}
+              arr={told.results?.landingGroundRoll.arrival ?? null}
+            />
+            <TOLDRow
+              label="Landing over 50' obstacle"
+              dep={told.results?.landing50ftObstacle.departure ?? null}
+              arr={told.results?.landing50ftObstacle.arrival ?? null}
+            />
+            <TOLDRow
+              label="Runway remaining (50' obstacle)"
+              dep={told.results?.availableRunwayRemainingTakeoff50ft.departure ?? null}
+              arr={told.results?.availableRunwayRemainingTakeoff50ft.arrival ?? null}
+              colorNegative
+            />
+          </tbody>
+        </table>
+      )}
     </section>
   );
 }
