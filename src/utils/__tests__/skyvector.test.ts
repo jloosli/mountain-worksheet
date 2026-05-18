@@ -50,9 +50,13 @@ describe("buildSkyvectorUrl", () => {
     );
   });
 
-  it("omits operating waypoint when operating is null", () => {
+  it("omits operating waypoint when operating tuple has both nulls", () => {
     expect(
-      buildSkyvectorUrl({ departure: "KPVU", arrival: "KSGU", operating: null })
+      buildSkyvectorUrl({
+        departure: "KPVU",
+        arrival: "KSGU",
+        operating: [null, null],
+      })
     ).toBe("https://skyvector.com/?fpl=KPVU%20KSGU");
   });
 
@@ -68,13 +72,13 @@ describe("buildSkyvectorUrl", () => {
 
   it("returns null when departure is empty", () => {
     expect(
-      buildSkyvectorUrl({ departure: "", arrival: "KSGU", operating: null })
+      buildSkyvectorUrl({ departure: "", arrival: "KSGU", operating: [null, null] })
     ).toBeNull();
   });
 
   it("returns null when arrival is whitespace-only", () => {
     expect(
-      buildSkyvectorUrl({ departure: "KPVU", arrival: "   ", operating: null })
+      buildSkyvectorUrl({ departure: "KPVU", arrival: "   ", operating: [null, null] })
     ).toBeNull();
   });
 
@@ -83,7 +87,7 @@ describe("buildSkyvectorUrl", () => {
       buildSkyvectorUrl({
         departure: " kpvu ",
         arrival: "kSgU",
-        operating: null,
+        operating: [null, null],
       })
     ).toBe("https://skyvector.com/?fpl=KPVU%20KSGU");
   });

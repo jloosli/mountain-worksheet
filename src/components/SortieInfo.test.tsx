@@ -203,10 +203,6 @@ describe("SortieInfo - sortie timing relative display", () => {
 });
 
 describe("SortieInfo — SkyVector button", () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-
   it("renders the button disabled when both airports are blank", () => {
     render(<SortieInfo onUpdate={jest.fn()} initialData={defaultInitialData} />);
     const button = screen.getByRole("button", { name: /open in skyvector/i });

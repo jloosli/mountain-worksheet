@@ -43,7 +43,7 @@ export function latLonToDmsWaypoint(lat: number, lon: number): string {
 export interface BuildSkyvectorUrlInput {
   departure: string;
   arrival: string;
-  operating: [number | null, number | null] | null;
+  operating: [number | null, number | null];
 }
 
 export function buildSkyvectorUrl(input: BuildSkyvectorUrlInput): string | null {
@@ -52,11 +52,7 @@ export function buildSkyvectorUrl(input: BuildSkyvectorUrlInput): string | null 
   if (!dep || !arr) return null;
 
   const waypoints: string[] = [dep];
-  if (
-    input.operating &&
-    input.operating[0] !== null &&
-    input.operating[1] !== null
-  ) {
+  if (input.operating[0] !== null && input.operating[1] !== null) {
     waypoints.push(latLonToDmsWaypoint(input.operating[0], input.operating[1]));
   }
   waypoints.push(arr);

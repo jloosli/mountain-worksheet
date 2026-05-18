@@ -424,7 +424,7 @@ export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
           const skyvectorUrl = buildSkyvectorUrl({
             departure: formData.airport?.[0] ?? "",
             arrival: formData.airport?.[1] ?? "",
-            operating: formData.position ?? null,
+            operating: formData.position,
           });
           const disabled = skyvectorUrl === null;
           return (
