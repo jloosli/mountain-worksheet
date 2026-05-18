@@ -22,8 +22,8 @@ describe("latLonToDmsWaypoint", () => {
   });
 
   it("rolls seconds 60 over into minutes", () => {
-    // 40 + 59.9/60 + 59.6/3600 deg places seconds at ~59.6, which rounds to 60
-    // and should carry into minutes.
+    // minutes total ≈ 59.993, leaving seconds ≈ 59.6, which rounds to 60
+    // (carries into minutes, then minutes 60 carries into degrees).
     const lat = 40 + 59 / 60 + 59.6 / 3600;
     expect(latLonToDmsWaypoint(lat, 0)).toBe("410000N0000000E");
   });
@@ -31,5 +31,8 @@ describe("latLonToDmsWaypoint", () => {
   it("clamps poles and anti-meridian", () => {
     expect(latLonToDmsWaypoint(89.9999, 179.9999)).toBe("900000N1800000E");
     expect(latLonToDmsWaypoint(-89.9999, -179.9999)).toBe("900000S1800000W");
+    // Inputs strictly above ±90 / ±180 should hit the explicit clamp branch.
+    expect(latLonToDmsWaypoint(91, 181)).toBe("900000N1800000E");
+    expect(latLonToDmsWaypoint(-91, -181)).toBe("900000S1800000W");
   });
 });
