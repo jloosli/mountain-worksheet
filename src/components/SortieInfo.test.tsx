@@ -202,6 +202,32 @@ describe("SortieInfo - sortie timing relative display", () => {
   });
 });
 
+describe("SortieInfo — SkyVector button", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("renders the button disabled when both airports are blank", () => {
+    render(<SortieInfo onUpdate={jest.fn()} initialData={defaultInitialData} />);
+    const button = screen.getByRole("button", { name: /open in skyvector/i });
+    expect(button).toBeDisabled();
+  });
+
+  it("renders the button disabled when only departure is set", () => {
+    const initialData = { ...defaultInitialData, airport: ["KPVU", ""] as [string, string] };
+    render(<SortieInfo onUpdate={jest.fn()} initialData={initialData} />);
+    const button = screen.getByRole("button", { name: /open in skyvector/i });
+    expect(button).toBeDisabled();
+  });
+
+  it("renders the button disabled when only arrival is set", () => {
+    const initialData = { ...defaultInitialData, airport: ["", "KSGU"] as [string, string] };
+    render(<SortieInfo onUpdate={jest.fn()} initialData={initialData} />);
+    const button = screen.getByRole("button", { name: /open in skyvector/i });
+    expect(button).toBeDisabled();
+  });
+});
+
 describe("SortieInfo - position field wiring", () => {
   it("calls onUpdate with both route and position when valid coords are entered", async () => {
     jest.useFakeTimers();
