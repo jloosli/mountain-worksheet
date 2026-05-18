@@ -87,4 +87,14 @@ describe("buildSkyvectorUrl", () => {
       })
     ).toBe("https://skyvector.com/?fpl=KPVU%20KSGU");
   });
+
+  it("treats exact-zero operating coordinates as valid", () => {
+    expect(
+      buildSkyvectorUrl({
+        departure: "KPVU",
+        arrival: "KSGU",
+        operating: [0, 0],
+      })
+    ).toBe("https://skyvector.com/?fpl=KPVU%20000000N0000000E%20KSGU");
+  });
 });
