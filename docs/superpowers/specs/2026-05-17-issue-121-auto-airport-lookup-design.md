@@ -34,7 +34,7 @@ export function useAirportRunways(
 Responsibilities:
 
 - Watches the `airports` tuple.
-- For each slot, validates the code with `/^[A-Z0-9]{3,4}$/` (codes are already uppercased upstream in `SortieInfo`). Invalid or empty codes resolve that slot to `null` with no API call.
+- For each slot, normalizes with `.trim().toUpperCase()` and validates the code with `/^[A-Z0-9]{3,4}$/`. `SortieInfo` already uppercases on input, but the hook normalizes defensively so a stray lowercase value from URL state can't fail the regex. Invalid or empty codes resolve that slot to `null` with no API call.
 - Debounces fetches by **400 ms** so typing "KDEN" produces one call, not four.
 - Dedupes when `dep === arr`: a single `getAirportInfo([code])` request is split into both slots.
 - Tracks the last-resolved code pair internally. When the incoming tuple already matches the resolved pair, the hook is a no-op (covers the case where a parent re-render passes the same tuple).
