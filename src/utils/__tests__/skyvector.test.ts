@@ -49,4 +49,42 @@ describe("buildSkyvectorUrl", () => {
       "https://skyvector.com/?fpl=KPVU%20403008N1104444W%20KSGU"
     );
   });
+
+  it("omits operating waypoint when operating is null", () => {
+    expect(
+      buildSkyvectorUrl({ departure: "KPVU", arrival: "KSGU", operating: null })
+    ).toBe("https://skyvector.com/?fpl=KPVU%20KSGU");
+  });
+
+  it("omits operating waypoint when one coordinate is null", () => {
+    expect(
+      buildSkyvectorUrl({
+        departure: "KPVU",
+        arrival: "KSGU",
+        operating: [40.5, null],
+      })
+    ).toBe("https://skyvector.com/?fpl=KPVU%20KSGU");
+  });
+
+  it("returns null when departure is empty", () => {
+    expect(
+      buildSkyvectorUrl({ departure: "", arrival: "KSGU", operating: null })
+    ).toBeNull();
+  });
+
+  it("returns null when arrival is whitespace-only", () => {
+    expect(
+      buildSkyvectorUrl({ departure: "KPVU", arrival: "   ", operating: null })
+    ).toBeNull();
+  });
+
+  it("uppercases and trims airport identifiers", () => {
+    expect(
+      buildSkyvectorUrl({
+        departure: " kpvu ",
+        arrival: "kSgU",
+        operating: null,
+      })
+    ).toBe("https://skyvector.com/?fpl=KPVU%20KSGU");
+  });
 });
