@@ -188,3 +188,26 @@ describe("PrintBriefing — TOLD", () => {
     expect(reds.length).toBeGreaterThan(0);
   });
 });
+
+describe("PrintBriefing — climb and V-speeds", () => {
+  it("renders ROC and V-speed labels when aircraft is selected", () => {
+    render(<PrintBriefing state={stateWithPerf} />);
+    expect(screen.getByText(/Rate of Climb \(MGW\)/i)).toBeInTheDocument();
+    expect(screen.getByText(/Rate of Climb \(Actual/i)).toBeInTheDocument();
+    expect(screen.getByText(/Vx/)).toBeInTheDocument();
+    expect(screen.getAllByText(/Vy/).length).toBeGreaterThan(0);
+    expect(screen.getByText(/Va/)).toBeInTheDocument();
+    expect(screen.getByText(/Vra/)).toBeInTheDocument();
+    expect(screen.getByText(/% MGW/)).toBeInTheDocument();
+  });
+});
+
+describe("PrintBriefing — maneuvering speeds", () => {
+  it("renders flap × bank-angle headers when aircraft is selected", () => {
+    render(<PrintBriefing state={stateWithPerf} />);
+    expect(screen.getByText(/Maneuvering speeds/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/0°/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/45°/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/60°/).length).toBeGreaterThan(0);
+  });
+});

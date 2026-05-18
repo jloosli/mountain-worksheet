@@ -4,6 +4,11 @@ import {
   computeTOLDViewModel,
   type Triple,
 } from "@/utils/derived";
+import aircraftData from "@/data/aircraft.json";
+import { bilinearInterpolateFlexible } from "@/utils/interpolation";
+import { calculateVra, calculateVx } from "@/utils/formulas";
+import { calculateManeuveringSpeeds } from "@/utils/maneuveringCalculations";
+import type { Aircraft } from "@/utils/types";
 
 interface PrintBriefingProps {
   state: WorksheetData;
@@ -62,6 +67,56 @@ const ENV_ROWS: ReadonlyArray<{
     fmt: fmtFt,
   },
 ];
+
+function lookupAircraft(model: string): Aircraft | null {
+  return (aircraftData.find((a) => a.id === model) as Aircraft | undefined) ?? null;
+}
+
+function computeClimbRow(aircraft: Aircraft, PAs: Triple, OATs: Triple): Triple {
+  const rates: Triple = [null, null, null];
+  for (let i = 0; i < 3; i++) {
+    const pa = PAs[i];
+    const oat = OATs[i];
+    if (pa !== null && oat !== null) {
+      try {
+        rates[i] = Math.round(
+          bilinearInterpolateFlexible(aircraft.climbPerformance, pa, oat, {
+            xAxisName: "pressureAltitudes",
+            yAxisName: "temperatures",
+          }),
+        );
+      } catch {
+        rates[i] = null;
+      }
+    }
+  }
+  return rates;
+}
+
+function vySpeed(aircraft: Aircraft, pa: number | null): number | null {
+  if (pa === null) return null;
+  const alts = aircraft.climbPerformance.pressureAltitudes;
+  let idx = alts.findIndex((p) => p >= pa);
+  if (idx === -1) idx = 0;
+  return aircraft.climbPerformance.climbSpeeds[idx] ?? null;
+}
+
+function vaSpeed(aircraft: Aircraft, weight: number | null): number | null {
+  if (weight === null) return null;
+  const { weights, Va } = aircraft.maneuvering;
+  if (!weights || !Va || weights.length === 0) return null;
+  if (weights.length === 1) return Math.round(Va[0]);
+  // linear interpolation / extrapolation
+  let lo = 0;
+  for (let i = 0; i < weights.length - 1; i++) {
+    if (weight <= weights[i + 1]) { lo = i; break; }
+    lo = i;
+  }
+  const hi = Math.min(lo + 1, weights.length - 1);
+  if (lo === hi) return Math.round(Va[lo]);
+  const t = (weight - weights[lo]) / (weights[hi] - weights[lo]);
+  return Math.round(Va[lo] + t * (Va[hi] - Va[lo]));
+}
 
 function TOLDRow({
   label,
@@ -270,6 +325,130 @@ export default function PrintBriefing({ state }: PrintBriefingProps) {
           </tbody>
         </table>
       )}
+      {/* ---- Climb + V-speeds ---- */}
+      {(() => {
+        if (!state.acType) return null;
+        const aircraft = lookupAircraft(state.acType);
+        if (!aircraft) return null;
+        const ROC = computeClimbRow(aircraft, PAs, state.temp);
+        const percentMGW =
+          state.weight !== null
+            ? Math.round((state.weight / aircraft.maxGrossWeight) * 100)
+            : null;
+        const ROCActual: Triple = ROC.map((r) =>
+          r === null || percentMGW === null
+            ? null
+            : Math.round(r * (1 + (1 - percentMGW / 100))),
+        ) as Triple;
+        const vra = calculateVra(aircraft);
+        return (
+          <table className="w-full border-collapse text-[8pt] mb-2 break-inside-avoid">
+            <thead>
+              <tr className="border-b border-slate-400">
+                <th className="text-left pr-2 font-medium" colSpan={4}>
+                  Climb &amp; V-speeds ({state.acType})
+                </th>
+              </tr>
+              <tr className="border-b border-slate-300">
+                <th className="text-left pr-2 font-medium"></th>
+                <th className="text-right pr-2 font-medium">Dep</th>
+                <th className="text-right pr-2 font-medium">Op</th>
+                <th className="text-right font-medium">Arr</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr className="border-b border-slate-200">
+                <td className="py-0.5 pr-2">Rate of Climb (MGW)</td>
+                <td className="py-0.5 pr-2 text-right">{fmtNum(ROC[0])}</td>
+                <td className="py-0.5 pr-2 text-right">{fmtNum(ROC[1])}</td>
+                <td className="py-0.5 text-right">{fmtNum(ROC[2])}</td>
+              </tr>
+              <tr className="border-b border-slate-200">
+                <td className="py-0.5 pr-2">Rate of Climb (Actual wt)</td>
+                <td className="py-0.5 pr-2 text-right">{fmtNum(ROCActual[0])}</td>
+                <td className="py-0.5 pr-2 text-right">{fmtNum(ROCActual[1])}</td>
+                <td className="py-0.5 text-right">{fmtNum(ROCActual[2])}</td>
+              </tr>
+              <tr className="border-b border-slate-200">
+                <td className="py-0.5 pr-2">Vx</td>
+                <td className="py-0.5 pr-2 text-right">{fmtNum(calculateVx(aircraft, PAs[0] ?? 0))}</td>
+                <td className="py-0.5 pr-2 text-right">{fmtNum(calculateVx(aircraft, PAs[1] ?? 0))}</td>
+                <td className="py-0.5 text-right">{fmtNum(calculateVx(aircraft, PAs[2] ?? 0))}</td>
+              </tr>
+              <tr className="border-b border-slate-200">
+                <td className="py-0.5 pr-2">Vy</td>
+                <td className="py-0.5 pr-2 text-right">{fmtNum(vySpeed(aircraft, PAs[0]))}</td>
+                <td className="py-0.5 pr-2 text-right">{fmtNum(vySpeed(aircraft, PAs[1]))}</td>
+                <td className="py-0.5 text-right">{fmtNum(vySpeed(aircraft, PAs[2]))}</td>
+              </tr>
+              <tr className="border-b border-slate-200">
+                <td className="py-0.5 pr-2">Va (actual weight)</td>
+                <td className="py-0.5 pr-2 text-right">{fmtNum(vaSpeed(aircraft, state.weight))}</td>
+                <td className="py-0.5 pr-2 text-right"></td>
+                <td className="py-0.5 text-right"></td>
+              </tr>
+              <tr className="border-b border-slate-200">
+                <td className="py-0.5 pr-2">Vra</td>
+                <td className="py-0.5 pr-2 text-right">{fmtNum(vra)}</td>
+                <td className="py-0.5 pr-2 text-right"></td>
+                <td className="py-0.5 text-right"></td>
+              </tr>
+              <tr className="border-b border-slate-200">
+                <td className="py-0.5 pr-2">% MGW</td>
+                <td className="py-0.5 pr-2 text-right">
+                  {percentMGW !== null ? `${percentMGW}%` : "—"}
+                </td>
+                <td className="py-0.5 pr-2 text-right"></td>
+                <td className="py-0.5 text-right"></td>
+              </tr>
+            </tbody>
+          </table>
+        );
+      })()}
+
+      {/* ---- Maneuvering / canyon-turn speeds ---- */}
+      {(() => {
+        if (!state.acType) return null;
+        const ms = calculateManeuveringSpeeds(state.acType);
+        if (!ms) return null;
+        const banks = [0, 45, 60];
+        return (
+          <table className="w-full border-collapse text-[8pt] mb-2 break-inside-avoid">
+            <thead>
+              <tr className="border-b border-slate-400">
+                <th className="text-left pr-2 font-medium" colSpan={4}>
+                  Maneuvering speeds (kts) ({state.acType})
+                </th>
+              </tr>
+              <tr className="border-b border-slate-300">
+                <th className="text-left pr-2 font-medium">Flaps</th>
+                {banks.map((b) => (
+                  <th key={b} className="text-right pr-2 font-medium">
+                    {b}°
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {ms.flapSettings.map((flap) => (
+                <tr key={flap} className="border-b border-slate-200">
+                  <td className="py-0.5 pr-2">{flap}°</td>
+                  {banks.map((b) => {
+                    const found = ms.speeds.find(
+                      (s) => s.flapSetting === flap && s.bankAngle === b,
+                    );
+                    return (
+                      <td key={b} className="py-0.5 pr-2 text-right">
+                        {fmtNum(found ? found.speed : null)}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        );
+      })()}
     </section>
   );
 }
