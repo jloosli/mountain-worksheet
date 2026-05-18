@@ -252,7 +252,7 @@ export default function ActionBar({
             </>
           )}
 
-          <div className="flex items-center sm:ml-0.5 sm:border-l sm:border-slate-200 sm:pl-2.5 dark:sm:border-slate-700">
+          <div className="flex items-center sm:ml-0.5 sm:border-l sm:border-slate-200 sm:pl-2.5 sm:dark:border-slate-700">
             <button
               type="button"
               onClick={onOpenChecklist}
@@ -274,7 +274,7 @@ Summary of what changed relative to the original:
 
 1. **Inner wrapper classes** (line ~49 in original): added `flex-col items-stretch gap-2`, prefixed the original row-flex classes with `sm:` (`sm:flex-row sm:items-center sm:justify-between sm:gap-4`). Removed plain `items-center justify-between gap-4`.
 2. **Per-state JSX shape**: each state branch used to be a `<>…</>` fragment containing both the status `<div>` and the actions `<div>` (or trailing FetchButton). Now each state branch renders only the status `<div>`. The action contents move into a shared trailing `<div className="flex items-center justify-end gap-2 shrink-0">` that wraps all four states' button sets plus the Checklist trigger.
-3. **Checklist slot classes**: was `shrink-0 pl-2.5 ml-0.5 border-l border-slate-200 dark:border-slate-700 flex items-center`; now `flex items-center sm:ml-0.5 sm:border-l sm:border-slate-200 sm:pl-2.5 dark:sm:border-slate-700`. The `shrink-0` is removed because the slot now lives inside an already-shrunk container, and the visual divider is `sm:`-only.
+3. **Checklist slot classes**: was `shrink-0 pl-2.5 ml-0.5 border-l border-slate-200 dark:border-slate-700 flex items-center`; now `flex items-center sm:ml-0.5 sm:border-l sm:border-slate-200 sm:pl-2.5 sm:dark:border-slate-700`. The `shrink-0` is removed because the slot now lives inside an already-shrunk container, and the visual divider is `sm:`-only.
 4. **Subtitle classes** in `ready` and `fetched` states: added `hidden sm:block` to the `text-xs` `<div>`s.
 
 Nothing else changes — `FetchButton`, the imports, the formatters, and the props interface are untouched.
