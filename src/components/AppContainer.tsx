@@ -15,9 +15,10 @@ import WorksheetHeader from "@/components/WorksheetHeader";
 import { deriveActionBarState } from "@/utils/actionBarState";
 import { applyOpTempForAltitudeChange } from "@/utils/areaOfOpsWeather";
 import { deriveStepStatuses } from "@/utils/stepStatuses";
-import type { AirportRunwayInfo, RunwayOption, WorksheetData } from "@/utils/types";
+import type { WorksheetData } from "@/utils/types";
 import { useTempUnit } from "@/utils/useTempUnit";
 import { useUrlState } from "@/utils/useUrlState";
+import { useAirportRunways } from "@/utils/useAirportRunways";
 
 const getDefaultSortieDateTime = () => {
   const now = new Date();
@@ -90,13 +91,7 @@ export default function AppContainer() {
     null
   );
 
-  const [airportRunways, setAirportRunways] = useState<
-    [RunwayOption[] | null, RunwayOption[] | null]
-  >([null, null]);
-
-  const handleAirportInfoUpdate = (info: AirportRunwayInfo) => {
-    setAirportRunways([info.departure, info.arrival]);
-  };
+  const airportRunways = useAirportRunways(state.airport);
 
   const [overlay, setOverlay] = useState<"instructions" | "checklist" | null>(
     null
@@ -125,19 +120,6 @@ export default function AppContainer() {
   );
 
   const handleUpdate = (updates: Partial<WorksheetData>) => {
-    // Clear stale runway options when the user edits an airport code — the
-    // dropdown options were fetched for a specific ICAO and shouldn't carry
-    // over to a different one. WeatherDataIntegration's onDataUpdate also
-    // includes airport in its merged payload, so compare values rather than
-    // just checking for the key's presence — otherwise a successful fetch
-    // would stomp the runways that just landed.
-    if (
-      updates.airport !== undefined &&
-      (updates.airport[0] !== state.airport[0] ||
-        updates.airport[1] !== state.airport[1])
-    ) {
-      setAirportRunways([null, null]);
-    }
     setState((prev: WorksheetData) => {
       const merged = { ...prev, ...updates } as WorksheetData;
       // Issue #117: When the user changes the operating altitude, re-derive
@@ -191,7 +173,6 @@ export default function AppContainer() {
         worksheetData={state}
         onDataUpdate={handleWeatherDataUpdate}
         onTimestampUpdate={handleWeatherTimestampUpdate}
-        onAirportInfoUpdate={handleAirportInfoUpdate}
         hideBox
         renderButton={({ onClick, disabled, isLoading }) => (
           <ActionBar
