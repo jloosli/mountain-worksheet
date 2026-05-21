@@ -202,6 +202,88 @@ describe("SortieInfo - sortie timing relative display", () => {
   });
 });
 
+describe("SortieInfo — SkyVector button", () => {
+  let openSpy: jest.SpyInstance;
+
+  beforeEach(() => {
+    openSpy = jest.spyOn(window, "open").mockImplementation(() => null);
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it("renders the button disabled when both airports are blank", () => {
+    render(<SortieInfo onUpdate={jest.fn()} initialData={defaultInitialData} />);
+    const button = screen.getByRole("button", { name: /open in skyvector/i });
+    expect(button).toBeDisabled();
+  });
+
+  it("renders the button disabled when only departure is set", () => {
+    const initialData = { ...defaultInitialData, airport: ["KPVU", ""] as [string, string] };
+    render(<SortieInfo onUpdate={jest.fn()} initialData={initialData} />);
+    const button = screen.getByRole("button", { name: /open in skyvector/i });
+    expect(button).toBeDisabled();
+  });
+
+  it("renders the button disabled when only arrival is set", () => {
+    const initialData = { ...defaultInitialData, airport: ["", "KSGU"] as [string, string] };
+    render(<SortieInfo onUpdate={jest.fn()} initialData={initialData} />);
+    const button = screen.getByRole("button", { name: /open in skyvector/i });
+    expect(button).toBeDisabled();
+  });
+
+  it("is enabled and opens a two-waypoint URL when only airports are set", () => {
+    const initialData = {
+      ...defaultInitialData,
+      airport: ["KPVU", "KSGU"] as [string, string],
+    };
+    render(<SortieInfo onUpdate={jest.fn()} initialData={initialData} />);
+
+    const button = screen.getByRole("button", { name: /open in skyvector/i });
+    expect(button).not.toBeDisabled();
+
+    fireEvent.click(button);
+    expect(openSpy).toHaveBeenCalledWith(
+      "https://skyvector.com/?fpl=KPVU%20KSGU",
+      "_blank",
+      "noopener,noreferrer"
+    );
+  });
+
+  it("opens a three-waypoint URL when operating coordinates are set", () => {
+    const initialData = {
+      ...defaultInitialData,
+      airport: ["KPVU", "KSGU"] as [string, string],
+      position: [40.5023, -110.7456] as [number | null, number | null],
+    };
+    render(<SortieInfo onUpdate={jest.fn()} initialData={initialData} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /open in skyvector/i }));
+    expect(openSpy).toHaveBeenCalledWith(
+      "https://skyvector.com/?fpl=KPVU%20403008N1104444W%20KSGU",
+      "_blank",
+      "noopener,noreferrer"
+    );
+  });
+
+  it("falls back to two-waypoint URL when operating position has nulls", () => {
+    const initialData = {
+      ...defaultInitialData,
+      airport: ["KPVU", "KSGU"] as [string, string],
+      position: [null, null] as [number | null, number | null],
+    };
+    render(<SortieInfo onUpdate={jest.fn()} initialData={initialData} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /open in skyvector/i }));
+    expect(openSpy).toHaveBeenCalledWith(
+      "https://skyvector.com/?fpl=KPVU%20KSGU",
+      "_blank",
+      "noopener,noreferrer"
+    );
+  });
+});
+
 describe("SortieInfo - position field wiring", () => {
   it("calls onUpdate with both route and position when valid coords are entered", async () => {
     jest.useFakeTimers();

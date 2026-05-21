@@ -4,6 +4,7 @@ import { ChangeEvent, useCallback, useEffect, useMemo, useState } from "react";
 import aircraftData from "@/data/aircraft.json";
 import type { WorksheetData } from "@/utils/types";
 import PositionInput from "@/components/PositionInput";
+import { buildSkyvectorUrl } from "@/utils/skyvector";
 
 interface SortieInfoProps {
   initialData?: WorksheetData;
@@ -419,6 +420,31 @@ export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
             />
           </div>
         </div>
+        {(() => {
+          const skyvectorUrl = buildSkyvectorUrl({
+            departure: formData.airport?.[0] ?? "",
+            arrival: formData.airport?.[1] ?? "",
+            operating: formData.position,
+          });
+          const disabled = skyvectorUrl === null;
+          return (
+            <div className="mt-4">
+              <button
+                type="button"
+                disabled={disabled}
+                onClick={() => {
+                  if (skyvectorUrl) {
+                    window.open(skyvectorUrl, "_blank", "noopener,noreferrer");
+                  }
+                }}
+                title={disabled ? "Set departure and arrival airports" : "Open route in SkyVector"}
+                className="inline-flex items-center gap-1.5 rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800"
+              >
+                Open in SkyVector
+              </button>
+            </div>
+          );
+        })()}
       </div>
 
       <div>
