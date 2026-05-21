@@ -57,7 +57,7 @@ The `border-l` makes sense as a separator only inside a single row. On mobile, t
 
 ```
 shrink-0 flex items-center
-  sm:pl-2.5 sm:ml-0.5 sm:border-l sm:border-slate-200 sm:dark:border-slate-700
+  sm:pl-2.5 sm:ml-0.5 sm:border-l sm:border-slate-200 dark:sm:border-slate-700
 ```
 
 On mobile, the Checklist button joins the per-state action group as a flat sibling. To make this happen, the Checklist slot needs to be part of the same Row-2 cluster as the per-state actions. The simplest structural change: keep the Checklist slot in its current position in the JSX (it sits *outside* each state's action `<div>`), and on mobile let the parent flex wrap them adjacent. Since the parent is `flex-col` on mobile, both the per-state action `<div>` and the Checklist `<div>` are siblings stacked vertically — that would put Checklist on Row 3, not Row 2.
@@ -81,7 +81,7 @@ To keep Checklist on Row 2 with the other buttons on mobile, wrap the per-state 
       {state === "ready" && <FetchButton ... />}
       {state === "fetched" && <><RefetchButton /><ReviewDecisionLink /></>}
       {state === "all-done" && <><PrintButton /><AcknowledgeButton /></>}
-      <div className="flex items-center sm:ml-0.5 sm:border-l sm:border-slate-200 sm:pl-2.5 sm:dark:border-slate-700">
+      <div className="flex items-center sm:ml-0.5 sm:border-l sm:border-slate-200 sm:pl-2.5 dark:sm:border-slate-700">
         <ChecklistButton onClick={onOpenChecklist} />
       </div>
     </div>

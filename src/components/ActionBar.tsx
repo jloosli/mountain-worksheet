@@ -152,7 +152,7 @@ export default function ActionBar({
             </>
           )}
 
-          <div className="flex items-center sm:ml-0.5 sm:border-l sm:border-slate-200 sm:pl-2.5 sm:dark:border-slate-700">
+          <div className="flex items-center sm:ml-0.5 sm:border-l sm:border-slate-200 sm:pl-2.5 dark:sm:border-slate-700">
             <button
               type="button"
               onClick={onOpenChecklist}
