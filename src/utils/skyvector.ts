@@ -57,5 +57,5 @@ export function buildSkyvectorUrl(input: BuildSkyvectorUrlInput): string | null 
   }
   waypoints.push(arr);
 
-  return `https://skyvector.com/?fpl=${waypoints.join("%20")}`;
+  return `https://skyvector.com/?fpl=${waypoints.map(encodeURIComponent).join("%20")}`;
 }

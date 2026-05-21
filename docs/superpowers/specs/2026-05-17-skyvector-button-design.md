@@ -44,7 +44,8 @@ utility; component tests are added to the existing
    `formData.airport[1]`, and `formData.position` from the same
    `SortieInfo` state the rest of the **Where** section uses.
 2. It calls `buildSkyvectorUrl({ departure, arrival, operating })` where
-   `operating` is `formData.position` if both entries are non-null, else
+   `operating` is `formData.position` (a `[number | null, number | null]`
+   tuple). The helper internally skips the waypoint when either entry is
    `null`.
 3. If the helper returns `null`, the button renders disabled. Otherwise
    the button is enabled and the URL is used in `window.open` on click.

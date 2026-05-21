@@ -203,6 +203,16 @@ describe("SortieInfo - sortie timing relative display", () => {
 });
 
 describe("SortieInfo — SkyVector button", () => {
+  let openSpy: jest.SpyInstance;
+
+  beforeEach(() => {
+    openSpy = jest.spyOn(window, "open").mockImplementation(() => null);
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
   it("renders the button disabled when both airports are blank", () => {
     render(<SortieInfo onUpdate={jest.fn()} initialData={defaultInitialData} />);
     const button = screen.getByRole("button", { name: /open in skyvector/i });
@@ -224,7 +234,6 @@ describe("SortieInfo — SkyVector button", () => {
   });
 
   it("is enabled and opens a two-waypoint URL when only airports are set", () => {
-    const openSpy = jest.spyOn(window, "open").mockImplementation(() => null);
     const initialData = {
       ...defaultInitialData,
       airport: ["KPVU", "KSGU"] as [string, string],
@@ -240,12 +249,9 @@ describe("SortieInfo — SkyVector button", () => {
       "_blank",
       "noopener,noreferrer"
     );
-
-    openSpy.mockRestore();
   });
 
   it("opens a three-waypoint URL when operating coordinates are set", () => {
-    const openSpy = jest.spyOn(window, "open").mockImplementation(() => null);
     const initialData = {
       ...defaultInitialData,
       airport: ["KPVU", "KSGU"] as [string, string],
@@ -259,12 +265,9 @@ describe("SortieInfo — SkyVector button", () => {
       "_blank",
       "noopener,noreferrer"
     );
-
-    openSpy.mockRestore();
   });
 
   it("falls back to two-waypoint URL when operating position has nulls", () => {
-    const openSpy = jest.spyOn(window, "open").mockImplementation(() => null);
     const initialData = {
       ...defaultInitialData,
       airport: ["KPVU", "KSGU"] as [string, string],
@@ -278,8 +281,6 @@ describe("SortieInfo — SkyVector button", () => {
       "_blank",
       "noopener,noreferrer"
     );
-
-    openSpy.mockRestore();
   });
 });
 

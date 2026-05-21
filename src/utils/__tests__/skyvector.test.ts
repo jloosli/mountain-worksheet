@@ -101,4 +101,15 @@ describe("buildSkyvectorUrl", () => {
       })
     ).toBe("https://skyvector.com/?fpl=KPVU%20000000N0000000E%20KSGU");
   });
+
+  it("encodes special characters in airport identifiers so they cannot inject query params", () => {
+    // Free-text inputs containing `&`, `#`, `%`, etc. must not break out of the fpl value.
+    expect(
+      buildSkyvectorUrl({
+        departure: "KPVU&foo=bar",
+        arrival: "KSGU#frag",
+        operating: [null, null],
+      })
+    ).toBe("https://skyvector.com/?fpl=KPVU%26FOO%3DBAR%20KSGU%23FRAG");
+  });
 });
