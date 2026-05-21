@@ -181,3 +181,61 @@ describe("ActionBar — Checklist trigger", () => {
     expect(baseProps.onOpenChecklist).toHaveBeenCalled();
   });
 });
+
+describe("ActionBar — responsive mobile layout (issue #120)", () => {
+  const fetched = {
+    ...baseProps,
+    state: "fetched" as const,
+    weatherLastUpdated: new Date("2026-05-12T14:31:00Z"),
+  };
+  const ready = {
+    ...baseProps,
+    state: "ready" as const,
+    worksheetData: {
+      ...empty,
+      airport: ["KOGD", "KLGU"] as [string, string],
+      date: "2026-05-12",
+      time: "18:00",
+    },
+  };
+
+  function getInnerWrapper(container: HTMLElement): HTMLElement {
+    // Inner flex container: the `<div>` carrying `max-w-5xl`
+    const el = container.querySelector(".max-w-5xl");
+    if (!el) throw new Error("inner wrapper not found");
+    return el as HTMLElement;
+  }
+
+  it("outer wrapper stacks on mobile and rows on sm+", () => {
+    const { container } = render(<ActionBar {...fetched} />);
+    const wrapper = getInnerWrapper(container);
+    expect(wrapper.className).toMatch(/\bflex-col\b/);
+    expect(wrapper.className).toMatch(/\bsm:flex-row\b/);
+  });
+
+  it("fetched subtitle is hidden on mobile", () => {
+    render(<ActionBar {...fetched} />);
+    const subtitle = screen.getByText(
+      /Review the weather below, then proceed to the decision/i
+    );
+    expect(subtitle.className).toMatch(/\bhidden\b/);
+    expect(subtitle.className).toMatch(/\bsm:block\b/);
+  });
+
+  it("ready subtitle is hidden on mobile", () => {
+    render(<ActionBar {...ready} />);
+    const subtitle = screen.getByText(/ready to fetch weather/i);
+    expect(subtitle.className).toMatch(/\bhidden\b/);
+    expect(subtitle.className).toMatch(/\bsm:block\b/);
+  });
+
+  it("Checklist divider is sm:-only", () => {
+    render(<ActionBar {...baseProps} state="incomplete" fetchDisabled={true} />);
+    const checklistBtn = screen.getByRole("button", { name: /Checklist/i });
+    const slot = checklistBtn.parentElement;
+    if (!slot) throw new Error("Checklist slot not found");
+    expect(slot.className).toMatch(/\bsm:border-l\b/);
+    // Plain `border-l` must NOT appear unprefixed — the divider is gated by sm:.
+    expect(slot.className).not.toMatch(/(^|\s)border-l(\s|$)/);
+  });
+});
