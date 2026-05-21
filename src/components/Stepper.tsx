@@ -73,7 +73,7 @@ export default function Stepper({ steps, activeId }: StepperProps) {
   return (
     <nav
       aria-label="Worksheet steps"
-      className="sticky top-0 z-20 border-b border-slate-200 bg-slate-50/95 backdrop-blur supports-[backdrop-filter]:bg-slate-50/75 dark:border-slate-800 dark:bg-slate-950/95 dark:supports-[backdrop-filter]:bg-slate-950/75"
+      className="sticky top-0 z-20 border-b border-slate-200 bg-slate-50/95 backdrop-blur supports-[backdrop-filter]:bg-slate-50/75 dark:border-slate-800 dark:bg-slate-950/95 dark:supports-[backdrop-filter]:bg-slate-950/75 print:hidden"
     >
       <div className="mx-auto max-w-5xl px-4 py-2.5 md:px-6">
         <ol className="-mx-1 -my-1 flex items-center gap-1.5 overflow-x-auto px-1 py-1 text-sm">

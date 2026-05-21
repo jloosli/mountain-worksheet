@@ -68,7 +68,7 @@ export default function WorksheetHeader({
   onOpenInstructions,
 }: WorksheetHeaderProps) {
   return (
-    <header className="w-full bg-slate-900 text-white shadow-md">
+    <header className="w-full bg-slate-900 text-white shadow-md print:hidden">
       <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-4 px-4 py-3.5 md:px-6">
         <div className="flex items-baseline gap-3 min-w-0">
           <h1 className="truncate text-2xl font-bold tracking-tight md:text-[28px]">

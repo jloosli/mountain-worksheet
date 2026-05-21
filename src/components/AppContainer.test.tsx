@@ -1,4 +1,4 @@
-import { render, screen } from "../test-utils/test-utils";
+import { render, screen, fireEvent } from "../test-utils/test-utils";
 import AppContainer from "./AppContainer";
 
 describe("AppContainer", () => {
@@ -33,6 +33,30 @@ describe("AppContainer", () => {
     // ActionBar always renders a Fetch weather button (disabled in incomplete state)
     expect(
       screen.getByRole("button", { name: /Fetch weather/i })
+    ).toBeInTheDocument();
+  });
+});
+
+describe("AppContainer — print wiring", () => {
+  it("renders the Print briefing button", () => {
+    render(<AppContainer />);
+    expect(
+      screen.getByRole("button", { name: /Print briefing/i }),
+    ).toBeInTheDocument();
+  });
+
+  it("calls window.print when Print briefing is clicked", () => {
+    const spy = jest.spyOn(window, "print").mockImplementation(() => {});
+    render(<AppContainer />);
+    fireEvent.click(screen.getByRole("button", { name: /Print briefing/i }));
+    expect(spy).toHaveBeenCalled();
+    spy.mockRestore();
+  });
+
+  it("renders the PrintBriefing region in the tree", () => {
+    render(<AppContainer />);
+    expect(
+      screen.getByRole("region", { name: /Print briefing/i }),
     ).toBeInTheDocument();
   });
 });

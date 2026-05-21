@@ -6,6 +6,7 @@ import AppInputs from "@/components/AppInputs";
 import Calculations from "@/components/Calculations";
 import ChecklistPanel from "@/components/ChecklistPanel";
 import InstructionsPanel from "@/components/InstructionsPanel";
+import PrintBriefing from "@/components/PrintBriefing";
 import SlideOver from "@/components/SlideOver";
 import Stepper, { type StepperStep } from "@/components/Stepper";
 import StepShell from "@/components/StepShell";
@@ -154,6 +155,10 @@ export default function AppContainer() {
     }
   };
 
+  const handlePrint = () => {
+    window.print();
+  };
+
   return (
     <div className="flex flex-col flex-1 w-full">
       <WorksheetHeader
@@ -178,10 +183,11 @@ export default function AppContainer() {
             fetchDisabled={disabled}
             isFetching={isLoading}
             onOpenChecklist={handleOpenChecklist}
+            onPrint={handlePrint}
           />
         )}
       />
-      <main className="flex-1 w-full flex justify-center pb-20">
+      <main className="flex-1 w-full flex justify-center pb-20 print:hidden">
         <div className="w-full max-w-5xl flex flex-col space-y-6 px-4 md:px-6">
           <AppInputs
             state={state}
@@ -215,7 +221,8 @@ export default function AppContainer() {
       >
         <ChecklistPanel />
       </SlideOver>
-      <footer className="w-full py-4 px-2 md:px-8 text-center text-sm text-gray-600 dark:text-gray-400 border-t border-gray-200 dark:border-gray-800">
+      <PrintBriefing state={state} />
+      <footer className="w-full py-4 px-2 md:px-8 text-center text-sm text-gray-600 dark:text-gray-400 border-t border-gray-200 dark:border-gray-800 print:hidden">
         Found an issue or bug?{" "}
         <a
           href="https://github.com/jloosli/mountain-worksheet/issues"

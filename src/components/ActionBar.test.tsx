@@ -36,6 +36,7 @@ const baseProps = {
   fetchDisabled: false,
   isFetching: false,
   onOpenChecklist: jest.fn(),
+  onPrint: jest.fn(),
 };
 
 beforeEach(() => {
@@ -120,10 +121,9 @@ describe("ActionBar — fetched state", () => {
 });
 
 describe("ActionBar — all-done state", () => {
-  it("renders the all-done title and the Print + Acknowledge buttons", () => {
+  it("renders the all-done title and the Acknowledge button", () => {
     render(<ActionBar {...baseProps} state="all-done" />);
     expect(screen.getByText(/All checks complete/i)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Print briefing/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Acknowledge/i })).toBeInTheDocument();
   });
 });
@@ -179,6 +179,26 @@ describe("ActionBar — Checklist trigger", () => {
     render(<ActionBar {...baseProps} state="incomplete" fetchDisabled={true} />);
     fireEvent.click(screen.getByRole("button", { name: /Checklist/i }));
     expect(baseProps.onOpenChecklist).toHaveBeenCalled();
+  });
+});
+
+describe("ActionBar — Print trigger", () => {
+  it("renders a Print briefing button visible across all states", () => {
+    for (const state of ["incomplete", "ready", "fetched", "all-done"] as const) {
+      const { unmount } = render(
+        <ActionBar {...baseProps} state={state} fetchDisabled={state === "incomplete"} />,
+      );
+      expect(
+        screen.getByRole("button", { name: /Print briefing/i }),
+      ).toBeInTheDocument();
+      unmount();
+    }
+  });
+
+  it("calls onPrint when the Print briefing button is clicked", () => {
+    render(<ActionBar {...baseProps} state="incomplete" fetchDisabled={true} />);
+    fireEvent.click(screen.getByRole("button", { name: /Print briefing/i }));
+    expect(baseProps.onPrint).toHaveBeenCalled();
   });
 });
 

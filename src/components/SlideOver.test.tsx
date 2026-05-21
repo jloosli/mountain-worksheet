@@ -31,6 +31,16 @@ describe("SlideOver — open state", () => {
     fireEvent.click(screen.getByRole("button", { name: /close/i }));
     expect(onClose).toHaveBeenCalled();
   });
+
+  it("carries print:hidden on the dialog so an open slide-over stays out of the print briefing", () => {
+    render(
+      <SlideOver isOpen={true} onClose={() => {}} title="Visible title">
+        <p>Body</p>
+      </SlideOver>
+    );
+    const dialog = screen.getByRole("dialog");
+    expect(dialog.className).toMatch(/print:hidden/);
+  });
 });
 
 describe("SlideOver — closed state", () => {
@@ -41,11 +51,10 @@ describe("SlideOver — closed state", () => {
       </SlideOver>
     );
     // With unmount={false} on the root Transition and its children, the
-    // dialog must stay in the DOM when closed so the print stylesheet can
-    // reposition it as a static appendix. Headless UI v2 marks the closed
-    // dialog with the `hidden` attribute (and a `display: none` inline
-    // style); the print CSS in globals.css overrides both. Assert the
-    // dialog is mounted and properly hidden on screen.
+    // dialog stays mounted when closed so Headless UI can animate it back
+    // in. Headless UI v2 marks the closed dialog with the `hidden`
+    // attribute (and a `display: none` inline style). Assert the dialog
+    // is mounted and properly hidden.
     const title = screen.getByText("Hidden title");
     const dialog = title.closest("[role='dialog']");
     expect(dialog).not.toBeNull();
