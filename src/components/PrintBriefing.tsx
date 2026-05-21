@@ -208,25 +208,26 @@ export default function PrintBriefing({ state }: PrintBriefingProps) {
           <table className="w-full border-collapse text-[8pt]">
             <thead>
               <tr className="border-b border-slate-400">
-                <th className="text-left pr-2 font-medium">Alt</th>
-                <th className="text-right pr-2 font-medium">Dir</th>
-                <th className="text-right pr-2 font-medium">Vel</th>
-                <th className="text-right font-medium">Temp</th>
+                <th className="text-left pr-2 font-medium"></th>
+                {WIND_LABELS.map((label) => (
+                  <th key={label} className="text-right pr-2 font-medium last:pr-0">
+                    {label}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
-              {WIND_LABELS.map((label, idx) => (
-                <tr key={label} className="border-b border-slate-200">
-                  <td className="py-0.5 pr-2">{label}</td>
-                  <td className="py-0.5 pr-2 text-right">
-                    {dash(state.wind[0][idx] ?? null)}
-                  </td>
-                  <td className="py-0.5 pr-2 text-right">
-                    {dash(state.wind[1][idx] ?? null)}
-                  </td>
-                  <td className="py-0.5 text-right">
-                    {dash(state.wind[2][idx] ?? null)}
-                  </td>
+              {(["Dir", "Vel", "Temp"] as const).map((rowLabel, rowIdx) => (
+                <tr key={rowLabel} className="border-b border-slate-200">
+                  <td className="py-0.5 pr-2">{rowLabel}</td>
+                  {WIND_LABELS.map((altLabel, colIdx) => (
+                    <td
+                      key={altLabel}
+                      className="py-0.5 pr-2 text-right last:pr-0"
+                    >
+                      {dash(state.wind[rowIdx][colIdx] ?? null)}
+                    </td>
+                  ))}
                 </tr>
               ))}
             </tbody>

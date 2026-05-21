@@ -98,15 +98,18 @@ const stateWithWeather: WorksheetData = {
 };
 
 describe("PrintBriefing — weather conditions", () => {
-  it("renders a winds-aloft table with rows for 3k/6k/9k/12k/15k", () => {
+  it("renders a winds-aloft table with altitude column headers for 3k/6k/9k/12k/15k", () => {
     render(<PrintBriefing state={stateWithWeather} />);
     for (const altLabel of ["3,000", "6,000", "9,000", "12,000", "15,000"]) {
       expect(screen.getByText(altLabel)).toBeInTheDocument();
     }
   });
 
-  it("renders wind direction, velocity, and temperature for each altitude", () => {
+  it("renders Dir / Vel / Temp row labels and a value cell for each altitude", () => {
     render(<PrintBriefing state={stateWithWeather} />);
+    expect(screen.getByText("Dir")).toBeInTheDocument();
+    expect(screen.getByText("Vel")).toBeInTheDocument();
+    expect(screen.getByText("Temp")).toBeInTheDocument();
     expect(screen.getByText("340")).toBeInTheDocument();
     expect(screen.getByText("270")).toBeInTheDocument();
     // -10 °C at 15k should appear with a minus sign
