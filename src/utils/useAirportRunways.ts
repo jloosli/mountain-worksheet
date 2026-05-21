@@ -7,6 +7,11 @@ const DEBOUNCE_MS = 400;
 
 type RunwaysTuple = [RunwayOption[] | null, RunwayOption[] | null];
 
+interface RunwaysState {
+  resolvedFor: [string, string];
+  runways: RunwaysTuple;
+}
+
 function normalize(code: string): string {
   return code.trim().toUpperCase();
 }
@@ -29,7 +34,10 @@ function extractRunways(
 export function useAirportRunways(
   airports: [string, string]
 ): RunwaysTuple {
-  const [runways, setRunways] = useState<RunwaysTuple>([null, null]);
+  const [state, setState] = useState<RunwaysState>({
+    resolvedFor: ["", ""],
+    runways: [null, null],
+  });
   const seqRef = useRef(0);
   const lastResolvedRef = useRef<[string, string]>(["", ""]);
 
@@ -46,14 +54,6 @@ export function useAirportRunways(
       return;
     }
 
-    setRunways((prev) => {
-      const keepDep =
-        depValid && lastResolvedRef.current[0] === dep ? prev[0] : null;
-      const keepArr =
-        arrValid && lastResolvedRef.current[1] === arr ? prev[1] : null;
-      return [keepDep, keepArr];
-    });
-
     if (!depValid && !arrValid) {
       lastResolvedRef.current = [dep, arr];
       return;
@@ -67,8 +67,8 @@ export function useAirportRunways(
       )
     );
     const seq = ++seqRef.current;
-
     let cancelled = false;
+
     const timer = setTimeout(async () => {
       try {
         const response = await getAirportInfo(codes);
@@ -79,11 +79,18 @@ export function useAirportRunways(
         const depRunways = depValid ? extractRunways(byCode.get(dep)) : null;
         const arrRunways = arrValid ? extractRunways(byCode.get(arr)) : null;
         lastResolvedRef.current = [dep, arr];
-        setRunways([depRunways, arrRunways]);
+        setState({
+          resolvedFor: [dep, arr],
+          runways: [depRunways, arrRunways],
+        });
       } catch (err) {
         if (cancelled || seq !== seqRef.current) return;
         console.warn("Airport lookup failed:", err);
         lastResolvedRef.current = [dep, arr];
+        setState({
+          resolvedFor: [dep, arr],
+          runways: [null, null],
+        });
       }
     }, DEBOUNCE_MS);
 
@@ -93,5 +100,9 @@ export function useAirportRunways(
     };
   }, [dep, arr, depValid, arrValid]);
 
-  return runways;
+  const depOut =
+    depValid && state.resolvedFor[0] === dep ? state.runways[0] : null;
+  const arrOut =
+    arrValid && state.resolvedFor[1] === arr ? state.runways[1] : null;
+  return [depOut, arrOut];
 }

@@ -307,4 +307,40 @@ describe("useAirportRunways", () => {
     });
     expect(result.current[1]).toEqual(kslcRunways);
   });
+
+  it("masks stale runways at render time before the effect fires", async () => {
+    const kdenRunways = [{ id: "16L/34R", length: 12000, alignment: 160 }];
+    const kslcRunways = [{ id: "16L/34R", length: 12000, alignment: 160 }];
+
+    mockedGetAirportInfo.mockResolvedValueOnce([
+      fakeAirport("KDEN", kdenRunways),
+      fakeAirport("KSLC", kslcRunways),
+    ]);
+
+    const { result, rerender } = renderHook(
+      ({ airports }: { airports: [string, string] }) => useAirportRunways(airports),
+      { initialProps: { airports: ["KDEN", "KSLC"] as [string, string] } }
+    );
+
+    act(() => {
+      jest.advanceTimersByTime(400);
+    });
+    await waitFor(() => {
+      expect(result.current[0]).toEqual(kdenRunways);
+    });
+
+    // Hold the second fetch so we can observe the synchronous render result
+    // before the effect's fetch can possibly resolve.
+    mockedGetAirportInfo.mockImplementationOnce(
+      () => new Promise(() => {}) as ReturnType<typeof getAirportInfo>
+    );
+
+    // Synchronous: rerender with a different dep code. Without render-time
+    // masking, result.current[0] would still hold the KDEN runways for one
+    // render until the effect fired.
+    rerender({ airports: ["KASE", "KSLC"] });
+
+    expect(result.current[0]).toBeNull();
+    expect(result.current[1]).toEqual(kslcRunways);
+  });
 });
