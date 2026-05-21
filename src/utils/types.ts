@@ -203,13 +203,3 @@ export interface RunwayOption {
   length: number;
   alignment: number | null;
 }
-
-/**
- * Per-airport runway info handed up by WeatherDataIntegration's
- * onAirportInfoUpdate callback. Stored in AppContainer state so the
- * AirportCard runway dropdowns can render their options.
- */
-export interface AirportRunwayInfo {
-  departure: RunwayOption[] | null;
-  arrival: RunwayOption[] | null;
-}
