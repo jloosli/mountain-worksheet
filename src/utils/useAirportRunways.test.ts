@@ -271,7 +271,7 @@ describe("useAirportRunways", () => {
     expect(result.current[1]).toEqual(kslcRunways);
 
     // Now queue the second response (dep changes to KASE, arr stays KSLC).
-    let resolveSecond: (v: unknown) => void = () => {};
+    let resolveSecond: (v: AirportResponse[] | PromiseLike<AirportResponse[]>) => void = () => {};
     mockedGetAirportInfo.mockImplementationOnce(
       () =>
         new Promise((resolve) => {
