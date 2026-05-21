@@ -26,7 +26,7 @@ export default function SlideOver({
         // stylesheet can re-position it as a static appendix. Transition's
         // `show` controls visibility (transform + opacity).
         static
-        className="relative z-40 print:static"
+        className="relative z-40 print:hidden"
       >
         <Transition.Child
           as={Fragment}

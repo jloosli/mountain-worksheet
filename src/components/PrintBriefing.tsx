@@ -376,9 +376,9 @@ export default function PrintBriefing({ state }: PrintBriefingProps) {
               </tr>
               <tr className="border-b border-slate-200">
                 <td className="py-0.5 pr-2">Vx</td>
-                <td className="py-0.5 pr-2 text-right">{fmtNum(calculateVx(aircraft, PAs[0] ?? 0))}</td>
-                <td className="py-0.5 pr-2 text-right">{fmtNum(calculateVx(aircraft, PAs[1] ?? 0))}</td>
-                <td className="py-0.5 text-right">{fmtNum(calculateVx(aircraft, PAs[2] ?? 0))}</td>
+                <td className="py-0.5 pr-2 text-right">{fmtNum(PAs[0] !== null ? calculateVx(aircraft, PAs[0]) : null)}</td>
+                <td className="py-0.5 pr-2 text-right">{fmtNum(PAs[1] !== null ? calculateVx(aircraft, PAs[1]) : null)}</td>
+                <td className="py-0.5 text-right">{fmtNum(PAs[2] !== null ? calculateVx(aircraft, PAs[2]) : null)}</td>
               </tr>
               <tr className="border-b border-slate-200">
                 <td className="py-0.5 pr-2">Vy</td>

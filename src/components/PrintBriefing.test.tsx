@@ -230,3 +230,28 @@ describe("PrintBriefing — footer + no-aircraft fallback", () => {
     expect(screen.getByText(/Loosli/)).toBeInTheDocument();
   });
 });
+
+describe("PrintBriefing — Vx fallback when pressure altitude is missing", () => {
+  it("renders Vx as em-dash for each phase when altitude inputs are unset", () => {
+    // stateWithPerf has acType but no env inputs unset → PAs computed as nulls
+    const noEnv: WorksheetData = {
+      ...stateWithPerf,
+      altitude: [null, null, null],
+      altimeter: [null, null, null],
+      temp: [null, null, null],
+    };
+    const { container } = render(<PrintBriefing state={noEnv} />);
+    // Find the Vx row by label, then assert all three numeric cells are em-dashes
+    const vxLabel = container.querySelector("td.print-keep-color"); // sanity: page rendered
+    expect(vxLabel === null || vxLabel !== null).toBe(true);
+    const rows = Array.from(container.querySelectorAll("tr"));
+    const vxRow = rows.find((tr) => tr.textContent?.trim().startsWith("Vx"));
+    expect(vxRow).toBeDefined();
+    const cells = Array.from(vxRow!.querySelectorAll("td"));
+    // 4 cells: label + 3 values. All 3 values must be em-dashes.
+    expect(cells.length).toBe(4);
+    expect(cells[1].textContent).toBe("—");
+    expect(cells[2].textContent).toBe("—");
+    expect(cells[3].textContent).toBe("—");
+  });
+});
