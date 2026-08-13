@@ -64,3 +64,17 @@ npx jest src/path/to/file.test.ts  # Single test file
 Jest + React Testing Library. Next.js navigation hooks are mocked in `jest.setup.ts`. Custom render wrapper in `src/test-utils/test-utils.ts`. CI runs tests, lint, and build on every push/PR to `main`.
 
 **POH null values:** Some aircraft have `null` entries at extreme altitudes/temperatures. `trilinearInterpolate` handles nulls via fallback average; callers of `bilinearInterpolate` variants should validate inputs are within table bounds or wrap in `try/catch`.
+
+## Agent skills
+
+### Issue tracker
+
+Issues live as GitHub issues in `jloosli/mountain-worksheet`, managed via the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+The five canonical triage roles map 1:1 to label strings of the same name. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: `CONTEXT.md` and `docs/adr/` at the repo root, both created lazily. See `docs/agents/domain.md`.
