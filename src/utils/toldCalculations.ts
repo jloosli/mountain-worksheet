@@ -608,7 +608,7 @@ function findWeightIndex(weights: number[], targetWeight: number): number {
  * @returns Validation result with errors and warnings
  */
 export function validateAircraftWeight(
-  weight: number | null,
+  weight: number | null | undefined,
   aircraftModel: string
 ): TOLDValidationResult {
   const errors: TOLDError[] = [];
@@ -680,7 +680,7 @@ export function validateAircraftWeight(
  * @returns Validation result with errors and warnings
  */
 export function validatePressureAltitude(
-  pressureAltitude: number | null
+  pressureAltitude: number | null | undefined
 ): TOLDValidationResult {
   const errors: TOLDError[] = [];
   const warnings: TOLDError[] = [];
@@ -726,7 +726,7 @@ export function validatePressureAltitude(
  * @returns Validation result with errors and warnings
  */
 export function validateTemperature(
-  temperature: number | null
+  temperature: number | null | undefined
 ): TOLDValidationResult {
   const errors: TOLDError[] = [];
   const warnings: TOLDError[] = [];
@@ -778,7 +778,7 @@ export function validateTemperature(
  * @returns Validation result with errors and warnings
  */
 export function validateRunwayLength(
-  runwayLength: number | null
+  runwayLength: number | null | undefined
 ): TOLDValidationResult {
   const errors: TOLDError[] = [];
   const warnings: TOLDError[] = [];

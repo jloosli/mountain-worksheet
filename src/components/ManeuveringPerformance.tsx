@@ -2,7 +2,7 @@ import type { ManeuveringSpeeds } from "@/utils/types";
 
 interface ManeuveringPerformanceProps {
   aircraftModel?: string;
-  maneuveringSpeeds?: ManeuveringSpeeds;
+  maneuveringSpeeds?: ManeuveringSpeeds | null;
 }
 
 export default function ManeuveringPerformance({

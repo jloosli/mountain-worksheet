@@ -104,7 +104,7 @@ describe("AppInputs", () => {
   });
 
   it("renders WeatherSection with non-default state", () => {
-    const testState = {
+    const testState: WorksheetData = {
       ...defaultState,
       wind: [
         [0, 260, 270, 340, 345],
@@ -195,7 +195,7 @@ describe("AppInputs", () => {
   });
 
   it("renders with different initial states", () => {
-    const populatedState = {
+    const populatedState: WorksheetData = {
       ...defaultState,
       pilot: "John Doe",
       date: "2025-01-24",

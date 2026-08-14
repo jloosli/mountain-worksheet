@@ -43,6 +43,7 @@ describe("WeatherDataIntegration", () => {
       temperature: false,
       pressure: false,
       runway: false,
+      altitude: false,
     });
   });
 
@@ -60,6 +61,7 @@ describe("WeatherDataIntegration", () => {
       temperature: false,
       pressure: false,
       runway: false,
+      altitude: false,
     });
 
     render(<WeatherDataIntegration {...defaultProps} />);
