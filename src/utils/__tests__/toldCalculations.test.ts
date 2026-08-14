@@ -10,8 +10,8 @@ import {
   validateTemperature,
   validateRunwayLength,
   validateTOLDInputs,
-  type TOLDCalculationParams,
 } from "../toldCalculations";
+import type { TOLDCalculationParams } from "@/utils/types";
 
 const mockLog = jest.spyOn(console, "log").mockImplementation(() => {});
 const mockWarn = jest.spyOn(console, "warn").mockImplementation(() => {});
@@ -510,8 +510,8 @@ describe("TOLD Calculations", () => {
     it("should return results when temperature is 0°C", () => {
       const result = calculateTOLDForMultipleAirports("C182T", {
         weight: 2800,
-        pressureAltitudes: [1000, 1000, 1000],
-        temperatures: [0, 0, 0], // 0°C — falsy but valid
+        pressureAltitudes: [1000, 1000],
+        temperatures: [0, 0], // 0°C — falsy but valid
         runwayLengths: [3000, 3000],
       });
       expect(result.success).toBe(true);
@@ -522,8 +522,8 @@ describe("TOLD Calculations", () => {
     it("should return results when pressure altitude is 0 ft (sea level)", () => {
       const result = calculateTOLDForMultipleAirports("C182T", {
         weight: 2800,
-        pressureAltitudes: [0, 0, 0], // 0 ft — valid sea-level PA
-        temperatures: [20, 20, 20],
+        pressureAltitudes: [0, 0], // 0 ft — valid sea-level PA
+        temperatures: [20, 20],
         runwayLengths: [3000, 3000],
       });
       expect(result.success).toBe(true);
@@ -534,8 +534,8 @@ describe("TOLD Calculations", () => {
     it("should return results when both temperature is 0°C and pressure altitude is 0 ft", () => {
       const result = calculateTOLDForMultipleAirports("C182T", {
         weight: 2800,
-        pressureAltitudes: [0, 0, 0],
-        temperatures: [0, 0, 0],
+        pressureAltitudes: [0, 0],
+        temperatures: [0, 0],
         runwayLengths: [3000, 3000],
       });
       expect(result.success).toBe(true);
@@ -547,8 +547,8 @@ describe("TOLD Calculations", () => {
       // Regression test for || null vs ?? null bug in result combining
       const result = calculateTOLDForMultipleAirports("C182T", {
         weight: 2800,
-        pressureAltitudes: [0, 0, 0],
-        temperatures: [0, 0, 0],
+        pressureAltitudes: [0, 0],
+        temperatures: [0, 0],
         runwayLengths: [3000, 3000],
       });
       // All result fields should be defined (not null from || coercion)

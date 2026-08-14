@@ -68,7 +68,7 @@ export default function Calculations({ state }: CalculationsProps) {
         </TOLDErrorBoundary>
         <ManeuveringPerformance
           aircraftModel={state.acType}
-          maneuveringSpeeds={maneuveringSpeeds ?? undefined}
+          maneuveringSpeeds={maneuveringSpeeds}
         />
       </div>
     </div>

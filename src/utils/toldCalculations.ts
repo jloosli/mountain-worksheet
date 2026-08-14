@@ -603,12 +603,12 @@ function findWeightIndex(weights: number[], targetWeight: number): number {
 
 /**
  * Validate aircraft weight against aircraft specifications
- * @param weight The aircraft weight in pounds (can be null)
+ * @param weight The aircraft weight in pounds (can be null or undefined)
  * @param aircraftModel The aircraft model identifier
  * @returns Validation result with errors and warnings
  */
 export function validateAircraftWeight(
-  weight: number | null,
+  weight: number | null | undefined,
   aircraftModel: string
 ): TOLDValidationResult {
   const errors: TOLDError[] = [];
@@ -676,11 +676,11 @@ export function validateAircraftWeight(
 
 /**
  * Validate pressure altitude against typical operating ranges
- * @param pressureAltitude The pressure altitude in feet (can be null)
+ * @param pressureAltitude The pressure altitude in feet (can be null or undefined)
  * @returns Validation result with errors and warnings
  */
 export function validatePressureAltitude(
-  pressureAltitude: number | null
+  pressureAltitude: number | null | undefined
 ): TOLDValidationResult {
   const errors: TOLDError[] = [];
   const warnings: TOLDError[] = [];
@@ -722,11 +722,11 @@ export function validatePressureAltitude(
 
 /**
  * Validate temperature against typical operating ranges
- * @param temperature The temperature in Celsius (can be null)
+ * @param temperature The temperature in Celsius (can be null or undefined)
  * @returns Validation result with errors and warnings
  */
 export function validateTemperature(
-  temperature: number | null
+  temperature: number | null | undefined
 ): TOLDValidationResult {
   const errors: TOLDError[] = [];
   const warnings: TOLDError[] = [];
@@ -774,11 +774,11 @@ export function validateTemperature(
 
 /**
  * Validate runway length against typical requirements
- * @param runwayLength The runway length in feet (can be null)
+ * @param runwayLength The runway length in feet (can be null or undefined)
  * @returns Validation result with errors and warnings
  */
 export function validateRunwayLength(
-  runwayLength: number | null
+  runwayLength: number | null | undefined
 ): TOLDValidationResult {
   const errors: TOLDError[] = [];
   const warnings: TOLDError[] = [];

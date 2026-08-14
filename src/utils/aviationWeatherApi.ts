@@ -288,7 +288,8 @@ async function makeApiRequest<T>(
  */
 export async function getMETAR(
   airports: string[],
-  hoursBeforeNow: number = 1
+  hoursBeforeNow: number = 1,
+  retries: number = 3
 ): Promise<METARResponse[]> {
   const params = {
     ids: airports.join(","),
@@ -296,7 +297,7 @@ export async function getMETAR(
     hours: hoursBeforeNow.toString(),
   };
 
-  return makeApiRequest<METARResponse[]>("metar", params);
+  return makeApiRequest<METARResponse[]>("metar", params, retries);
 }
 
 /**
@@ -304,7 +305,8 @@ export async function getMETAR(
  */
 export async function getTAF(
   airports: string[],
-  hoursBeforeNow: number = 24
+  hoursBeforeNow: number = 24,
+  retries: number = 3
 ): Promise<TAFResponse[]> {
   const params = {
     ids: airports.join(","),
@@ -312,7 +314,7 @@ export async function getTAF(
     hours: hoursBeforeNow.toString(),
   };
 
-  return makeApiRequest<TAFResponse[]>("taf", params);
+  return makeApiRequest<TAFResponse[]>("taf", params, retries);
 }
 
 /**

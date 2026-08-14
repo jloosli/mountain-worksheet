@@ -200,19 +200,21 @@ describe("Vra Calculation Function", () => {
   });
 
   test("returns null for aircraft with missing stallSpeeds", () => {
+    // Deliberately malformed: calculateVra must defend against bad data
     const aircraftWithoutStallSpeeds = {
       ...mockAircraft,
       stallSpeeds: undefined,
-    } as Aircraft;
+    } as unknown as Aircraft;
     const result = calculateVra(aircraftWithoutStallSpeeds);
     expect(result).toBeNull();
   });
 
   test("returns null for aircraft with missing Vso array", () => {
+    // Deliberately malformed: calculateVra must defend against bad data
     const aircraftWithoutVso = {
       ...mockAircraft,
       stallSpeeds: { flaps: [0, 30], Vso: undefined },
-    } as Aircraft;
+    } as unknown as Aircraft;
     const result = calculateVra(aircraftWithoutVso);
     expect(result).toBeNull();
   });
