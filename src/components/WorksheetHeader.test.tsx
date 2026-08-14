@@ -10,6 +10,13 @@ const defaultProps = {
 };
 
 describe("WorksheetHeader", () => {
+  function getInnerWrapper(banner: HTMLElement): HTMLElement {
+    // Inner flex container: the `<div>` carrying `max-w-5xl`
+    const el = banner.querySelector(".max-w-5xl");
+    if (!el) throw new Error("inner wrapper not found");
+    return el as HTMLElement;
+  }
+
   it('renders "Current Time" instead of "Current UTC"', () => {
     render(<WorksheetHeader {...defaultProps} />);
 
@@ -30,6 +37,24 @@ describe("WorksheetHeader", () => {
     expect(
       screen.queryByRole("button", { name: /Fetch Weather/i })
     ).not.toBeInTheDocument();
+  });
+
+  it("stacks the title above the controls below the sm breakpoint", () => {
+    render(<WorksheetHeader {...defaultProps} />);
+
+    const wrapper = getInnerWrapper(screen.getByRole("banner"));
+    expect(wrapper.className).toMatch(/\bflex-col\b/);
+    expect(wrapper.className).toMatch(/\bsm:flex-row\b/);
+  });
+
+  it("only truncates the title from sm up, so mobile shows the full name", () => {
+    render(<WorksheetHeader {...defaultProps} />);
+
+    const title = screen.getByRole("heading", {
+      name: "Mountain Flying Worksheet",
+    });
+    expect(title).toHaveClass("sm:truncate");
+    expect(title).not.toHaveClass("truncate");
   });
 
   it("renders an instructions trigger button and calls onOpenInstructions when clicked", () => {
