@@ -9,3 +9,16 @@ updates:
     directory: "/" # Location of package manifests
     schedule:
       interval: "weekly"
+    ignore:
+      # eslint 10 cannot be installed: eslint-config-next depends on
+      # eslint-plugin-react, whose peer range caps at `eslint ^9.7`.
+      # eslint-plugin-react has published nothing since 2025-04-03, so there is
+      # no timeline for a fix and npm ci fails with ERESOLVE on every attempt.
+      #
+      # Scoped to 10.x on purpose: eslint 9.x security updates still come
+      # through, and eslint 11 will still be proposed when it ships.
+      #
+      # Remove this once eslint-plugin-react supports eslint 10 and
+      # eslint-config-next depends on that version.
+      - dependency-name: "eslint"
+        versions: ["10.x"]
