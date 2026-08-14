@@ -69,13 +69,15 @@ export default function WorksheetHeader({
 }: WorksheetHeaderProps) {
   return (
     <header className="w-full bg-slate-900 text-white shadow-md print:hidden">
-      <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-4 px-4 py-3.5 md:px-6">
+      {/* Below sm the title gets its own row so it isn't truncated to "Mountain F…"
+          by the control cluster; from sm up both share one row as before. */}
+      <div className="mx-auto flex w-full max-w-5xl flex-col gap-2.5 px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4 md:px-6">
         <div className="flex items-baseline gap-3 min-w-0">
-          <h1 className="truncate text-2xl font-bold tracking-tight md:text-[28px]">
+          <h1 className="text-2xl font-bold tracking-tight sm:truncate md:text-[28px]">
             Mountain Flying Worksheet
           </h1>
         </div>
-        <div className="flex items-center gap-3 shrink-0">
+        <div className="flex items-center justify-end gap-3 sm:shrink-0">
           <UtcClock />
           <div className="flex items-center gap-1.5">
             <button

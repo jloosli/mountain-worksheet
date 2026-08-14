@@ -32,6 +32,24 @@ describe("WorksheetHeader", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("stacks the title above the controls below the sm breakpoint", () => {
+    render(<WorksheetHeader {...defaultProps} />);
+
+    const row = screen.getByRole("banner").querySelector(".max-w-5xl");
+    expect(row).toHaveClass("flex-col");
+    expect(row).toHaveClass("sm:flex-row");
+  });
+
+  it("only truncates the title from sm up, so mobile shows the full name", () => {
+    render(<WorksheetHeader {...defaultProps} />);
+
+    const title = screen.getByRole("heading", {
+      name: "Mountain Flying Worksheet",
+    });
+    expect(title).toHaveClass("sm:truncate");
+    expect(title).not.toHaveClass("truncate");
+  });
+
   it("renders an instructions trigger button and calls onOpenInstructions when clicked", () => {
     render(<WorksheetHeader {...defaultProps} />);
     const trigger = screen.getByRole("button", { name: /instructions/i });
