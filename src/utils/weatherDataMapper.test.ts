@@ -562,7 +562,7 @@ describe("Weather Data Mapper", () => {
 
   describe("isApiPopulatedData", () => {
     it("should detect API-populated wind data", () => {
-      const data : Partial<WorksheetData> = {
+      const data: Partial<WorksheetData> = {
         wind: [
           [270, 0, 0, 0, 0],
           [25, 0, 0, 0, 0],
@@ -579,7 +579,7 @@ describe("Weather Data Mapper", () => {
     });
 
     it("should detect API-populated temperature data", () => {
-      const data : Partial<WorksheetData> = {
+      const data: Partial<WorksheetData> = {
         temp: [18, 18, 18], // Different from default 21
       };
 
@@ -592,7 +592,7 @@ describe("Weather Data Mapper", () => {
     });
 
     it("should detect API-populated pressure data", () => {
-      const data : Partial<WorksheetData> = {
+      const data: Partial<WorksheetData> = {
         altimeter: [29.85, 29.85, 29.85], // Different from default 29.92
       };
 
@@ -605,7 +605,7 @@ describe("Weather Data Mapper", () => {
     });
 
     it("should detect API-populated runway data", () => {
-      const data : Partial<WorksheetData> = {
+      const data: Partial<WorksheetData> = {
         rwy: [10000, null],
       };
 
@@ -618,7 +618,7 @@ describe("Weather Data Mapper", () => {
     });
 
     it("should detect null values as not API-populated", () => {
-      const data : Partial<WorksheetData> = {
+      const data: Partial<WorksheetData> = {
         wind: [
           [null, null, null, null, null],
           [null, null, null, null, null],
@@ -640,7 +640,7 @@ describe("Weather Data Mapper", () => {
 
   describe("mergeWeatherData", () => {
     it("should merge API data with existing data", () => {
-      const existingData : Partial<WorksheetData> = {
+      const existingData: Partial<WorksheetData> = {
         wind: [
           [0, 0, 0, 0, 0],
           [0, 0, 0, 0, 0],
@@ -651,7 +651,7 @@ describe("Weather Data Mapper", () => {
         rwy: [null, null],
       };
 
-      const apiData : Partial<WorksheetData> = {
+      const apiData: Partial<WorksheetData> = {
         wind: [
           [270, 0, 0, 0, 0],
           [25, 0, 0, 0, 0],
@@ -671,7 +671,7 @@ describe("Weather Data Mapper", () => {
     });
 
     it("should preserve user-modified data when preserveUserData is true", () => {
-      const existingData : Partial<WorksheetData> = {
+      const existingData: Partial<WorksheetData> = {
         wind: [
           [180, 0, 0, 0, 0],
           [20, 0, 0, 0, 0],
@@ -682,7 +682,7 @@ describe("Weather Data Mapper", () => {
         rwy: [5000, null], // User modified
       };
 
-      const apiData : Partial<WorksheetData> = {
+      const apiData: Partial<WorksheetData> = {
         wind: [
           [270, 0, 0, 0, 0],
           [25, 0, 0, 0, 0],
@@ -724,7 +724,7 @@ describe("Weather Data Mapper", () => {
     });
 
     it("should overwrite user data when preserveUserData is false", () => {
-      const existingData : Partial<WorksheetData> = {
+      const existingData: Partial<WorksheetData> = {
         wind: [
           [180, 0, 0, 0, 0],
           [20, 0, 0, 0, 0],
@@ -735,7 +735,7 @@ describe("Weather Data Mapper", () => {
         rwy: [5000, null],
       };
 
-      const apiData : Partial<WorksheetData> = {
+      const apiData: Partial<WorksheetData> = {
         wind: [
           [270, 0, 0, 0, 0],
           [25, 0, 0, 0, 0],
