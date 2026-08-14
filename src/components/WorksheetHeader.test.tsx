@@ -10,6 +10,13 @@ const defaultProps = {
 };
 
 describe("WorksheetHeader", () => {
+  function getInnerWrapper(banner: HTMLElement): HTMLElement {
+    // Inner flex container: the `<div>` carrying `max-w-5xl`
+    const el = banner.querySelector(".max-w-5xl");
+    if (!el) throw new Error("inner wrapper not found");
+    return el as HTMLElement;
+  }
+
   it('renders "Current Time" instead of "Current UTC"', () => {
     render(<WorksheetHeader {...defaultProps} />);
 
@@ -35,9 +42,9 @@ describe("WorksheetHeader", () => {
   it("stacks the title above the controls below the sm breakpoint", () => {
     render(<WorksheetHeader {...defaultProps} />);
 
-    const row = screen.getByRole("banner").querySelector(".max-w-5xl");
-    expect(row).toHaveClass("flex-col");
-    expect(row).toHaveClass("sm:flex-row");
+    const wrapper = getInnerWrapper(screen.getByRole("banner"));
+    expect(wrapper.className).toMatch(/\bflex-col\b/);
+    expect(wrapper.className).toMatch(/\bsm:flex-row\b/);
   });
 
   it("only truncates the title from sm up, so mobile shows the full name", () => {
