@@ -31,6 +31,33 @@ jobs:
           PR_URL: ${{ github.event.pull_request.html_url }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      # Grouped PRs report an empty update-type, because one group can span
+      # several semver levels. Every step in this job gates on update-type, so
+      # they all skip and both jobs pass while doing nothing -- the PR sits
+      # green and unmerged with no indication that it needs a human. Security
+      # updates are grouped by ecosystem automatically, so this silently
+      # affects exactly the PRs that matter most. Say it out loud instead.
+      #
+      # Skipped on synchronize so a Dependabot rebase doesn't re-comment.
+      - name: Flag grouped updates for manual merge
+        if: |
+          steps.metadata.outputs.dependency-group != '' &&
+          github.event.action != 'synchronize'
+        run: |
+          gh pr comment "$PR_URL" --body "**Grouped update — needs a manual merge.**
+
+          Dependabot reports an empty update-type for grouped PRs, since one group can span several semver levels. Auto-approve and auto-merge both gate on update-type, so both skip: this PR will stay green and unmerged until someone merges it by hand.
+
+          Group: $GROUP
+          Packages: $PACKAGES
+
+          A group can contain a major bump, which would normally be held back for review, so check the versions before merging."
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GROUP: ${{ steps.metadata.outputs.dependency-group }}
+          PACKAGES: ${{ steps.metadata.outputs.dependency-names }}
+
       - name: Flag major updates for manual review
         if: steps.metadata.outputs.update-type == 'version-update:semver-major'
         run: |
