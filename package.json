@@ -15,7 +15,7 @@
     "@headlessui/react": "^2.2.10",
     "@heroicons/react": "^2.2.0",
     "geomagnetism": "^0.2.0",
-    "next": "^16.3.1",
+    "next": "^16.3.2",
     "qs": "^6.15.3",
     "react": "^19.2.0",
     "react-dom": "^19.2.8"
