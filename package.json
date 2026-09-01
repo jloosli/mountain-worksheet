@@ -34,7 +34,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "^16.3.2",
+    "eslint-config-next": "^16.3.3",
     "eslint-plugin-react": "^7.37.5",
     "jest": "^30.4.2",
     "jest-environment-jsdom": "^30.4.1",
