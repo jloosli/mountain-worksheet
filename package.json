@@ -36,7 +36,7 @@
     "eslint": "^9",
     "eslint-config-next": "^16.3.5",
     "eslint-plugin-react": "^7.37.5",
-    "jest": "^30.4.2",
+    "jest": "^30.5.1",
     "jest-environment-jsdom": "^30.5.1",
     "tailwindcss": "^4",
     "ts-node": "^10.9.2",
