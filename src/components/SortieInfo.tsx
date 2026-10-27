@@ -5,6 +5,7 @@ import aircraftData from "@/data/aircraft.json";
 import type { WorksheetData } from "@/utils/types";
 import PositionInput from "@/components/PositionInput";
 import { buildSkyvectorUrl } from "@/utils/skyvector";
+import { normalizeAirportCode } from "@/utils/airportCode";
 
 interface SortieInfoProps {
   initialData?: WorksheetData;
@@ -79,6 +80,14 @@ export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
     const updatedData = { ...formData, [name]: processedValue };
     setFormData(updatedData);
     onUpdate(updatedData);
+  };
+
+  // Strip stray whitespace once the user leaves the field (not per keystroke)
+  // so it never reaches the URL or the weather API (#208).
+  const handleAirportBlur = (index: number) => {
+    const current = formData.airport?.[index] ?? "";
+    const normalized = normalizeAirportCode(current);
+    if (normalized !== current) handleAirportChange(index, normalized);
   };
 
   const handleWeightChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -368,6 +377,7 @@ export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
               id="departureAirport"
               value={formData.airport?.[0] || ""}
               onChange={(e) => handleAirportChange(0, e.target.value)}
+              onBlur={() => handleAirportBlur(0)}
               className="w-full px-3 py-2 border rounded-md dark:bg-black/[.15] dark:border-white/[.145]"
             />
           </div>
@@ -381,6 +391,7 @@ export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
               id="arrivalAirport"
               value={formData.airport?.[1] || ""}
               onChange={(e) => handleAirportChange(1, e.target.value)}
+              onBlur={() => handleAirportBlur(1)}
               className="w-full px-3 py-2 border rounded-md dark:bg-black/[.15] dark:border-white/[.145]"
             />
           </div>

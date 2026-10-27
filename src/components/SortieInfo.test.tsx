@@ -315,3 +315,34 @@ describe("SortieInfo - position field wiring", () => {
     expect(screen.getByText(/41\.4321, -112\.7042/)).toBeInTheDocument();
   });
 });
+
+describe("SortieInfo - airport code whitespace (#208)", () => {
+  const mockOnUpdate = jest.fn();
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("trims whitespace from airport codes on blur (#208)", () => {
+    render(<SortieInfo onUpdate={mockOnUpdate} initialData={defaultInitialData} />);
+    const arrival = screen.getByLabelText("Arrival Airport");
+    fireEvent.change(arrival, { target: { value: "kogd " } });
+    expect(mockOnUpdate).toHaveBeenLastCalledWith(
+      expect.objectContaining({ airport: ["", "KOGD "] })
+    );
+    fireEvent.blur(arrival);
+    expect(mockOnUpdate).toHaveBeenLastCalledWith(
+      expect.objectContaining({ airport: ["", "KOGD"] })
+    );
+    expect(arrival).toHaveValue("KOGD");
+  });
+
+  it("does not call onUpdate on blur when the airport code is already clean", () => {
+    render(<SortieInfo onUpdate={mockOnUpdate} initialData={defaultInitialData} />);
+    const departure = screen.getByLabelText("Departure Airport");
+    fireEvent.change(departure, { target: { value: "KOGD" } });
+    mockOnUpdate.mockClear();
+    fireEvent.blur(departure);
+    expect(mockOnUpdate).not.toHaveBeenCalled();
+  });
+});

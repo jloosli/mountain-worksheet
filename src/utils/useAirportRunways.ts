@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { getAirportInfo, type AirportResponse } from "./aviationWeatherApi";
 import type { RunwayOption } from "./types";
+import { normalizeAirportCode } from "./airportCode";
 
 const ICAO_RE = /^[A-Z0-9]{3,4}$/;
 const DEBOUNCE_MS = 400;
@@ -10,10 +11,6 @@ type RunwaysTuple = [RunwayOption[] | null, RunwayOption[] | null];
 interface RunwaysState {
   resolvedFor: [string, string];
   runways: RunwaysTuple;
-}
-
-function normalize(code: string): string {
-  return code.trim().toUpperCase();
 }
 
 function isValid(code: string): boolean {
@@ -41,8 +38,8 @@ export function useAirportRunways(
   const seqRef = useRef(0);
   const lastResolvedRef = useRef<[string, string]>(["", ""]);
 
-  const dep = normalize(airports[0] ?? "");
-  const arr = normalize(airports[1] ?? "");
+  const dep = normalizeAirportCode(airports[0]);
+  const arr = normalizeAirportCode(airports[1]);
   const depValid = isValid(dep);
   const arrValid = isValid(arr);
 

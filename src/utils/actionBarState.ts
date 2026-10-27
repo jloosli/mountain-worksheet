@@ -1,5 +1,6 @@
 // src/utils/actionBarState.ts
 import type { WorksheetData } from "@/utils/types";
+import { normalizeAirportCode } from "@/utils/airportCode";
 
 export type ActionBarState =
   | "incomplete"
@@ -15,7 +16,10 @@ export type ActionBarState =
  */
 export function canFetchWeather(state: WorksheetData): boolean {
   return Boolean(
-    state.airport[0] && state.airport[1] && state.date && state.time
+    normalizeAirportCode(state.airport[0]) &&
+      normalizeAirportCode(state.airport[1]) &&
+      state.date &&
+      state.time
   );
 }
 
