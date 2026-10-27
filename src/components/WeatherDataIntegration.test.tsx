@@ -274,4 +274,74 @@ describe("WeatherDataIntegration", () => {
     });
     expect(capturedAirmets).toBeNull();
   });
+
+  describe("airport code whitespace (#208)", () => {
+    const setUpSuccessfulFetch = () => {
+      const { mapWeatherDataToWorksheet, mergeWeatherData } = jest.requireMock(
+        "@/utils/weatherDataMapper"
+      );
+      mapWeatherDataToWorksheet.mockReturnValue({
+        success: true,
+        data: {},
+        errors: [],
+        warnings: [],
+      });
+      mergeWeatherData.mockImplementation((existing: object, api: object) => ({
+        ...existing,
+        ...api,
+      }));
+      const { getWeatherDataBatch } = jest.requireMock(
+        "@/utils/aviationWeatherApi"
+      );
+      getWeatherDataBatch.mockResolvedValue({ metar: [], taf: [], airport: [] });
+      return getWeatherDataBatch as jest.Mock;
+    };
+
+    it("dedupes and trims ['KOGD', 'KOGD '] into a single KOGD request", async () => {
+      const getWeatherDataBatch = setUpSuccessfulFetch();
+      render(
+        <WeatherDataIntegration
+          {...defaultProps}
+          worksheetData={{
+            ...defaultProps.worksheetData,
+            airport: ["KOGD", "KOGD "],
+          }}
+        />
+      );
+      fireEvent.click(screen.getByText("Fetch Weather"));
+
+      await waitFor(() => expect(getWeatherDataBatch).toHaveBeenCalled());
+      expect(getWeatherDataBatch.mock.calls[0][0]).toEqual(["KOGD"]);
+    });
+
+    it("trims padded codes on both airports", async () => {
+      const getWeatherDataBatch = setUpSuccessfulFetch();
+      render(
+        <WeatherDataIntegration
+          {...defaultProps}
+          worksheetData={{
+            ...defaultProps.worksheetData,
+            airport: [" kslc", "KOGD "],
+          }}
+        />
+      );
+      fireEvent.click(screen.getByText("Fetch Weather"));
+
+      await waitFor(() => expect(getWeatherDataBatch).toHaveBeenCalled());
+      expect(getWeatherDataBatch.mock.calls[0][0]).toEqual(["KSLC", "KOGD"]);
+    });
+
+    it("disables fetch when an airport code is whitespace-only", () => {
+      render(
+        <WeatherDataIntegration
+          {...defaultProps}
+          worksheetData={{
+            ...defaultProps.worksheetData,
+            airport: ["KOGD", "   "],
+          }}
+        />
+      );
+      expect(screen.getByText("Fetch Weather")).toBeDisabled();
+    });
+  });
 });

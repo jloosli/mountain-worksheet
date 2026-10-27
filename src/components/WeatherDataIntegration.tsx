@@ -30,6 +30,7 @@ import {
 } from "./WeatherModal";
 import WeatherWarningsPanel from "./WeatherWarningsPanel";
 import type { WorksheetData } from "@/utils/types";
+import { normalizeAirportCode } from "@/utils/airportCode";
 
 interface WeatherDataIntegrationProps {
   worksheetData: Partial<WorksheetData>;
@@ -81,7 +82,13 @@ export default function WeatherDataIntegration({
     const date = worksheetData.date;
     const time = worksheetData.time;
 
-    return airports && airports[0] && airports[1] && date && time;
+    return (
+      airports &&
+      normalizeAirportCode(airports[0]) &&
+      normalizeAirportCode(airports[1]) &&
+      date &&
+      time
+    );
   }, [worksheetData]);
 
   const fetchWeatherData = useCallback(
@@ -110,8 +117,8 @@ export default function WeatherDataIntegration({
 
       try {
         const airports = worksheetData.airport!;
-        const departureAirport = airports[0].toUpperCase();
-        const arrivalAirport = airports[1].toUpperCase();
+        const departureAirport = normalizeAirportCode(airports[0]);
+        const arrivalAirport = normalizeAirportCode(airports[1]);
 
         // Collect unique airports
         const uniqueAirports = Array.from(

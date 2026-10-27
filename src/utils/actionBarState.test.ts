@@ -35,6 +35,17 @@ const empty: WorksheetData = {
 };
 
 describe("canFetchWeather", () => {
+  it("treats whitespace-only airport codes as missing (#208)", () => {
+    expect(
+      canFetchWeather({
+        ...empty,
+        airport: ["KOGD", "   "],
+        date: "2026-10-27",
+        time: "16:00",
+      })
+    ).toBe(false);
+  });
+
   it("returns false when nothing is filled in", () => {
     expect(canFetchWeather(empty)).toBe(false);
   });
