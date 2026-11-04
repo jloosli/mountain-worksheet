@@ -77,7 +77,7 @@ The five canonical triage roles map 1:1 to label strings of the same name. See `
 
 ### Domain docs
 
-Single-context: `CONTEXT.md` and `docs/adr/` at the repo root, both created lazily. See `docs/agents/domain.md`.
+Single-context: `GLOSSARY.md` and `docs/adr/` at the repo root, both created lazily. See `docs/agents/domain.md`.
 
 <!-- BEGIN:nextjs-agent-rules -->
 
