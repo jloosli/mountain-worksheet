@@ -8,6 +8,7 @@ import type { Aircraft, WorksheetData } from "./types";
 import {
   fieldSubject,
   notificationKey,
+  subjectKey,
   valueSubject,
   type Notification,
   type Subject,
@@ -77,6 +78,74 @@ export function pressureColumnDependsOn(col: 0 | 1 | 2): {
     pressureAltitude,
     densityAltitude: [...pressureAltitude, fieldSubject("temp", col)],
   };
+}
+
+/**
+ * A pressure- or density-altitude column as a computed value: withheld when
+ * one of its inputs has a Warning (see `withholdOnInputWarnings`).
+ */
+export function pressureColumnValue(
+  values: Triple,
+  col: 0 | 1 | 2,
+  kind: "pressureAltitude" | "densityAltitude",
+  inputNotifications: readonly Notification[],
+): ComputedValue {
+  const v = values[col];
+  if (v === null) return { status: "unavailable" };
+  return withholdOnInputWarnings(
+    { status: "computed", value: v, dependsOn: pressureColumnDependsOn(col)[kind] },
+    inputNotifications,
+  );
+}
+
+const INPUT_SLOT = ["departure", "operating", "arrival"] as const;
+
+/** How a withheld reason names an input Subject ("departure altimeter"). */
+function inputLabel(subject: Subject): string {
+  if (subject.kind !== "field") return subjectKey(subject);
+  const i = subject.index ?? 0;
+  switch (subject.field) {
+    case "acType":
+      return "aircraft type";
+    case "weight":
+      return "weight";
+    case "altitude":
+      return i === 1 ? "operating altitude" : `${INPUT_SLOT[i]} field elevation`;
+    case "altimeter":
+      return `${INPUT_SLOT[i]} altimeter`;
+    case "temp":
+      return `${INPUT_SLOT[i]} temperature`;
+    case "rwy":
+      return `${i === 0 ? "departure" : "arrival"} runway length`;
+    default:
+      return subject.field;
+  }
+}
+
+/**
+ * Withholds a computed value when any of its own inputs carries a Warning in
+ * `inputNotifications` (GLOSSARY.md, Withheld value): a stale fetch, a
+ * rejected entry, a malformed link value, an out-of-range input. The reason
+ * names the input. Values not computed, or without Warned inputs, are
+ * returned unchanged. Input Warnings feed withholding, never the reverse.
+ */
+export function withholdOnInputWarnings<T extends ComputedValue | ServiceCeiling>(
+  value: T,
+  inputNotifications: readonly Notification[],
+): T | ComputedValue {
+  if (!("dependsOn" in value) || inputNotifications.length === 0) return value;
+  const warned = new Set(
+    inputNotifications.filter((n) => n.level === "warning").map((n) => subjectKey(n.subject)),
+  );
+  const labels = value.dependsOn
+    .filter((s) => warned.has(subjectKey(s)))
+    .map(inputLabel);
+  if (labels.length === 0) return value;
+  const list =
+    labels.length === 1
+      ? labels[0]
+      : `${labels.slice(0, -1).join(", ")} and ${labels[labels.length - 1]}`;
+  return withheld(`needs ${list} checked (Warning)`);
 }
 
 export type AirportSlot = "departure" | "arrival";
@@ -395,7 +464,27 @@ function computeAirportTOLD(
   return { slot, values, notifications };
 }
 
+/**
+ * TOLD values for both airports. `inputNotifications` (the notifications in
+ * force) withholds values whose own inputs carry a Warning; the returned
+ * notifications don't depend on it.
+ */
 export function computeTOLDViewModel(
+  state: WorksheetData,
+  PAs: Triple,
+  inputNotifications: readonly Notification[] = [],
+): TOLDViewModel {
+  const vm = toldViewModel(state, PAs);
+  const withhold = (airport: AirportTOLD): AirportTOLD => ({
+    ...airport,
+    values: Object.fromEntries(
+      TOLD_VALUE_KEYS.map((k) => [k, withholdOnInputWarnings(airport.values[k], inputNotifications)]),
+    ) as Record<TOLDValueKey, ComputedValue>,
+  });
+  return { ...vm, departure: withhold(vm.departure), arrival: withhold(vm.arrival) };
+}
+
+function toldViewModel(
   state: WorksheetData,
   PAs: Triple,
 ): TOLDViewModel {
@@ -507,7 +596,34 @@ function collect<T>(lookups: Lookup<T>[]): { values: Columns<T>; notifications: 
   };
 }
 
-export function computeClimbViewModel(state: WorksheetData): ClimbViewModel {
+/**
+ * Climb, V-speed and ceiling values. `inputNotifications` (the notifications
+ * in force) withholds values whose own inputs carry a Warning; the returned
+ * notifications don't depend on it.
+ */
+export function computeClimbViewModel(
+  state: WorksheetData,
+  inputNotifications: readonly Notification[] = [],
+): ClimbViewModel {
+  const vm = climbViewModel(state);
+  const one = <T extends ComputedValue | ServiceCeiling>(v: T) =>
+    withholdOnInputWarnings(v, inputNotifications) as T;
+  const cols = <T extends ComputedValue | ServiceCeiling>(c: Columns<T>) =>
+    c.map(one) as Columns<T>;
+  return {
+    ...vm,
+    rateOfClimb: cols(vm.rateOfClimb),
+    rateOfClimbActual: cols(vm.rateOfClimbActual),
+    vx: cols(vm.vx),
+    vy: cols(vm.vy),
+    serviceCeiling: cols(vm.serviceCeiling),
+    va: one(vm.va),
+    vra: one(vm.vra),
+    percentMGW: one(vm.percentMGW),
+  };
+}
+
+function climbViewModel(state: WorksheetData): ClimbViewModel {
   const aircraft = findAircraft(state.acType);
   const weight = assessWeight(state.weight, aircraft);
   const unknownAircraft = !state.acType ? "needs aircraft type" : "needs a supported aircraft type";

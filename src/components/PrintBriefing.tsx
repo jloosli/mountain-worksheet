@@ -4,6 +4,7 @@ import {
   climbSubject,
   computeClimbViewModel,
   computePressureColumns,
+  pressureColumnValue,
   computeTOLDViewModel,
   pressureColumnDependsOn,
   toldValueSubjects,
@@ -176,14 +177,21 @@ export default function PrintBriefing({ state, notifications = [] }: PrintBriefi
     state.altimeter,
     state.temp,
   );
-  const told = computeTOLDViewModel(state, PAs);
-  const climb = computeClimbViewModel(state);
+  const told = computeTOLDViewModel(state, PAs, notifications);
+  const climb = computeClimbViewModel(state, notifications);
   const b = briefingNotes(notifications);
   const notesIn = (section: BriefingSection) => <Notes notes={b.inSection(section)} />;
   const on = (field: FieldName, index?: number) => <Refs refs={b.refsOn(fieldSubject(field, index))} />;
 
-  /** A pressure/density-altitude cell, marked when its inputs carry a Caution. */
+  /**
+   * A pressure/density-altitude cell, marked when its inputs carry a Caution
+   * and withheld when one carries a Warning.
+   */
   const altitudeCell = (values: Triple, col: 0 | 1 | 2, kind: "pressureAltitude" | "densityAltitude") => {
+    const value = pressureColumnValue(values, col, kind, notifications);
+    if (value.status === "withheld") {
+      return <span className="italic text-slate-600">{value.reason}</span>;
+    }
     const v = values[col];
     const refs =
       v === null

@@ -281,6 +281,21 @@ describe("PrintBriefing — notifications", () => {
   const refs = (cell: Element) =>
     Array.from(cell.querySelectorAll("[data-ref]")).map((e) => e.getAttribute("data-ref"));
 
+  it("withholds values whose own inputs have a Warning, naming the input, and keeps the rest", () => {
+    const stale: Notification = {
+      level: "warning",
+      subject: fieldSubject("altimeter", 0),
+      message: "Fetched for KOGD at 2026-05-17 18:00; refetch weather.",
+    };
+    const { container } = render(
+      <PrintBriefing state={stateWithPerf} notifications={[stale]} />
+    );
+    expect(row(container, /^TO Ground Roll/)[1].textContent).toMatch(/departure altimeter/);
+    expect(row(container, /^Pressure Alt/)[1].textContent).toMatch(/departure altimeter/);
+    expect(row(container, /^Pressure Alt/)[3].textContent).toMatch(/^[\d,]+/);
+    expect(row(container, /^TO Ground Roll/)[2].textContent).toMatch(/^[\d,]+/);
+  });
+
   it("prints the arrival temperature Caution next to the arrival temperature", () => {
     const { container } = render(
       <PrintBriefing state={stateWithPerf} notifications={[arrivalTempSubstitution]} />

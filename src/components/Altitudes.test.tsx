@@ -1,5 +1,6 @@
 import { render, screen } from "../test-utils/test-utils";
 import Altitudes from "./Altitudes";
+import { fieldSubject } from "@/utils/notifications";
 
 describe("Altitudes (pure display)", () => {
   it("renders '-' for all PA/DA cells when nulls are passed", () => {
@@ -50,5 +51,21 @@ describe("Altitudes (pure display)", () => {
     );
     expect(screen.getByText("11,000")).toBeInTheDocument();
     expect(screen.queryByText("9,500")).not.toBeInTheDocument();
+  });
+
+  it("shows why a density altitude is withheld when its temperature has a Warning", () => {
+    render(
+      <Altitudes
+        altitudes={[4472, 10000, 4321]}
+        PAs={[4500, 10500, 4400]}
+        DAs={[6000, 13000, 5800]}
+        notifications={[
+          { level: "warning", subject: fieldSubject("temp", 2), message: "stale" },
+        ]}
+      />
+    );
+    expect(screen.getByText(/needs arrival temperature checked/)).toBeInTheDocument();
+    expect(screen.queryByText("5,800")).not.toBeInTheDocument();
+    expect(screen.getByText("4,400")).toBeInTheDocument();
   });
 });

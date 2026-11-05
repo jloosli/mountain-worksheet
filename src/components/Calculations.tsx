@@ -18,7 +18,10 @@ import type { Notification } from "@/utils/notifications";
 
 interface CalculationsProps {
   state: WorksheetData;
-  /** All notifications in force; computed values whose inputs carry a Caution are marked. */
+  /**
+   * All notifications in force. Computed values whose inputs carry a Warning
+   * are withheld; those whose inputs carry a Caution are marked.
+   */
   notifications?: readonly Notification[];
 }
 
@@ -28,8 +31,9 @@ export default function Calculations({ state, notifications = [] }: Calculations
     state.altimeter,
     state.temp,
   );
-  const told = computeTOLDViewModel(state, PAs);
-  const climb = computeClimbViewModel(state);
+  // Values whose own inputs carry a Warning are withheld (#222).
+  const told = computeTOLDViewModel(state, PAs, notifications);
+  const climb = computeClimbViewModel(state, notifications);
   const maneuveringWarnings = maneuveringNotifications(findAircraft(state.acType));
   const maneuveringSpeeds =
     state.acType && maneuveringWarnings.length === 0

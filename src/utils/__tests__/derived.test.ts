@@ -5,11 +5,12 @@ import {
   derivePerformanceNotifications,
   findAircraft,
   maneuveringNotifications,
+  pressureColumnValue,
   toldValueSubjects,
   vyForPressureAltitude,
 } from "../derived";
 import type { WorksheetData } from "../types";
-import { fieldSubject, valueSubject } from "../notifications";
+import { fieldSubject, valueSubject, type Notification } from "../notifications";
 
 describe("computePressureColumns", () => {
   it("returns nulls for all columns when inputs are missing", () => {
@@ -652,5 +653,64 @@ describe("vyForPressureAltitude", () => {
 
   it("returns null when PA is unknown", () => {
     expect(vyForPressureAltitude(climb, null)).toBeNull();
+  });
+});
+
+describe("withholding values whose own inputs have a Warning (#222)", () => {
+  const warningOn = (field: Parameters<typeof fieldSubject>[0], index?: number): Notification => ({
+    level: "warning",
+    subject: fieldSubject(field, index),
+    message: "Fetched for KABC at 2026-01-01 10:00; refetch weather.",
+  });
+
+  it("withholds only the TOLD values that use the Warned input, naming it", () => {
+    const vm = computeTOLDViewModel(baseState(), PAS_OK, [warningOn("altimeter", 0)]);
+    for (const value of Object.values(vm.departure.values)) {
+      expect(value).toEqual({
+        status: "withheld",
+        reason: expect.stringMatching(/departure altimeter/),
+      });
+    }
+    expect(vm.arrival.values.takeoffGroundRoll.status).toBe("computed");
+  });
+
+  it("ignores Cautions and Advisories on inputs", () => {
+    const caution = { ...warningOn("altimeter", 0), level: "caution" as const };
+    const vm = computeTOLDViewModel(baseState(), PAS_OK, [caution]);
+    expect(vm.departure.values.takeoffGroundRoll.status).toBe("computed");
+  });
+
+  it("withholds weight-dependent values when weight is Warned, but not landing distances", () => {
+    const vm = computeTOLDViewModel(baseState(), PAS_OK, [warningOn("weight")]);
+    expect(vm.departure.values.takeoffGroundRoll).toEqual({
+      status: "withheld",
+      reason: expect.stringMatching(/weight/),
+    });
+    expect(vm.departure.values.landingGroundRoll.status).toBe("computed");
+  });
+
+  it("withholds climb values that use a Warned operating temperature, keeping those that don't", () => {
+    const vm = computeClimbViewModel(baseState(), [warningOn("temp", 1)]);
+    expect(vm.rateOfClimb[1]).toEqual({
+      status: "withheld",
+      reason: expect.stringMatching(/operating temperature/),
+    });
+    expect(vm.serviceCeiling[1].status).toBe("withheld");
+    expect(vm.vx[1].status).toBe("computed");
+    expect(vm.rateOfClimb[0].status).toBe("computed");
+  });
+
+  it("withholds a pressure or density altitude whose input is Warned", () => {
+    const { PAs, DAs } = computePressureColumns(
+      baseState().altitude,
+      baseState().altimeter,
+      baseState().temp,
+    );
+    const warned = [warningOn("temp", 2)];
+    expect(pressureColumnValue(PAs, 2, "pressureAltitude", warned).status).toBe("computed");
+    expect(pressureColumnValue(DAs, 2, "densityAltitude", warned)).toEqual({
+      status: "withheld",
+      reason: expect.stringMatching(/arrival temperature/),
+    });
   });
 });

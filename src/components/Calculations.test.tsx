@@ -173,6 +173,20 @@ describe("Calculations", () => {
     mtnCert: true,
   };
 
+  it("withholds results whose own inputs have a Warning, naming the input", () => {
+    const rejected: Notification = {
+      level: "warning",
+      subject: fieldSubject("altimeter", 0),
+      message: "Altimeter 35.00 is not valid; enter 28.00–31.00 inHg. Not applied.",
+    };
+    render(<Calculations state={mockWorksheetData} notifications={[rejected]} />);
+    expect(
+      screen.getAllByText(/needs departure altimeter checked/).length
+    ).toBeGreaterThan(0);
+    // The arrival column doesn't use the departure altimeter.
+    expect(screen.queryAllByText(/needs arrival/)).toHaveLength(0);
+  });
+
   it("renders without crashing", () => {
     render(<Calculations state={mockWorksheetData} />);
     expect(screen.getByText("Calculations")).toBeInTheDocument();
