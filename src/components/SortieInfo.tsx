@@ -323,11 +323,13 @@ export default function SortieInfo({
             <input
               type="date"
               id="date"
+              {...notificationA11yProps(notifications, fieldSubject("date"))}
               name="date"
               value={formData.date}
               onChange={handleInputChange}
               className="w-full px-3 py-2 border rounded-md dark:bg-black/[.15] dark:border-white/[.145]"
             />
+            <InlineNotifications notifications={notifications} subject={fieldSubject("date")} />
           </div>
 
           <div className="space-y-2">
@@ -336,6 +338,7 @@ export default function SortieInfo({
             </label>
             <select
               id="time"
+              {...notificationA11yProps(notifications, fieldSubject("time"))}
               name="time"
               value={formData.time}
               onChange={handleInputChange}
@@ -348,6 +351,7 @@ export default function SortieInfo({
                 </option>
               ))}
             </select>
+            <InlineNotifications notifications={notifications} subject={fieldSubject("time")} />
           </div>
 
           <div className="space-y-2">
@@ -356,6 +360,7 @@ export default function SortieInfo({
             </label>
             <select
               id="duration"
+              {...notificationA11yProps(notifications, fieldSubject("duration"))}
               name="duration"
               value={formData.duration ?? ""}
               onChange={handleDurationChange}
@@ -368,6 +373,7 @@ export default function SortieInfo({
                 </option>
               ))}
             </select>
+            <InlineNotifications notifications={notifications} subject={fieldSubject("duration")} />
           </div>
         </div>
         {sortieLocalTiming && (
@@ -441,10 +447,12 @@ export default function SortieInfo({
             <input
               type="number"
               id="operatingAltitude"
+              {...notificationA11yProps(notifications, fieldSubject("altitude", 1))}
               value={formData.altitude?.[1] ?? ""}
               onChange={handleOperatingAltitudeChange}
               className="w-full px-3 py-2 border rounded-md dark:bg-black/[.15] dark:border-white/[.145]"
             />
+            <InlineNotifications notifications={notifications} subject={fieldSubject("altitude", 1)} />
           </div>
 
           <div className="space-y-2">
@@ -502,6 +510,7 @@ export default function SortieInfo({
               type="checkbox"
               checked={formData.mtnEndorse}
               onChange={handleQualChange("mtnEndorse")}
+              {...notificationA11yProps(notifications, fieldSubject("mtnEndorse"))}
             />
             Current CAPF 70-5 Mountain Flight Endorsement?
           </label>
@@ -510,9 +519,12 @@ export default function SortieInfo({
               type="checkbox"
               checked={formData.mtnCert}
               onChange={handleQualChange("mtnCert")}
+              {...notificationA11yProps(notifications, fieldSubject("mtnCert"))}
             />
             Current CAPF 70-91 and Mountain Flying Certification?
           </label>
+          <InlineNotifications notifications={notifications} subject={fieldSubject("mtnEndorse")} />
+          <InlineNotifications notifications={notifications} subject={fieldSubject("mtnCert")} />
         </div>
       </div>
     </div>

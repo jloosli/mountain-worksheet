@@ -3,9 +3,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { LinkIcon, QuestionMarkCircleIcon } from "@heroicons/react/24/outline";
 
+/** Outcome of the last "Copy link". */
+export type ShareStatus =
+  | { kind: "copied" }
+  | { kind: "failed"; link: string; reason: string };
+
 interface WorksheetHeaderProps {
   onReset: () => void;
   onShare: () => void | Promise<void>;
+  shareStatus?: ShareStatus | null;
   useFahrenheit: boolean;
   onToggleTempUnit: () => void;
   onOpenInstructions: () => void;
@@ -63,6 +69,7 @@ const UtcClock = () => {
 export default function WorksheetHeader({
   onReset,
   onShare,
+  shareStatus = null,
   useFahrenheit,
   onToggleTempUnit,
   onOpenInstructions,
@@ -113,6 +120,37 @@ export default function WorksheetHeader({
           </div>
         </div>
       </div>
+      {shareStatus && <ShareStatusLine status={shareStatus} />}
     </header>
+  );
+}
+
+function ShareStatusLine({ status }: { status: ShareStatus }) {
+  if (status.kind === "copied") {
+    return (
+      <div className="mx-auto w-full max-w-5xl px-4 pb-2 md:px-6">
+        <p role="status" className="text-right text-xs text-slate-300">
+          Link copied to clipboard.
+        </p>
+      </div>
+    );
+  }
+  return (
+    <div className="mx-auto w-full max-w-5xl px-4 pb-3 md:px-6">
+      <div
+        role="alert"
+        className="rounded border border-red-800 bg-red-950/60 px-2 py-1.5 text-xs text-red-100"
+      >
+        <span className="font-semibold">Warning:</span> Couldn&apos;t copy the
+        link ({status.reason}). Copy it from here:
+        <input
+          readOnly
+          aria-label="Worksheet link"
+          value={status.link}
+          onFocus={(e) => e.currentTarget.select()}
+          className="mt-1 block w-full rounded border border-red-800 bg-slate-900 px-2 py-1 font-mono text-xs text-slate-100"
+        />
+      </div>
+    </div>
   );
 }

@@ -2,18 +2,36 @@ import { render, screen, fireEvent, waitFor } from "../test-utils/test-utils";
 import AppContainer from "./AppContainer";
 import { fetchWorksheetWeather } from "@/utils/weatherFetch";
 import { useSearchParams } from "next/navigation";
+import {
+  useAirportRunwayLookup,
+  type RunwayLookup,
+} from "@/utils/useAirportRunways";
 
 jest.mock("@/utils/weatherFetch");
-// Same as jest.setup.ts, but with a controllable query string so a test can
-// open the worksheet from a shared link.
 jest.mock("next/navigation", () => ({
   useRouter: () => ({ push: jest.fn(), replace: jest.fn(), prefetch: jest.fn() }),
-  useSearchParams: jest.fn(() => new URLSearchParams()),
   usePathname: () => "",
+  useSearchParams: jest.fn(),
 }));
 jest.mock("@/utils/useAirportRunways", () => ({
-  useAirportRunways: () => [null, null],
+  useAirportRunwayLookup: jest.fn(),
 }));
+
+const mockRunwayLookup = useAirportRunwayLookup as jest.MockedFunction<
+  typeof useAirportRunwayLookup
+>;
+const idleLookup: RunwayLookup = {
+  runways: [null, null],
+  status: ["idle", "idle"],
+  notifications: [],
+};
+
+const mockSearchParams = useSearchParams as jest.Mock;
+
+beforeEach(() => {
+  mockRunwayLookup.mockReturnValue(idleLookup);
+  mockSearchParams.mockReturnValue(new URLSearchParams());
+});
 
 describe("AppContainer", () => {
   it("renders without crashing", () => {
@@ -211,6 +229,114 @@ describe("AppContainer — performance notifications (#222)", () => {
     ).toBeInTheDocument();
     expect(weight).not.toHaveAttribute("aria-invalid");
     expect(container.querySelector("#step-sortie header")).not.toHaveTextContent("warning");
+  });
+});
+
+describe("AppContainer — runway lookup (#225)", () => {
+  it("shows a failed runway lookup as a Warning on the runway and counts it on the weather step", () => {
+    mockRunwayLookup.mockReturnValue({
+      runways: [null, null],
+      status: ["failed", "idle"],
+      notifications: [
+        {
+          level: "warning",
+          subject: { kind: "field", field: "rwy", index: 0 },
+          message: "Couldn't look up runways for KDEN (network down)",
+        },
+      ],
+    });
+    const { container } = render(<AppContainer />);
+    expect(
+      screen.getByText(/Couldn't look up runways for KDEN \(network down\)/)
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Runway lookup failed/)).toBeInTheDocument();
+    expect(container.querySelector("#step-weather header")).toHaveTextContent(
+      "1 warning"
+    );
+  });
+});
+
+describe("AppContainer — share (#225)", () => {
+  const setClipboard = (writeText: jest.Mock) =>
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText },
+      configurable: true,
+    });
+
+  it("confirms a copied link inline without window.alert", async () => {
+    const alertSpy = jest.spyOn(window, "alert").mockImplementation(() => {});
+    setClipboard(jest.fn().mockResolvedValue(undefined));
+    render(<AppContainer />);
+    fireEvent.click(screen.getByRole("button", { name: /Copy link/i }));
+    expect(await screen.findByRole("status")).toHaveTextContent(/Link copied/i);
+    expect(alertSpy).not.toHaveBeenCalled();
+    alertSpy.mockRestore();
+  });
+
+  it("shows a copy failure with the link to copy by hand", async () => {
+    jest.spyOn(console, "error").mockImplementation(() => {});
+    setClipboard(jest.fn().mockRejectedValue(new Error("denied")));
+    render(<AppContainer />);
+    fireEvent.click(screen.getByRole("button", { name: /Copy link/i }));
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent(/Couldn't copy the link \(denied\)/);
+    expect(screen.getByLabelText(/Worksheet link/i)).toHaveValue(
+      window.location.href
+    );
+    jest.restoreAllMocks();
+  });
+});
+
+describe("AppContainer — operating temperature re-derivation (#225)", () => {
+  const enterAloftTemps = (temps: number[]) => {
+    ["3,000", "6,000", "9,000", "12,000", "15,000"].forEach((alt, i) => {
+      fireEvent.change(screen.getByLabelText(`Temperature at ${alt} ft`), {
+        target: { value: String(temps[i]) },
+      });
+    });
+  };
+  const operatingTemperature = () => screen.getAllByLabelText("Temperature")[1];
+  const operatingAltitude = () =>
+    screen.getByLabelText("Operating Altitude (MSL ft)");
+
+  it("announces a Caution when an altitude change replaces the pilot's operating temperature", () => {
+    render(<AppContainer />);
+    enterAloftTemps([20, 14, 8, 2, -10]);
+    fireEvent.change(operatingTemperature(), { target: { value: "5" } });
+    fireEvent.change(operatingAltitude(), { target: { value: "9000" } });
+
+    expect(operatingTemperature()).toHaveValue(8);
+    expect(
+      screen.getByText(/replacing your entry of 5°C/)
+    ).toBeInTheDocument();
+
+    fireEvent.change(operatingTemperature(), { target: { value: "5" } });
+    expect(screen.queryByText(/replacing your entry/)).not.toBeInTheDocument();
+  });
+
+  it("announces a Caution when the operating altitude is outside the winds-aloft temperatures", () => {
+    render(<AppContainer />);
+    enterAloftTemps([20, 14, 8, 2, -10]);
+    fireEvent.change(operatingAltitude(), { target: { value: "17000" } });
+    expect(
+      screen.getByText(/17,000 ft is above the winds-aloft temperatures/)
+    ).toBeInTheDocument();
+  });
+});
+
+describe("AppContainer — malformed link values (#225)", () => {
+  it("clears a malformed value from a shared link and shows a Warning on its field until the pilot fixes it", () => {
+    mockSearchParams.mockReturnValue(new URLSearchParams("weight=heavy"));
+    const { container } = render(<AppContainer />);
+    const weight = screen.getByLabelText(/Aircraft Takeoff Weight/i);
+    expect(weight).toHaveValue(null);
+    expect(screen.getByText(/"heavy" isn't a number/)).toBeInTheDocument();
+    expect(container.querySelector("#step-sortie header")).toHaveTextContent(
+      "1 warning"
+    );
+
+    fireEvent.change(weight, { target: { value: "2300" } });
+    expect(screen.queryByText(/"heavy" isn't a number/)).not.toBeInTheDocument();
   });
 });
 

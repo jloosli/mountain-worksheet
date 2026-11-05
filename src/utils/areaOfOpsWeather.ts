@@ -105,6 +105,104 @@ export function applyOpTempForAltitudeChange(
   return [curTemp[0] ?? null, newOpTemp, curTemp[2] ?? null];
 }
 
+/**
+ * A re-derivation of the operating temperature after an altitude change
+ * (#117), with what it means for the pilot: whether it replaced a value the
+ * pilot entered, and whether the altitude was outside the winds-aloft
+ * temperatures so the value snapped to the nearest one.
+ */
+export interface OpTempChange {
+  value: number;
+  altitudeFt: number;
+  /** The pilot's entry it replaced, or null if it replaced fetched/derived data. */
+  replaced: number | null;
+  /** The winds-aloft altitude it snapped to, or null if interpolated. */
+  snappedToFt: number | null;
+}
+
+/**
+ * Describes the re-derivation `applyOpTempForAltitudeChange` would apply, or
+ * null if none applies. `fetchedOpTemp` is the operating temperature the
+ * latest weather fetch applied, and `previous` the re-derivation before this
+ * one; a prior value equal to either is not the pilot's entry.
+ */
+export function describeOpTempChange(
+  prev: Parameters<typeof applyOpTempForAltitudeChange>[0],
+  updates: Parameters<typeof applyOpTempForAltitudeChange>[1],
+  context: { fetchedOpTemp?: number | null; previous?: OpTempChange | null }
+): OpTempChange | null {
+  const next = applyOpTempForAltitudeChange(prev, updates);
+  const altitudeFt = updates.altitude?.[1];
+  if (!next || next[1] === null || typeof altitudeFt !== "number") return null;
+
+  const prior = prev.temp?.[1] ?? null;
+  const replaced =
+    prior === null ||
+    prior === context.fetchedOpTemp ||
+    prior === context.previous?.value
+      ? null
+      : prior;
+
+  const aloftTemps = (updates.wind ?? prev.wind)?.[2] ?? [];
+  const available = TARGET_ALTITUDES_FT.filter(
+    (_, i) => typeof aloftTemps[i] === "number" && Number.isFinite(aloftTemps[i])
+  );
+  const lowest = available[0];
+  const highest = available[available.length - 1];
+  const snappedToFt =
+    altitudeFt < lowest ? lowest : altitudeFt > highest ? highest : null;
+
+  return { value: next[1], altitudeFt, replaced, snappedToFt };
+}
+
+const formatFt = (ft: number) => `${ft.toLocaleString("en-US")} ft`;
+
+/**
+ * Notifications about an operating-temperature re-derivation, while the
+ * worksheet still holds it (same operating altitude and temperature):
+ * a Caution when it replaced the pilot's entry (a Substitution), and a
+ * Caution when the altitude was outside the winds-aloft temperatures.
+ */
+export function opTempChangeNotifications(
+  state: {
+    altitude: [number | null, number | null, number | null];
+    temp: [number | null, number | null, number | null];
+  },
+  change: OpTempChange | null
+): Notification[] {
+  if (
+    !change ||
+    state.altitude[1] !== change.altitudeFt ||
+    state.temp[1] !== change.value
+  ) {
+    return [];
+  }
+  const subject = fieldSubject("temp", 1);
+  const out: Notification[] = [];
+  if (change.replaced !== null) {
+    out.push({
+      level: "caution",
+      subject,
+      message: `Operating temperature re-derived from winds aloft at ${formatFt(
+        change.altitudeFt
+      )} (${change.value}°C), replacing your entry of ${change.replaced}°C. Re-enter it to keep your value.`,
+    });
+  }
+  if (change.snappedToFt !== null) {
+    const side = change.altitudeFt > change.snappedToFt ? "above" : "below";
+    out.push({
+      level: "caution",
+      subject,
+      message: `Operating altitude ${formatFt(
+        change.altitudeFt
+      )} is ${side} the winds-aloft temperatures; using the ${formatFt(
+        change.snappedToFt
+      )} temperature.`,
+    });
+  }
+  return out;
+}
+
 export type AreaOfOpsPositionSource = "user" | "midpoint" | "none";
 
 export interface AreaOfOpsWeather {
@@ -252,9 +350,17 @@ export function buildAreaOfOpsWeather(opts: BuildOptions): AreaOfOpsWeather {
     idx
   ];
   const opAltimeter =
-    typeof pressureMsl === "number"
+    typeof pressureMsl === "number" && Number.isFinite(pressureMsl)
       ? Math.round(pressureMsl * HPA_TO_INHG * 100) / 100
       : null;
+  if (opAltimeter === null) {
+    notifications.push({
+      level: "warning",
+      subject: fieldSubject("altimeter", 1),
+      message:
+        "Operating area forecast had no sea-level pressure; enter the operating altimeter manually",
+    });
+  }
 
   return {
     position,

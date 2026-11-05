@@ -197,7 +197,15 @@ export function deriveNotifications(
     const { subject } = n;
     if (subject.kind !== "field") return inputsUnchanged;
     const current = readField(state, subject);
-    if (n.level === "warning") return inputsUnchanged && isBlank(current);
+    if (n.level === "warning") {
+      // A winds-aloft column needs all of dir/vel/temp, so its Warning holds
+      // until every cell in the column is filled.
+      const unresolved =
+        subject.field === "wind" && subject.index !== undefined
+          ? Array.isArray(current) && current.some(isBlank)
+          : isBlank(current);
+      return inputsUnchanged && unresolved;
+    }
     return sameValue(current, readField(fetch.applied, subject));
   });
 }

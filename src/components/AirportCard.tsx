@@ -9,6 +9,7 @@ import InlineNotifications, {
   notificationA11yProps,
 } from "@/components/InlineNotifications";
 import { fieldSubject, type Notification } from "@/utils/notifications";
+import type { RunwayLookupStatus } from "@/utils/useAirportRunways";
 
 type AirportCardVariant = "departure" | "operating" | "arrival";
 
@@ -29,6 +30,8 @@ interface AirportCardAirportProps extends AirportCardCommonProps {
   airportCode?: string;
   fieldElev?: number | null;
   runways?: RunwayOption[] | null;
+  /** Where the runway lookup for this airport stands (default `idle`). */
+  runwayStatus?: RunwayLookupStatus;
   selectedRunwayLength?: number | null;
   onRunwaySelect?: (length: number) => void;
 }
@@ -205,6 +208,8 @@ export default function AirportCard(props: AirportCardProps) {
             />
             <RunwayRow
               runways={props.runways ?? null}
+              status={props.runwayStatus ?? "idle"}
+              airportCode={props.airportCode}
               selectedLength={props.selectedRunwayLength ?? null}
               onSelect={props.onRunwaySelect}
               id={rwyId}
@@ -228,6 +233,8 @@ export default function AirportCard(props: AirportCardProps) {
 
 interface RunwayRowProps {
   runways: RunwayOption[] | null;
+  status: RunwayLookupStatus;
+  airportCode?: string;
   selectedLength: number | null;
   onSelect?: (length: number) => void;
   id: string;
@@ -235,8 +242,27 @@ interface RunwayRowProps {
   a11yProps: ReturnType<typeof notificationA11yProps>;
 }
 
+const runwayPlaceholder = (
+  status: RunwayLookupStatus,
+  airportCode: string | undefined
+): string => {
+  switch (status) {
+    case "idle":
+      return "Enter an airport ID to load runways";
+    case "pending":
+      return "Loading runways…";
+    case "failed":
+      return "Runway lookup failed";
+    case "found":
+    case "no-runways":
+      return `No runway data for ${airportCode || "this airport"}`;
+  }
+};
+
 function RunwayRow({
   runways,
+  status,
+  airportCode,
   selectedLength,
   onSelect,
   id,
@@ -271,7 +297,7 @@ function RunwayRow({
       </label>
       {!validRunways || validRunways.length === 0 ? (
         <span className="text-xs text-slate-400 italic">
-          Fetch weather to load runways
+          {runwayPlaceholder(status, airportCode)}
         </span>
       ) : (
         <select

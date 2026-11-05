@@ -37,6 +37,15 @@ export function airmetFlagsUnavailable(reason: string): Notification {
 
 const VALID_TIME_THRESHOLD_MS = 3 * 60 * 60 * 1000;
 
+const HAZARD_FLAG: Record<
+  string,
+  { field: "turb" | "cielVis" | "mtnObsc"; label: string } | undefined
+> = {
+  TURB: { field: "turb", label: "turbulence" },
+  IFR: { field: "cielVis", label: "IFR" },
+  "MTN OBSC": { field: "mtnObsc", label: "mountain obscuration" },
+};
+
 export async function fetchGAirmets(): Promise<GAirmetFeature[]> {
   const url = `${BASE_URL}?endpoint=gairmet&format=json`;
   const res = await fetch(url, {
@@ -86,6 +95,12 @@ export function classifyAirmets(
   // (Genuine unavailability — fetch failure or no features in the time window
   // — is signaled with null sentinels below.)
   if (eligible.length === 0) {
+    notifications.push({
+      level: "advisory",
+      subject: stepSubject("weather"),
+      message:
+        "No turbulence, IFR or mountain obscuration G-AIRMETs in effect; those flags were cleared",
+    });
     return { turb: false, cielVis: false, mtnObsc: false, notifications };
   }
 
@@ -104,6 +119,7 @@ export function classifyAirmets(
     notifications,
   };
 
+  const staleHazards: { hazard: string; deltaMs: number }[] = [];
   let anyWithinThreshold = false;
   let ifrWithinThreshold = false;
   for (const [hazard, list] of byHazard.entries()) {
@@ -114,7 +130,10 @@ export function classifyAirmets(
         Math.abs(Date.parse(b.validTime) - targetMs)
     );
     const bestDelta = Math.abs(Date.parse(sorted[0].validTime) - targetMs);
-    if (bestDelta > VALID_TIME_THRESHOLD_MS) continue;
+    if (bestDelta > VALID_TIME_THRESHOLD_MS) {
+      staleHazards.push({ hazard, deltaMs: bestDelta });
+      continue;
+    }
     anyWithinThreshold = true;
     if (hazard === "IFR") ifrWithinThreshold = true;
 
@@ -135,6 +154,20 @@ export function classifyAirmets(
       message:
         "AIRMET IFR auto-flag uses 1000 ft / 3 sm threshold, not the worksheet's 2000 ft / 10 sm threshold",
     });
+  }
+
+  if (anyWithinThreshold) {
+    for (const { hazard, deltaMs } of staleHazards) {
+      const flag = HAZARD_FLAG[hazard];
+      if (!flag) continue;
+      notifications.push({
+        level: "caution",
+        subject: fieldSubject(flag.field),
+        message: `No ${flag.label} G-AIRMET within 3 hr of the sortie (nearest is ${(
+          deltaMs / 3_600_000
+        ).toFixed(1)} hr away); flag left off. Check AIRMETs manually.`,
+      });
+    }
   }
 
   if (!anyWithinThreshold) {

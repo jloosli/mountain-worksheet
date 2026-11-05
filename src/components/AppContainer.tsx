@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import ActionBar from "@/components/ActionBar";
 import AppInputs from "@/components/AppInputs";
 import Calculations from "@/components/Calculations";
@@ -11,9 +11,14 @@ import SlideOver from "@/components/SlideOver";
 import Stepper, { type StepperStep } from "@/components/Stepper";
 import StepShell from "@/components/StepShell";
 import WeatherDataIntegration from "@/components/WeatherDataIntegration";
-import WorksheetHeader from "@/components/WorksheetHeader";
+import WorksheetHeader, { type ShareStatus } from "@/components/WorksheetHeader";
 import { deriveActionBarState } from "@/utils/actionBarState";
-import { applyOpTempForAltitudeChange } from "@/utils/areaOfOpsWeather";
+import {
+  applyOpTempForAltitudeChange,
+  describeOpTempChange,
+  opTempChangeNotifications,
+  type OpTempChange,
+} from "@/utils/areaOfOpsWeather";
 import { deriveStepStatuses, formatStepBadge } from "@/utils/stepStatuses";
 import InlineNotifications from "@/components/InlineNotifications";
 import {
@@ -26,7 +31,11 @@ import type { WorksheetData } from "@/utils/types";
 import { unverifiedWeatherNotifications } from "@/utils/unverifiedWeather";
 import { useTempUnit } from "@/utils/useTempUnit";
 import { useUrlState } from "@/utils/useUrlState";
-import { useAirportRunways } from "@/utils/useAirportRunways";
+import { useAirportRunwayLookup } from "@/utils/useAirportRunways";
+import {
+  deriveUrlNotifications,
+  sanitizeWorksheetUrlState,
+} from "@/utils/worksheetUrlState";
 
 const getDefaultSortieDateTime = () => {
   const now = new Date();
@@ -51,7 +60,7 @@ const getDefaultSortieDateTime = () => {
 export default function AppContainer() {
   const defaultSortieDateTime = getDefaultSortieDateTime();
   const { useFahrenheit, toggleTempUnit } = useTempUnit();
-  const [state, setState] = useUrlState({
+  const initialWorksheet = {
     // Sortie Information
     pilot: "",
     date: defaultSortieDateTime.date,
@@ -93,7 +102,14 @@ export default function AppContainer() {
     // Mountain Qualifications
     mtnEndorse: false,
     mtnCert: false,
-  } as WorksheetData);
+  } as WorksheetData;
+  // Values a shared link coerced or passed through are cleared (or reset)
+  // with a Warning on their field.
+  const [state, setState, urlLoad] = useUrlState(
+    initialWorksheet,
+    (loaded, query) =>
+      sanitizeWorksheetUrlState(loaded, query, initialWorksheet)
+  );
 
   const [weatherLastUpdated, setWeatherLastUpdated] = useState<Date | null>(
     null
@@ -105,7 +121,12 @@ export default function AppContainer() {
     null
   );
 
-  const airportRunways = useAirportRunways(state.airport);
+  const runwayLookup = useAirportRunwayLookup(state.airport);
+
+  // The latest operating-temperature re-derivation (#117). Its notifications
+  // are derived from it plus current state, so they clear once the pilot
+  // overrides the temperature or changes the altitude again.
+  const [opTempChange, setOpTempChange] = useState<OpTempChange | null>(null);
 
   const [overlay, setOverlay] = useState<"instructions" | "checklist" | null>(
     null
@@ -117,10 +138,20 @@ export default function AppContainer() {
   const notifications = useMemo(
     () => [
       ...deriveNotifications(state, weatherFetch),
+      ...runwayLookup.notifications,
+      ...opTempChangeNotifications(state, opTempChange),
+      ...deriveUrlNotifications(state, urlLoad),
       ...unverifiedWeatherNotifications(state, weatherLastUpdated),
       ...derivePerformanceNotifications(state),
     ],
-    [state, weatherFetch, weatherLastUpdated]
+    [
+      state,
+      weatherFetch,
+      runwayLookup.notifications,
+      opTempChange,
+      urlLoad,
+      weatherLastUpdated,
+    ]
   );
 
   const stepStatuses = useMemo(
@@ -161,6 +192,11 @@ export default function AppContainer() {
   );
 
   const handleUpdate = (updates: Partial<WorksheetData>) => {
+    const change = describeOpTempChange(state, updates, {
+      fetchedOpTemp: weatherFetch?.applied.temp?.[1] ?? null,
+      previous: opTempChange,
+    });
+    if (change) setOpTempChange(change);
     setState((prev: WorksheetData) => {
       const merged = { ...prev, ...updates } as WorksheetData;
       // Issue #117: When the user changes the operating altitude, re-derive
@@ -186,13 +222,28 @@ export default function AppContainer() {
     window.location.reload();
   };
 
+  const [shareStatus, setShareStatus] = useState<ShareStatus | null>(null);
+
+  // A successful copy is confirmed briefly; a failure stays until the next try.
+  useEffect(() => {
+    if (shareStatus?.kind !== "copied") return;
+    const timer = setTimeout(() => setShareStatus(null), 4000);
+    return () => clearTimeout(timer);
+  }, [shareStatus]);
+
   const handleShare = async () => {
     const shareLink = window.location.href.replace(/%22/g, '"');
     try {
       await navigator.clipboard.writeText(shareLink);
-      alert("URL copied to clipboard!");
+      setShareStatus({ kind: "copied" });
     } catch (error) {
+      // Developer diagnostic; the pilot sees the failure in the header.
       console.error("Error sharing:", error);
+      setShareStatus({
+        kind: "failed",
+        link: shareLink,
+        reason: error instanceof Error ? error.message : "clipboard unavailable",
+      });
     }
   };
 
@@ -205,6 +256,7 @@ export default function AppContainer() {
       <WorksheetHeader
         onReset={handleReset}
         onShare={handleShare}
+        shareStatus={shareStatus}
         useFahrenheit={useFahrenheit}
         onToggleTempUnit={toggleTempUnit}
         onOpenInstructions={handleOpenInstructions}
@@ -235,7 +287,8 @@ export default function AppContainer() {
             state={state}
             onStateUpdate={handleUpdate}
             useFahrenheit={useFahrenheit}
-            airportRunways={airportRunways}
+            airportRunways={runwayLookup.runways}
+            runwayStatus={runwayLookup.status}
             notifications={notifications}
             stepStatuses={stepStatuses}
           />
