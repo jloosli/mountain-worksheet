@@ -430,6 +430,18 @@ describe("Weather Data Mapper", () => {
       expect(result.errors).toHaveLength(0);
     });
 
+    it("does not report an unmatched airport's runway as invalid when validating (issue #227)", () => {
+      const kord = mockApiData.airport.find((a) => a.icaoId === "KORD")!;
+      const result = mapWeatherDataToWorksheet({ airport: [kord] }, null, null, {
+        departureAirport: "KORD",
+        arrivalAirport: "BOI",
+        validateData: true,
+      });
+
+      expect(result.data.rwy?.[1]).toBe(-1);
+      expect(result.errors).toEqual([]);
+    });
+
     it("should handle missing data gracefully", () => {
       const emptyApiData = {};
 
@@ -661,6 +673,10 @@ describe("Weather Data Mapper", () => {
       expect(result.temperature).toBe(false);
       expect(result.pressure).toBe(false);
       expect(result.runway).toBe(true);
+    });
+
+    it("does not treat the 'don't update' runway marker as API-populated (issue #227)", () => {
+      expect(isApiPopulatedData({ rwy: [-1, -1] }).runway).toBe(false);
     });
 
     it("should detect null values as not API-populated", () => {

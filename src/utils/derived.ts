@@ -7,10 +7,10 @@ import { calculateTOLDForMultipleAirports } from "./toldCalculations";
 
 export type Triple = [number | null, number | null, number | null];
 
-// -1 is the legacy "no value" sentinel used by the weather mapper. For
-// temp/altimeter the mapper writes -1 directly into freshly-created arrays;
-// for altitude it doubles as a "don't update" marker for the operating slot
-// inside mergeWeatherData. Treated as missing uniformly here so any -1 that
+// -1 is the legacy "no value" sentinel used by the weather mapper. In mapper
+// output it means "don't update this slot": for temp/altimeter, for the
+// operating altitude (manual entry only), and for the runway and elevation of
+// an airport the lookup didn't match (#227). mergeWeatherData skips it. Treated as missing uniformly here so any -1 that
 // does reach state (e.g. from a fresh weather fetch when no altitude is set
 // yet) is rendered as missing rather than as a real altitude of -1 ft.
 export function isReal(v: number | null | undefined): v is number {

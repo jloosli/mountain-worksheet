@@ -169,7 +169,7 @@ export function mapAirportElevationData(
   const departure = elevationFor(options.departureAirport);
   const arrival = elevationFor(options.arrivalAirport);
 
-  // Only set altitude if we have updates
+  // Neither airport matched: nothing to update
   if (departure === -1 && arrival === -1) {
     return {};
   }
@@ -429,7 +429,7 @@ function validateMappedData(data: Partial<WorksheetData>): {
   // Validate runway data
   if (data.rwy) {
     data.rwy.forEach((runway, index) => {
-      if (runway !== null && !isValidRunwayLength(runway)) {
+      if (runway !== null && runway !== -1 && !isValidRunwayLength(runway)) {
         errors.push(`Invalid runway length for phase ${index}: ${runway}ft`);
       }
     });
@@ -469,7 +469,7 @@ export function isApiPopulatedData(data: Partial<WorksheetData>): {
     runway: !!(
       data.rwy &&
       Array.isArray(data.rwy) &&
-      data.rwy.some((val) => val !== null)
+      data.rwy.some((val) => val !== null && val !== -1)
     ),
     altitude: !!(
       data.altitude &&
@@ -526,28 +526,15 @@ export function mergeWeatherData(
   // Runway and altitude merge per slot: -1 means "don't update" (an
   // unmatched airport, or the manually-entered operating altitude).
   if (apiData.rwy) {
-    const next = (result.rwy ? [...result.rwy] : [null, null]) as [
-      number | null,
-      number | null,
-    ];
-    apiData.rwy.forEach((val, i) => {
-      if (val !== undefined && val !== -1) {
-        next[i] = val;
-      }
-    });
-    result.rwy = next;
+    result.rwy = mergeSlots(result.rwy, apiData.rwy, [null, null]);
   }
 
   if (apiData.altitude) {
-    const next = (
-      result.altitude ? [...result.altitude] : [null, null, null]
-    ) as [number | null, number | null, number | null];
-    apiData.altitude.forEach((val, i) => {
-      if (val !== undefined && val !== -1) {
-        next[i] = val;
-      }
-    });
-    result.altitude = next;
+    result.altitude = mergeSlots(result.altitude, apiData.altitude, [
+      null,
+      null,
+      null,
+    ]);
   }
 
   // AIRMET boolean flags: only overwrite when the API supplied an explicit
@@ -558,4 +545,22 @@ export function mergeWeatherData(
   if (typeof apiData.mtnObsc === "boolean") result.mtnObsc = apiData.mtnObsc;
 
   return result;
+}
+
+/**
+ * Overlay incoming slot values onto a copy of the existing array, skipping
+ * undefined and the -1 "don't update" sentinel. Never mutates its inputs.
+ */
+function mergeSlots<T extends (number | null)[]>(
+  existing: T | undefined,
+  incoming: T,
+  empty: T
+): T {
+  const next = [...(existing ?? empty)] as T;
+  incoming.forEach((val, i) => {
+    if (val !== undefined && val !== -1) {
+      next[i] = val;
+    }
+  });
+  return next;
 }
