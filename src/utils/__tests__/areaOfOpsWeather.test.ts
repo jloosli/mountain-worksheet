@@ -470,6 +470,30 @@ describe("operating temperature re-derivation notifications (#225)", () => {
     ]);
   });
 
+  it("keeps the snap Caution when the new altitude's temperature equals the stored one", () => {
+    // 15,000 → 17,000 ft: both use the 15,000 ft bucket (-10°C), so the
+    // stored temperature doesn't change, but the value is still snapped.
+    const atTop = { altitude: [4500, 15000, 4490] as Triple, temp: [21, -10, 19] as Triple, wind };
+    const change = describeOpTempChange(
+      atTop,
+      { altitude: [4500, 17000, 4490] },
+      { fetchedOpTemp: 5 }
+    );
+    expect(change).toEqual({
+      value: -10,
+      altitudeFt: 17000,
+      replaced: null,
+      snappedToFt: 15000,
+    });
+    expect(opTempChangeNotifications(at(17000, -10), change)).toEqual([
+      {
+        level: "caution",
+        subject: fieldSubject("temp", 1),
+        message: expect.stringMatching(/17,000 ft is above the winds-aloft temperatures/),
+      },
+    ]);
+  });
+
   it("drops the notifications once the pilot overrides the temperature or changes altitude again", () => {
     const change = describeOpTempChange(
       prev,

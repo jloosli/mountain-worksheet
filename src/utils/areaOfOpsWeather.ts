@@ -91,18 +91,29 @@ export function applyOpTempForAltitudeChange(
     ];
   }
 ): [number | null, number | null, number | null] | null {
-  if (updates.altitude === undefined) return null;
-  if (updates.altitude[1] === prev.altitude?.[1]) return null;
-  if (updates.temp !== undefined) return null;
-
-  const aloftTemps = (updates.wind ?? prev.wind)?.[2];
-  const newOpTemp = interpolateOpTempFromAloft(updates.altitude[1], aloftTemps);
+  const newOpTemp = rederivedOpTemp(prev, updates);
   if (newOpTemp === null) return null;
 
   const curTemp = prev.temp ?? [null, null, null];
   if (newOpTemp === curTemp[1]) return null;
 
   return [curTemp[0] ?? null, newOpTemp, curTemp[2] ?? null];
+}
+
+/**
+ * The operating temperature an altitude change re-derives from the
+ * winds-aloft temperatures, whether or not it differs from the stored one;
+ * null when no re-derivation applies.
+ */
+function rederivedOpTemp(
+  prev: Parameters<typeof applyOpTempForAltitudeChange>[0],
+  updates: Parameters<typeof applyOpTempForAltitudeChange>[1]
+): number | null {
+  if (updates.altitude === undefined) return null;
+  if (updates.altitude[1] === prev.altitude?.[1]) return null;
+  if (updates.temp !== undefined) return null;
+  const aloftTemps = (updates.wind ?? prev.wind)?.[2];
+  return interpolateOpTempFromAloft(updates.altitude[1], aloftTemps);
 }
 
 /**
@@ -121,8 +132,9 @@ export interface OpTempChange {
 }
 
 /**
- * Describes the re-derivation `applyOpTempForAltitudeChange` would apply, or
- * null if none applies. `fetchedOpTemp` is the operating temperature the
+ * Describes the operating temperature an altitude change re-derives, or null
+ * if none applies (`applyOpTempForAltitudeChange` writes it only when it
+ * differs from the stored value). `fetchedOpTemp` is the operating temperature the
  * latest weather fetch applied, and `previous` the re-derivation before this
  * one; a prior value equal to either is not the pilot's entry.
  */
@@ -131,13 +143,16 @@ export function describeOpTempChange(
   updates: Parameters<typeof applyOpTempForAltitudeChange>[1],
   context: { fetchedOpTemp?: number | null; previous?: OpTempChange | null }
 ): OpTempChange | null {
-  const next = applyOpTempForAltitudeChange(prev, updates);
+  // Described even when the stored temperature already equals the new one:
+  // the value may still be snapped to the edge of the winds-aloft table.
+  const value = rederivedOpTemp(prev, updates);
   const altitudeFt = updates.altitude?.[1];
-  if (!next || next[1] === null || typeof altitudeFt !== "number") return null;
+  if (value === null || typeof altitudeFt !== "number") return null;
 
   const prior = prev.temp?.[1] ?? null;
   const replaced =
     prior === null ||
+    prior === value ||
     prior === context.fetchedOpTemp ||
     prior === context.previous?.value
       ? null
@@ -152,7 +167,7 @@ export function describeOpTempChange(
   const snappedToFt =
     altitudeFt < lowest ? lowest : altitudeFt > highest ? highest : null;
 
-  return { value: next[1], altitudeFt, replaced, snappedToFt };
+  return { value, altitudeFt, replaced, snappedToFt };
 }
 
 const formatFt = (ft: number) => `${ft.toLocaleString("en-US")} ft`;
