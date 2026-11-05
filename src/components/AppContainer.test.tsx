@@ -1,12 +1,18 @@
 import { render, screen, fireEvent, waitFor } from "../test-utils/test-utils";
 import AppContainer from "./AppContainer";
 import { fetchWorksheetWeather } from "@/utils/weatherFetch";
+import { useSearchParams } from "next/navigation";
 import {
   useAirportRunwayLookup,
   type RunwayLookup,
 } from "@/utils/useAirportRunways";
 
 jest.mock("@/utils/weatherFetch");
+jest.mock("next/navigation", () => ({
+  useRouter: () => ({ push: jest.fn(), replace: jest.fn(), prefetch: jest.fn() }),
+  usePathname: () => "",
+  useSearchParams: jest.fn(),
+}));
 jest.mock("@/utils/useAirportRunways", () => ({
   useAirportRunwayLookup: jest.fn(),
 }));
@@ -20,8 +26,11 @@ const idleLookup: RunwayLookup = {
   notifications: [],
 };
 
+const mockSearchParams = useSearchParams as jest.Mock;
+
 beforeEach(() => {
   mockRunwayLookup.mockReturnValue(idleLookup);
+  mockSearchParams.mockReturnValue(new URLSearchParams());
 });
 
 describe("AppContainer", () => {
@@ -288,5 +297,21 @@ describe("AppContainer — operating temperature re-derivation (#225)", () => {
     expect(
       screen.getByText(/17,000 ft is above the winds-aloft temperatures/)
     ).toBeInTheDocument();
+  });
+});
+
+describe("AppContainer — malformed link values (#225)", () => {
+  it("clears a malformed value from a shared link and shows a Warning on its field until the pilot fixes it", () => {
+    mockSearchParams.mockReturnValue(new URLSearchParams("weight=heavy"));
+    const { container } = render(<AppContainer />);
+    const weight = screen.getByLabelText(/Aircraft Takeoff Weight/i);
+    expect(weight).toHaveValue(null);
+    expect(screen.getByText(/"heavy" isn't a number/)).toBeInTheDocument();
+    expect(container.querySelector("#step-sortie header")).toHaveTextContent(
+      "1 warning"
+    );
+
+    fireEvent.change(weight, { target: { value: "2300" } });
+    expect(screen.queryByText(/"heavy" isn't a number/)).not.toBeInTheDocument();
   });
 });

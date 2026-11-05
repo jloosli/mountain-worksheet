@@ -28,6 +28,10 @@ import type { WorksheetData } from "@/utils/types";
 import { useTempUnit } from "@/utils/useTempUnit";
 import { useUrlState } from "@/utils/useUrlState";
 import { useAirportRunwayLookup } from "@/utils/useAirportRunways";
+import {
+  deriveUrlNotifications,
+  sanitizeWorksheetUrlState,
+} from "@/utils/worksheetUrlState";
 
 const getDefaultSortieDateTime = () => {
   const now = new Date();
@@ -52,7 +56,7 @@ const getDefaultSortieDateTime = () => {
 export default function AppContainer() {
   const defaultSortieDateTime = getDefaultSortieDateTime();
   const { useFahrenheit, toggleTempUnit } = useTempUnit();
-  const [state, setState] = useUrlState({
+  const initialWorksheet = {
     // Sortie Information
     pilot: "",
     date: defaultSortieDateTime.date,
@@ -94,7 +98,14 @@ export default function AppContainer() {
     // Mountain Qualifications
     mtnEndorse: false,
     mtnCert: false,
-  } as WorksheetData);
+  } as WorksheetData;
+  // Values a shared link coerced or passed through are cleared (or reset)
+  // with a Warning on their field.
+  const [state, setState, urlLoad] = useUrlState(
+    initialWorksheet,
+    (loaded, query) =>
+      sanitizeWorksheetUrlState(loaded, query, initialWorksheet)
+  );
 
   const [weatherLastUpdated, setWeatherLastUpdated] = useState<Date | null>(
     null
@@ -125,8 +136,9 @@ export default function AppContainer() {
       ...deriveNotifications(state, weatherFetch),
       ...runwayLookup.notifications,
       ...opTempChangeNotifications(state, opTempChange),
+      ...deriveUrlNotifications(state, urlLoad),
     ],
-    [state, weatherFetch, runwayLookup.notifications, opTempChange]
+    [state, weatherFetch, runwayLookup.notifications, opTempChange, urlLoad]
   );
 
   const stepStatuses = useMemo(
