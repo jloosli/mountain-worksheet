@@ -15,6 +15,7 @@ import {
   bilinearInterpolateDetailed,
   findExtrapolations,
   findInverseXgivenYandZ,
+  inverseLookupExtrapolation,
   type Extrapolation,
 } from "./interpolation";
 import aircraftData from "@/data/aircraft.json";
@@ -272,6 +273,14 @@ function computeAirportTOLD(
         level: "caution",
         subject,
         message: `${label} ${name} distances are extrapolated beyond the POH table: ${describeExtrapolations(result.extrapolated)}.`,
+      });
+    }
+    if (result && result.tableGaps > 0) {
+      const entries = result.tableGaps === 1 ? "entry" : "entries";
+      notifications.push({
+        level: "caution",
+        subject,
+        message: `${label} ${name} distances fill ${result.tableGaps} blank POH table ${entries} near these conditions with the average of the neighbouring entries.`,
       });
     }
     return [computed(result?.groundRoll ?? null), computed(result?.obstacle50ft ?? null)];
@@ -559,7 +568,17 @@ export function computeClimbViewModel(state: WorksheetData): ClimbViewModel {
     try {
       const pa = findInverseXgivenYandZ(climb.data, alts, climb.temperatures, 300, temp);
       const tableMax = alts[alts.length - 1];
-      return pa > tableMax ? { status: "aboveTable", tableMax } : computed(pa);
+      if (pa > tableMax) return { status: "aboveTable", tableMax };
+      const outside = inverseLookupExtrapolation(climb.data, alts, climb.temperatures, temp, pa);
+      if (outside) {
+        const edge = outside === "below" ? "lowest" : "highest";
+        notifications.push({
+          level: "caution",
+          subject: climbSubject("serviceCeiling", col),
+          message: `${columnLabel(state, col)} service ceiling is extrapolated ${outside} the ${edge} altitude in the POH climb table at ${fmt(temp)}°C.`,
+        });
+      }
+      return computed(pa);
     } catch {
       notifications.push({
         level: "warning",

@@ -234,7 +234,7 @@ describe("computeTOLDViewModel", () => {
   it("names each airport and phase once, with no duplicate notifications", () => {
     // Both airports at 9,000 ft and 45°C: both tables extrapolate on two axes.
     const vm = computeTOLDViewModel(
-      { ...baseState(), altitude: [9000, 10000, 9000], temp: [45, 10, 45], weight: 3000 },
+      { ...baseState(), altitude: [9000, 10000, 9000], temp: [45, 10, 45], weight: 2600 },
       [9000, 10000, 9000],
     );
     const messages = vm.notifications.map((n) => n.message);
@@ -331,6 +331,24 @@ describe("computeTOLDViewModel", () => {
       status: "withheld",
       reason: "needs a supported aircraft type",
     });
+  });
+
+  it("puts a Caution on takeoff distances that averaged blank POH table entries", () => {
+    // C182T 3,100 lb takeoff table is blank at 7,000 ft/40°C, 8,000 ft/30°C and 8,000 ft/40°C.
+    const vm = computeTOLDViewModel(
+      { ...baseState(), weight: 2900, altitude: [7500, 10000, 1000], temp: [35, 10, 20] },
+      [7500, 10000, 1000],
+    );
+    expect(vm.departure.notifications).toEqual([
+      {
+        level: "caution",
+        subject: valueSubject("told.departure.takeoff", "decision"),
+        message:
+          "Departure (KABC) takeoff distances fill 3 blank POH table entries near these conditions with the average of the neighbouring entries.",
+      },
+    ]);
+    expect(vm.departure.values.takeoffGroundRoll.status).toBe("computed");
+    expect(vm.arrival.notifications).toEqual([]);
   });
 
   it("computes values at 0°C and sea level (falsy but valid)", () => {

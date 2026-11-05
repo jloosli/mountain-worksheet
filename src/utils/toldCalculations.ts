@@ -3,6 +3,7 @@ import {
   trilinearInterpolate,
   bilinearInterpolateDetailed,
   findExtrapolations,
+  trilinearTableGaps,
   type Extrapolation,
   type TrilinearInterpolationTable,
 } from "@/utils/interpolation";
@@ -15,6 +16,8 @@ export interface PhaseDistances {
   obstacle50ft: number | null;
   /** POH table axes the lookup went beyond (reported, never logged). */
   extrapolated: Extrapolation[];
+  /** Blank POH table entries filled with the average of their neighbours (a Substitution). */
+  tableGaps: number;
 }
 
 const round = (v: number | null): number | null =>
@@ -57,14 +60,20 @@ export function calculateTakeoffDistances(
       ],
     };
     try {
-      return trilinearInterpolate(table, weight, pressureAltitude, temperature);
+      return {
+        value: trilinearInterpolate(table, weight, pressureAltitude, temperature),
+        gaps: trilinearTableGaps(table, weight, pressureAltitude, temperature),
+      };
     } catch {
-      return null;
+      return { value: null, gaps: 0 };
     }
   };
+  const ground = lookup("groundRoll");
+  const obstacle = lookup("groundRoll50ft");
   return {
-    groundRoll: round(lookup("groundRoll")),
-    obstacle50ft: round(lookup("groundRoll50ft")),
+    groundRoll: round(ground.value),
+    obstacle50ft: round(obstacle.value),
+    tableGaps: Math.max(ground.gaps, obstacle.gaps),
     // Against the full table, not the two-weight bracket used for lookup.
     extrapolated: findExtrapolations([
       { axis: "weight", values: weights, value: weight },
@@ -106,6 +115,8 @@ export function calculateLandingDistances(
     groundRoll: round(ground.value),
     obstacle50ft: round(obstacle.value),
     extrapolated: mergeExtrapolations(ground.extrapolated, obstacle.extrapolated),
+    // Landing uses bilinear lookup, which refuses blank corners rather than averaging.
+    tableGaps: 0,
   };
 }
 

@@ -355,6 +355,7 @@ describe("TOLD Calculations", () => {
         groundRoll: expect.any(Number),
         obstacle50ft: expect.any(Number),
         extrapolated: [],
+        tableGaps: 0,
       });
     });
 
