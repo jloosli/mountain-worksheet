@@ -111,7 +111,7 @@ export function selectAirportWeather(
   const altSubject = fieldSubject("altimeter", slot);
   const requestedIso = requestedTime.toISOString();
   /** One Caution per field a substitution actually filled. */
-  const cautionFilled = (
+  const cautionOnFilledTempAndAltimeter = (
     message: string,
     temp: number | null,
     altimeter: number | null
@@ -185,7 +185,7 @@ export function selectAirportWeather(
     };
   }
 
-  // 3) Nearest TAF period as fallback
+  // 3) Nearest TAF period as a substitution
   const closest = findClosestFcst(fcsts, requestedTime);
   if (closest) {
     let temp = fcstTempValue(closest.fcst, requestedTime);
@@ -195,7 +195,7 @@ export function selectAirportWeather(
       closest.fcst.altim != null
         ? Math.round(closest.fcst.altim * 100) / 100
         : metarAltimeterInHg(metar?.altim);
-    cautionFilled(
+    cautionOnFilledTempAndAltimeter(
       `${airportId}: forecast unavailable for ${requestedIso}; using nearest TAF period (Δt = ${fmtDelta(
         closest.deltaMs
       )})`,
@@ -210,7 +210,7 @@ export function selectAirportWeather(
     };
   }
 
-  // 4) Stale METAR as last-resort fallback (better than nothing for airports
+  // 4) Stale METAR as a last-resort substitution (better than nothing for airports
   //    without TAF service — small / uncontrolled fields).
   if (metar != null && (metar.temp != null || metar.altim != null)) {
     const delta = Number.isFinite(obsMs)
@@ -222,8 +222,8 @@ export function selectAirportWeather(
         : "no usable TAF forecast period";
     const temp = metar.temp != null ? Math.round(metar.temp) : null;
     const altimeter = metarAltimeterInHg(metar.altim);
-    cautionFilled(
-      `${airportId}: ${reason}; using current METAR observation as fallback (Δt = ${delta})`,
+    cautionOnFilledTempAndAltimeter(
+      `${airportId}: ${reason}; substituting the current METAR observation (Δt = ${delta})`,
       temp,
       altimeter
     );

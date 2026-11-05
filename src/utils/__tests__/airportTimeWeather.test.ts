@@ -173,6 +173,22 @@ describe("selectAirportWeather", () => {
     ]);
   });
 
+  it("words the stale-METAR Caution as a substitution, not a fallback", () => {
+    const ktvyMetar: METARResponse = {
+      ...baseMetar,
+      icaoId: "KTVY",
+      temp: 19,
+      altim: 1022.4,
+      obsTime: Math.floor(Date.parse("2026-05-10T15:22:00Z") / 1000),
+    };
+    const requested = new Date("2026-05-10T20:30:00Z");
+    const result = selectAirportWeather(ktvyMetar, undefined, requested, "KTVY");
+    for (const n of result.notifications) {
+      expect(n.message).not.toMatch(/fallback/i);
+      expect(n.message).toMatch(/substitut/i);
+    }
+  });
+
   it("returns 'none' only when no METAR data exists either", () => {
     const requested = new Date("2026-05-12T15:00:00Z");
     const result = selectAirportWeather(undefined, undefined, requested, "KSLC");
