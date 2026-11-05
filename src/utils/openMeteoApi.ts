@@ -162,16 +162,8 @@ export function interpolateAtAltitude(
   const lowerHeight = s.heightsFtByLevel[lowerLevel];
   const upperHeight = s.heightsFtByLevel[upperLevel];
 
-  // Duplicate heights would produce a 0/0 fraction (NaN) that propagates into
-  // worksheet wind/temp fields. Snap to the lower level instead.
-  if (upperHeight === lowerHeight) {
-    return {
-      temp: roundFinite(s.tempByLevel[lowerLevel]),
-      wspd: roundFinite(s.wspdByLevel[lowerLevel]),
-      wdir: roundFinite(s.wdirByLevel[lowerLevel]),
-      notes,
-    };
-  }
+  // No bracket has zero width here: a target equal to a duplicated height
+  // matches the bracket below the pair first, or the lowest/highest snap.
 
   const f = (targetFt - lowerHeight) / (upperHeight - lowerHeight);
 
