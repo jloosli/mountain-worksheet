@@ -22,7 +22,7 @@ import {
 import type { WorksheetData } from "@/utils/types";
 import { useTempUnit } from "@/utils/useTempUnit";
 import { useUrlState } from "@/utils/useUrlState";
-import { useAirportRunways } from "@/utils/useAirportRunways";
+import { useAirportRunwayLookup } from "@/utils/useAirportRunways";
 
 const getDefaultSortieDateTime = () => {
   const now = new Date();
@@ -101,7 +101,7 @@ export default function AppContainer() {
     null
   );
 
-  const airportRunways = useAirportRunways(state.airport);
+  const runwayLookup = useAirportRunwayLookup(state.airport);
 
   const [overlay, setOverlay] = useState<"instructions" | "checklist" | null>(
     null
@@ -111,8 +111,11 @@ export default function AppContainer() {
   const handleCloseOverlay = () => setOverlay(null);
 
   const notifications = useMemo(
-    () => deriveNotifications(state, weatherFetch),
-    [state, weatherFetch]
+    () => [
+      ...deriveNotifications(state, weatherFetch),
+      ...runwayLookup.notifications,
+    ],
+    [state, weatherFetch, runwayLookup.notifications]
   );
 
   const stepStatuses = useMemo(
@@ -227,7 +230,8 @@ export default function AppContainer() {
             state={state}
             onStateUpdate={handleUpdate}
             useFahrenheit={useFahrenheit}
-            airportRunways={airportRunways}
+            airportRunways={runwayLookup.runways}
+            runwayStatus={runwayLookup.status}
             notifications={notifications}
             stepStatuses={stepStatuses}
           />

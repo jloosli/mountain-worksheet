@@ -5,6 +5,7 @@ import AirportCard from "@/components/AirportCard";
 import { isApiPopulatedData } from "@/utils/weatherDataMapper";
 import { celciusToFarenheit, farenheitToCelcius } from "@/utils/formulas";
 import type { RunwayOption, WorksheetData } from "@/utils/types";
+import type { RunwayLookupStatus } from "@/utils/useAirportRunways";
 import InlineNotifications, {
   notificationA11yProps,
 } from "@/components/InlineNotifications";
@@ -18,6 +19,8 @@ interface WeatherSectionProps {
   state: WorksheetData;
   onUpdate: (data: Partial<WorksheetData>) => void;
   airportRunways: [RunwayOption[] | null, RunwayOption[] | null];
+  /** Where each airport's runway lookup stands (default: idle). */
+  runwayStatus?: [RunwayLookupStatus, RunwayLookupStatus];
   useFahrenheit?: boolean;
   /** All notifications in force; each is shown next to its Subject. */
   notifications?: readonly Notification[];
@@ -29,6 +32,7 @@ export default function WeatherSection({
   state,
   onUpdate,
   airportRunways,
+  runwayStatus = ["idle", "idle"],
   useFahrenheit = false,
   notifications = [],
 }: WeatherSectionProps) {
@@ -144,6 +148,7 @@ export default function WeatherSection({
             onTemperatureChange={(v) => handleAirportTempChange(0, v)}
             onAltimeterChange={(v) => handleAirportAltimeterChange(0, v)}
             runways={airportRunways[0]}
+            runwayStatus={runwayStatus[0]}
             selectedRunwayLength={state.rwy[0]}
             onRunwaySelect={(length) => handleRunwaySelect(0, length)}
           />
@@ -170,6 +175,7 @@ export default function WeatherSection({
             onTemperatureChange={(v) => handleAirportTempChange(2, v)}
             onAltimeterChange={(v) => handleAirportAltimeterChange(2, v)}
             runways={airportRunways[1]}
+            runwayStatus={runwayStatus[1]}
             selectedRunwayLength={state.rwy[1]}
             onRunwaySelect={(length) => handleRunwaySelect(1, length)}
           />

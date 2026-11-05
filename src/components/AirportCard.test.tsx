@@ -70,21 +70,32 @@ describe("AirportCard — departure variant", () => {
     expect(select).toHaveValue("5500");
   });
 
-  it("renders 'Fetch weather to load runways' placeholder when runways is null", () => {
-    render(
-      <AirportCard
-        {...baseProps}
-        variant="departure"
-        airportCode="KOGD"
-        fieldElev={4473}
-        runways={null}
-        selectedRunwayLength={null}
-        onRunwaySelect={noOp}
-      />
-    );
-    expect(screen.queryByRole("combobox", { name: /Runway/i })).not.toBeInTheDocument();
-    expect(screen.getByText(/Fetch weather to load runways/i)).toBeInTheDocument();
-  });
+  it.each([
+    ["idle", /Enter an airport ID to load runways/i],
+    ["pending", /Loading runways/i],
+    ["failed", /Runway lookup failed/i],
+    ["no-runways", /No runway data for KOGD/i],
+  ] as const)(
+    "says why there is no runway list when the lookup is %s",
+    (runwayStatus, text) => {
+      render(
+        <AirportCard
+          {...baseProps}
+          variant="departure"
+          airportCode="KOGD"
+          fieldElev={4473}
+          runways={null}
+          runwayStatus={runwayStatus}
+          selectedRunwayLength={null}
+          onRunwaySelect={noOp}
+        />
+      );
+      expect(
+        screen.queryByRole("combobox", { name: /Runway/i })
+      ).not.toBeInTheDocument();
+      expect(screen.getByText(text)).toBeInTheDocument();
+    }
+  );
 
   it("calls onRunwaySelect with the chosen runway length", () => {
     const onRunwaySelect = jest.fn();
@@ -134,11 +145,12 @@ describe("AirportCard — departure variant", () => {
         variant="departure"
         airportCode="KOGD"
         runways={runways}
+        runwayStatus="found"
         selectedRunwayLength={null}
       />
     );
     expect(screen.queryByRole("combobox", { name: /Runway/i })).not.toBeInTheDocument();
-    expect(screen.getByText(/Fetch weather to load runways/i)).toBeInTheDocument();
+    expect(screen.getByText(/No runway data for KOGD/i)).toBeInTheDocument();
   });
 
   it("calls onTemperatureChange and onAltimeterChange on input", () => {

@@ -1,11 +1,28 @@
 import { render, screen, fireEvent, waitFor } from "../test-utils/test-utils";
 import AppContainer from "./AppContainer";
 import { fetchWorksheetWeather } from "@/utils/weatherFetch";
+import {
+  useAirportRunwayLookup,
+  type RunwayLookup,
+} from "@/utils/useAirportRunways";
 
 jest.mock("@/utils/weatherFetch");
 jest.mock("@/utils/useAirportRunways", () => ({
-  useAirportRunways: () => [null, null],
+  useAirportRunwayLookup: jest.fn(),
 }));
+
+const mockRunwayLookup = useAirportRunwayLookup as jest.MockedFunction<
+  typeof useAirportRunwayLookup
+>;
+const idleLookup: RunwayLookup = {
+  runways: [null, null],
+  status: ["idle", "idle"],
+  notifications: [],
+};
+
+beforeEach(() => {
+  mockRunwayLookup.mockReturnValue(idleLookup);
+});
 
 describe("AppContainer", () => {
   it("renders without crashing", () => {
@@ -179,5 +196,29 @@ describe("AppContainer — notifications (#221)", () => {
     expect(screen.getByRole("button", { name: /Print briefing/i })).toBeEnabled();
     fireEvent.change(arrivalTemperature(), { target: { value: "12" } });
     expect(arrivalTemperature()).toHaveValue(12);
+  });
+});
+
+describe("AppContainer — runway lookup (#225)", () => {
+  it("shows a failed runway lookup as a Warning on the runway and counts it on the weather step", () => {
+    mockRunwayLookup.mockReturnValue({
+      runways: [null, null],
+      status: ["failed", "idle"],
+      notifications: [
+        {
+          level: "warning",
+          subject: { kind: "field", field: "rwy", index: 0 },
+          message: "Couldn't look up runways for KDEN (network down)",
+        },
+      ],
+    });
+    const { container } = render(<AppContainer />);
+    expect(
+      screen.getByText(/Couldn't look up runways for KDEN \(network down\)/)
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Runway lookup failed/)).toBeInTheDocument();
+    expect(container.querySelector("#step-weather header")).toHaveTextContent(
+      "1 warning"
+    );
   });
 });

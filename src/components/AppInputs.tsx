@@ -12,11 +12,13 @@ import {
   type StepStatusesResult,
 } from "@/utils/stepStatuses";
 import type { RunwayOption, WorksheetData } from "@/utils/types";
+import type { RunwayLookupStatus } from "@/utils/useAirportRunways";
 
 interface WorksheetFormProps {
   state: WorksheetData;
   onStateUpdate: (updates: Partial<WorksheetData>) => void;
   airportRunways: [RunwayOption[] | null, RunwayOption[] | null];
+  runwayStatus?: [RunwayLookupStatus, RunwayLookupStatus];
   useFahrenheit?: boolean;
   /** All notifications in force; each is shown next to its Subject. */
   notifications?: readonly Notification[];
@@ -28,6 +30,7 @@ export default function AppInputs({
   state,
   onStateUpdate,
   airportRunways,
+  runwayStatus,
   useFahrenheit,
   notifications = [],
   stepStatuses,
@@ -73,6 +76,7 @@ export default function AppInputs({
           state={state}
           onUpdate={handleUpdate}
           airportRunways={airportRunways}
+          runwayStatus={runwayStatus}
           useFahrenheit={useFahrenheit}
           notifications={notifications}
         />
