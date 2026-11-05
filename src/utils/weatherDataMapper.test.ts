@@ -869,6 +869,21 @@ describe("Weather Data Mapper", () => {
       // arr at 18:00 → TAF period 18-21 → temp 25
       expect(result.data.temp?.[2]).toBe(25);
     });
+
+    it("names the requested airport when it has no METAR or TAF (issue #220)", () => {
+      const result = mapAirportSpecificWeatherData([], [], {
+        flightDate: "2026-05-12",
+        flightTime: "15:00",
+        durationHours: 1,
+        departureAirport: "KPVU",
+        arrivalAirport: "BOI",
+      });
+
+      expect(result.warnings).toContain(
+        "BOI: no METAR or TAF data available for requested time 2026-05-12T16:00:00.000Z"
+      );
+      expect(result.warnings.some((w) => w.startsWith("airport:"))).toBe(false);
+    });
   });
 
   describe("Constants", () => {

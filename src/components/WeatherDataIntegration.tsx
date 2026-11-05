@@ -37,7 +37,7 @@ interface WeatherDataIntegrationProps {
   onDataUpdate: (data: Partial<WorksheetData>) => void;
   onTimestampUpdate?: (timestamp: Date) => void; // Callback to pass timestamp to parent
   disabled?: boolean;
-  hideBox?: boolean; // If true, don't render the box UI, only modals
+  hideBox?: boolean; // If true, don't render the status box UI (warnings and modals still render)
   renderButton?: (props: {
     onClick: () => void;
     disabled: boolean;
@@ -421,11 +421,15 @@ export default function WeatherDataIntegration({
               </button>
             </div>
           </div>
-          <WeatherWarningsPanel warnings={apiState.warnings} />
         </>
       )}
 
       {renderButton && renderButton(buttonProps)}
+
+      {/* Width-matched to the ActionBar; stopgap until the notification model (#219) replaces this panel. */}
+      <div className="mx-auto w-full max-w-5xl px-4 md:px-6 print:hidden">
+        <WeatherWarningsPanel warnings={apiState.warnings} />
+      </div>
 
       {/* Loading Modal */}
       <WeatherLoadingModal

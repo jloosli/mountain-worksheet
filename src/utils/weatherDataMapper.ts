@@ -83,7 +83,7 @@ export function mapAirportSpecificWeatherData(
     const code = airportCode.toUpperCase();
     const metar = safeMetar.find((m) => m.icaoId?.toUpperCase() === code);
     const taf = safeTaf.find((t) => t.icaoId?.toUpperCase() === code);
-    const sel = selectAirportWeather(metar, taf, requestedTime);
+    const sel = selectAirportWeather(metar, taf, requestedTime, code);
     warnings.push(...sel.warnings);
     if (sel.temp !== null) {
       const temp = sel.temp;
