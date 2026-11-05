@@ -252,9 +252,17 @@ export function buildAreaOfOpsWeather(opts: BuildOptions): AreaOfOpsWeather {
     idx
   ];
   const opAltimeter =
-    typeof pressureMsl === "number"
+    typeof pressureMsl === "number" && Number.isFinite(pressureMsl)
       ? Math.round(pressureMsl * HPA_TO_INHG * 100) / 100
       : null;
+  if (opAltimeter === null) {
+    notifications.push({
+      level: "warning",
+      subject: fieldSubject("altimeter", 1),
+      message:
+        "Operating area forecast had no sea-level pressure; enter the operating altimeter manually",
+    });
+  }
 
   return {
     position,

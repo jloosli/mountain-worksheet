@@ -120,6 +120,25 @@ describe("buildAreaOfOpsWeather", () => {
     expect(r.opAltimeter).toBeCloseTo(29.97, 2);
   });
 
+  it("raises a Warning on the operating altimeter when the forecast has no sea-level pressure", () => {
+    const { pressure_msl: _omit, ...hourly } = mockRaw.hourly;
+    void _omit;
+    const r = buildAreaOfOpsWeather({
+      position: [40.5, -112.0],
+      depAirportLatLon: null,
+      arrAirportLatLon: null,
+      midTime: new Date("2026-05-12T16:00:00Z"),
+      opAltitudeFt: 9000,
+      raw: { hourly: hourly as OpenMeteoPointForecast["hourly"] },
+    });
+    expect(r.opAltimeter).toBeNull();
+    expect(r.notifications).toContainEqual({
+      level: "warning",
+      subject: fieldSubject("altimeter", 1),
+      message: expect.stringMatching(/sea-level pressure/i),
+    });
+  });
+
   it("returns null op fields and warning when no airport coords either", () => {
     const r = buildAreaOfOpsWeather({
       position: [null, null],

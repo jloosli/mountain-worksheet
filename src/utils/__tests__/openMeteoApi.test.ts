@@ -162,6 +162,35 @@ describe("openMeteoApi", () => {
       expect(r.wdir).toBeNull();
     });
 
+    it("raises a Warning note naming each component the forecast didn't provide", () => {
+      const partial = {
+        ...sample,
+        wspdByLevel: { ...sample.wspdByLevel, 700: NaN },
+      };
+      const r = interpolateAtAltitude(9000, partial);
+      expect(r.wspd).toBeNull();
+      expect(r.temp).not.toBeNull();
+      expect(r.notes).toEqual([
+        {
+          level: "warning",
+          message: expect.stringMatching(/no wind speed at 9,000 ft/i),
+        },
+      ]);
+    });
+
+    it("names every missing component in one Warning note", () => {
+      const partial = {
+        ...sample,
+        tempByLevel: { ...sample.tempByLevel, 850: NaN, 700: NaN },
+        wspdByLevel: { ...sample.wspdByLevel, 850: NaN, 700: NaN },
+        wdirByLevel: { ...sample.wdirByLevel, 850: NaN, 700: NaN },
+      };
+      const r = interpolateAtAltitude(9000, partial);
+      expect(r.notes).toHaveLength(1);
+      expect(r.notes[0].level).toBe("warning");
+      expect(r.notes[0].message).toMatch(/wind direction, wind speed and temperature/);
+    });
+
     it("does not divide by zero when two levels share a geopotential height", () => {
       const collapsed = {
         ...sample,

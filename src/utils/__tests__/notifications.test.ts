@@ -118,17 +118,36 @@ describe("deriveNotifications", () => {
     expect(deriveNotifications(state, fetchFor([warning]))).toEqual([]);
   });
 
-  it("drops a winds-aloft Warning once any cell in its column holds a value", () => {
+  it("keeps a winds-aloft column Warning until every cell in the column holds a value", () => {
     const warning: Notification = {
       level: "warning",
       subject: fieldSubject("wind", 2),
       message: "no data at 9,000 ft",
     };
-    const filled = base.wind.map((row) => [...row]) as WorksheetData["wind"];
-    filled[1][2] = 15;
+    const partly = base.wind.map((row) => [...row]) as WorksheetData["wind"];
+    partly[1][2] = 15;
+    const filled = partly.map((row) => [...row]) as WorksheetData["wind"];
+    filled[0][2] = 270;
+    filled[2][2] = -4;
     expect(deriveNotifications(base, fetchFor([warning]))).toEqual([warning]);
     expect(
+      deriveNotifications({ ...base, wind: partly }, fetchFor([warning]))
+    ).toEqual([warning]);
+    expect(
       deriveNotifications({ ...base, wind: filled }, fetchFor([warning]))
+    ).toEqual([]);
+  });
+
+  it("drops a whole-table winds-aloft Warning once any cell holds a value", () => {
+    const warning: Notification = {
+      level: "warning",
+      subject: fieldSubject("wind"),
+      message: "winds aloft couldn't be fetched",
+    };
+    const partly = base.wind.map((row) => [...row]) as WorksheetData["wind"];
+    partly[1][2] = 15;
+    expect(
+      deriveNotifications({ ...base, wind: partly }, fetchFor([warning]))
     ).toEqual([]);
   });
 

@@ -194,12 +194,30 @@ export function interpolateAtAltitude(
     Number.isFinite(wdirLow) && Number.isFinite(wdirHigh)
       ? circularInterp(wdirLow, wdirHigh, f)
       : NaN;
-  return {
+  const result = {
     temp: roundFinite(temp),
     wspd: roundFinite(wspd),
     wdir: roundFinite(wdir),
-    notes,
   };
+  const missing = [
+    result.wdir === null && "wind direction",
+    result.wspd === null && "wind speed",
+    result.temp === null && "temperature",
+  ].filter((m): m is string => typeof m === "string");
+  if (missing.length > 0) {
+    notes.push({
+      level: "warning",
+      message: `Forecast had no ${joinList(missing)} at ${targetFt.toLocaleString(
+        "en-US"
+      )} ft; enter ${missing.length > 1 ? "them" : "it"} manually`,
+    });
+  }
+  return { ...result, notes };
+}
+
+function joinList(items: string[]): string {
+  if (items.length <= 1) return items.join("");
+  return `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
 }
 
 export function buildSampleAtTime(
