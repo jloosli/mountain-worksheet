@@ -89,15 +89,17 @@ describe("openMeteoApi", () => {
     it("snaps to highest level and warns when target above range", () => {
       const r = interpolateAtAltitude(20000, sample);
       expect(r.temp).toBe(-15); // 500 hPa value
-      expect(r.warnings.length).toBeGreaterThan(0);
-      expect(r.warnings[0]).toMatch(/above/i);
+      expect(r.notes).toEqual([
+        { level: "caution", message: expect.stringMatching(/above/i) },
+      ]);
     });
 
     it("snaps to lowest level and warns when target below range", () => {
       const r = interpolateAtAltitude(1000, sample);
       expect(r.temp).toBe(20); // 925 hPa value
-      expect(r.warnings.length).toBeGreaterThan(0);
-      expect(r.warnings[0]).toMatch(/below/i);
+      expect(r.notes).toEqual([
+        { level: "caution", message: expect.stringMatching(/below/i) },
+      ]);
     });
 
     it("converts metres to feet via M_TO_FT", () => {

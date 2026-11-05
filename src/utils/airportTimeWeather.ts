@@ -3,6 +3,7 @@ import type {
   TAFForecast,
   TAFResponse,
 } from "./aviationWeatherApi";
+import { fieldSubject, type Notification } from "./notifications";
 
 const HPA_TO_INHG = 0.0295299;
 const METAR_FRESHNESS_MS = 90 * 60 * 1000;
@@ -18,8 +19,12 @@ export interface AirportWeatherAtTime {
   temp: number | null;
   altimeter: number | null;
   source: AirportWeatherSource;
-  warnings: string[];
+  /** Subjects are `temp[slot]` / `altimeter[slot]`. */
+  notifications: Notification[];
 }
+
+/** Worksheet slot an airport fills: 0 = departure, 1 = operating, 2 = arrival. */
+export type AirportSlot = 0 | 1 | 2;
 
 function parseObsTimeMs(obsTime: string | number | undefined): number {
   // Live API returns Unix epoch seconds (number); some fixtures use ISO strings.
@@ -98,10 +103,24 @@ export function selectAirportWeather(
   metar: METARResponse | undefined,
   taf: TAFResponse | undefined,
   requestedTime: Date,
-  airportId: string
+  airportId: string,
+  slot: AirportSlot = 0
 ): AirportWeatherAtTime {
-  const warnings: string[] = [];
+  const notifications: Notification[] = [];
+  const tempSubject = fieldSubject("temp", slot);
+  const altSubject = fieldSubject("altimeter", slot);
   const requestedIso = requestedTime.toISOString();
+  /** One Caution per field a substitution actually filled. */
+  const cautionFilled = (
+    message: string,
+    temp: number | null,
+    altimeter: number | null
+  ) => {
+    if (temp !== null)
+      notifications.push({ level: "caution", subject: tempSubject, message });
+    if (altimeter !== null)
+      notifications.push({ level: "caution", subject: altSubject, message });
+  };
 
   // 1) METAR if fresh
   const obsMs = parseObsTimeMs(metar?.obsTime);
@@ -110,16 +129,18 @@ export function selectAirportWeather(
     Number.isFinite(obsMs) &&
     Math.abs(requestedTime.getTime() - obsMs) <= METAR_FRESHNESS_MS;
   if (metar?.obsTime != null && !Number.isFinite(obsMs)) {
-    warnings.push(
-      `${metar.icaoId}: obsTime "${metar.obsTime}" could not be parsed`
-    );
+    notifications.push({
+      level: "advisory",
+      subject: tempSubject,
+      message: `${metar.icaoId}: observation time "${metar.obsTime}" could not be parsed; observation not used as current`,
+    });
   }
   if (metarFresh && metar) {
     return {
       temp: metar.temp != null ? Math.round(metar.temp) : null,
       altimeter: metarAltimeterInHg(metar.altim),
       source: "metar",
-      warnings,
+      notifications,
     };
   }
 
@@ -134,42 +155,58 @@ export function selectAirportWeather(
       const delta = Number.isFinite(tempObsMs)
         ? fmtDelta(Math.abs(requestedTime.getTime() - tempObsMs))
         : "unknown";
-      warnings.push(
-        `${metar.icaoId}: forecast period has no temperature; using current observation (Δt = ${delta})`
-      );
+      notifications.push({
+        level: "caution",
+        subject: tempSubject,
+        message: `${metar.icaoId}: forecast period has no temperature; using current observation (Δt = ${delta})`,
+      });
     }
     // TAF fcst.altim is already inHg (unlike METARResponse.altim, which is hPa — see metarAltimeterInHg).
     // Use `!= null` rather than `!== undefined` because the live API returns
     // `altim: null` (not undefined) when the period has no altimeter forecast.
+    let altimeter: number | null;
+    if (covering.altim != null) {
+      altimeter = Math.round(covering.altim * 100) / 100;
+    } else {
+      altimeter = metarAltimeterInHg(metar?.altim);
+      if (altimeter !== null) {
+        notifications.push({
+          level: "caution",
+          subject: altSubject,
+          message: `${airportId}: forecast period has no altimeter; using current observation`,
+        });
+      }
+    }
     return {
       temp: temp != null ? Math.round(temp) : null,
-      altimeter:
-        covering.altim != null
-          ? Math.round(covering.altim * 100) / 100
-          : metarAltimeterInHg(metar?.altim),
+      altimeter,
       source: "taf-fcst",
-      warnings,
+      notifications,
     };
   }
 
   // 3) Nearest TAF period as fallback
   const closest = findClosestFcst(fcsts, requestedTime);
   if (closest) {
-    warnings.push(
-      `${airportId}: forecast unavailable for ${requestedIso}; using nearest TAF period (Δt = ${fmtDelta(
-        closest.deltaMs
-      )})`
-    );
     let temp = fcstTempValue(closest.fcst, requestedTime);
     if (temp == null) temp = metar?.temp ?? undefined;
+    const roundedTemp = temp != null ? Math.round(temp) : null;
+    const altimeter =
+      closest.fcst.altim != null
+        ? Math.round(closest.fcst.altim * 100) / 100
+        : metarAltimeterInHg(metar?.altim);
+    cautionFilled(
+      `${airportId}: forecast unavailable for ${requestedIso}; using nearest TAF period (Δt = ${fmtDelta(
+        closest.deltaMs
+      )})`,
+      roundedTemp,
+      altimeter
+    );
     return {
-      temp: temp != null ? Math.round(temp) : null,
-      altimeter:
-        closest.fcst.altim != null
-          ? Math.round(closest.fcst.altim * 100) / 100
-          : metarAltimeterInHg(metar?.altim),
+      temp: roundedTemp,
+      altimeter,
       source: "taf-nearest",
-      warnings,
+      notifications,
     };
   }
 
@@ -183,20 +220,21 @@ export function selectAirportWeather(
       taf == null
         ? "no TAF available"
         : "no usable TAF forecast period";
-    warnings.push(
-      `${airportId}: ${reason}; using current METAR observation as fallback (Δt = ${delta})`
+    const temp = metar.temp != null ? Math.round(metar.temp) : null;
+    const altimeter = metarAltimeterInHg(metar.altim);
+    cautionFilled(
+      `${airportId}: ${reason}; using current METAR observation as fallback (Δt = ${delta})`,
+      temp,
+      altimeter
     );
-    return {
-      temp: metar.temp != null ? Math.round(metar.temp) : null,
-      altimeter: metarAltimeterInHg(metar.altim),
-      source: "metar-stale",
-      warnings,
-    };
+    return { temp, altimeter, source: "metar-stale", notifications };
   }
 
   // 5) Nothing
-  warnings.push(
-    `${airportId}: no METAR or TAF data available for requested time ${requestedIso}`
+  const message = `${airportId}: no METAR or TAF data available for requested time ${requestedIso}`;
+  notifications.push(
+    { level: "warning", subject: tempSubject, message },
+    { level: "warning", subject: altSubject, message }
   );
-  return { temp: null, altimeter: null, source: "none", warnings };
+  return { temp: null, altimeter: null, source: "none", notifications };
 }

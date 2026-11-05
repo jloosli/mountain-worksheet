@@ -1,3 +1,5 @@
+import type { NotificationDraft } from "./notifications";
+
 export const PRESSURE_LEVELS = [925, 900, 850, 800, 700, 600, 500] as const;
 export type PressureLevel = (typeof PRESSURE_LEVELS)[number];
 
@@ -74,7 +76,8 @@ export interface InterpolatedAloft {
   temp: number | null;
   wspd: number | null;
   wdir: number | null;
-  warnings: string[];
+  /** Caveats about this altitude; the caller attaches the Subject. */
+  notes: NotificationDraft[];
 }
 
 function circularInterp(low: number, high: number, f: number): number {
@@ -93,7 +96,7 @@ export function interpolateAtAltitude(
   targetFt: number,
   s: InterpolationSample
 ): InterpolatedAloft {
-  const warnings: string[] = [];
+  const notes: NotificationDraft[] = [];
   // Only consider levels with a finite geopotential height; missing heights
   // would otherwise collapse to 0 ft and pollute bracket selection.
   const sortedLevels = [...PRESSURE_LEVELS]
@@ -101,8 +104,11 @@ export function interpolateAtAltitude(
     .sort((a, b) => s.heightsFtByLevel[a] - s.heightsFtByLevel[b]);
 
   if (sortedLevels.length === 0) {
-    warnings.push("No pressure-level heights available for interpolation");
-    return { temp: null, wspd: null, wdir: null, warnings };
+    notes.push({
+      level: "warning",
+      message: "No pressure-level heights available for interpolation",
+    });
+    return { temp: null, wspd: null, wdir: null, notes };
   }
 
   const lowest = sortedLevels[0];
@@ -110,32 +116,34 @@ export function interpolateAtAltitude(
 
   if (targetFt <= s.heightsFtByLevel[lowest]) {
     if (targetFt < s.heightsFtByLevel[lowest]) {
-      warnings.push(
-        `Target altitude ${targetFt} ft below available pressure-level range (${Math.round(
+      notes.push({
+        level: "caution",
+        message: `Target altitude ${targetFt} ft below available pressure-level range (${Math.round(
           s.heightsFtByLevel[lowest]
-        )} ft); snapping to lowest level`
-      );
+        )} ft); snapping to lowest level`,
+      });
     }
     return {
       temp: roundFinite(s.tempByLevel[lowest]),
       wspd: roundFinite(s.wspdByLevel[lowest]),
       wdir: roundFinite(s.wdirByLevel[lowest]),
-      warnings,
+      notes,
     };
   }
   if (targetFt >= s.heightsFtByLevel[highest]) {
     if (targetFt > s.heightsFtByLevel[highest]) {
-      warnings.push(
-        `Target altitude ${targetFt} ft above available pressure-level range (${Math.round(
+      notes.push({
+        level: "caution",
+        message: `Target altitude ${targetFt} ft above available pressure-level range (${Math.round(
           s.heightsFtByLevel[highest]
-        )} ft); snapping to highest level`
-      );
+        )} ft); snapping to highest level`,
+      });
     }
     return {
       temp: roundFinite(s.tempByLevel[highest]),
       wspd: roundFinite(s.wspdByLevel[highest]),
       wdir: roundFinite(s.wdirByLevel[highest]),
-      warnings,
+      notes,
     };
   }
 
@@ -161,7 +169,7 @@ export function interpolateAtAltitude(
       temp: roundFinite(s.tempByLevel[lowerLevel]),
       wspd: roundFinite(s.wspdByLevel[lowerLevel]),
       wdir: roundFinite(s.wdirByLevel[lowerLevel]),
-      warnings,
+      notes,
     };
   }
 
@@ -190,7 +198,7 @@ export function interpolateAtAltitude(
     temp: roundFinite(temp),
     wspd: roundFinite(wspd),
     wdir: roundFinite(wdir),
-    warnings,
+    notes,
   };
 }
 

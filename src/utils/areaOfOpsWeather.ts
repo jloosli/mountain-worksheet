@@ -5,6 +5,12 @@ import {
   HPA_TO_INHG,
   type OpenMeteoPointForecast,
 } from "./openMeteoApi";
+import {
+  fieldSubject,
+  stepSubject,
+  withSubject,
+  type Notification,
+} from "./notifications";
 
 export const TARGET_ALTITUDES_FT = [3000, 6000, 9000, 12000, 15000];
 
@@ -111,7 +117,7 @@ export interface AreaOfOpsWeather {
   };
   opTemp: number | null;
   opAltimeter: number | null;
-  warnings: string[];
+  notifications: Notification[];
 }
 
 export function greatCircleMidpoint(
@@ -163,7 +169,7 @@ function emptyWindsAloft() {
 }
 
 export function buildAreaOfOpsWeather(opts: BuildOptions): AreaOfOpsWeather {
-  const warnings: string[] = [];
+  const notifications: Notification[] = [];
 
   let position: [number, number] | null = null;
   let positionSource: AreaOfOpsPositionSource = "none";
@@ -177,43 +183,47 @@ export function buildAreaOfOpsWeather(opts: BuildOptions): AreaOfOpsWeather {
       opts.arrAirportLatLon
     );
     positionSource = "midpoint";
-    warnings.push(
-      "Operating area position not entered; using midpoint of departure↔arrival airports"
-    );
+    notifications.push({
+      level: "caution",
+      subject: stepSubject("weather"),
+      message:
+        "Operating area position not entered; winds aloft and operating conditions use the midpoint of the departure↔arrival airports",
+    });
   } else {
-    warnings.push(
-      "Operating area weather skipped: position and airport coordinates unavailable"
-    );
     return {
       position: null,
       positionSource,
       windsAloft: emptyWindsAloft(),
       opTemp: null,
       opAltimeter: null,
-      warnings,
+      notifications: [noPositionWarning()],
     };
   }
 
   const { idx, deltaMs } = pickClosestTimeIdx(opts.raw, opts.midTime);
   if (idx < 0) {
-    warnings.push("Open-Meteo response had no hourly times");
     return {
       position,
       positionSource,
       windsAloft: emptyWindsAloft(),
       opTemp: null,
       opAltimeter: null,
-      warnings,
+      notifications: [
+        ...notifications,
+        ...areaOfOpsUnavailable("Open-Meteo response had no hourly times"),
+      ],
     };
   }
   if (deltaMs > TIME_SNAP_THRESHOLD_MS) {
-    warnings.push(
-      `Operating area forecast time snapped to ${
+    notifications.push({
+      level: "caution",
+      subject: stepSubject("weather"),
+      message: `Operating area forecast time snapped to ${
         opts.raw.hourly.time[idx]
       }Z (Δt = ${Math.round(deltaMs / 60000)} min from requested ${opts.midTime
         .toISOString()
-        .slice(0, 16)}Z)`
-    );
+        .slice(0, 16)}Z)`,
+    });
   }
 
   const sample = buildSampleAtTime(opts.raw, idx);
@@ -224,14 +234,18 @@ export function buildAreaOfOpsWeather(opts: BuildOptions): AreaOfOpsWeather {
     wind.direction[i] = r.wdir;
     wind.speed[i] = r.wspd;
     wind.temp[i] = r.temp;
-    warnings.push(...r.warnings);
+    notifications.push(
+      ...r.notes.map((n) => withSubject(n, fieldSubject("wind", i)))
+    );
   });
 
   let opTemp: number | null = null;
   if (typeof opts.opAltitudeFt === "number" && opts.opAltitudeFt > 0) {
     const r = interpolateAtAltitude(opts.opAltitudeFt, sample);
     opTemp = r.temp;
-    warnings.push(...r.warnings);
+    notifications.push(
+      ...r.notes.map((n) => withSubject(n, fieldSubject("temp", 1)))
+    );
   }
 
   const pressureMsl = (opts.raw.hourly.pressure_msl as number[] | undefined)?.[
@@ -248,6 +262,28 @@ export function buildAreaOfOpsWeather(opts: BuildOptions): AreaOfOpsWeather {
     windsAloft: wind,
     opTemp,
     opAltimeter,
-    warnings,
+    notifications,
   };
+}
+
+/** Warning raised when there is no position to fetch area-of-ops weather for. */
+export function noPositionWarning(): Notification {
+  return {
+    level: "warning",
+    subject: fieldSubject("position"),
+    message:
+      "Operating area weather skipped: position and airport coordinates unavailable. Enter an operating area position and fetch again.",
+  };
+}
+
+/**
+ * Warnings for every area-of-ops field that could not be filled: the
+ * winds-aloft table and the operating temperature and altimeter.
+ */
+export function areaOfOpsUnavailable(reason: string): Notification[] {
+  return [
+    fieldSubject("wind"),
+    fieldSubject("temp", 1),
+    fieldSubject("altimeter", 1),
+  ].map((subject) => ({ level: "warning" as const, subject, message: reason }));
 }

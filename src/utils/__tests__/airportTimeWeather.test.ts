@@ -1,4 +1,5 @@
 import { selectAirportWeather } from "../airportTimeWeather";
+import { fieldSubject } from "../notifications";
 import type {
   METARResponse,
   TAFForecast,
@@ -59,7 +60,7 @@ describe("selectAirportWeather", () => {
     expect(result.source).toBe("metar");
     expect(result.temp).toBe(18);
     expect(result.altimeter).toBeCloseTo(29.97, 2); // 1015 hPa → ~29.97 inHg
-    expect(result.warnings).toEqual([]);
+    expect(result.notifications).toEqual([]);
   });
 
   it("uses TAF period covering requested time when METAR is stale", () => {
@@ -68,7 +69,7 @@ describe("selectAirportWeather", () => {
     expect(result.source).toBe("taf-fcst");
     expect(result.temp).toBe(24);
     expect(result.altimeter).toBe(30.05);
-    expect(result.warnings).toEqual([]);
+    expect(result.notifications).toEqual([]);
   });
 
   it("falls back to METAR temp when matched TAF period has no temp", () => {
@@ -80,16 +81,32 @@ describe("selectAirportWeather", () => {
     const result = selectAirportWeather(baseMetar, tafNoTemp, requested, "KSLC");
     expect(result.source).toBe("taf-fcst");
     expect(result.temp).toBe(18); // fell back to METAR
-    expect(result.warnings.length).toBeGreaterThan(0);
-    expect(result.warnings[0]).toMatch(/no temperature/);
+    expect(result.notifications).toEqual([
+      expect.objectContaining({
+        level: "caution",
+        subject: fieldSubject("temp", 0),
+        message: expect.stringMatching(/no temperature/),
+      }),
+    ]);
   });
 
   it("emits stale warning when no TAF period covers requested time", () => {
     const requested = new Date("2026-05-15T12:00:00Z"); // 3 days past TAF end
     const result = selectAirportWeather(baseMetar, baseTaf, requested, "KSLC");
     expect(result.source).toBe("taf-nearest");
-    expect(result.warnings.length).toBeGreaterThan(0);
-    expect(result.warnings[0]).toMatch(/forecast unavailable/i);
+    // A Substitution: one Caution on each field it filled.
+    expect(result.notifications).toEqual([
+      expect.objectContaining({
+        level: "caution",
+        subject: fieldSubject("temp", 0),
+        message: expect.stringMatching(/forecast unavailable/i),
+      }),
+      expect.objectContaining({
+        level: "caution",
+        subject: fieldSubject("altimeter", 0),
+        message: expect.stringMatching(/forecast unavailable/i),
+      }),
+    ]);
   });
 
   it("returns source 'none' when neither METAR nor TAF available", () => {
@@ -98,14 +115,20 @@ describe("selectAirportWeather", () => {
     expect(result.source).toBe("none");
     expect(result.temp).toBeNull();
     expect(result.altimeter).toBeNull();
-    expect(result.warnings.length).toBeGreaterThan(0);
+    expect(result.notifications.map((n) => n.level)).toEqual([
+      "warning",
+      "warning",
+    ]);
   });
 
   it("names the requested airport ID when neither METAR nor TAF exists (issue #220)", () => {
     const requested = new Date("2026-05-12T15:00:00Z");
-    const result = selectAirportWeather(undefined, undefined, requested, "BOI");
-    expect(result.warnings).toEqual([
-      "BOI: no METAR or TAF data available for requested time 2026-05-12T15:00:00.000Z",
+    const result = selectAirportWeather(undefined, undefined, requested, "BOI", 2);
+    const message =
+      "BOI: no METAR or TAF data available for requested time 2026-05-12T15:00:00.000Z";
+    expect(result.notifications).toEqual([
+      { level: "warning", subject: fieldSubject("temp", 2), message },
+      { level: "warning", subject: fieldSubject("altimeter", 2), message },
     ]);
   });
 
@@ -136,7 +159,18 @@ describe("selectAirportWeather", () => {
     expect(result.source).toBe("metar-stale");
     expect(result.temp).toBe(19);
     expect(result.altimeter).toBeCloseTo(30.19, 2);
-    expect(result.warnings.some((w) => /no TAF available/i.test(w))).toBe(true);
+    expect(result.notifications).toEqual([
+      expect.objectContaining({
+        level: "caution",
+        subject: fieldSubject("temp", 0),
+        message: expect.stringMatching(/no TAF available/i),
+      }),
+      expect.objectContaining({
+        level: "caution",
+        subject: fieldSubject("altimeter", 0),
+        message: expect.stringMatching(/no TAF available/i),
+      }),
+    ]);
   });
 
   it("returns 'none' only when no METAR data exists either", () => {
@@ -150,7 +184,13 @@ describe("selectAirportWeather", () => {
     const requested = new Date("2026-05-12T19:30:00Z");
     const result = selectAirportWeather(broken, baseTaf, requested, "KSLC");
     expect(result.source).toBe("taf-fcst");
-    expect(result.warnings.some((w) => /could not be parsed/i.test(w))).toBe(true);
+    expect(result.notifications).toContainEqual(
+      expect.objectContaining({
+        level: "advisory",
+        subject: fieldSubject("temp", 0),
+        message: expect.stringMatching(/could not be parsed/i),
+      })
+    );
   });
 
   it("falls back to METAR altimeter when nearest TAF period has null altim (real-world API shape)", () => {
@@ -192,6 +232,14 @@ describe("selectAirportWeather", () => {
     const result = selectAirportWeather(baseMetar, tafWithNullAltim, requested, "KSLC");
     expect(result.source).toBe("taf-fcst");
     expect(result.altimeter).toBeCloseTo(29.97, 2);
+    // Substituting the observation for the forecast is announced, never silent.
+    expect(result.notifications).toEqual([
+      expect.objectContaining({
+        level: "caution",
+        subject: fieldSubject("altimeter", 0),
+        message: expect.stringMatching(/no altimeter/i),
+      }),
+    ]);
   });
 
   it("picks the temporally closest sfcTemp from a TAF array-form temp", () => {

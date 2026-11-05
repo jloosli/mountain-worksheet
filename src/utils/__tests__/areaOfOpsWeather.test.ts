@@ -5,6 +5,7 @@ import {
   interpolateOpTempFromAloft,
 } from "../areaOfOpsWeather";
 import type { OpenMeteoPointForecast } from "../openMeteoApi";
+import { fieldSubject, stepSubject } from "../notifications";
 
 const mockRaw: OpenMeteoPointForecast = {
   hourly: {
@@ -80,7 +81,12 @@ describe("buildAreaOfOpsWeather", () => {
       raw: mockRaw,
     });
     expect(r.positionSource).toBe("midpoint");
-    expect(r.warnings.some((w) => /position not entered/i.test(w))).toBe(true);
+    // A midpoint position is a Substitution for the whole area-of-ops fetch.
+    expect(r.notifications).toContainEqual({
+      level: "caution",
+      subject: stepSubject("weather"),
+      message: expect.stringMatching(/position not entered/i),
+    });
   });
 
   it("populates 5-altitude wind table from interpolation", () => {
@@ -125,7 +131,14 @@ describe("buildAreaOfOpsWeather", () => {
     });
     expect(r.positionSource).toBe("none");
     expect(r.opTemp).toBeNull();
-    expect(r.warnings.some((w) => /skipped/i.test(w))).toBe(true);
+    // Entering a position is how the pilot fixes this, so it sits on that field.
+    expect(r.notifications).toEqual([
+      {
+        level: "warning",
+        subject: fieldSubject("position"),
+        message: expect.stringMatching(/skipped/i),
+      },
+    ]);
   });
 
   it("warns when forecast time snap delta exceeds 1 hour", () => {
@@ -138,7 +151,68 @@ describe("buildAreaOfOpsWeather", () => {
       opAltitudeFt: 9000,
       raw: mockRaw,
     });
-    expect(r.warnings.some((w) => /forecast time snapped/i.test(w))).toBe(true);
+    expect(r.notifications).toContainEqual({
+      level: "caution",
+      subject: stepSubject("weather"),
+      message: expect.stringMatching(/forecast time snapped/i),
+    });
+  });
+
+  it("raises a Caution on the winds-aloft column whose altitude was snapped", () => {
+    const r = buildAreaOfOpsWeather({
+      position: [40.5, -112.0],
+      depAirportLatLon: null,
+      arrAirportLatLon: null,
+      midTime: new Date("2026-05-12T16:00:00Z"),
+      opAltitudeFt: 9000,
+      // Drop 925/900 hPa so the lowest level (850 hPa, ~5,000 ft) sits above 3,000 ft.
+      raw: {
+        hourly: {
+          ...mockRaw.hourly,
+          geopotential_height_925hPa: [NaN, NaN],
+          geopotential_height_900hPa: [NaN, NaN],
+        },
+      },
+    });
+    expect(r.notifications).toEqual([
+      {
+        level: "caution",
+        subject: fieldSubject("wind", 0),
+        message: expect.stringMatching(/3000 ft below/i),
+      },
+    ]);
+  });
+
+  it("raises a Caution on the operating temperature when its altitude was snapped", () => {
+    const r = buildAreaOfOpsWeather({
+      position: [40.5, -112.0],
+      depAirportLatLon: null,
+      arrAirportLatLon: null,
+      midTime: new Date("2026-05-12T16:00:00Z"),
+      opAltitudeFt: 20000,
+      raw: mockRaw,
+    });
+    expect(r.notifications).toContainEqual({
+      level: "caution",
+      subject: fieldSubject("temp", 1),
+      message: expect.stringMatching(/20000 ft above/i),
+    });
+  });
+
+  it("raises Warnings on the winds aloft and operating values when the forecast has no times", () => {
+    const r = buildAreaOfOpsWeather({
+      position: [40.5, -112.0],
+      depAirportLatLon: null,
+      arrAirportLatLon: null,
+      midTime: new Date("2026-05-12T16:00:00Z"),
+      opAltitudeFt: 9000,
+      raw: { hourly: { ...mockRaw.hourly, time: [] } },
+    });
+    expect(r.notifications.map((n) => [n.level, n.subject])).toEqual([
+      ["warning", fieldSubject("wind")],
+      ["warning", fieldSubject("temp", 1)],
+      ["warning", fieldSubject("altimeter", 1)],
+    ]);
   });
 });
 
