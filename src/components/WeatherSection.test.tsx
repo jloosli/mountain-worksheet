@@ -2,6 +2,8 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import WeatherSection from "./WeatherSection";
 import type { RunwayOption, WorksheetData } from "@/utils/types";
 import { fieldSubject, type Notification } from "@/utils/notifications";
+import { deserializeState } from "@/utils/urlState";
+import { sanitizeWorksheetUrlState } from "@/utils/worksheetUrlState";
 
 const empty: WorksheetData = {
   pilot: "",
@@ -284,6 +286,29 @@ describe("WeatherSection — invalid entries (#225)", () => {
     expect(altimeter).toHaveAttribute("aria-invalid", "true");
     expect(
       screen.getByText(/Altimeter 35.00 is not valid; enter 28.00–31.00 inHg/i)
+    ).toBeInTheDocument();
+  });
+});
+
+describe("WeatherSection — worksheet opened from a link", () => {
+  it("renders a truncated winds-aloft table and explains it, instead of crashing", () => {
+    const query = "wind=90,90,90||5,10,15";
+    const loaded = sanitizeWorksheetUrlState(
+      deserializeState(query, empty),
+      query,
+      empty
+    );
+    render(
+      <WeatherSection
+        state={loaded.state}
+        onUpdate={() => {}}
+        airportRunways={[null, null]}
+        notifications={loaded.notifications}
+      />
+    );
+    expect(screen.getByText("Aloft")).toBeInTheDocument();
+    expect(
+      screen.getByText(/winds aloft.*direction, speed and temperature/)
     ).toBeInTheDocument();
   });
 });

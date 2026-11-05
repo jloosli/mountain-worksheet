@@ -39,7 +39,7 @@ const load = (query: string) =>
 describe("sanitizeWorksheetUrlState", () => {
   it("passes a well-formed link through with no notifications", () => {
     const r = load(
-      "weight=2300&temp=12,,8&wind=,90,180||5,10,15&turb=1&date=2026-11-05&time=09:30"
+      "weight=2300&temp=12,,8&wind=,90,180,,||5,10,15,,||,,,,&turb=1&date=2026-11-05&time=09:30"
     );
     expect(r.notifications).toEqual([]);
     expect(r.state.weight).toBe(2300);
@@ -84,13 +84,29 @@ describe("sanitizeWorksheetUrlState", () => {
   });
 
   it("clears a non-numeric winds-aloft cell with a Warning on its column", () => {
-    const r = load("wind=,90,abc||5,10,15");
+    const r = load("wind=,90,abc,,||5,10,15,,||,,,,");
     expect(r.state.wind[0][2]).toBeNull();
     expect(r.notifications).toEqual([
       {
         level: "warning",
         subject: fieldSubject("wind", 2),
         message: expect.stringMatching(/"abc".*isn't a number/),
+      },
+    ]);
+  });
+
+  it("pads a truncated winds-aloft table to three rows with a Warning on the table", () => {
+    const r = load("wind=90,90,90||5,10,15");
+    expect(r.state.wind).toEqual([
+      [90, 90, 90, null, null],
+      [5, 10, 15, null, null],
+      [null, null, null, null, null],
+    ]);
+    expect(r.notifications).toEqual([
+      {
+        level: "warning",
+        subject: fieldSubject("wind"),
+        message: expect.stringMatching(/winds aloft.*direction, speed and temperature/),
       },
     ]);
   });

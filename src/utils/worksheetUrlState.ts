@@ -116,6 +116,31 @@ export function sanitizeWorksheetUrlState(
     ) as WorksheetData["wind"];
   }
 
+  // The winds-aloft table is read as fixed rows (direction, speed,
+  // temperature) by altitude column; any other shape is padded or cut to fit.
+  const rows = initialState.wind.length;
+  const cols = initialState.wind[0].length;
+  const wind = next.wind as unknown;
+  const wellShaped =
+    Array.isArray(wind) &&
+    wind.length === rows &&
+    wind.every((row) => Array.isArray(row) && row.length === cols);
+  if (!wellShaped) {
+    const source = Array.isArray(wind) ? wind : [];
+    next.wind = Array.from({ length: rows }, (_, r) => {
+      const row = Array.isArray(source[r]) ? (source[r] as unknown[]) : [];
+      return Array.from({ length: cols }, (_, c) =>
+        typeof row[c] === "number" ? (row[c] as number) : null
+      );
+    }) as WorksheetData["wind"];
+    notifications.push({
+      level: "warning",
+      subject: fieldSubject("wind"),
+      message:
+        "The link's winds aloft table doesn't have a direction, speed and temperature row for every altitude; missing entries were left blank. Check it.",
+    });
+  }
+
   for (const key of FLAGS) {
     const raw = params.get(key);
     if (raw === null || ["0", "1", "true", "false"].includes(raw)) continue;
