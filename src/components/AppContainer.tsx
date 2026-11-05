@@ -13,7 +13,12 @@ import StepShell from "@/components/StepShell";
 import WeatherDataIntegration from "@/components/WeatherDataIntegration";
 import WorksheetHeader, { type ShareStatus } from "@/components/WorksheetHeader";
 import { deriveActionBarState } from "@/utils/actionBarState";
-import { applyOpTempForAltitudeChange } from "@/utils/areaOfOpsWeather";
+import {
+  applyOpTempForAltitudeChange,
+  describeOpTempChange,
+  opTempChangeNotifications,
+  type OpTempChange,
+} from "@/utils/areaOfOpsWeather";
 import { deriveStepStatuses, formatStepBadge } from "@/utils/stepStatuses";
 import {
   deriveNotifications,
@@ -103,6 +108,11 @@ export default function AppContainer() {
 
   const runwayLookup = useAirportRunwayLookup(state.airport);
 
+  // The latest operating-temperature re-derivation (#117). Its notifications
+  // are derived from it plus current state, so they clear once the pilot
+  // overrides the temperature or changes the altitude again.
+  const [opTempChange, setOpTempChange] = useState<OpTempChange | null>(null);
+
   const [overlay, setOverlay] = useState<"instructions" | "checklist" | null>(
     null
   );
@@ -114,8 +124,9 @@ export default function AppContainer() {
     () => [
       ...deriveNotifications(state, weatherFetch),
       ...runwayLookup.notifications,
+      ...opTempChangeNotifications(state, opTempChange),
     ],
-    [state, weatherFetch, runwayLookup.notifications]
+    [state, weatherFetch, runwayLookup.notifications, opTempChange]
   );
 
   const stepStatuses = useMemo(
@@ -156,6 +167,11 @@ export default function AppContainer() {
   );
 
   const handleUpdate = (updates: Partial<WorksheetData>) => {
+    const change = describeOpTempChange(state, updates, {
+      fetchedOpTemp: weatherFetch?.applied.temp?.[1] ?? null,
+      previous: opTempChange,
+    });
+    if (change) setOpTempChange(change);
     setState((prev: WorksheetData) => {
       const merged = { ...prev, ...updates } as WorksheetData;
       // Issue #117: When the user changes the operating altitude, re-derive

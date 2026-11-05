@@ -253,3 +253,40 @@ describe("AppContainer — share (#225)", () => {
     jest.restoreAllMocks();
   });
 });
+
+describe("AppContainer — operating temperature re-derivation (#225)", () => {
+  const enterAloftTemps = (temps: number[]) => {
+    ["3,000", "6,000", "9,000", "12,000", "15,000"].forEach((alt, i) => {
+      fireEvent.change(screen.getByLabelText(`Temperature at ${alt} ft`), {
+        target: { value: String(temps[i]) },
+      });
+    });
+  };
+  const operatingTemperature = () => screen.getAllByLabelText("Temperature")[1];
+  const operatingAltitude = () =>
+    screen.getByLabelText("Operating Altitude (MSL ft)");
+
+  it("announces a Caution when an altitude change replaces the pilot's operating temperature", () => {
+    render(<AppContainer />);
+    enterAloftTemps([20, 14, 8, 2, -10]);
+    fireEvent.change(operatingTemperature(), { target: { value: "5" } });
+    fireEvent.change(operatingAltitude(), { target: { value: "9000" } });
+
+    expect(operatingTemperature()).toHaveValue(8);
+    expect(
+      screen.getByText(/replacing your entry of 5°C/)
+    ).toBeInTheDocument();
+
+    fireEvent.change(operatingTemperature(), { target: { value: "5" } });
+    expect(screen.queryByText(/replacing your entry/)).not.toBeInTheDocument();
+  });
+
+  it("announces a Caution when the operating altitude is outside the winds-aloft temperatures", () => {
+    render(<AppContainer />);
+    enterAloftTemps([20, 14, 8, 2, -10]);
+    fireEvent.change(operatingAltitude(), { target: { value: "17000" } });
+    expect(
+      screen.getByText(/17,000 ft is above the winds-aloft temperatures/)
+    ).toBeInTheDocument();
+  });
+});
