@@ -29,6 +29,13 @@ import {
 import { derivePerformanceNotifications } from "@/utils/derived";
 import type { WorksheetData } from "@/utils/types";
 import { unverifiedWeatherNotifications } from "@/utils/unverifiedWeather";
+import {
+  rejectedEntryNotifications,
+  updateRejectedEntries,
+  type RejectedEntries,
+  type RejectedEntry,
+  type RejectedEntryKey,
+} from "@/utils/rejectedEntries";
 import { useTempUnit } from "@/utils/useTempUnit";
 import { useUrlState } from "@/utils/useUrlState";
 import { useAirportRunwayLookup } from "@/utils/useAirportRunways";
@@ -128,6 +135,15 @@ export default function AppContainer() {
   // overrides the temperature or changes the altitude again.
   const [opTempChange, setOpTempChange] = useState<OpTempChange | null>(null);
 
+  // Weather entries the pilot typed that were out of range and not applied.
+  // Held here so their Warnings join the one notifications list (step
+  // status, badge, Briefing).
+  const [rejectedEntries, setRejectedEntries] = useState<RejectedEntries>({});
+  const handleRejectedEntryChange = (
+    key: RejectedEntryKey,
+    entry: RejectedEntry | null
+  ) => setRejectedEntries((prev) => updateRejectedEntries(state, prev, key, entry));
+
   const [overlay, setOverlay] = useState<"instructions" | "checklist" | null>(
     null
   );
@@ -143,6 +159,7 @@ export default function AppContainer() {
       ...deriveUrlNotifications(state, urlLoad),
       ...unverifiedWeatherNotifications(state, weatherLastUpdated),
       ...derivePerformanceNotifications(state),
+      ...rejectedEntryNotifications(state, rejectedEntries),
     ],
     [
       state,
@@ -151,6 +168,7 @@ export default function AppContainer() {
       opTempChange,
       urlLoad,
       weatherLastUpdated,
+      rejectedEntries,
     ]
   );
 
@@ -291,6 +309,8 @@ export default function AppContainer() {
             runwayStatus={runwayLookup.status}
             notifications={notifications}
             stepStatuses={stepStatuses}
+            rejectedEntries={rejectedEntries}
+            onRejectedEntryChange={handleRejectedEntryChange}
           />
           <StepShell
             id="step-decision"

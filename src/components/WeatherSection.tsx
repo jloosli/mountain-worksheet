@@ -15,6 +15,16 @@ import {
   type Notification,
   type Subject,
 } from "@/utils/notifications";
+import {
+  altimeterEntryKey,
+  rejectedEntryNotifications,
+  rejectedEntryText,
+  updateRejectedEntries,
+  windEntryKey,
+  type RejectedEntries,
+  type RejectedEntry,
+  type RejectedEntryKey,
+} from "@/utils/rejectedEntries";
 
 interface WeatherSectionProps {
   state: WorksheetData;
@@ -25,6 +35,14 @@ interface WeatherSectionProps {
   useFahrenheit?: boolean;
   /** All notifications in force; each is shown next to its Subject. */
   notifications?: readonly Notification[];
+  /**
+   * Entries the pilot typed that were not applied, held by the caller so
+   * their Warnings are part of `notifications`. Without
+   * `onRejectedEntryChange` they are kept locally and added here instead.
+   */
+  rejectedEntries?: RejectedEntries;
+  /** Records (`entry`) or clears (`null`) a rejected entry. */
+  onRejectedEntryChange?: (key: RejectedEntryKey, entry: RejectedEntry | null) => void;
 }
 
 const ALOFT_ALTITUDES = ["3,000", "6,000", "9,000", "12,000", "15,000"];
@@ -36,44 +54,36 @@ export default function WeatherSection({
   runwayStatus = ["idle", "idle"],
   useFahrenheit = false,
   notifications = [],
+  rejectedEntries,
+  onRejectedEntryChange,
 }: WeatherSectionProps) {
   const apiPopulated = isApiPopulatedData(state);
 
-  // Entries the pilot typed that were not applied, keyed by cell. Each holds
-  // the raw text (still shown in the field) and a Warning on the field, while
-  // the stored value is unchanged from when it was rejected.
-  const [rejected, setRejected] = useState<Record<string, RejectedEntry>>({});
-  const reject = (key: string, entry: RejectedEntry) =>
-    setRejected((prev) => ({ ...prev, [key]: entry }));
-  const accept = (key: string) =>
-    setRejected((prev) => {
-      if (!(key in prev)) return prev;
-      const next = { ...prev };
-      delete next[key];
-      return next;
-    });
-  const currentValue = (key: string): number | null | undefined => {
-    const [field, a, b] = key.split(":");
-    if (field === "wind") return state.wind[Number(a)]?.[Number(b)];
-    if (field === "altimeter") return state.altimeter[Number(a)];
-    return undefined;
+  // Rejected entries: held by the caller when it derives notifications,
+  // otherwise kept here and their Warnings added to the ones passed in.
+  const [localRejected, setLocalRejected] = useState<RejectedEntries>({});
+  const controlled = onRejectedEntryChange !== undefined;
+  const rejected = controlled ? (rejectedEntries ?? {}) : localRejected;
+  const setRejected = (key: RejectedEntryKey, entry: RejectedEntry | null) => {
+    if (controlled) onRejectedEntryChange(key, entry);
+    else setLocalRejected((prev) => updateRejectedEntries(state, prev, key, entry));
   };
-  const activeRejections = Object.entries(rejected).filter(
-    ([key, entry]) => (currentValue(key) ?? null) === entry.storedValue
-  );
+  const reject = (key: RejectedEntryKey, entry: RejectedEntry) => setRejected(key, entry);
+  const accept = (key: RejectedEntryKey) => {
+    if (rejected[key]) setRejected(key, null);
+  };
   const rejectedWindText = (row: number, col: number): string | undefined =>
-    activeRejections.find(([key]) => key === `wind:${row}:${col}`)?.[1].raw;
-  const allNotifications: readonly Notification[] =
-    activeRejections.length === 0
-      ? notifications
-      : [...notifications, ...activeRejections.map(([, e]) => e.notification)];
+    rejectedEntryText(state, rejected, windEntryKey(row, col));
+  const allNotifications: readonly Notification[] = controlled
+    ? notifications
+    : [...notifications, ...rejectedEntryNotifications(state, localRejected)];
 
   const handleWindChange = (
     row: 0 | 1 | 2,
     col: number,
     rawValue: string
   ) => {
-    const key = `wind:${row}:${col}`;
+    const key = windEntryKey(row, col);
     const numValue: number | null = rawValue === "" ? null : Number(rawValue);
     let isValid = true;
     if (numValue !== null) {
@@ -131,7 +141,7 @@ export default function WeatherSection({
     index: 0 | 1 | 2,
     rawValue: string
   ) => {
-    const key = `altimeter:${index}`;
+    const key = altimeterEntryKey(index);
     const num = rawValue === "" ? null : Number(rawValue);
     const isValid = num === null || (num >= 28.0 && num <= 31.0);
     if (!isValid) {
@@ -322,14 +332,6 @@ export default function WeatherSection({
       </div>
     </div>
   );
-}
-
-interface RejectedEntry {
-  /** What the pilot typed. */
-  raw: string;
-  /** The stored value when the entry was rejected. */
-  storedValue: number | null;
-  notification: Notification;
 }
 
 /** ARIA props for an input covered by several Subjects (e.g. table + column). */

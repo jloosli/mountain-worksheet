@@ -469,3 +469,23 @@ describe("AppContainer — markers from a Substitution (#223)", () => {
     expect(printedLanding[1].querySelector("[data-ref]")).toBeNull();
   });
 });
+
+describe("AppContainer — rejected weather entries", () => {
+  it("counts an out-of-range wind entry on the weather step and prints it on the Briefing", () => {
+    const { container } = render(<AppContainer />);
+    const header = () => container.querySelector("#step-weather header");
+    expect(header()).not.toHaveTextContent(/warning/);
+
+    fireEvent.change(onScreen().getByLabelText("Wind direction at 9,000 ft"), {
+      target: { value: "400" },
+    });
+
+    const message = /Wind direction 400 at 9,000 ft is not valid/;
+    expect(onScreen().getByText(message)).toBeInTheDocument();
+    expect(header()).toHaveTextContent("1 warning");
+    expect(container.querySelector("#step-weather .bg-red-600")).not.toBeNull();
+    expect(
+      within(screen.getByLabelText("Print briefing")).getByText(message)
+    ).toBeInTheDocument();
+  });
+});

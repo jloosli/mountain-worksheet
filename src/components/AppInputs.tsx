@@ -13,6 +13,11 @@ import {
 } from "@/utils/stepStatuses";
 import type { RunwayOption, WorksheetData } from "@/utils/types";
 import type { RunwayLookupStatus } from "@/utils/useAirportRunways";
+import type {
+  RejectedEntries,
+  RejectedEntry,
+  RejectedEntryKey,
+} from "@/utils/rejectedEntries";
 
 interface WorksheetFormProps {
   state: WorksheetData;
@@ -24,6 +29,9 @@ interface WorksheetFormProps {
   notifications?: readonly Notification[];
   /** Step statuses and counts; derived from `state` + `notifications` if omitted. */
   stepStatuses?: StepStatusesResult;
+  /** Weather entries that were not applied; see WeatherSection. */
+  rejectedEntries?: RejectedEntries;
+  onRejectedEntryChange?: (key: RejectedEntryKey, entry: RejectedEntry | null) => void;
 }
 
 export default function AppInputs({
@@ -34,6 +42,8 @@ export default function AppInputs({
   useFahrenheit,
   notifications = [],
   stepStatuses,
+  rejectedEntries,
+  onRejectedEntryChange,
 }: WorksheetFormProps): ReactNode {
   const handleUpdate = (data: Partial<WorksheetData>) => {
     onStateUpdate(data);
@@ -79,6 +89,8 @@ export default function AppInputs({
           runwayStatus={runwayStatus}
           useFahrenheit={useFahrenheit}
           notifications={notifications}
+          rejectedEntries={rejectedEntries}
+          onRejectedEntryChange={onRejectedEntryChange}
         />
       </StepShell>
     </div>
