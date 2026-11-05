@@ -365,4 +365,31 @@ describe("SortieInfo - airport code whitespace (#208)", () => {
     expect(input).toHaveAttribute("aria-invalid", "true");
     expect(input).toHaveAccessibleDescription(/Operating area weather skipped/);
   });
+
+  it("shows airport-ID notifications next to the ID they are about (#216)", () => {
+    render(
+      <SortieInfo
+        initialData={{ ...defaultInitialData, airport: ["XQZ", "KBOI"] }}
+        onUpdate={jest.fn()}
+        notifications={[
+          {
+            level: "caution",
+            subject: fieldSubject("airport", 0),
+            message: "No airport found for XQZ or KXQZ. Check the ID",
+          },
+          {
+            level: "advisory",
+            subject: fieldSubject("airport", 1),
+            message: "Using KBOI for BOI",
+          },
+        ]}
+      />
+    );
+    const departure = screen.getByLabelText("Departure Airport");
+    const arrival = screen.getByLabelText("Arrival Airport");
+    expect(departure).toHaveAccessibleDescription(/No airport found for XQZ/);
+    expect(departure).not.toHaveAttribute("aria-invalid");
+    expect(arrival).toHaveAccessibleDescription(/Using KBOI for BOI/);
+    expect(screen.getByText(/Using KBOI for BOI/)).toBeVisible();
+  });
 });

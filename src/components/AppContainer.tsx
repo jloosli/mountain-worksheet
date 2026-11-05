@@ -23,6 +23,7 @@ import {
 } from "@/utils/notifications";
 import { derivePerformanceNotifications } from "@/utils/derived";
 import type { WorksheetData } from "@/utils/types";
+import { unverifiedWeatherNotifications } from "@/utils/unverifiedWeather";
 import { useTempUnit } from "@/utils/useTempUnit";
 import { useUrlState } from "@/utils/useUrlState";
 import { useAirportRunways } from "@/utils/useAirportRunways";
@@ -116,9 +117,10 @@ export default function AppContainer() {
   const notifications = useMemo(
     () => [
       ...deriveNotifications(state, weatherFetch),
+      ...unverifiedWeatherNotifications(state, weatherLastUpdated),
       ...derivePerformanceNotifications(state),
     ],
-    [state, weatherFetch]
+    [state, weatherFetch, weatherLastUpdated]
   );
 
   const stepStatuses = useMemo(
