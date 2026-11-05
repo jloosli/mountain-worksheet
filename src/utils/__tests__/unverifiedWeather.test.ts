@@ -1,0 +1,49 @@
+import { unverifiedWeatherNotifications } from "../unverifiedWeather";
+import type { WorksheetData } from "../types";
+
+const blank = {
+  temp: [null, null, null],
+  altimeter: [null, null, null],
+  wind: [
+    [null, null, null],
+    [null, null, null],
+    [null, null, null],
+  ],
+} as unknown as WorksheetData;
+
+const withSharedTemp = { ...blank, temp: [21, null, null] } as WorksheetData;
+
+describe("unverifiedWeatherNotifications", () => {
+  it("raises a Caution on the weather step for weather values not fetched this session", () => {
+    const notes = unverifiedWeatherNotifications(withSharedTemp, null);
+    expect(notes).toHaveLength(1);
+    expect(notes[0]).toMatchObject({
+      level: "caution",
+      subject: { kind: "step", step: "weather" },
+    });
+    expect(notes[0].message).toMatch(/shared link/i);
+    expect(notes[0].message).toMatch(/fetch/i);
+  });
+
+  it("treats a wind value of 0 as weather data", () => {
+    const calmWind = {
+      ...blank,
+      wind: [
+        [0, null, null],
+        [null, null, null],
+        [null, null, null],
+      ],
+    } as unknown as WorksheetData;
+    expect(unverifiedWeatherNotifications(calmWind, null)).toHaveLength(1);
+  });
+
+  it("raises nothing once weather has been fetched this session", () => {
+    expect(
+      unverifiedWeatherNotifications(withSharedTemp, new Date())
+    ).toEqual([]);
+  });
+
+  it("raises nothing for a worksheet with no weather values", () => {
+    expect(unverifiedWeatherNotifications(blank, null)).toEqual([]);
+  });
+});

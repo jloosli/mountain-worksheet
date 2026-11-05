@@ -19,6 +19,7 @@ interface SortieInfoProps {
 }
 
 const POSITION_SUBJECT = fieldSubject("position");
+const AIRPORT_SUBJECTS = [fieldSubject("airport", 0), fieldSubject("airport", 1)];
 
 type SortieInfoData = Pick<
   WorksheetData,
@@ -397,6 +398,11 @@ export default function SortieInfo({
               onChange={(e) => handleAirportChange(0, e.target.value)}
               onBlur={() => handleAirportBlur(0)}
               className="w-full px-3 py-2 border rounded-md dark:bg-black/[.15] dark:border-white/[.145]"
+              {...notificationA11yProps(notifications, AIRPORT_SUBJECTS[0])}
+            />
+            <InlineNotifications
+              notifications={notifications}
+              subject={AIRPORT_SUBJECTS[0]}
             />
           </div>
 
@@ -411,6 +417,11 @@ export default function SortieInfo({
               onChange={(e) => handleAirportChange(1, e.target.value)}
               onBlur={() => handleAirportBlur(1)}
               className="w-full px-3 py-2 border rounded-md dark:bg-black/[.15] dark:border-white/[.145]"
+              {...notificationA11yProps(notifications, AIRPORT_SUBJECTS[1])}
+            />
+            <InlineNotifications
+              notifications={notifications}
+              subject={AIRPORT_SUBJECTS[1]}
             />
           </div>
 

@@ -315,3 +315,72 @@ describe("AppContainer — malformed link values (#225)", () => {
     expect(screen.queryByText(/"heavy" isn't a number/)).not.toBeInTheDocument();
   });
 });
+
+describe("AppContainer — unverified weather (#224)", () => {
+  const mockFetch = fetchWorksheetWeather as jest.MockedFunction<
+    typeof fetchWorksheetWeather
+  >;
+  const unverified = /came from a shared link/i;
+
+  const mockSearchParams = useSearchParams as jest.MockedFunction<
+    typeof useSearchParams
+  >;
+  const openSharedLink = (query: string) =>
+    mockSearchParams.mockReturnValue(
+      new URLSearchParams(query) as unknown as ReturnType<typeof useSearchParams>
+    );
+
+  beforeEach(() => {
+    mockFetch.mockImplementation(async (worksheet) => ({
+      data: { temp: [18, null, null] },
+      result: {
+        fetchedFor: {
+          airport: [worksheet.airport[0], worksheet.airport[1]],
+          date: worksheet.date,
+          time: worksheet.time,
+        },
+        applied: { temp: [18, null, null] },
+        notifications: [],
+      },
+    }));
+  });
+
+  afterEach(() =>
+    mockSearchParams.mockImplementation(
+      () => new URLSearchParams() as unknown as ReturnType<typeof useSearchParams>
+    )
+  );
+
+  it("shows a Caution on the weather step when a shared link carries weather values", () => {
+    openSharedLink("airport=KORD,KBOI&temp=21,,");
+    const { container } = render(<AppContainer />);
+
+    const caution = screen.getByText(unverified);
+    expect(container.querySelector("#step-weather")).toContainElement(caution);
+    expect(container.querySelector("#step-weather header")).toHaveTextContent(
+      "1 caution"
+    );
+    // A Caution never blocks: fetching stays available.
+    expect(screen.getByRole("button", { name: /Re-fetch/i })).toBeEnabled();
+  });
+
+  it("removes the Caution after weather is fetched this session", async () => {
+    openSharedLink("airport=KORD,KBOI&temp=21,,");
+    const { container } = render(<AppContainer />);
+    expect(screen.getByText(unverified)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /Re-fetch/i }));
+
+    await waitFor(() =>
+      expect(screen.queryByText(unverified)).not.toBeInTheDocument()
+    );
+    expect(
+      container.querySelector("#step-weather header")
+    ).not.toHaveTextContent("caution");
+  });
+
+  it("shows no Caution on a fresh worksheet with no weather values", () => {
+    render(<AppContainer />);
+    expect(screen.queryByText(unverified)).not.toBeInTheDocument();
+  });
+});

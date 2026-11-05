@@ -25,6 +25,7 @@ import {
   type WeatherFetchResult,
 } from "@/utils/notifications";
 import type { WorksheetData } from "@/utils/types";
+import { unverifiedWeatherNotifications } from "@/utils/unverifiedWeather";
 import { useTempUnit } from "@/utils/useTempUnit";
 import { useUrlState } from "@/utils/useUrlState";
 import { useAirportRunwayLookup } from "@/utils/useAirportRunways";
@@ -137,8 +138,16 @@ export default function AppContainer() {
       ...runwayLookup.notifications,
       ...opTempChangeNotifications(state, opTempChange),
       ...deriveUrlNotifications(state, urlLoad),
+      ...unverifiedWeatherNotifications(state, weatherLastUpdated),
     ],
-    [state, weatherFetch, runwayLookup.notifications, opTempChange, urlLoad]
+    [
+      state,
+      weatherFetch,
+      runwayLookup.notifications,
+      opTempChange,
+      urlLoad,
+      weatherLastUpdated,
+    ]
   );
 
   const stepStatuses = useMemo(
