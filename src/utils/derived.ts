@@ -2,7 +2,7 @@ import {
   altitudeToPressureAltitude,
   pressureAltitudeToDensityAltitude,
 } from "./formulas";
-import type { WorksheetData, TOLDError } from "./types";
+import type { Aircraft, WorksheetData, TOLDError } from "./types";
 import { calculateTOLDForMultipleAirports } from "./toldCalculations";
 
 export type Triple = [number | null, number | null, number | null];
@@ -160,4 +160,21 @@ export function computeTOLDViewModel(
     hasErrors,
     hasWarnings,
   };
+}
+
+/**
+ * Vy (best rate of climb speed) for a pressure altitude, taken from the first
+ * climb-table row at or above `pa` (no interpolation between rows). Above the
+ * top of the table, clamps to the highest-altitude row — never the sea-level
+ * row, which would overstate Vy at high density altitude (#228).
+ */
+export function vyForPressureAltitude(
+  climb: Pick<Aircraft["climbPerformance"], "pressureAltitudes" | "climbSpeeds">,
+  pa: number | null,
+): number | null {
+  if (pa === null) return null;
+  const { pressureAltitudes, climbSpeeds } = climb;
+  let idx = pressureAltitudes.findIndex((p) => p >= pa);
+  if (idx === -1) idx = pressureAltitudes.length - 1;
+  return climbSpeeds[idx] ?? null;
 }

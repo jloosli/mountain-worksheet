@@ -1,4 +1,4 @@
-import { computePressureColumns, computeTOLDViewModel } from "../derived";
+import { computePressureColumns, computeTOLDViewModel, vyForPressureAltitude } from "../derived";
 import type { WorksheetData } from "../types";
 
 describe("computePressureColumns", () => {
@@ -175,5 +175,37 @@ describe("computeTOLDViewModel", () => {
     expect(vm.errors.length).toBeGreaterThan(0);
     expect(vm.errorSummary).not.toBeNull();
     expect(vm.errorSummary!.count).toBe(vm.errors.length);
+  });
+});
+
+describe("vyForPressureAltitude", () => {
+  // C172-style table: 0..14000 ft, Vy 80 at sea level down to 72 at 14000.
+  const climb = {
+    pressureAltitudes: [0, 2000, 4000, 6000, 8000, 10000, 12000, 14000],
+    climbSpeeds: [80, 79, 78, 77, 75, 74, 73, 72],
+  };
+
+  it("clamps to the top-altitude Vy when PA is above the table (#228)", () => {
+    expect(vyForPressureAltitude(climb, 15500)).toBe(72);
+  });
+
+  it("uses the next row up for a PA between table rows", () => {
+    expect(vyForPressureAltitude(climb, 5000)).toBe(77);
+  });
+
+  it("uses the exact row for a PA on a table altitude", () => {
+    expect(vyForPressureAltitude(climb, 4000)).toBe(78);
+  });
+
+  it("returns the top row at exactly the top table altitude", () => {
+    expect(vyForPressureAltitude(climb, 14000)).toBe(72);
+  });
+
+  it("returns the sea-level row for a PA below the table", () => {
+    expect(vyForPressureAltitude(climb, -500)).toBe(80);
+  });
+
+  it("returns null when PA is unknown", () => {
+    expect(vyForPressureAltitude(climb, null)).toBeNull();
   });
 });
