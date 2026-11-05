@@ -1,4 +1,11 @@
-import { computePressureColumns, computeTOLDViewModel } from "../derived";
+import {
+  computeClimbViewModel,
+  computePressureColumns,
+  computeTOLDViewModel,
+  derivePerformanceNotifications,
+  findAircraft,
+  maneuveringNotifications,
+} from "../derived";
 import type { WorksheetData } from "../types";
 import { fieldSubject, valueSubject } from "../notifications";
 
@@ -347,5 +354,156 @@ describe("computeTOLDViewModel", () => {
       status: "withheld",
       reason: "needs departure field elevation and altimeter",
     });
+  });
+});
+
+describe("computeClimbViewModel", () => {
+  it("computes each column independently and shows what a column is waiting for", () => {
+    const state = { ...baseState(), temp: [20, null, 20] as WorksheetData["temp"] };
+    const vm = computeClimbViewModel(state);
+    expect(vm.rateOfClimb[0]).toEqual({ status: "computed", value: expect.any(Number) });
+    expect(vm.rateOfClimb[1]).toEqual({ status: "withheld", reason: "needs operating temperature" });
+    expect(vm.serviceCeiling[1]).toEqual({ status: "withheld", reason: "needs operating temperature" });
+    // Vx and Vy depend on pressure altitude only, not temperature.
+    expect(vm.vx[1].status).toBe("computed");
+    expect(vm.vy[1].status).toBe("computed");
+    expect(vm.notifications).toEqual([]);
+  });
+
+  it("withholds weight-dependent values while weight has a Warning", () => {
+    const vm = computeClimbViewModel({ ...baseState(), weight: 3200 });
+    const needs = { status: "withheld", reason: "needs valid weight" };
+    expect(vm.va).toEqual(needs);
+    expect(vm.percentMGW).toEqual(needs);
+    expect(vm.rateOfClimbActual[0]).toEqual(needs);
+    expect(vm.rateOfClimb[0].status).toBe("computed");
+  });
+
+  it("puts a Caution on a rate of climb extrapolated beyond the climb table", () => {
+    // C182T climb table tops out at 14,000 ft PA.
+    const vm = computeClimbViewModel({ ...baseState(), altitude: [1000, 15000, 1000] });
+    expect(vm.notifications).toContainEqual({
+      level: "caution",
+      subject: valueSubject("climb.rateOfClimb.operating", "decision"),
+      message:
+        "Operating altitude rate of climb is extrapolated beyond the POH climb table: pressure altitude 15,000 ft is outside 0–14,000 ft.",
+    });
+    expect(vm.rateOfClimb[1].status).toBe("computed");
+  });
+
+  it("puts a Caution on Vx extrapolated beyond the Vx table", () => {
+    // C182T Vx table covers 0–10,000 ft.
+    const vm = computeClimbViewModel({ ...baseState(), altitude: [1000, 12000, 1000] });
+    expect(vm.notifications).toContainEqual({
+      level: "caution",
+      subject: valueSubject("climb.vx.operating", "decision"),
+      message:
+        "Operating altitude Vx is extrapolated beyond the POH Vx table: pressure altitude 12,000 ft is outside 0–10,000 ft.",
+    });
+  });
+
+  it("puts a Caution on Va extrapolated beyond the maneuvering table (single-axis)", () => {
+    // C172S Va table covers 1,900–2,550 lbs; empty weight is 1,663 lbs.
+    const vm = computeClimbViewModel({ ...baseState(), acType: "C172S", weight: 1800 });
+    expect(vm.va.status).toBe("computed");
+    expect(vm.notifications).toContainEqual({
+      level: "caution",
+      subject: valueSubject("climb.va", "decision"),
+      message:
+        "Va is extrapolated beyond the POH maneuvering-speed table: weight 1,800 lbs is outside 1,900–2,550 lbs.",
+    });
+  });
+
+  it("explains a rate of climb the POH table has no data for", () => {
+    // C172S climb table has no entry at 12,000 ft / 40°C.
+    const vm = computeClimbViewModel({
+      ...baseState(),
+      acType: "C172S",
+      weight: 2400,
+      altitude: [1000, 11000, 1000],
+      temp: [20, 30, 20],
+    });
+    expect(vm.rateOfClimb[1]).toEqual({ status: "unavailable" });
+    expect(vm.notifications).toContainEqual({
+      level: "warning",
+      subject: valueSubject("climb.rateOfClimb.operating", "decision"),
+      message:
+        "Operating altitude rate of climb could not be computed: the C172S POH climb table has no data for these conditions.",
+    });
+  });
+
+  it("explains, once, that Vx is unavailable for an aircraft without Vx data", () => {
+    const vm = computeClimbViewModel({ ...baseState(), acType: "C172S", weight: 2400 });
+    expect(vm.vx.map((v) => v.status)).toEqual(["unavailable", "unavailable", "unavailable"]);
+    expect(vm.notifications).toEqual([
+      {
+        level: "warning",
+        subject: valueSubject("climb.vx", "decision"),
+        message: "Vx is not available: the C172S POH data has no Vx table.",
+      },
+    ]);
+  });
+
+  it("puts a Warning on an operating temperature beyond the hard limit", () => {
+    const vm = computeClimbViewModel({ ...baseState(), temp: [20, -60, 20] });
+    expect(vm.notifications).toContainEqual({
+      level: "warning",
+      subject: fieldSubject("temp", 1),
+      message: "Operating altitude temperature -60°C is outside the -50 to 60°C the worksheet accepts.",
+    });
+    expect(vm.rateOfClimb[1]).toEqual({
+      status: "withheld",
+      reason: "needs valid operating temperature",
+    });
+  });
+});
+
+describe("maneuveringNotifications", () => {
+  const c182t = findAircraft("C182T")!;
+
+  it("raises nothing for an aircraft with stall speeds for every flap setting", () => {
+    expect(maneuveringNotifications(c182t)).toEqual([]);
+  });
+
+  it("puts a Warning on maneuvering speeds when stall speeds are missing", () => {
+    const aircraft = { ...c182t, stallSpeeds: { flaps: [0, 30], Vso: [] } };
+    expect(maneuveringNotifications(aircraft)).toEqual([
+      {
+        level: "warning",
+        subject: valueSubject("maneuvering", "decision"),
+        message:
+          "Maneuvering speeds are not available: the C182T POH data has no stall speed for every flap setting.",
+      },
+    ]);
+  });
+
+  it("leaves an unknown aircraft to the aircraft-type Warning", () => {
+    expect(maneuveringNotifications(undefined)).toEqual([]);
+  });
+});
+
+describe("derivePerformanceNotifications", () => {
+  it("returns TOLD and climb notifications together, each once", () => {
+    const state = {
+      ...baseState(),
+      weight: 3200,
+      temp: [20, -60, 20] as WorksheetData["temp"],
+      altitude: [1000, 15000, 9000] as WorksheetData["altitude"],
+    };
+    const all = derivePerformanceNotifications(state);
+    const weightWarnings = all.filter(
+      (n) => n.subject.kind === "field" && n.subject.field === "weight",
+    );
+    expect(weightWarnings).toHaveLength(1);
+    expect(all).toContainEqual(expect.objectContaining({ subject: fieldSubject("temp", 1) }));
+    expect(all).toContainEqual(
+      expect.objectContaining({ subject: valueSubject("told.arrival.landing", "decision") }),
+    );
+    const keys = all.map((n) => JSON.stringify(n));
+    expect(new Set(keys).size).toBe(keys.length);
+  });
+
+  it("is empty for a complete, in-range worksheet", () => {
+    expect(derivePerformanceNotifications(baseState())).toEqual([]);
   });
 });

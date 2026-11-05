@@ -181,3 +181,27 @@ describe("AppContainer — notifications (#221)", () => {
     expect(arrivalTemperature()).toHaveValue(12);
   });
 });
+
+describe("AppContainer — performance notifications (#222)", () => {
+  it("shows a weight Warning at the weight input, marks Sortie Details, and clears when fixed", () => {
+    const { container } = render(<AppContainer />);
+    fireEvent.change(screen.getByLabelText("Aircraft Model"), {
+      target: { value: "C182T" },
+    });
+    const weight = screen.getByLabelText("Aircraft Takeoff Weight (lbs)");
+    fireEvent.change(weight, { target: { value: "3200" } });
+
+    expect(
+      screen.getByText(/Weight 3,200 lbs exceeds the C182T maximum gross weight/)
+    ).toBeInTheDocument();
+    expect(weight).toHaveAttribute("aria-invalid", "true");
+    expect(container.querySelector("#step-sortie header")).toHaveTextContent("1 warning");
+
+    fireEvent.change(weight, { target: { value: "2976" } });
+    expect(
+      screen.getByText(/Weight 2,976 lbs is 96% of the C182T maximum gross weight/)
+    ).toBeInTheDocument();
+    expect(weight).not.toHaveAttribute("aria-invalid");
+    expect(container.querySelector("#step-sortie header")).not.toHaveTextContent("warning");
+  });
+});

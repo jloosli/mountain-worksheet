@@ -8,8 +8,11 @@ import TakeoffPerformance from "@/components/TakeoffPerformance";
 import ManeuveringPerformance from "@/components/ManeuveringPerformance";
 import { calculateManeuveringSpeeds } from "@/utils/maneuveringCalculations";
 import {
+  computeClimbViewModel,
   computePressureColumns,
   computeTOLDViewModel,
+  findAircraft,
+  maneuveringNotifications,
 } from "@/utils/derived";
 
 interface CalculationsProps {
@@ -23,9 +26,12 @@ export default function Calculations({ state }: CalculationsProps) {
     state.temp,
   );
   const told = computeTOLDViewModel(state, PAs);
-  const maneuveringSpeeds = state.acType
-    ? calculateManeuveringSpeeds(state.acType)
-    : undefined;
+  const climb = computeClimbViewModel(state);
+  const maneuveringWarnings = maneuveringNotifications(findAircraft(state.acType));
+  const maneuveringSpeeds =
+    state.acType && maneuveringWarnings.length === 0
+      ? calculateManeuveringSpeeds(state.acType)
+      : null;
 
   return (
     <div className="w-full">
@@ -49,9 +55,8 @@ export default function Calculations({ state }: CalculationsProps) {
         <Altitudes altitudes={state.altitude} PAs={PAs} DAs={DAs} />
         <ClimbPerformance
           aircraftModel={state.acType}
-          weight={state.weight}
+          climb={climb}
           OATs={state.temp}
-          PAs={PAs}
           altimeters={state.altimeter}
         />
         <TakeoffPerformance
@@ -62,6 +67,7 @@ export default function Calculations({ state }: CalculationsProps) {
         <ManeuveringPerformance
           aircraftModel={state.acType}
           maneuveringSpeeds={maneuveringSpeeds}
+          notifications={maneuveringWarnings}
         />
       </div>
     </div>

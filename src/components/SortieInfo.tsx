@@ -19,6 +19,8 @@ interface SortieInfoProps {
 }
 
 const POSITION_SUBJECT = fieldSubject("position");
+const AC_TYPE_SUBJECT = fieldSubject("acType");
+const WEIGHT_SUBJECT = fieldSubject("weight");
 
 type SortieInfoData = Pick<
   WorksheetData,
@@ -280,6 +282,7 @@ export default function SortieInfo({
               value={formData.acType || ""}
               onChange={handleInputChange}
               className="w-full px-3 py-2 border rounded-md dark:bg-black/[.15] dark:border-white/[.145]"
+              {...notificationA11yProps(notifications, AC_TYPE_SUBJECT)}
             >
               <option value="">Select Aircraft</option>
               {aircraftData.map((aircraft) => (
@@ -288,6 +291,7 @@ export default function SortieInfo({
                 </option>
               ))}
             </select>
+            <InlineNotifications notifications={notifications} subject={AC_TYPE_SUBJECT} />
           </div>
 
           <div className="space-y-2">
@@ -445,7 +449,9 @@ export default function SortieInfo({
               min={2200}
               max={3600}
               className="w-full px-3 py-2 border rounded-md dark:bg-black/[.15] dark:border-white/[.145]"
+              {...notificationA11yProps(notifications, WEIGHT_SUBJECT)}
             />
+            <InlineNotifications notifications={notifications} subject={WEIGHT_SUBJECT} />
           </div>
         </div>
         {(() => {

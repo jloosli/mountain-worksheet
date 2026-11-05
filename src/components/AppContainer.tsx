@@ -15,10 +15,13 @@ import WorksheetHeader from "@/components/WorksheetHeader";
 import { deriveActionBarState } from "@/utils/actionBarState";
 import { applyOpTempForAltitudeChange } from "@/utils/areaOfOpsWeather";
 import { deriveStepStatuses, formatStepBadge } from "@/utils/stepStatuses";
+import InlineNotifications from "@/components/InlineNotifications";
 import {
   deriveNotifications,
+  stepSubject,
   type WeatherFetchResult,
 } from "@/utils/notifications";
+import { derivePerformanceNotifications } from "@/utils/derived";
 import type { WorksheetData } from "@/utils/types";
 import { useTempUnit } from "@/utils/useTempUnit";
 import { useUrlState } from "@/utils/useUrlState";
@@ -111,7 +114,10 @@ export default function AppContainer() {
   const handleCloseOverlay = () => setOverlay(null);
 
   const notifications = useMemo(
-    () => deriveNotifications(state, weatherFetch),
+    () => [
+      ...deriveNotifications(state, weatherFetch),
+      ...derivePerformanceNotifications(state),
+    ],
     [state, weatherFetch]
   );
 
@@ -240,6 +246,11 @@ export default function AppContainer() {
             subtitle="Go / no-go summary, with detailed calculations below"
             showSpine={false}
           >
+            <InlineNotifications
+              notifications={notifications}
+              subject={stepSubject("decision")}
+              className="mb-4"
+            />
             <Calculations state={state} />
           </StepShell>
         </div>

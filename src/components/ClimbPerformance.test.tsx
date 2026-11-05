@@ -1,5 +1,7 @@
 import { render, screen } from "../test-utils/test-utils";
 import ClimbPerformance from "./ClimbPerformance";
+import { computeClimbViewModel } from "@/utils/derived";
+import type { WorksheetData } from "@/utils/types";
 
 // Mock the aircraft data
 jest.mock("../data/aircraft.json", () => [
@@ -86,49 +88,99 @@ jest.mock("../data/aircraft.json", () => [
   },
 ]);
 
-describe("ClimbPerformance Component", () => {
-  const defaultProps = {
-    aircraftModel: "C182T",
-    weight: 2800,
-    OATs: [15, 10, 5] as [number, number, number],
-    PAs: [2000, 4000, 6000] as [number, number, number],
-  };
+type Triple = [number | null, number | null, number | null];
 
+const baseState: WorksheetData = {
+  pilot: "",
+  date: "2026-01-01",
+  time: "10:00",
+  duration: null,
+  acType: "C182T",
+  tailN: "",
+  airport: ["KABC", "KXYZ"],
+  route: "",
+  position: [null, null],
+  wind: [[], [], []],
+  turb: false,
+  cielVis: false,
+  mtnObsc: false,
+  temp: [15, 10, 5],
+  altimeter: [29.92, 29.92, 29.92],
+  altitude: [2000, 4000, 6000],
+  rwy: [3000, 3000],
+  weight: 2800,
+  mtnEndorse: false,
+  mtnCert: false,
+};
+
+function renderClimb(overrides: Partial<WorksheetData> = {}) {
+  const state = { ...baseState, ...overrides };
+  const ui = (s: WorksheetData) => (
+    <ClimbPerformance
+      aircraftModel={s.acType}
+      climb={computeClimbViewModel(s)}
+      OATs={s.temp}
+      altimeters={s.altimeter}
+    />
+  );
+  const result = render(ui(state));
+  return {
+    ...result,
+    rerenderWith: (more: Partial<WorksheetData>) =>
+      result.rerender(ui({ ...state, ...more })),
+  };
+}
+
+describe("ClimbPerformance Component", () => {
   test("renders without crashing", () => {
-    render(<ClimbPerformance {...defaultProps} />);
+    renderClimb();
     expect(
       screen.getByText("Rates of Climb, V Speeds, Ceilings (C182T)")
     ).toBeInTheDocument();
   });
 
   test("displays Vra value correctly for valid aircraft", () => {
-    render(<ClimbPerformance {...defaultProps} />);
+    renderClimb();
     // Vra = 1.7 × 51 = 86.7, rounded to 87
     expect(screen.getByText("87")).toBeInTheDocument();
   });
 
-  test("displays N/A for aircraft with missing Vso data", () => {
-    render(<ClimbPerformance {...defaultProps} aircraftModel="INVALID" />);
-    expect(screen.getByText("N/A")).toBeInTheDocument();
+  test("explains a missing Vra with a Warning instead of N/A", () => {
+    renderClimb({ acType: "INVALID", weight: 2500 });
+    const vraRow = screen.getByText("Vra (Rough Air Speed)").closest("tr");
+    expect(vraRow?.querySelectorAll("td")[1]).toHaveTextContent("—");
+    expect(screen.queryByText("N/A")).not.toBeInTheDocument();
+    const warning = screen.getByText(
+      "Vra is not available: the INVALID POH data has no clean stall speed."
+    );
+    expect(warning.closest("li")).toHaveAttribute("data-level", "warning");
   });
 
-  test("displays N/A when no aircraft model is provided", () => {
-    render(<ClimbPerformance {...defaultProps} aircraftModel={undefined} />);
+  test("renders nothing when no aircraft model is provided", () => {
+    renderClimb({ acType: "" });
     expect(
-      screen.queryByText("Rates of Climb, V Speeds, Ceilings")
+      screen.queryByText(/Rates of Climb, V Speeds, Ceilings/)
     ).not.toBeInTheDocument();
   });
 
   test("updates Vra value when aircraft model changes", () => {
-    const { rerender } = render(<ClimbPerformance {...defaultProps} />);
+    const { rerenderWith } = renderClimb();
     expect(screen.getByText("87")).toBeInTheDocument();
 
-    rerender(<ClimbPerformance {...defaultProps} aircraftModel="INVALID" />);
-    expect(screen.getByText("N/A")).toBeInTheDocument();
+    rerenderWith({ acType: "INVALID", weight: 2500 });
+    expect(screen.queryByText("87")).not.toBeInTheDocument();
+  });
+
+  test("shows what a column is waiting for instead of '-'", () => {
+    renderClimb({ temp: [15, null, 5] });
+    const rocRow = screen.getByText("Rate of Climb (MGW)").closest("tr");
+    expect(rocRow?.querySelectorAll("td")[2]).toHaveTextContent(
+      "needs operating temperature"
+    );
   });
 
   test("Vra row appears after Va row in the table", () => {
-    render(<ClimbPerformance {...defaultProps} />);
+    renderClimb();
 
     const table = screen.getByRole("table");
     const rows = table.querySelectorAll("tbody tr");
@@ -152,7 +204,7 @@ describe("ClimbPerformance Component", () => {
   });
 
   test("Vra value is displayed only in departure column", () => {
-    render(<ClimbPerformance {...defaultProps} />);
+    renderClimb();
 
     const vraRow = screen.getByText("Vra (Rough Air Speed)").closest("tr");
     const cells = vraRow?.querySelectorAll("td");
@@ -164,7 +216,7 @@ describe("ClimbPerformance Component", () => {
   });
 
   test("Vra value has correct styling (right-aligned)", () => {
-    render(<ClimbPerformance {...defaultProps} />);
+    renderClimb();
 
     const vraRow = screen.getByText("Vra (Rough Air Speed)").closest("tr");
     const departureCell = vraRow?.querySelectorAll("td")[1];
@@ -177,45 +229,27 @@ describe("ClimbPerformance Component", () => {
       screen.getByText(/Service Ceiling \(300 ft\/min ROC, MSL\)/).closest("tr");
 
     test("label reads 'Service Ceiling (300 ft/min ROC, MSL)'", () => {
-      render(<ClimbPerformance {...defaultProps} />);
+      renderClimb();
       expect(screen.getByText("Service Ceiling (300 ft/min ROC, MSL)")).toBeInTheDocument();
     });
 
-    test("shows '-' for all columns when all OATs are null", () => {
-      render(
-        <ClimbPerformance
-          {...defaultProps}
-          OATs={[null, null, null] as unknown as [number, number, number]}
-        />
-      );
+    test("shows what each column is waiting for when all OATs are null", () => {
+      renderClimb({ temp: [null, null, null] });
       const cells = getServiceCeilingRow()?.querySelectorAll("td");
-      expect(cells?.[1]).toHaveTextContent("-");
-      expect(cells?.[2]).toHaveTextContent("-");
-      expect(cells?.[3]).toHaveTextContent("-");
+      expect(cells?.[1]).toHaveTextContent("needs departure temperature");
+      expect(cells?.[2]).toHaveTextContent("needs operating temperature");
+      expect(cells?.[3]).toHaveTextContent("needs arrival temperature");
     });
 
     test("shows PA with '(PA)' suffix when altimeter is null", () => {
-      render(
-        <ClimbPerformance
-          {...defaultProps}
-          OATs={[20, null, 20] as unknown as [number, number, number]}
-          altimeters={[null, null, null]}
-        />
-      );
+      renderClimb({ temp: [20, null, 20], altimeter: [null, null, null] });
       const cells = getServiceCeilingRow()?.querySelectorAll("td");
       expect(cells?.[1].textContent).toMatch(/ft \(PA\)$/);
-      expect(cells?.[2]).toHaveTextContent("-");
       expect(cells?.[3].textContent).toMatch(/ft \(PA\)$/);
     });
 
     test("shows MSL without '(PA)' suffix when altimeter is provided", () => {
-      render(
-        <ClimbPerformance
-          {...defaultProps}
-          OATs={[20, null, 20] as unknown as [number, number, number]}
-          altimeters={[29.92, null, 29.92]}
-        />
-      );
+      renderClimb({ temp: [20, null, 20], altimeter: [29.92, null, 29.92] });
       const cells = getServiceCeilingRow()?.querySelectorAll("td");
       expect(cells?.[1].textContent).toMatch(/ft$/);
       expect(cells?.[1].textContent).not.toMatch(/\(PA\)/);
@@ -224,37 +258,24 @@ describe("ClimbPerformance Component", () => {
     });
 
     test("MSL is 1000 ft higher than PA when altimeter is 30.92", () => {
-      const { rerender } = render(
-        <ClimbPerformance
-          {...defaultProps}
-          OATs={[20, null, null] as unknown as [number, number, number]}
-          altimeters={[29.92, null, null]}
-        />
+      const { rerenderWith } = renderClimb({
+        temp: [20, null, null],
+        altimeter: [29.92, null, null],
+      });
+      const baseMSL = parseInt(
+        getServiceCeilingRow()?.querySelectorAll("td")?.[1].textContent?.replace(/[^0-9]/g, "") ?? "0"
       );
-      const baseRow = getServiceCeilingRow();
-      const baseMSL = parseInt(baseRow?.querySelectorAll("td")?.[1].textContent?.replace(/[^0-9]/g, "") ?? "0");
 
-      rerender(
-        <ClimbPerformance
-          {...defaultProps}
-          OATs={[20, null, null] as unknown as [number, number, number]}
-          altimeters={[30.92, null, null]}
-        />
+      rerenderWith({ altimeter: [30.92, null, null] as Triple });
+      const highMSL = parseInt(
+        getServiceCeilingRow()?.querySelectorAll("td")?.[1].textContent?.replace(/[^0-9]/g, "") ?? "0"
       );
-      const highRow = getServiceCeilingRow();
-      const highMSL = parseInt(highRow?.querySelectorAll("td")?.[1].textContent?.replace(/[^0-9]/g, "") ?? "0");
 
       expect(highMSL - baseMSL).toBe(1000);
     });
 
     test("cell has title attribute with Pressure Alt and Density Alt when value is computed", () => {
-      render(
-        <ClimbPerformance
-          {...defaultProps}
-          OATs={[20, null, null] as unknown as [number, number, number]}
-          altimeters={[29.92, null, null]}
-        />
-      );
+      renderClimb({ temp: [20, null, null], altimeter: [29.92, null, null] });
       const cells = getServiceCeilingRow()?.querySelectorAll("td");
       const title = cells?.[1].getAttribute("title") ?? "";
       expect(title).toMatch(/Pressure Alt:/);
@@ -262,13 +283,7 @@ describe("ClimbPerformance Component", () => {
     });
 
     test("shows PA with '(PA)' suffix when altimeter is -1 sentinel", () => {
-      render(
-        <ClimbPerformance
-          {...defaultProps}
-          OATs={[20, null, null] as unknown as [number, number, number]}
-          altimeters={[-1, null, null]}
-        />
-      );
+      renderClimb({ temp: [20, null, null], altimeter: [-1, null, null] });
       const cells = getServiceCeilingRow()?.querySelectorAll("td");
       expect(cells?.[1].textContent).toMatch(/ft \(PA\)$/);
     });
@@ -276,12 +291,7 @@ describe("ClimbPerformance Component", () => {
     test("shows '> X ft' when 300 fpm ROC is never reached within the table", () => {
       // At -20°C the mock data tops out at 6,000 ft with 400 fpm — ceiling exceeds the table.
       // Display "> 6,000 ft" rather than an unreliable extrapolated altitude.
-      render(
-        <ClimbPerformance
-          {...defaultProps}
-          OATs={[-20, -20, -20]}
-        />
-      );
+      renderClimb({ temp: [-20, -20, -20] });
       const cells = getServiceCeilingRow()?.querySelectorAll("td");
       expect(cells?.[1].textContent).toBe("> 6,000 ft");
       expect(cells?.[2].textContent).toBe("> 6,000 ft");
@@ -289,13 +299,7 @@ describe("ClimbPerformance Component", () => {
     });
 
     test("departure and arrival show the same MSL ceiling for the same OAT and altimeter", () => {
-      render(
-        <ClimbPerformance
-          {...defaultProps}
-          OATs={[20, null, 20] as unknown as [number, number, number]}
-          altimeters={[29.92, null, 29.92]}
-        />
-      );
+      renderClimb({ temp: [20, null, 20], altimeter: [29.92, null, 29.92] });
       const cells = getServiceCeilingRow()?.querySelectorAll("td");
       expect(cells?.[1].textContent).toBe(cells?.[3].textContent);
     });

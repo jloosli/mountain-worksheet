@@ -1,6 +1,7 @@
 import { render, screen } from "../test-utils/test-utils";
 import ManeuveringPerformance from "./ManeuveringPerformance";
 import type { ManeuveringSpeeds } from "../utils/types";
+import { MANEUVERING_SUBJECT } from "../utils/derived";
 
 describe("ManeuveringPerformance", () => {
   const mockManeuveringSpeeds: ManeuveringSpeeds = {
@@ -164,5 +165,23 @@ describe("ManeuveringPerformance", () => {
     
     const tbdElements = screen.getAllByText("TBD");
     expect(tbdElements.length).toBeGreaterThan(0);
+  });
+
+  it("shows why maneuvering speeds are unavailable", () => {
+    render(
+      <ManeuveringPerformance
+        aircraftModel="C182T"
+        maneuveringSpeeds={null}
+        notifications={[
+          {
+            level: "warning",
+            subject: MANEUVERING_SUBJECT,
+            message: "Maneuvering speeds are not available: no stall speeds.",
+          },
+        ]}
+      />
+    );
+    const warning = screen.getByText(/Maneuvering speeds are not available/);
+    expect(warning.closest("li")).toHaveAttribute("data-level", "warning");
   });
 });

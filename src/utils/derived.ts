@@ -1,10 +1,22 @@
 import {
   altitudeToPressureAltitude,
+  calculateVra,
+  calculateVx,
   pressureAltitudeToDensityAltitude,
 } from "./formulas";
 import type { Aircraft, WorksheetData } from "./types";
-import { fieldSubject, valueSubject, type Notification } from "./notifications";
-import type { Extrapolation } from "./interpolation";
+import {
+  fieldSubject,
+  subjectKey,
+  valueSubject,
+  type Notification,
+} from "./notifications";
+import {
+  bilinearInterpolateDetailed,
+  findExtrapolations,
+  findInverseXgivenYandZ,
+  type Extrapolation,
+} from "./interpolation";
 import aircraftData from "@/data/aircraft.json";
 
 export function findAircraft(acType: string): Aircraft | undefined {
@@ -132,7 +144,7 @@ const computed = (value: number | null): ComputedValue =>
 
 const withheld = (reason: string): ComputedValue => ({ status: "withheld", reason });
 
-function joinNeeds(slot: AirportSlot, needs: string[]): string {
+function joinNeeds(slot: AirportSlot | "operating", needs: string[]): string {
   const list =
     needs.length <= 1
       ? needs.join("")
@@ -328,4 +340,297 @@ export function computeTOLDViewModel(
       ...arrival.notifications,
     ],
   };
+}
+
+// ---------------------------------------------------------------------------
+// Climb, V-speeds and ceilings
+// ---------------------------------------------------------------------------
+
+export type Column = 0 | 1 | 2;
+export const COLUMNS: readonly Column[] = [0, 1, 2];
+export const COLUMN_SLOT = ["departure", "operating", "arrival"] as const;
+export type ColumnSlot = (typeof COLUMN_SLOT)[number];
+
+type Columns<T> = [T, T, T];
+
+/** A service ceiling: computed, withheld, unavailable, or above the top of the climb table. */
+export type ServiceCeiling = ComputedValue | { status: "aboveTable"; tableMax: number };
+
+export interface ClimbViewModel {
+  rateOfClimb: Columns<ComputedValue>;
+  rateOfClimbActual: Columns<ComputedValue>;
+  vx: Columns<ComputedValue>;
+  vy: Columns<ComputedValue>;
+  /** Pressure altitude (ft) at which climb falls to 300 fpm, per column temperature. */
+  serviceCeiling: Columns<ServiceCeiling>;
+  va: ComputedValue;
+  vra: ComputedValue;
+  percentMGW: ComputedValue;
+  notifications: Notification[];
+}
+
+/** Subject for a climb-table value, per column ("climb.vx.operating") or overall ("climb.va"). */
+export const climbSubject = (row: string, col?: Column) =>
+  valueSubject(col === undefined ? `climb.${row}` : `climb.${row}.${COLUMN_SLOT[col]}`, "decision");
+
+/** "Departure (KABC)", "Operating altitude", or "Arrival (KXYZ)". */
+export function columnLabel(state: WorksheetData, col: Column): string {
+  if (col === 1) return "Operating altitude";
+  return airportLabel(state, col === 0 ? "departure" : "arrival");
+}
+
+function columnNeeds(col: Column, missing: string[]): string {
+  return joinNeeds(COLUMN_SLOT[col], missing);
+}
+
+/** Pressure altitude from altitude and altimeter alone (no temperature needed). */
+function columnPressureAltitude(state: WorksheetData, col: Column): number | null {
+  const alt = state.altitude[col];
+  const altim = state.altimeter[col];
+  return isReal(alt) && isReal(altim) ? altitudeToPressureAltitude(alt, altim) : null;
+}
+
+function missingPressureInputs(state: WorksheetData, col: Column): string[] {
+  const missing: string[] = [];
+  if (!isReal(state.altitude[col])) missing.push(col === 1 ? "altitude" : "field elevation");
+  if (!isReal(state.altimeter[col])) missing.push("altimeter");
+  return missing;
+}
+
+export function computeClimbViewModel(state: WorksheetData): ClimbViewModel {
+  const aircraft = findAircraft(state.acType);
+  const notifications: Notification[] = [];
+  const weight = assessWeight(state.weight, aircraft);
+  const unknownAircraft = !state.acType ? "needs aircraft type" : "needs a supported aircraft type";
+  const all = (v: ComputedValue): Columns<ComputedValue> => [v, v, v];
+
+  if (!aircraft) {
+    const w = withheld(unknownAircraft);
+    return {
+      rateOfClimb: all(w),
+      rateOfClimbActual: all(w),
+      vx: all(w),
+      vy: all(w),
+      serviceCeiling: all(w),
+      va: w,
+      vra: w,
+      percentMGW: w,
+      notifications,
+    };
+  }
+
+  // Operating temperature limit (departure/arrival limits are raised by TOLD).
+  const opTemp = state.temp[1];
+  if (isReal(opTemp) && (opTemp < TEMP_LIMITS_C.min || opTemp > TEMP_LIMITS_C.max)) {
+    notifications.push({
+      level: "warning",
+      subject: fieldSubject("temp", 1),
+      message: `${columnLabel(state, 1)} temperature ${fmt(opTemp)}°C is outside the ${TEMP_LIMITS_C.min} to ${TEMP_LIMITS_C.max}°C the worksheet accepts.`,
+    });
+  }
+
+  /** The column's temperature, or why values needing it are withheld. */
+  const tempFor = (col: Column): number | string => {
+    const t = state.temp[col];
+    if (!isReal(t)) return columnNeeds(col, ["temperature"]);
+    if (t < TEMP_LIMITS_C.min || t > TEMP_LIMITS_C.max) {
+      return `needs valid ${COLUMN_SLOT[col]} temperature`;
+    }
+    return t;
+  };
+  const paFor = (col: Column): number | string =>
+    columnPressureAltitude(state, col) ?? columnNeeds(col, missingPressureInputs(state, col));
+
+  const climb = aircraft.climbPerformance;
+  const rateOfClimb = COLUMNS.map((col): ComputedValue => {
+    const pa = paFor(col);
+    const temp = tempFor(col);
+    const missing = [
+      ...missingPressureInputs(state, col),
+      ...(isReal(state.temp[col]) ? [] : ["temperature"]),
+    ];
+    if (missing.length > 0) return withheld(columnNeeds(col, missing));
+    if (typeof pa === "string") return withheld(pa);
+    if (typeof temp === "string") return withheld(temp);
+    const label = columnLabel(state, col);
+    try {
+      const r = bilinearInterpolateDetailed(
+        { xAxis: climb.pressureAltitudes, yAxis: climb.temperatures, data: climb.data as number[][] },
+        pa,
+        temp,
+        { xAxisName: "pressureAltitude", yAxisName: "temperature" },
+      );
+      if (r.extrapolated.length > 0) {
+        notifications.push({
+          level: "caution",
+          subject: climbSubject("rateOfClimb", col),
+          message: `${label} rate of climb is extrapolated beyond the POH climb table: ${describeExtrapolations(r.extrapolated)}.`,
+        });
+      }
+      return computed(Math.round(r.value));
+    } catch {
+      notifications.push({
+        level: "warning",
+        subject: climbSubject("rateOfClimb", col),
+        message: `${label} rate of climb could not be computed: the ${aircraft.id} POH climb table has no data for these conditions.`,
+      });
+      return { status: "unavailable" };
+    }
+  }) as Columns<ComputedValue>;
+
+  const percentMGW: ComputedValue = weight.withheldReason
+    ? withheld(weight.withheldReason)
+    : computed(Math.round(((state.weight as number) / aircraft.maxGrossWeight) * 100));
+
+  const rateOfClimbActual = rateOfClimb.map((roc): ComputedValue => {
+    if (roc.status === "withheld") return roc;
+    if (percentMGW.status !== "computed") return percentMGW;
+    if (roc.status !== "computed") return roc;
+    return computed(Math.round(roc.value * (1 + (1 - percentMGW.value / 100))));
+  }) as Columns<ComputedValue>;
+
+  const vxTable = aircraft.Vx;
+  if (!vxTable) {
+    notifications.push({
+      level: "warning",
+      subject: climbSubject("vx"),
+      message: `Vx is not available: the ${aircraft.id} POH data has no Vx table.`,
+    });
+  }
+  const vx = COLUMNS.map((col): ComputedValue => {
+    const pa = paFor(col);
+    if (typeof pa === "string") return withheld(pa);
+    if (!vxTable) return { status: "unavailable" };
+    const extrapolated = findExtrapolations([
+      { axis: "pressureAltitude", values: vxTable.altitudes, value: pa },
+    ]);
+    if (extrapolated.length > 0) {
+      notifications.push({
+        level: "caution",
+        subject: climbSubject("vx", col),
+        message: `${columnLabel(state, col)} Vx is extrapolated beyond the POH Vx table: ${describeExtrapolations(extrapolated)}.`,
+      });
+    }
+    return computed(calculateVx(aircraft, pa));
+  }) as Columns<ComputedValue>;
+
+  const vy = COLUMNS.map((col): ComputedValue => {
+    const pa = paFor(col);
+    if (typeof pa === "string") return withheld(pa);
+    let idx = climb.pressureAltitudes.findIndex((p) => p >= pa);
+    if (idx === -1) idx = 0;
+    return computed(climb.climbSpeeds[idx] ?? null);
+  }) as Columns<ComputedValue>;
+
+  let va: ComputedValue;
+  if (weight.withheldReason) {
+    va = withheld(weight.withheldReason);
+  } else {
+    const r = bilinearInterpolateDetailed(
+      { xAxis: [1], yAxis: aircraft.maneuvering.weights, data: [aircraft.maneuvering.Va] },
+      1,
+      state.weight as number,
+      { yAxisName: "weight" },
+    );
+    if (r.extrapolated.length > 0) {
+      notifications.push({
+        level: "caution",
+        subject: climbSubject("va"),
+        message: `Va is extrapolated beyond the POH maneuvering-speed table: ${describeExtrapolations(r.extrapolated)}.`,
+      });
+    }
+    va = computed(Math.round(r.value));
+  }
+
+  const vraValue = calculateVra(aircraft);
+  if (vraValue === null) {
+    notifications.push({
+      level: "warning",
+      subject: climbSubject("vra"),
+      message: `Vra is not available: the ${aircraft.id} POH data has no clean stall speed.`,
+    });
+  }
+  const vra = computed(vraValue);
+
+  const alts = climb.pressureAltitudes;
+  const serviceCeiling = COLUMNS.map((col): ServiceCeiling => {
+    const temp = tempFor(col);
+    if (typeof temp === "string") return withheld(temp);
+    try {
+      const pa = findInverseXgivenYandZ(climb.data, alts, climb.temperatures, 300, temp);
+      const tableMax = alts[alts.length - 1];
+      return pa > tableMax ? { status: "aboveTable", tableMax } : computed(pa);
+    } catch {
+      notifications.push({
+        level: "warning",
+        subject: climbSubject("serviceCeiling", col),
+        message: `${columnLabel(state, col)} service ceiling could not be computed: the ${aircraft.id} POH climb table has no data at ${fmt(temp)}°C.`,
+      });
+      return { status: "unavailable" };
+    }
+  }) as Columns<ServiceCeiling>;
+
+  return {
+    rateOfClimb,
+    rateOfClimbActual,
+    vx,
+    vy,
+    serviceCeiling,
+    va,
+    vra,
+    percentMGW,
+    notifications,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Maneuvering speeds
+// ---------------------------------------------------------------------------
+
+export const MANEUVERING_SUBJECT = valueSubject("maneuvering", "decision");
+
+/**
+ * A Warning when the aircraft's stall speeds can't produce maneuvering
+ * speeds. An unknown aircraft is left to the aircraft-type Warning.
+ */
+export function maneuveringNotifications(aircraft: Aircraft | undefined): Notification[] {
+  if (!aircraft) return [];
+  const { flaps, Vso } = aircraft.stallSpeeds ?? { flaps: [], Vso: [] };
+  const usable =
+    flaps.length > 0 &&
+    Vso.length === flaps.length &&
+    Vso.every((v) => typeof v === "number" && v > 0);
+  if (usable) return [];
+  return [
+    {
+      level: "warning",
+      subject: MANEUVERING_SUBJECT,
+      message: `Maneuvering speeds are not available: the ${aircraft.id} POH data has no stall speed for every flap setting.`,
+    },
+  ];
+}
+
+// ---------------------------------------------------------------------------
+// All performance notifications
+// ---------------------------------------------------------------------------
+
+/**
+ * Every notification about performance inputs and computed values (TOLD,
+ * climb, maneuvering), once each. Pure; AppContainer concatenates it with the
+ * weather-fetch notifications so inputs and step badges show them.
+ */
+export function derivePerformanceNotifications(state: WorksheetData): Notification[] {
+  const { PAs } = computePressureColumns(state.altitude, state.altimeter, state.temp);
+  const all = [
+    ...computeTOLDViewModel(state, PAs).notifications,
+    ...computeClimbViewModel(state).notifications,
+    ...maneuveringNotifications(findAircraft(state.acType)),
+  ];
+  const seen = new Set<string>();
+  return all.filter((n) => {
+    const key = `${n.level}|${subjectKey(n.subject)}|${n.message}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
