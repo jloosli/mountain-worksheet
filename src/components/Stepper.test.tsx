@@ -31,4 +31,18 @@ describe("Stepper", () => {
     const weather = screen.getByRole("link", { name: /Weather/ });
     expect(weather).toHaveAttribute("data-active", "true");
   });
+
+  it("shows a warning step and its count badge in red", () => {
+    render(
+      <Stepper
+        steps={[
+          defaultSteps[0],
+          { ...defaultSteps[1], status: "warning", badge: "1 warning" },
+          defaultSteps[2],
+        ]}
+      />
+    );
+    expect(screen.getByText("2").className).toMatch(/bg-red-/);
+    expect(screen.getByText("1 warning").className).toMatch(/text-red-/);
+  });
 });
