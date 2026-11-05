@@ -6,6 +6,7 @@ import {
   findAircraft,
   maneuveringNotifications,
   toldValueSubjects,
+  vyForPressureAltitude,
 } from "../derived";
 import type { WorksheetData } from "../types";
 import { fieldSubject, valueSubject } from "../notifications";
@@ -376,6 +377,22 @@ describe("computeTOLDViewModel", () => {
 });
 
 describe("computeClimbViewModel", () => {
+  it("clamps Vy above the climb table to the top row, with a Caution (#228)", () => {
+    // C172S climb table tops out at 12,000 ft PA (Vy 72); sea-level Vy is 74.
+    const state = {
+      ...baseState(),
+      acType: "C172S",
+      weight: 2400,
+      altimeter: [29.92, 29.92, 29.92] as WorksheetData["altimeter"],
+      altitude: [4000, 13000, 4500] as WorksheetData["altitude"],
+    };
+    const vm = computeClimbViewModel(state);
+    expect(vm.vy[1]).toEqual(expect.objectContaining({ status: "computed", value: 72 }));
+    expect(vm.notifications).toContainEqual(
+      expect.objectContaining({ level: "caution", subject: expect.objectContaining({ id: "climb.vy.operating" }) }),
+    );
+  });
+
   it("computes each column independently and shows what a column is waiting for", () => {
     const state = { ...baseState(), temp: [20, null, 20] as WorksheetData["temp"] };
     const vm = computeClimbViewModel(state);
@@ -603,5 +620,37 @@ describe("toldValueSubjects", () => {
       told("told.arrival.landing"),
       fieldSubject("rwy", 1),
     ]);
+  });
+});
+
+describe("vyForPressureAltitude", () => {
+  // C172-style table: 0..14000 ft, Vy 80 at sea level down to 72 at 14000.
+  const climb = {
+    pressureAltitudes: [0, 2000, 4000, 6000, 8000, 10000, 12000, 14000],
+    climbSpeeds: [80, 79, 78, 77, 75, 74, 73, 72],
+  };
+
+  it("clamps to the top-altitude Vy when PA is above the table (#228)", () => {
+    expect(vyForPressureAltitude(climb, 15500)).toBe(72);
+  });
+
+  it("uses the next row up for a PA between table rows", () => {
+    expect(vyForPressureAltitude(climb, 5000)).toBe(77);
+  });
+
+  it("uses the exact row for a PA on a table altitude", () => {
+    expect(vyForPressureAltitude(climb, 4000)).toBe(78);
+  });
+
+  it("returns the top row at exactly the top table altitude", () => {
+    expect(vyForPressureAltitude(climb, 14000)).toBe(72);
+  });
+
+  it("returns the sea-level row for a PA below the table", () => {
+    expect(vyForPressureAltitude(climb, -500)).toBe(80);
+  });
+
+  it("returns null when PA is unknown", () => {
+    expect(vyForPressureAltitude(climb, null)).toBeNull();
   });
 });

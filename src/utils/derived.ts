@@ -639,9 +639,7 @@ export function computeClimbViewModel(state: WorksheetData): ClimbViewModel {
   const vyAt = (col: Column): Lookup<ComputedValue> => {
     const pa = paFor(col);
     if (typeof pa === "string") return lookup(withheld(pa));
-    let idx = climb.pressureAltitudes.findIndex((p) => p >= pa);
-    if (idx === -1) idx = 0; // Above the table; which entry to show is #228.
-    const value = computed(climb.climbSpeeds[idx] ?? null, inputs({ altitude: col, altimeter: col }));
+    const value = computed(vyForPressureAltitude(climb, pa), inputs({ altitude: col, altimeter: col }));
     const outside = findExtrapolations([
       { axis: "pressureAltitude", values: climb.pressureAltitudes, value: pa },
     ]);
@@ -795,4 +793,21 @@ export function derivePerformanceNotifications(state: WorksheetData): Notificati
     seen.add(key);
     return true;
   });
+}
+
+/**
+ * Vy (best rate of climb speed) for a pressure altitude, taken from the first
+ * climb-table row at or above `pa` (no interpolation between rows). Above the
+ * top of the table, clamps to the highest-altitude row — never the sea-level
+ * row, which would overstate Vy at high density altitude (#228).
+ */
+export function vyForPressureAltitude(
+  climb: Pick<Aircraft["climbPerformance"], "pressureAltitudes" | "climbSpeeds">,
+  pa: number | null,
+): number | null {
+  if (pa === null) return null;
+  const { pressureAltitudes, climbSpeeds } = climb;
+  let idx = pressureAltitudes.findIndex((p) => p >= pa);
+  if (idx === -1) idx = pressureAltitudes.length - 1;
+  return climbSpeeds[idx] ?? null;
 }
