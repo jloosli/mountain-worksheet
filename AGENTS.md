@@ -6,11 +6,11 @@ A Next.js 16.x web application (App Router, TypeScript, Tailwind CSS v4, Vercel)
 
 - `src/app/` — App Router pages and layouts
 - `src/components/` — UI components; `AppContainer` owns all state, `AppInputs` owns user inputs, `Calculations` derives results during render
-- `src/utils/types.ts` — Core types: `WorksheetData`, `Aircraft`, `TOLDResults`, `TOLDInputs`
+- `src/utils/types.ts` — Core types: `WorksheetData`, `Aircraft`, `TOLDCalculationParams`
 - `src/data/aircraft.json` — POH performance tables indexed by weight × altitude × temperature
 - `src/utils/interpolation.ts` — Trilinear interpolation across POH tables
 - `src/utils/toldCalculations.ts`, `maneuveringCalculations.ts`, `formulas.ts` — Calculations
-- `src/utils/derived.ts` — Pure helpers (`computePressureColumns`, `computeTOLDViewModel`) used by `<Calculations>` during render
+- `src/utils/derived.ts` — Pure helpers (`computePressureColumns`, `computeTOLDViewModel`) used by `<Calculations>` during render; TOLD results are per airport, each value `computed`/`withheld`/`unavailable`, with notifications
 - `src/app/api/aviation-weather/route.ts` — Proxy to `aviationweather.gov` (avoids CORS)
 
 ## URL State Management

@@ -2,6 +2,7 @@ import type { WorksheetData } from "@/utils/types";
 import {
   computePressureColumns,
   computeTOLDViewModel,
+  type ComputedValue,
   type Triple,
 } from "@/utils/derived";
 import aircraftData from "@/data/aircraft.json";
@@ -117,6 +118,10 @@ function vaSpeed(aircraft: Aircraft, weight: number | null): number | null {
   const t = (weight - weights[lo]) / (weights[hi] - weights[lo]);
   return Math.round(Va[lo] + t * (Va[hi] - Va[lo]));
 }
+
+/** A computed value's number, or null when it is withheld or unavailable. */
+const shownValue = (v: ComputedValue): number | null =>
+  v.status === "computed" ? v.value : null;
 
 function TOLDRow({
   label,
@@ -304,28 +309,28 @@ export default function PrintBriefing({ state }: PrintBriefingProps) {
           <tbody>
             <TOLDRow
               label="TO Ground Roll"
-              dep={told.results?.takeoffGroundRoll.departure ?? null}
-              arr={told.results?.takeoffGroundRoll.arrival ?? null}
+              dep={shownValue(told.departure.values.takeoffGroundRoll)}
+              arr={shownValue(told.arrival.values.takeoffGroundRoll)}
             />
             <TOLDRow
               label="TO over 50' obstacle"
-              dep={told.results?.takeoff50ftObstacle.departure ?? null}
-              arr={told.results?.takeoff50ftObstacle.arrival ?? null}
+              dep={shownValue(told.departure.values.takeoff50ftObstacle)}
+              arr={shownValue(told.arrival.values.takeoff50ftObstacle)}
             />
             <TOLDRow
               label="Landing Ground Roll"
-              dep={told.results?.landingGroundRoll.departure ?? null}
-              arr={told.results?.landingGroundRoll.arrival ?? null}
+              dep={shownValue(told.departure.values.landingGroundRoll)}
+              arr={shownValue(told.arrival.values.landingGroundRoll)}
             />
             <TOLDRow
               label="Landing over 50' obstacle"
-              dep={told.results?.landing50ftObstacle.departure ?? null}
-              arr={told.results?.landing50ftObstacle.arrival ?? null}
+              dep={shownValue(told.departure.values.landing50ftObstacle)}
+              arr={shownValue(told.arrival.values.landing50ftObstacle)}
             />
             <TOLDRow
               label="Runway remaining (50' obstacle)"
-              dep={told.results?.availableRunwayRemainingTakeoff50ft.departure ?? null}
-              arr={told.results?.availableRunwayRemainingTakeoff50ft.arrival ?? null}
+              dep={shownValue(told.departure.values.runwayRemaining50ft)}
+              arr={shownValue(told.arrival.values.runwayRemaining50ft)}
               colorNegative
             />
           </tbody>

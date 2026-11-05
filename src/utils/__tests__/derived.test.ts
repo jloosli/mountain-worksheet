@@ -1,5 +1,6 @@
 import { computePressureColumns, computeTOLDViewModel } from "../derived";
 import type { WorksheetData } from "../types";
+import { fieldSubject, valueSubject } from "../notifications";
 
 describe("computePressureColumns", () => {
   it("returns nulls for all columns when inputs are missing", () => {
@@ -115,65 +116,236 @@ const baseState = (): WorksheetData => ({
   mtnCert: false,
 });
 
+const PAS_OK: [number, number, number] = [1000, 8000, 1000];
+
 describe("computeTOLDViewModel", () => {
-  it("returns status 'invalid_inputs' and null results when acType is empty", () => {
+  it("computes departure values while arrival waits for its temperature", () => {
+    const state = { ...baseState(), temp: [20, 10, null] as WorksheetData["temp"] };
+    const vm = computeTOLDViewModel(state, [1000, 8000, null]);
+
+    expect(vm.departure.values.takeoffGroundRoll).toEqual({
+      status: "computed",
+      value: expect.any(Number),
+    });
+    expect(vm.departure.values.landingGroundRoll.status).toBe("computed");
+    expect(vm.departure.values.runwayRemaining50ft.status).toBe("computed");
+    for (const v of Object.values(vm.arrival.values)) {
+      expect(v).toEqual({ status: "withheld", reason: "needs arrival temperature" });
+    }
+  });
+
+  it("puts one Warning on weight above max gross and withholds only weight-dependent values", () => {
+    // C182T max gross is 3,100 lbs
+    const vm = computeTOLDViewModel({ ...baseState(), weight: 3200 }, PAS_OK);
+
+    expect(vm.notifications).toEqual([
+      {
+        level: "warning",
+        subject: fieldSubject("weight"),
+        message: "Weight 3,200 lbs exceeds the C182T maximum gross weight (3,100 lbs).",
+      },
+    ]);
+    for (const slot of ["departure", "arrival"] as const) {
+      const v = vm[slot].values;
+      expect(v.takeoffGroundRoll).toEqual({ status: "withheld", reason: "needs valid weight" });
+      expect(v.takeoff50ftObstacle).toEqual({ status: "withheld", reason: "needs valid weight" });
+      expect(v.runwayRemaining50ft).toEqual({ status: "withheld", reason: "needs valid weight" });
+      // Landing distances don't depend on weight (single-weight POH table).
+      expect(v.landingGroundRoll.status).toBe("computed");
+      expect(v.landing50ftObstacle.status).toBe("computed");
+    }
+  });
+
+  it("puts a Warning on weight below empty weight", () => {
+    const vm = computeTOLDViewModel({ ...baseState(), weight: 2000 }, PAS_OK);
+    expect(vm.notifications).toEqual([
+      {
+        level: "warning",
+        subject: fieldSubject("weight"),
+        message: "Weight 2,000 lbs is below the C182T empty weight (2,300 lbs).",
+      },
+    ]);
+  });
+
+  it("shows an Advisory when weight is at 96% of max gross", () => {
+    const vm = computeTOLDViewModel({ ...baseState(), weight: 2976 }, PAS_OK);
+    expect(vm.notifications).toEqual([
+      {
+        level: "advisory",
+        subject: fieldSubject("weight"),
+        message: "Weight 2,976 lbs is 96% of the C182T maximum gross weight (3,100 lbs).",
+      },
+    ]);
+    expect(vm.departure.values.takeoffGroundRoll.status).toBe("computed");
+  });
+
+  it("raises nothing about weight below 95% of max gross", () => {
+    const vm = computeTOLDViewModel({ ...baseState(), weight: 2900 }, PAS_OK);
+    expect(vm.notifications).toEqual([]);
+  });
+
+  it("asks for weight without a notification when weight is blank", () => {
+    const vm = computeTOLDViewModel({ ...baseState(), weight: null }, PAS_OK);
+    expect(vm.notifications).toEqual([]);
+    expect(vm.departure.values.takeoffGroundRoll).toEqual({
+      status: "withheld",
+      reason: "needs weight",
+    });
+    expect(vm.arrival.values.landingGroundRoll.status).toBe("computed");
+  });
+
+  it("puts a Caution on arrival landing distances extrapolated beyond the landing table", () => {
+    // POH landing table covers 0–8,000 ft PA; KXYZ is at 9,000 ft.
     const vm = computeTOLDViewModel(
-      { ...baseState(), acType: "" },
-      [1000, 8000, 1000]
+      { ...baseState(), altitude: [1000, 10000, 9000] },
+      [1000, 10000, 9000],
     );
-    expect(vm.results).toBeNull();
-    expect(vm.status).toBe("invalid_inputs");
-    expect(vm.errors).toEqual([]);
+
+    expect(vm.arrival.notifications).toContainEqual({
+      level: "caution",
+      subject: valueSubject("told.arrival.landing", "decision"),
+      message:
+        "Arrival (KXYZ) landing distances are extrapolated beyond the POH table: pressure altitude 9,000 ft is outside 0–8,000 ft.",
+    });
+    expect(vm.arrival.values.landingGroundRoll.status).toBe("computed");
+    expect(vm.departure.notifications).toEqual([]);
   });
 
-  it("returns status 'invalid_inputs' and null results when weight is null", () => {
+  it("puts a Caution on takeoff distances extrapolated beyond the takeoff table", () => {
     const vm = computeTOLDViewModel(
-      { ...baseState(), weight: null },
-      [1000, 8000, 1000]
+      { ...baseState(), temp: [45, 10, 20] },
+      [1000, 8000, 1000],
     );
-    expect(vm.results).toBeNull();
-    expect(vm.status).toBe("invalid_inputs");
+    expect(vm.departure.notifications).toContainEqual({
+      level: "caution",
+      subject: valueSubject("told.departure.takeoff", "decision"),
+      message:
+        "Departure (KABC) takeoff distances are extrapolated beyond the POH table: temperature 45°C is outside 0–40°C.",
+    });
   });
 
-  it("returns null results when neither departure nor arrival has PA+temp", () => {
-    const vm = computeTOLDViewModel(baseState(), [null, null, null]);
-    expect(vm.results).toBeNull();
-    expect(vm.status).toBe("invalid_inputs");
-  });
-
-  it("returns success with a populated results shape when inputs are valid", () => {
-    const vm = computeTOLDViewModel(baseState(), [1000, 8000, 1000]);
-    expect(vm.status).toBe("success");
-    expect(vm.results).not.toBeNull();
-    expect(vm.results!.takeoffGroundRoll).toHaveProperty("departure");
-    expect(vm.results!.takeoffGroundRoll).toHaveProperty("arrival");
-    expect(vm.results!.takeoff50ftObstacle).toHaveProperty("departure");
-    expect(vm.results!.landingGroundRoll).toHaveProperty("departure");
-    expect(vm.results!.landing50ftObstacle).toHaveProperty("departure");
-    expect(vm.results!.availableRunwayRemainingTakeoffGroundRoll).toHaveProperty("departure");
-    expect(vm.results!.availableRunwayRemainingTakeoff50ft).toHaveProperty("departure");
-  });
-
-  it("does not expose retry/clear/isCalculating fields", () => {
-    const vm = computeTOLDViewModel(baseState(), [1000, 8000, 1000]);
-    expect(vm).not.toHaveProperty("isCalculating");
-    expect(vm).not.toHaveProperty("retryCalculation");
-    expect(vm).not.toHaveProperty("clearErrors");
-  });
-
-  it("populates errorSummary as null when there are no errors", () => {
-    const vm = computeTOLDViewModel(baseState(), [1000, 8000, 1000]);
-    expect(vm.errorSummary).toBeNull();
-  });
-
-  it("populates errorSummary when calculation surfaces errors", () => {
-    // Weight below empty weight triggers validation error per validateAircraftWeight
+  it("names each airport and phase once, with no duplicate notifications", () => {
+    // Both airports at 9,000 ft and 45°C: both tables extrapolate on two axes.
     const vm = computeTOLDViewModel(
-      { ...baseState(), weight: 100 },
-      [1000, 8000, 1000]
+      { ...baseState(), altitude: [9000, 10000, 9000], temp: [45, 10, 45], weight: 3000 },
+      [9000, 10000, 9000],
     );
-    expect(vm.errors.length).toBeGreaterThan(0);
-    expect(vm.errorSummary).not.toBeNull();
-    expect(vm.errorSummary!.count).toBe(vm.errors.length);
+    const messages = vm.notifications.map((n) => n.message);
+    expect(new Set(messages).size).toBe(messages.length);
+    const keys = vm.notifications.map((n) => JSON.stringify(n.subject));
+    expect(new Set(keys).size).toBe(keys.length);
+    expect(vm.notifications.filter((n) => n.level === "caution").map((n) => n.message)).toEqual([
+      "Departure (KABC) takeoff distances are extrapolated beyond the POH table: pressure altitude 9,000 ft is outside 0–8,000 ft; temperature 45°C is outside 0–40°C.",
+      "Departure (KABC) landing distances are extrapolated beyond the POH table: pressure altitude 9,000 ft is outside 0–8,000 ft; temperature 45°C is outside 0–40°C.",
+      "Arrival (KXYZ) takeoff distances are extrapolated beyond the POH table: pressure altitude 9,000 ft is outside 0–8,000 ft; temperature 45°C is outside 0–40°C.",
+      "Arrival (KXYZ) landing distances are extrapolated beyond the POH table: pressure altitude 9,000 ft is outside 0–8,000 ft; temperature 45°C is outside 0–40°C.",
+    ]);
+  });
+
+  it("puts a Warning on an arrival temperature beyond the hard limit and withholds only arrival values", () => {
+    const vm = computeTOLDViewModel({ ...baseState(), temp: [20, 10, 65] }, PAS_OK);
+    expect(vm.arrival.notifications).toContainEqual({
+      level: "warning",
+      subject: fieldSubject("temp", 2),
+      message: "Arrival (KXYZ) temperature 65°C is outside the -50 to 60°C the worksheet accepts.",
+    });
+    expect(vm.arrival.values.landingGroundRoll).toEqual({
+      status: "withheld",
+      reason: "needs valid arrival temperature",
+    });
+    expect(vm.departure.values.takeoffGroundRoll.status).toBe("computed");
+  });
+
+  it("waits for a blank runway length without a notification", () => {
+    const vm = computeTOLDViewModel({ ...baseState(), rwy: [3000, null] }, PAS_OK);
+    expect(vm.notifications).toEqual([]);
+    expect(vm.arrival.values.runwayRemaining50ft).toEqual({
+      status: "withheld",
+      reason: "needs arrival runway length",
+    });
+    expect(vm.arrival.values.landingGroundRoll.status).toBe("computed");
+    expect(vm.departure.values.runwayRemaining50ft.status).toBe("computed");
+  });
+
+  it("puts a Warning on a runway length that isn't positive", () => {
+    const vm = computeTOLDViewModel({ ...baseState(), rwy: [0, 3000] }, PAS_OK);
+    expect(vm.departure.notifications).toEqual([
+      {
+        level: "warning",
+        subject: fieldSubject("rwy", 0),
+        message: "Departure (KABC) runway length must be greater than 0 ft.",
+      },
+    ]);
+    expect(vm.departure.values.runwayRemainingGroundRoll).toEqual({
+      status: "withheld",
+      reason: "needs valid departure runway length",
+    });
+  });
+
+  it("shows an Advisory when an airport's pressure altitude is above 15,000 ft", () => {
+    const vm = computeTOLDViewModel(
+      { ...baseState(), altitude: [1000, 10000, 15200] },
+      [1000, 10000, 15200],
+    );
+    expect(vm.arrival.notifications).toContainEqual({
+      level: "advisory",
+      subject: valueSubject("told.arrival", "decision"),
+      message: "Arrival (KXYZ) pressure altitude 15,200 ft is above 15,000 ft.",
+    });
+  });
+
+  it("does not raise generic reminders for high, short or extreme-temperature fields", () => {
+    const vm = computeTOLDViewModel(
+      {
+        ...baseState(),
+        altitude: [7000, 10000, 7000],
+        temp: [-25, 10, 38],
+        rwy: [1800, 2500],
+      },
+      [11000, 10000, 12000],
+    );
+    const text = vm.notifications.map((n) => n.message).join("\n");
+    expect(text).not.toMatch(/careful performance planning/);
+    expect(text).not.toMatch(/Short runway operations/);
+    expect(text).not.toMatch(/Extreme temperature/);
+    expect(vm.notifications.every((n) => n.level === "caution")).toBe(true);
+  });
+
+  it("puts a Warning on an aircraft type with no performance data", () => {
+    const vm = computeTOLDViewModel({ ...baseState(), acType: "XYZ1" }, PAS_OK);
+    expect(vm.notifications).toEqual([
+      {
+        level: "warning",
+        subject: fieldSubject("acType"),
+        message: "Aircraft type XYZ1 has no POH performance data.",
+      },
+    ]);
+    expect(vm.departure.values.landingGroundRoll).toEqual({
+      status: "withheld",
+      reason: "needs a supported aircraft type",
+    });
+  });
+
+  it("computes values at 0°C and sea level (falsy but valid)", () => {
+    const vm = computeTOLDViewModel(
+      { ...baseState(), altitude: [0, 8000, 0], temp: [0, 10, 0] },
+      [0, 8000, 0],
+    );
+    for (const slot of ["departure", "arrival"] as const) {
+      for (const v of Object.values(vm[slot].values)) {
+        expect(v.status).toBe("computed");
+      }
+    }
+  });
+
+  it("names everything an airport is waiting for", () => {
+    const vm = computeTOLDViewModel(
+      { ...baseState(), altitude: [null, 8000, 1000], altimeter: [null, 29.92, 29.92] },
+      [null, 8000, 1000],
+    );
+    expect(vm.departure.values.takeoffGroundRoll).toEqual({
+      status: "withheld",
+      reason: "needs departure field elevation and altimeter",
+    });
   });
 });

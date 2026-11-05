@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "../test-utils/test-utils";
+import { render, screen, waitFor, within } from "../test-utils/test-utils";
 import Calculations from "./Calculations";
 import type { WorksheetData } from "../utils/types";
 
@@ -353,5 +353,63 @@ describe("Calculations", () => {
       .querySelectorAll("td")[2].textContent;
 
     expect(secondROC).not.toBe(firstROC);
+  });
+
+  describe("TOLD notifications", () => {
+    const toldTable = () =>
+      screen.getByRole("table", { name: /take off and landing distances/i });
+
+    it("computes departure TOLD and shows what arrival is waiting for", () => {
+      render(
+        <Calculations
+          state={{
+            ...mockWorksheetData,
+            altitude: [1000, 8000, 1000],
+            temp: [20, 10, null],
+            rwy: [3000, 3000],
+          }}
+        />
+      );
+      const table = within(toldTable());
+      expect(table.getAllByText("needs arrival temperature")).toHaveLength(6);
+      expect(table.getAllByText(/^\d{1,3}(,\d{3})*$/).length).toBe(6);
+      expect(table.queryByText("Error")).not.toBeInTheDocument();
+    });
+
+    it("shows a Caution naming the airport when landing distances are extrapolated", () => {
+      render(
+        <Calculations
+          state={{
+            ...mockWorksheetData,
+            altitude: [1000, 10000, 9000],
+            temp: [20, 10, 20],
+            rwy: [3000, 3000],
+          }}
+        />
+      );
+      const caution = screen.getByText(
+        /Arrival \(KXYZ\) landing distances are extrapolated beyond the POH table/
+      );
+      expect(caution.closest("li")).toHaveAttribute("data-level", "caution");
+    });
+
+    it("shows a value that can't be trusted only once, with no generic reminders", () => {
+      render(
+        <Calculations
+          state={{
+            ...mockWorksheetData,
+            altitude: [9000, 10000, 9000],
+            temp: [-25, 10, 38],
+            rwy: [1500, 2500],
+          }}
+        />
+      );
+      expect(
+        screen.getAllByText(/Departure \(KABC\) takeoff distances are extrapolated/)
+      ).toHaveLength(1);
+      expect(screen.queryByText(/careful performance planning/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Short runway operations/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Extreme temperature/)).not.toBeInTheDocument();
+    });
   });
 });

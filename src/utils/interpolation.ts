@@ -12,14 +12,43 @@ export interface FlexibleInterpolationTable {
 
 export interface InterpolationOptions {
   allowExtrapolation?: boolean;
-  warnOnExtrapolation?: boolean;
   xAxisName?: string;
   yAxisName?: string;
+}
+
+/**
+ * One table axis a lookup went beyond. Extrapolation is reported as data so
+ * callers can raise a Caution; the helpers here never log it.
+ */
+export interface Extrapolation {
+  axis: string;
+  value: number;
+  min: number;
+  max: number;
+}
+
+/**
+ * The axes on which `value` lies outside the table. Single-point axes are
+ * skipped: the table is constant along them by design.
+ */
+export function findExtrapolations(
+  axes: { axis: string; values: number[]; value: number }[]
+): Extrapolation[] {
+  const out: Extrapolation[] = [];
+  for (const { axis, values, value } of axes) {
+    if (values.length < 2) continue;
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    if (value < min || value > max) out.push({ axis, value, min, max });
+  }
+  return out;
 }
 
 export interface InterpolationResult {
   value: number;
   wasExtrapolated: boolean;
+  /** Each axis the lookup went beyond (named by xAxisName/yAxisName, default "x"/"y"). */
+  extrapolated: Extrapolation[];
   bounds: {
     xMin: number;
     xMax: number;
@@ -37,7 +66,6 @@ export interface TrilinearInterpolationTable {
 
 export interface TrilinearInterpolationOptions {
   allowExtrapolation?: boolean;
-  warnOnExtrapolation?: boolean;
 }
 
 // Helper function to find surrounding index for interpolation
@@ -62,9 +90,7 @@ function performInterpolation(
   data: (number | null)[][],
   xValue: number,
   yValue: number,
-  options: Required<
-    Pick<InterpolationOptions, "allowExtrapolation" | "warnOnExtrapolation">
-  >
+  options: Required<Pick<InterpolationOptions, "allowExtrapolation">>
 ): number {
   // Validate input dimensions
   if (xAxis.length === 0 || yAxis.length === 0) {
@@ -131,10 +157,6 @@ function performInterpolation(
     throw new Error("Values outside table range and extrapolation is disabled");
   }
 
-  if ((isExtrapolatingX || isExtrapolatingY) && options.warnOnExtrapolation) {
-    console.warn("Extrapolating outside table bounds");
-  }
-
   // Find surrounding indices
   const xIndex = findSurroundingIndex(xAxis, xValue);
   const yIndex = findSurroundingIndex(yAxis, yValue);
@@ -174,12 +196,11 @@ export function bilinearInterpolate(
   yValue: number,
   options: InterpolationOptions = {}
 ): number {
-  const { allowExtrapolation = true, warnOnExtrapolation = true } = options;
+  const { allowExtrapolation = true } = options;
   const { xAxis, yAxis, data } = table;
 
   return performInterpolation(xAxis, yAxis, data, xValue, yValue, {
     allowExtrapolation,
-    warnOnExtrapolation,
   });
 }
 
@@ -189,16 +210,9 @@ export function bilinearInterpolateFlexible(
   xValue: number,
   yValue: number,
   options: Required<Pick<InterpolationOptions, "xAxisName" | "yAxisName">> &
-    Partial<
-      Pick<InterpolationOptions, "allowExtrapolation" | "warnOnExtrapolation">
-    >
+    Partial<Pick<InterpolationOptions, "allowExtrapolation">>
 ): number {
-  const {
-    xAxisName,
-    yAxisName,
-    allowExtrapolation = true,
-    warnOnExtrapolation = true,
-  } = options;
+  const { xAxisName, yAxisName, allowExtrapolation = true } = options;
 
   const xAxis = table[xAxisName] as number[];
   const yAxis = table[yAxisName] as number[];
@@ -212,7 +226,6 @@ export function bilinearInterpolateFlexible(
 
   return performInterpolation(xAxis, yAxis, data, xValue, yValue, {
     allowExtrapolation,
-    warnOnExtrapolation,
   });
 }
 
@@ -229,9 +242,15 @@ export function bilinearInterpolateDetailed(
   const isExtrapolatingY =
     yValue < yAxis[0] || yValue > yAxis[yAxis.length - 1];
 
+  const { xAxisName = "x", yAxisName = "y" } = options;
+
   return {
     value: bilinearInterpolate(table, xValue, yValue, options),
     wasExtrapolated: isExtrapolatingX || isExtrapolatingY,
+    extrapolated: findExtrapolations([
+      { axis: xAxisName, values: xAxis, value: xValue },
+      { axis: yAxisName, values: yAxis, value: yValue },
+    ]),
     bounds: {
       xMin: xAxis[0],
       xMax: xAxis[xAxis.length - 1],
@@ -424,7 +443,7 @@ export function trilinearInterpolate(
   temperature: number,
   options: TrilinearInterpolationOptions = {}
 ): number | null {
-  const { allowExtrapolation = true, warnOnExtrapolation = true } = options;
+  const { allowExtrapolation = true } = options;
   const { weights, pressureAltitudes, temperatures, data } = table;
 
   // Validate input dimensions
@@ -475,15 +494,6 @@ export function trilinearInterpolate(
     !allowExtrapolation
   ) {
     throw new Error("Values outside table range and extrapolation is disabled");
-  }
-
-  if (
-    (isExtrapolatingWeight ||
-      isExtrapolatingAltitude ||
-      isExtrapolatingTemperature) &&
-    warnOnExtrapolation
-  ) {
-    console.warn("Trilinear extrapolation outside table bounds");
   }
 
   // Find surrounding indices
@@ -576,4 +586,26 @@ export function trilinearInterpolate(
 
   const result = c0 * (1 - fw) + c1 * fw;
   return result;
+}
+
+
+/**
+ * `trilinearInterpolate`, plus the axes ("weight", "pressureAltitude",
+ * "temperature") the lookup extrapolated beyond.
+ */
+export function trilinearInterpolateDetailed(
+  table: TrilinearInterpolationTable,
+  weight: number,
+  pressureAltitude: number,
+  temperature: number,
+  options: TrilinearInterpolationOptions = {}
+): { value: number | null; extrapolated: Extrapolation[] } {
+  return {
+    value: trilinearInterpolate(table, weight, pressureAltitude, temperature, options),
+    extrapolated: findExtrapolations([
+      { axis: "weight", values: table.weights, value: weight },
+      { axis: "pressureAltitude", values: table.pressureAltitudes, value: pressureAltitude },
+      { axis: "temperature", values: table.temperatures, value: temperature },
+    ]),
+  };
 }

@@ -6,7 +6,6 @@ import Altitudes from "@/components/Altitudes";
 import ClimbPerformance from "@/components/ClimbPerformance";
 import TakeoffPerformance from "@/components/TakeoffPerformance";
 import ManeuveringPerformance from "@/components/ManeuveringPerformance";
-import TOLDErrorBoundary from "@/components/TOLDErrorBoundary";
 import { calculateManeuveringSpeeds } from "@/utils/maneuveringCalculations";
 import {
   computePressureColumns,
@@ -23,7 +22,7 @@ export default function Calculations({ state }: CalculationsProps) {
     state.altimeter,
     state.temp,
   );
-  const toldData = computeTOLDViewModel(state, PAs);
+  const told = computeTOLDViewModel(state, PAs);
   const maneuveringSpeeds = state.acType
     ? calculateManeuveringSpeeds(state.acType)
     : undefined;
@@ -55,17 +54,11 @@ export default function Calculations({ state }: CalculationsProps) {
           PAs={PAs}
           altimeters={state.altimeter}
         />
-        <TOLDErrorBoundary
-          onError={(error, errorInfo) => {
-            console.error("TOLD calculation error:", error, errorInfo);
-          }}
-        >
-          <TakeoffPerformance
-            aircraftModel={state.acType}
-            airports={state.airport}
-            toldData={toldData}
-          />
-        </TOLDErrorBoundary>
+        <TakeoffPerformance
+          aircraftModel={state.acType}
+          airports={state.airport}
+          told={told}
+        />
         <ManeuveringPerformance
           aircraftModel={state.acType}
           maneuveringSpeeds={maneuveringSpeeds}
