@@ -11,6 +11,7 @@ import {
   pressureAltitudeToDensityAltitude,
 } from "@/utils/formulas";
 import { Aircraft } from "@/utils/types";
+import { vyForPressureAltitude } from "@/utils/derived";
 
 interface ClimbPerformanceProps {
   aircraftModel?: string;
@@ -71,11 +72,7 @@ export default function ClimbPerformance({
 
   const Vy = (pa: number | null): number | null => {
     if (pa === null || !aircraft) return null;
-    let idx = aircraft.climbPerformance.pressureAltitudes.findIndex(
-      (p) => p >= pa
-    );
-    if (idx === -1) idx = 0;
-    return aircraft.climbPerformance.climbSpeeds[idx] ?? null;
+    return vyForPressureAltitude(aircraft.climbPerformance, pa);
   };
 
   const Va = (): number | null => {

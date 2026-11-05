@@ -258,3 +258,23 @@ describe("PrintBriefing — Vx fallback when pressure altitude is missing", () =
     expect(cells[3].textContent).toBe("—");
   });
 });
+
+describe("PrintBriefing — Vy above the climb table (#228)", () => {
+  it("clamps Vy to the top-altitude row, not the sea-level row", () => {
+    // C172S climb table tops out at 12,000 ft PA (Vy 72); sea-level Vy is 74.
+    const highOp: WorksheetData = {
+      ...stateWithPerf,
+      acType: "C172S",
+      weight: 2400,
+      altitude: [4000, 13000, 4500] as [number, number, number],
+    };
+    const { container } = render(<PrintBriefing state={highOp} />);
+    const vyRow = Array.from(container.querySelectorAll("tr")).find(
+      (tr) => tr.querySelector("td")?.textContent?.trim() === "Vy",
+    );
+    const cells = Array.from(vyRow!.querySelectorAll("td")).map(
+      (td) => td.textContent,
+    );
+    expect(cells.slice(1)).toEqual(["73", "72", "73"]);
+  });
+});

@@ -3,6 +3,7 @@ import {
   computePressureColumns,
   computeTOLDViewModel,
   type Triple,
+  vyForPressureAltitude,
 } from "@/utils/derived";
 import aircraftData from "@/data/aircraft.json";
 import { bilinearInterpolateFlexible } from "@/utils/interpolation";
@@ -91,14 +92,6 @@ function computeClimbRow(aircraft: Aircraft, PAs: Triple, OATs: Triple): Triple 
     }
   }
   return rates;
-}
-
-function vySpeed(aircraft: Aircraft, pa: number | null): number | null {
-  if (pa === null) return null;
-  const alts = aircraft.climbPerformance.pressureAltitudes;
-  let idx = alts.findIndex((p) => p >= pa);
-  if (idx === -1) idx = 0;
-  return aircraft.climbPerformance.climbSpeeds[idx] ?? null;
 }
 
 function vaSpeed(aircraft: Aircraft, weight: number | null): number | null {
@@ -383,9 +376,9 @@ export default function PrintBriefing({ state }: PrintBriefingProps) {
               </tr>
               <tr className="border-b border-slate-200">
                 <td className="py-0.5 pr-2">Vy</td>
-                <td className="py-0.5 pr-2 text-right">{fmtNum(vySpeed(aircraft, PAs[0]))}</td>
-                <td className="py-0.5 pr-2 text-right">{fmtNum(vySpeed(aircraft, PAs[1]))}</td>
-                <td className="py-0.5 text-right">{fmtNum(vySpeed(aircraft, PAs[2]))}</td>
+                <td className="py-0.5 pr-2 text-right">{fmtNum(vyForPressureAltitude(aircraft.climbPerformance, PAs[0]))}</td>
+                <td className="py-0.5 pr-2 text-right">{fmtNum(vyForPressureAltitude(aircraft.climbPerformance, PAs[1]))}</td>
+                <td className="py-0.5 text-right">{fmtNum(vyForPressureAltitude(aircraft.climbPerformance, PAs[2]))}</td>
               </tr>
               <tr className="border-b border-slate-200">
                 <td className="py-0.5 pr-2">Va (actual weight)</td>

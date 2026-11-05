@@ -94,6 +94,20 @@ describe("ClimbPerformance Component", () => {
     PAs: [2000, 4000, 6000] as [number, number, number],
   };
 
+  test("Vy above the top of the climb table uses the top-altitude speed (#228)", () => {
+    const { container } = render(
+      <ClimbPerformance {...defaultProps} PAs={[2000, 4000, 7000]} />
+    );
+    const vyRow = Array.from(container.querySelectorAll("tr")).find((tr) =>
+      tr.querySelector("td")?.textContent?.trim().startsWith("Vy")
+    );
+    const cells = Array.from(vyRow!.querySelectorAll("td")).map((td) =>
+      td.textContent?.trim()
+    );
+    // Table tops out at 6000 ft (Vy 77); 7000 ft must clamp to 77, not sea-level 80.
+    expect(cells.slice(1)).toEqual(["79", "78", "77"]);
+  });
+
   test("renders without crashing", () => {
     render(<ClimbPerformance {...defaultProps} />);
     expect(
