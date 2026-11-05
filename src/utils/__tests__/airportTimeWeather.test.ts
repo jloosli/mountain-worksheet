@@ -232,6 +232,53 @@ describe("selectAirportWeather", () => {
     expect(result.altimeter).toBeCloseTo(29.97, 2);
   });
 
+  it("attributes each nearest-period field to its actual source and offset", () => {
+    const tafWithNullAltim: TAFResponse = {
+      ...baseTaf,
+      fcsts: [
+        {
+          timeFrom: Math.floor(Date.parse("2026-05-12T15:00:00Z") / 1000),
+          timeTo: Math.floor(Date.parse("2026-05-12T18:00:00Z") / 1000),
+          temp: 22,
+          altim: null,
+        },
+      ],
+    };
+    // 21 hr after the 15:00Z observation; past the end of the only TAF period.
+    const requested = new Date("2026-05-13T12:00:00Z");
+    const result = selectAirportWeather(baseMetar, tafWithNullAltim, requested, "KSLC");
+    expect(result.source).toBe("taf-nearest");
+    const on = (field: "temp" | "altimeter") =>
+      result.notifications.filter(
+        (n) => n.subject.kind === "field" && n.subject.field === field
+      );
+    expect(on("temp")).toEqual([
+      expect.objectContaining({ message: expect.stringMatching(/using nearest TAF period/) }),
+    ]);
+    const [altim] = on("altimeter");
+    expect(on("altimeter")).toHaveLength(1);
+    expect(altim.level).toBe("caution");
+    expect(altim.message).toMatch(/no altimeter; using the current observation \(Δt = 21\.0 hr\)/);
+    expect(altim.message).not.toMatch(/using nearest TAF period/);
+  });
+
+  it("gives the observation's offset when a covering period's altimeter comes from it", () => {
+    const tafWithNullAltim: TAFResponse = {
+      ...baseTaf,
+      fcsts: [
+        {
+          timeFrom: Math.floor(Date.parse("2026-05-12T15:00:00Z") / 1000),
+          timeTo: Math.floor(Date.parse("2026-05-12T21:00:00Z") / 1000),
+          temp: 22,
+          altim: null,
+        },
+      ],
+    };
+    const requested = new Date("2026-05-12T19:00:00Z");
+    const result = selectAirportWeather(baseMetar, tafWithNullAltim, requested, "KSLC");
+    expect(result.notifications[0].message).toMatch(/Δt = 4\.0 hr/);
+  });
+
   it("falls back to METAR altimeter when covering TAF period has null altim", () => {
     const tafWithNullAltim: TAFResponse = {
       ...baseTaf,

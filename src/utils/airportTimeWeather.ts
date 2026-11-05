@@ -124,6 +124,10 @@ export function selectAirportWeather(
 
   // 1) METAR if fresh
   const obsMs = parseObsTimeMs(metar?.obsTime);
+  /** How far the observation is from the requested time, for Cautions. */
+  const obsDelta = Number.isFinite(obsMs)
+    ? fmtDelta(Math.abs(requestedTime.getTime() - obsMs))
+    : "unknown";
   const metarFresh =
     metar != null &&
     Number.isFinite(obsMs) &&
@@ -151,14 +155,10 @@ export function selectAirportWeather(
     let temp = fcstTempValue(covering, requestedTime);
     if (temp == null && metar?.temp != null) {
       temp = metar.temp;
-      const tempObsMs = parseObsTimeMs(metar.obsTime);
-      const delta = Number.isFinite(tempObsMs)
-        ? fmtDelta(Math.abs(requestedTime.getTime() - tempObsMs))
-        : "unknown";
       notifications.push({
         level: "caution",
         subject: tempSubject,
-        message: `${metar.icaoId}: forecast period has no temperature; using current observation (Δt = ${delta})`,
+        message: `${metar.icaoId}: forecast period has no temperature; using current observation (Δt = ${obsDelta})`,
       });
     }
     // TAF fcst.altim is already inHg (unlike METARResponse.altim, which is hPa — see metarAltimeterInHg).
@@ -173,7 +173,7 @@ export function selectAirportWeather(
         notifications.push({
           level: "caution",
           subject: altSubject,
-          message: `${airportId}: forecast period has no altimeter; using current observation`,
+          message: `${airportId}: forecast period has no altimeter; using current observation (Δt = ${obsDelta})`,
         });
       }
     }
@@ -188,20 +188,36 @@ export function selectAirportWeather(
   // 3) Nearest TAF period as a substitution
   const closest = findClosestFcst(fcsts, requestedTime);
   if (closest) {
-    let temp = fcstTempValue(closest.fcst, requestedTime);
-    if (temp == null) temp = metar?.temp ?? undefined;
+    // Each field is attributed to where it actually came from: the nearest
+    // TAF period, or the observation when that period lacks it.
+    const nearest = `${airportId}: forecast unavailable for ${requestedIso}; using nearest TAF period (Δt = ${fmtDelta(
+      closest.deltaMs
+    )})`;
+    const fromObservation = (what: string) =>
+      `${airportId}: forecast unavailable for ${requestedIso} and the nearest TAF period has no ${what}; using the current observation (Δt = ${obsDelta})`;
+
+    const tafTemp = fcstTempValue(closest.fcst, requestedTime);
+    const temp = tafTemp ?? metar?.temp ?? undefined;
     const roundedTemp = temp != null ? Math.round(temp) : null;
+    if (roundedTemp !== null) {
+      notifications.push({
+        level: "caution",
+        subject: tempSubject,
+        message: tafTemp != null ? nearest : fromObservation("temperature"),
+      });
+    }
+    const tafAltimeter = closest.fcst.altim;
     const altimeter =
-      closest.fcst.altim != null
-        ? Math.round(closest.fcst.altim * 100) / 100
+      tafAltimeter != null
+        ? Math.round(tafAltimeter * 100) / 100
         : metarAltimeterInHg(metar?.altim);
-    cautionOnFilledTempAndAltimeter(
-      `${airportId}: forecast unavailable for ${requestedIso}; using nearest TAF period (Δt = ${fmtDelta(
-        closest.deltaMs
-      )})`,
-      roundedTemp,
-      altimeter
-    );
+    if (altimeter !== null) {
+      notifications.push({
+        level: "caution",
+        subject: altSubject,
+        message: tafAltimeter != null ? nearest : fromObservation("altimeter"),
+      });
+    }
     return {
       temp: roundedTemp,
       altimeter,
@@ -213,9 +229,7 @@ export function selectAirportWeather(
   // 4) Stale METAR as a last-resort substitution (better than nothing for airports
   //    without TAF service — small / uncontrolled fields).
   if (metar != null && (metar.temp != null || metar.altim != null)) {
-    const delta = Number.isFinite(obsMs)
-      ? fmtDelta(Math.abs(requestedTime.getTime() - obsMs))
-      : "unknown";
+    const delta = obsDelta;
     const reason =
       taf == null
         ? "no TAF available"
