@@ -83,6 +83,47 @@ describe("sanitizeWorksheetUrlState", () => {
     ]);
   });
 
+  it("pads a short list to its slots and warns on the first slot", () => {
+    const r = load("altimeter=29.92");
+    expect(r.state.altimeter).toEqual([29.92, null, null]);
+    expect(r.notifications).toEqual([
+      {
+        level: "warning",
+        subject: fieldSubject("altimeter", 0),
+        message: expect.stringMatching(/altimeter.*1 value instead of 3/),
+      },
+    ]);
+  });
+
+  it("cuts a long list to its slots and warns", () => {
+    const r = load("temp=1,2,3,4");
+    expect(r.state.temp).toEqual([1, 2, 3]);
+    expect(r.notifications.map((n) => n.subject)).toEqual([fieldSubject("temp", 0)]);
+  });
+
+  it("clears a list that isn't a list, with a Warning", () => {
+    const r = load("temp[a]=1");
+    expect(r.state.temp).toEqual([null, null, null]);
+    expect(r.notifications).toEqual([
+      {
+        level: "warning",
+        subject: fieldSubject("temp", 0),
+        message: expect.stringMatching(/temperature.*isn't a list/),
+      },
+    ]);
+  });
+
+  it("pads a short position on the whole position Subject", () => {
+    const r = load("position=41.2");
+    expect(r.state.position).toEqual([41.2, null]);
+    expect(r.notifications.map((n) => n.subject)).toEqual([fieldSubject("position")]);
+  });
+
+  it("says nothing about an empty list", () => {
+    expect(load("temp=").notifications).toEqual([]);
+    expect(load("temp=").state.temp).toEqual([null, null, null]);
+  });
+
   it("clears a non-numeric winds-aloft cell with a Warning on its column", () => {
     const r = load("wind=,90,abc,,||5,10,15,,||,,,,");
     expect(r.state.wind[0][2]).toBeNull();

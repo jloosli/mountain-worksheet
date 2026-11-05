@@ -75,6 +75,20 @@ describe("AppContainer", () => {
   });
 });
 
+describe("AppContainer — malformed link (#225)", () => {
+  it.each([
+    ["a short altimeter list", "altimeter=29.92", /altimeter.*1 value instead of 3/],
+    ["a temperature that isn't a list", "temp[a]=1", /temperature.*isn't a list/],
+  ])("renders %s and explains it instead of crashing", (_, query, message) => {
+    jest.spyOn(console, "error").mockImplementation(() => {});
+    mockSearchParams.mockReturnValue(new URLSearchParams(query));
+    render(<AppContainer />);
+    expect(onScreen().getByText(message)).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: /Print briefing/i })).toBeInTheDocument();
+    jest.restoreAllMocks();
+  });
+});
+
 describe("AppContainer — print wiring", () => {
   it("renders the Print briefing button", () => {
     render(<AppContainer />);

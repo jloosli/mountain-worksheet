@@ -90,8 +90,36 @@ export function sanitizeWorksheetUrlState(
   }
 
   for (const key of NUMERIC_ARRAYS) {
-    const arr = next[key] as unknown;
-    if (!Array.isArray(arr)) continue;
+    // Each list has a fixed slot per airport/column; pad or cut it to fit, or
+    // clear it if it isn't a list, so nothing downstream reads a missing slot.
+    const size = (initialState[key] as unknown[]).length;
+    const shapeSubject = key === "position" ? fieldSubject(key) : fieldSubject(key, 0);
+    const raw = next[key] as unknown;
+    let arr: unknown[];
+    if (!Array.isArray(raw)) {
+      arr = Array(size).fill(null);
+      if (raw !== null && raw !== undefined) {
+        notifications.push({
+          level: "warning",
+          subject: shapeSubject,
+          message: `The link's ${LABEL[key]} value isn't a list; it was cleared. Enter it again.`,
+        });
+      }
+    } else {
+      arr = Array.from({ length: size }, (_, i) => raw[i] ?? null);
+      const hasValue = raw.some((v) => v !== null && v !== undefined && v !== "");
+      if (raw.length !== size && hasValue) {
+        notifications.push({
+          level: "warning",
+          subject: shapeSubject,
+          message: `The link's ${LABEL[key]} list has ${raw.length} value${
+            raw.length === 1 ? "" : "s"
+          } instead of ${size}; ${
+            raw.length < size ? "missing entries were left blank" : "extra entries were dropped"
+          }. Check it.`,
+        });
+      }
+    }
     const cleaned = arr.map((v, i) => {
       if (!isMalformedNumber(v)) return v ?? null;
       // The position is shown and edited as one Area of Operations entry,
