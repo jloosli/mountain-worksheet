@@ -20,6 +20,7 @@ import {
   type WeatherFetchResult,
 } from "@/utils/notifications";
 import type { WorksheetData } from "@/utils/types";
+import { unverifiedWeatherNotifications } from "@/utils/unverifiedWeather";
 import { useTempUnit } from "@/utils/useTempUnit";
 import { useUrlState } from "@/utils/useUrlState";
 import { useAirportRunways } from "@/utils/useAirportRunways";
@@ -111,8 +112,11 @@ export default function AppContainer() {
   const handleCloseOverlay = () => setOverlay(null);
 
   const notifications = useMemo(
-    () => deriveNotifications(state, weatherFetch),
-    [state, weatherFetch]
+    () => [
+      ...deriveNotifications(state, weatherFetch),
+      ...unverifiedWeatherNotifications(state, weatherLastUpdated),
+    ],
+    [state, weatherFetch, weatherLastUpdated]
   );
 
   const stepStatuses = useMemo(
