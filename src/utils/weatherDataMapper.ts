@@ -376,7 +376,9 @@ export function mapWeatherDataToWorksheet(
         });
         altimeter[1] = null;
       }
-      wind = rejectInvalidWinds(wind, notifications);
+      const checkedWind = rejectInvalidWinds(wind);
+      wind = checkedWind.value;
+      notifications.push(...checkedWind.notifications);
     }
     data.temp = temp;
     data.altimeter = altimeter;
@@ -412,10 +414,11 @@ export function mapWeatherDataToWorksheet(
 }
 
 /** Blanks out-of-range winds-aloft values, with a Warning on each column. */
-function rejectInvalidWinds(
-  wind: WindTable,
-  notifications: Notification[]
-): WindTable {
+function rejectInvalidWinds(wind: WindTable): {
+  value: WindTable;
+  notifications: Notification[];
+} {
+  const notifications: Notification[] = [];
   const checks: [string, (v: number) => boolean][] = [
     ["wind direction", isValidWindDirection],
     ["wind speed", isValidWindSpeed],
@@ -433,7 +436,7 @@ function rejectInvalidWinds(
       next[row][col] = null;
     });
   });
-  return next;
+  return { value: next, notifications };
 }
 
 /**
