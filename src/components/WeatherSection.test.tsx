@@ -1,6 +1,7 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import WeatherSection from "./WeatherSection";
 import type { RunwayOption, WorksheetData } from "@/utils/types";
+import { fieldSubject, type Notification } from "@/utils/notifications";
 
 const empty: WorksheetData = {
   pilot: "",
@@ -144,5 +145,71 @@ describe("WeatherSection — winds aloft", () => {
     expect(onUpdate).toHaveBeenCalled();
     const call = onUpdate.mock.calls[0][0];
     expect(call.wind[0][0]).toBe(270);
+  });
+});
+
+describe("WeatherSection — notifications", () => {
+  const renderWith = (notifications: Notification[]) =>
+    render(
+      <WeatherSection
+        state={populated}
+        onUpdate={() => {}}
+        airportRunways={[null, null]}
+        notifications={notifications}
+      />
+    );
+
+  it("shows a whole-table winds-aloft Warning and marks every cell invalid", () => {
+    renderWith([
+      {
+        level: "warning",
+        subject: fieldSubject("wind"),
+        message: "Open-Meteo request failed (network down)",
+      },
+    ]);
+    expect(screen.getByText(/Open-Meteo request failed/)).toBeInTheDocument();
+    const cell = screen.getByLabelText("Wind direction at 9,000 ft");
+    expect(cell).toHaveAttribute("aria-invalid", "true");
+    expect(cell).toHaveAccessibleDescription(/Open-Meteo request failed/);
+  });
+
+  it("shows a per-altitude winds-aloft notification on that column only", () => {
+    renderWith([
+      {
+        level: "caution",
+        subject: fieldSubject("wind", 0),
+        message: "Target altitude 3000 ft below available pressure-level range",
+      },
+    ]);
+    expect(
+      screen.getByLabelText("Temperature at 3,000 ft")
+    ).toHaveAccessibleDescription(/3000 ft below/);
+    expect(
+      screen.getByLabelText("Temperature at 6,000 ft")
+    ).not.toHaveAttribute("aria-describedby");
+  });
+
+  it("passes airport-field notifications to the matching card", () => {
+    renderWith([
+      {
+        level: "warning",
+        subject: fieldSubject("temp", 2),
+        message: "KLGU: no METAR or TAF",
+      },
+    ]);
+    expect(screen.getByText(/KLGU: no METAR or TAF/)).toBeInTheDocument();
+  });
+
+  it("shows AIRMET flag notifications next to the flag", () => {
+    renderWith([
+      {
+        level: "caution",
+        subject: fieldSubject("cielVis"),
+        message: "AIRMET IFR auto-flag uses 1000 ft / 3 sm threshold",
+      },
+    ]);
+    expect(
+      screen.getByRole("checkbox", { name: /Ceiling \/ Vis/ })
+    ).toHaveAccessibleDescription(/1000 ft \/ 3 sm/);
   });
 });

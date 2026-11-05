@@ -5,12 +5,22 @@ import AirportCard from "@/components/AirportCard";
 import { isApiPopulatedData } from "@/utils/weatherDataMapper";
 import { celciusToFarenheit, farenheitToCelcius } from "@/utils/formulas";
 import type { RunwayOption, WorksheetData } from "@/utils/types";
+import InlineNotifications, {
+  notificationA11yProps,
+} from "@/components/InlineNotifications";
+import {
+  fieldSubject,
+  type Notification,
+  type Subject,
+} from "@/utils/notifications";
 
 interface WeatherSectionProps {
   state: WorksheetData;
   onUpdate: (data: Partial<WorksheetData>) => void;
   airportRunways: [RunwayOption[] | null, RunwayOption[] | null];
   useFahrenheit?: boolean;
+  /** All notifications in force; each is shown next to its Subject. */
+  notifications?: readonly Notification[];
 }
 
 const ALOFT_ALTITUDES = ["3,000", "6,000", "9,000", "12,000", "15,000"];
@@ -20,6 +30,7 @@ export default function WeatherSection({
   onUpdate,
   airportRunways,
   useFahrenheit = false,
+  notifications = [],
 }: WeatherSectionProps) {
   const apiPopulated = isApiPopulatedData(state);
 
@@ -113,6 +124,7 @@ export default function WeatherSection({
         apiPopulatedTemp={apiPopulated.temperature}
         useFahrenheit={useFahrenheit}
         onChange={handleWindChange}
+        notifications={notifications}
       />
 
       <div>
@@ -128,6 +140,7 @@ export default function WeatherSection({
             altimeter={state.altimeter[0]}
             useFahrenheit={useFahrenheit}
             apiPopulated={apiPopulated}
+            notifications={notifications}
             onTemperatureChange={(v) => handleAirportTempChange(0, v)}
             onAltimeterChange={(v) => handleAirportAltimeterChange(0, v)}
             runways={airportRunways[0]}
@@ -141,6 +154,7 @@ export default function WeatherSection({
             altimeter={state.altimeter[1]}
             useFahrenheit={useFahrenheit}
             apiPopulated={apiPopulated}
+            notifications={notifications}
             onTemperatureChange={(v) => handleAirportTempChange(1, v)}
             onAltimeterChange={(v) => handleAirportAltimeterChange(1, v)}
           />
@@ -152,6 +166,7 @@ export default function WeatherSection({
             altimeter={state.altimeter[2]}
             useFahrenheit={useFahrenheit}
             apiPopulated={apiPopulated}
+            notifications={notifications}
             onTemperatureChange={(v) => handleAirportTempChange(2, v)}
             onAltimeterChange={(v) => handleAirportAltimeterChange(2, v)}
             runways={airportRunways[1]}
@@ -172,6 +187,7 @@ export default function WeatherSection({
               checked={state.turb}
               onChange={() => handleAdvisoryToggle("turb")}
               className="rounded border-slate-300"
+              {...notificationA11yProps(notifications, fieldSubject("turb"))}
             />
             <span>
               AIRMET Tango (turbulence) —{" "}
@@ -191,6 +207,7 @@ export default function WeatherSection({
               checked={state.cielVis}
               onChange={() => handleAdvisoryToggle("cielVis")}
               className="rounded border-slate-300"
+              {...notificationA11yProps(notifications, fieldSubject("cielVis"))}
             />
             <span>
               Ceiling / Vis &lt; 10sm/2000′ —{" "}
@@ -210,6 +227,7 @@ export default function WeatherSection({
               checked={state.mtnObsc}
               onChange={() => handleAdvisoryToggle("mtnObsc")}
               className="rounded border-slate-300"
+              {...notificationA11yProps(notifications, fieldSubject("mtnObsc"))}
             />
             <span>
               AIRMET Sierra (mtn obscuration) —{" "}
@@ -224,9 +242,33 @@ export default function WeatherSection({
             </span>
           </label>
         </div>
+        {(["turb", "cielVis", "mtnObsc"] as const).map((field) => (
+          <InlineNotifications
+            key={field}
+            notifications={notifications}
+            subject={fieldSubject(field)}
+            className="mt-2"
+          />
+        ))}
       </div>
     </div>
   );
+}
+
+/** ARIA props for an input covered by several Subjects (e.g. table + column). */
+function combinedA11yProps(
+  notifications: readonly Notification[],
+  subjects: Subject[]
+): ReturnType<typeof notificationA11yProps> {
+  const parts = subjects.map((s) => notificationA11yProps(notifications, s));
+  const describedBy = parts
+    .map((p) => p["aria-describedby"])
+    .filter(Boolean)
+    .join(" ");
+  return {
+    ...(parts.some((p) => p["aria-invalid"]) ? { "aria-invalid": true } : {}),
+    ...(describedBy ? { "aria-describedby": describedBy } : {}),
+  };
 }
 
 interface WindsAloftBlockProps {
@@ -235,6 +277,7 @@ interface WindsAloftBlockProps {
   apiPopulatedTemp: boolean;
   useFahrenheit: boolean;
   onChange: (row: 0 | 1 | 2, col: number, rawValue: string) => void;
+  notifications: readonly Notification[];
 }
 
 function WindsAloftBlock({
@@ -243,7 +286,11 @@ function WindsAloftBlock({
   apiPopulatedTemp,
   useFahrenheit,
   onChange,
+  notifications,
 }: WindsAloftBlockProps) {
+  const tableSubject = fieldSubject("wind");
+  const cellA11y = (col: number) =>
+    combinedA11yProps(notifications, [tableSubject, fieldSubject("wind", col)]);
   const cellClass = (apiPopulated: boolean) => {
     const base =
       "w-full text-center rounded border p-1 focus:outline-none focus:ring-2 focus:ring-slate-300";
@@ -264,6 +311,11 @@ function WindsAloftBlock({
       <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3">
         Aloft
       </h3>
+      <InlineNotifications
+        notifications={notifications}
+        subject={tableSubject}
+        className="mb-2"
+      />
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-sm">
           <thead>
@@ -296,6 +348,7 @@ function WindsAloftBlock({
                     aria-label={`Wind direction at ${alt} ft`}
                     value={wind[0][idx] ?? ""}
                     onChange={(e) => onChange(0, idx, e.target.value)}
+                    {...cellA11y(idx)}
                     className={cellClass(apiPopulatedWind)}
                   />
                 </td>
@@ -317,6 +370,7 @@ function WindsAloftBlock({
                     aria-label={`Wind velocity at ${alt} ft`}
                     value={wind[1][idx] ?? ""}
                     onChange={(e) => onChange(1, idx, e.target.value)}
+                    {...cellA11y(idx)}
                     className={cellClass(apiPopulatedWind)}
                   />
                 </td>
@@ -338,6 +392,7 @@ function WindsAloftBlock({
                     aria-label={`Temperature at ${alt} ft`}
                     value={displayTemp(wind[2][idx])}
                     onChange={(e) => onChange(2, idx, e.target.value)}
+                    {...cellA11y(idx)}
                     className={cellClass(apiPopulatedTemp)}
                   />
                 </td>
@@ -346,6 +401,14 @@ function WindsAloftBlock({
           </tbody>
         </table>
       </div>
+      {ALOFT_ALTITUDES.map((alt, idx) => (
+        <InlineNotifications
+          key={alt}
+          notifications={notifications}
+          subject={fieldSubject("wind", idx)}
+          className="mt-2"
+        />
+      ))}
     </div>
   );
 }
