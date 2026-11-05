@@ -220,6 +220,11 @@ export default function WeatherSection({
             notifications={allNotifications}
             onTemperatureChange={(v) => handleAirportTempChange(0, v)}
             onAltimeterChange={(v) => handleAirportAltimeterChange(0, v)}
+            rejectedAltimeterText={rejectedEntryText(
+              state,
+              rejected,
+              altimeterEntryKey(0)
+            )}
             runways={airportRunways[0]}
             runwayStatus={runwayStatus[0]}
             selectedRunwayLength={state.rwy[0]}
@@ -235,6 +240,11 @@ export default function WeatherSection({
             notifications={allNotifications}
             onTemperatureChange={(v) => handleAirportTempChange(1, v)}
             onAltimeterChange={(v) => handleAirportAltimeterChange(1, v)}
+            rejectedAltimeterText={rejectedEntryText(
+              state,
+              rejected,
+              altimeterEntryKey(1)
+            )}
           />
           <AirportCard
             variant="arrival"
@@ -247,6 +257,11 @@ export default function WeatherSection({
             notifications={allNotifications}
             onTemperatureChange={(v) => handleAirportTempChange(2, v)}
             onAltimeterChange={(v) => handleAirportAltimeterChange(2, v)}
+            rejectedAltimeterText={rejectedEntryText(
+              state,
+              rejected,
+              altimeterEntryKey(2)
+            )}
             runways={airportRunways[1]}
             runwayStatus={runwayStatus[1]}
             selectedRunwayLength={state.rwy[1]}

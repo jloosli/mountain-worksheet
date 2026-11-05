@@ -2,6 +2,7 @@ import {
   altimeterEntryKey,
   rejectedEntryNotifications,
   rejectedEntryText,
+  retireRejectedEntries,
   updateRejectedEntries,
   windEntryKey,
   type RejectedEntry,
@@ -88,5 +89,48 @@ describe("rejected weather entries", () => {
     });
     const later = updateRejectedEntries(filled, entries, altimeterEntryKey(1), null);
     expect(rejectedEntryNotifications(state(), later)).toEqual([]);
+  });
+});
+
+describe("retireRejectedEntries", () => {
+  const both = () =>
+    updateRejectedEntries(
+      state({ altimeter: [29.92, null, null] }),
+      updateRejectedEntries(state(), {}, windEntryKey(0, 2), windEntry),
+      altimeterEntryKey(0),
+      altimeterEntry
+    );
+
+  it("clears an entry whose field a weather fetch replaced, even with the same number", () => {
+    const s = state({ altimeter: [29.92, null, null] });
+    const next = retireRejectedEntries(s, both(), { altimeter: [29.92, 30.01, null] });
+    expect(rejectedEntryNotifications(s, next)).toEqual([windEntry.notification]);
+    expect(rejectedEntryText(s, next, altimeterEntryKey(0))).toBeUndefined();
+  });
+
+  it("clears a winds-aloft entry whose cell a fetch replaced", () => {
+    const s = state({ altimeter: [29.92, null, null] });
+    const next = retireRejectedEntries(s, both(), {
+      wind: [
+        [null, null, null, null, null],
+        [null, null, null, null, null],
+        [null, null, null, null, null],
+      ],
+    });
+    expect(rejectedEntryNotifications(s, next)).toEqual([altimeterEntry.notification]);
+  });
+
+  it("permanently retires an entry once its stored value changes, so it can't reappear", () => {
+    const changed = state({ altimeter: [30.1, null, null] });
+    const retired = retireRejectedEntries(changed, both());
+    // A later fetch puts the old number back: the rejection stays gone.
+    const restored = state({ altimeter: [29.92, null, null] });
+    expect(rejectedEntryNotifications(restored, retired)).toEqual([windEntry.notification]);
+  });
+
+  it("keeps entries in force when nothing replaced them", () => {
+    const s = state({ altimeter: [29.92, null, null] });
+    const entries = both();
+    expect(retireRejectedEntries(s, entries)).toEqual(entries);
   });
 });

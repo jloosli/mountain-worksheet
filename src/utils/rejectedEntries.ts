@@ -2,8 +2,8 @@
  * Weather entries the pilot typed that were not applied because they are out
  * of range. Each keeps the raw text (still shown in its field) and a Warning
  * on the field. An entry is in force while the stored value is unchanged
- * from when it was rejected, so a valid entry or a weather fetch that fills
- * the field clears it.
+ * from when it was rejected and no weather fetch has filled the field since;
+ * a retired entry never comes back (`retireRejectedEntries`).
  *
  * The entries are held where notifications are derived (AppContainer), so
  * their Warnings reach step statuses, badges and the Briefing like any other.
@@ -29,13 +29,18 @@ export const windEntryKey = (row: number, col: number): RejectedEntryKey =>
 export const altimeterEntryKey = (slot: number): RejectedEntryKey =>
   `altimeter:${slot}`;
 
-function storedValue(state: WorksheetData, key: RejectedEntryKey): number | null {
+function cellValue(
+  data: Partial<WorksheetData>,
+  key: RejectedEntryKey
+): number | null | undefined {
   const [field, a, b] = key.split(":");
-  const value =
-    field === "wind"
-      ? state.wind[Number(a)]?.[Number(b)]
-      : state.altimeter[Number(a)];
-  return value ?? null;
+  return field === "wind"
+    ? data.wind?.[Number(a)]?.[Number(b)]
+    : data.altimeter?.[Number(a)];
+}
+
+function storedValue(state: WorksheetData, key: RejectedEntryKey): number | null {
+  return cellValue(state, key) ?? null;
 }
 
 function activeEntries(
@@ -81,4 +86,24 @@ export function updateRejectedEntries(
   );
   if (entry) next[key] = entry;
   return next;
+}
+
+/**
+ * The entries that survive a worksheet update. An entry is retired for good
+ * once its stored value has changed (so it can't reappear if the value later
+ * returns), and an entry whose field a weather fetch filled (`replaced`) is
+ * retired even when the fetch wrote the same number: the fetched value
+ * supersedes what the pilot typed.
+ */
+export function retireRejectedEntries(
+  next: WorksheetData,
+  entries: RejectedEntries,
+  replaced?: Partial<WorksheetData>
+): RejectedEntries {
+  const kept = activeEntries(next, entries).filter(
+    ([key]) => !replaced || cellValue(replaced, key) === undefined
+  );
+  return kept.length === Object.keys(entries).length
+    ? entries
+    : Object.fromEntries(kept);
 }

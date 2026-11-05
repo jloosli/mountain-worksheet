@@ -179,6 +179,25 @@ describe("AirportCard — departure variant", () => {
   });
 });
 
+describe("AirportCard — rejected altimeter entry", () => {
+  it("shows the stored altimeter again once the rejection is retired, even if the number didn't change", () => {
+    const props = {
+      ...baseProps,
+      variant: "departure" as const,
+      airportCode: "KOGD",
+      altimeter: 29.92,
+    };
+    const { rerender } = render(<AirportCard {...props} />);
+    const input = screen.getByLabelText(/Altimeter/i);
+    fireEvent.change(input, { target: { value: "35" } });
+    rerender(<AirportCard {...props} rejectedAltimeterText="35" />);
+    expect(input).toHaveValue(35);
+
+    rerender(<AirportCard {...props} />);
+    expect(input).toHaveValue(29.92);
+  });
+});
+
 describe("AirportCard — operating variant", () => {
   it("renders the operating header and altitude link to step-sortie", () => {
     render(

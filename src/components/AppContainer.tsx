@@ -32,6 +32,7 @@ import type { WorksheetData } from "@/utils/types";
 import { unverifiedWeatherNotifications } from "@/utils/unverifiedWeather";
 import {
   rejectedEntryNotifications,
+  retireRejectedEntries,
   updateRejectedEntries,
   type RejectedEntries,
   type RejectedEntry,
@@ -211,7 +212,18 @@ export default function AppContainer() {
     [stepStatuses]
   );
 
-  const handleUpdate = (updates: Partial<WorksheetData>) => {
+  /**
+   * `fetched` marks an update a weather fetch applied: rejected entries for
+   * the fields it filled are retired even when the value is unchanged.
+   */
+  const handleUpdate = (updates: Partial<WorksheetData>, fetched = false) => {
+    setRejectedEntries((prev) =>
+      retireRejectedEntries(
+        { ...state, ...updates } as WorksheetData,
+        prev,
+        fetched ? updates : undefined
+      )
+    );
     const change = describeOpTempChange(state, updates, {
       fetchedOpTemp: weatherFetch?.applied.temp?.[1] ?? null,
       previous: opTempChange,
@@ -230,7 +242,7 @@ export default function AppContainer() {
   };
 
   const handleWeatherDataUpdate = (data: Partial<WorksheetData>) => {
-    handleUpdate(data);
+    handleUpdate(data, true);
   };
 
   const handleWeatherTimestampUpdate = (timestamp: Date) => {

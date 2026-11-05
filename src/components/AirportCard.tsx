@@ -23,6 +23,12 @@ interface AirportCardCommonProps {
   useFahrenheit?: boolean;
   /** All notifications in force; the card shows those about its own fields. */
   notifications?: readonly Notification[];
+  /**
+   * The pilot's rejected altimeter text while that rejection is in force.
+   * When it is retired (e.g. a weather fetch filled the field), the input
+   * shows the stored value again even if the number didn't change.
+   */
+  rejectedAltimeterText?: string;
 }
 
 interface AirportCardAirportProps extends AirportCardCommonProps {
@@ -107,9 +113,12 @@ export default function AirportCard(props: AirportCardProps) {
     setTempStr(formatTemperatureValue(props.temperature, !!props.useFahrenheit));
   }, [props.temperature, props.useFahrenheit]);
 
+  const { rejectedAltimeterText } = props;
   useEffect(() => {
-    setAltStr(altimeterDisplayValue(props.altimeter));
-  }, [props.altimeter]);
+    if (rejectedAltimeterText === undefined) {
+      setAltStr(altimeterDisplayValue(props.altimeter));
+    }
+  }, [props.altimeter, rejectedAltimeterText]);
 
   return (
     <div className="rounded-lg border border-slate-200 bg-white overflow-hidden dark:border-slate-700 dark:bg-slate-900">

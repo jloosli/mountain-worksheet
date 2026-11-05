@@ -214,6 +214,46 @@ describe("AppContainer — notifications (#221)", () => {
   });
 });
 
+describe("AppContainer — rejected entries and weather fetches", () => {
+  const mockFetch = fetchWorksheetWeather as jest.MockedFunction<
+    typeof fetchWorksheetWeather
+  >;
+
+  it("clears a rejected altimeter entry when a fetch fills that field, even with the same value", async () => {
+    // The fetch couldn't get the departure altimeter: it writes blank, which
+    // is what was stored when the pilot's entry was rejected.
+    mockFetch.mockImplementation(async (worksheet) => ({
+      data: { altimeter: [null, null, null] },
+      result: {
+        fetchedFor: {
+          airport: [worksheet.airport[0], worksheet.airport[1]],
+          date: worksheet.date,
+          time: worksheet.time,
+        },
+        applied: { altimeter: [null, null, null] },
+        notifications: [],
+      },
+    }));
+    render(<AppContainer />);
+    fireEvent.change(screen.getByLabelText("Departure Airport"), {
+      target: { value: "KORD" },
+    });
+    fireEvent.change(screen.getByLabelText("Arrival Airport"), {
+      target: { value: "KBOI" },
+    });
+    const altimeter = () => screen.getAllByLabelText("Altimeter")[0];
+    fireEvent.change(altimeter(), { target: { value: "35.00" } });
+    expect(onScreen().getByText(/Altimeter 35.00 is not valid/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /Fetch weather/i }));
+
+    await waitFor(() =>
+      expect(onScreen().queryByText(/Altimeter 35.00 is not valid/)).not.toBeInTheDocument()
+    );
+    expect(altimeter()).toHaveValue(null);
+  });
+});
+
 describe("AppContainer — performance notifications (#222)", () => {
   it("shows a weight Warning at the weight input, marks Sortie Details, and clears when fixed", () => {
     const { container } = render(<AppContainer />);
