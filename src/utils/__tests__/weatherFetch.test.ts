@@ -234,4 +234,16 @@ describe("fetchWorksheetWeather", () => {
       },
     ]);
   });
+
+  describe("airport code whitespace (#208)", () => {
+    it("dedupes and trims ['KOGD', 'KOGD '] into a single KOGD request", async () => {
+      await fetchWorksheetWeather({ ...worksheet, airport: ["KOGD", "KOGD "] });
+      expect(mockBatch.mock.calls[0][0]).toEqual(["KOGD"]);
+    });
+
+    it("trims padded codes on both airports", async () => {
+      await fetchWorksheetWeather({ ...worksheet, airport: [" kslc", "KOGD "] });
+      expect(mockBatch.mock.calls[0][0]).toEqual(["KSLC", "KOGD"]);
+    });
+  });
 });

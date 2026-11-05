@@ -14,7 +14,11 @@ import WeatherDataIntegration from "@/components/WeatherDataIntegration";
 import WorksheetHeader from "@/components/WorksheetHeader";
 import { deriveActionBarState } from "@/utils/actionBarState";
 import { applyOpTempForAltitudeChange } from "@/utils/areaOfOpsWeather";
-import { deriveStepStatuses } from "@/utils/stepStatuses";
+import { deriveStepStatuses, formatStepBadge } from "@/utils/stepStatuses";
+import {
+  deriveNotifications,
+  type WeatherFetchResult,
+} from "@/utils/notifications";
 import type { WorksheetData } from "@/utils/types";
 import { useTempUnit } from "@/utils/useTempUnit";
 import { useUrlState } from "@/utils/useUrlState";
@@ -91,6 +95,12 @@ export default function AppContainer() {
     null
   );
 
+  // The latest weather fetch (session only). Notifications are derived from
+  // it plus current state during render, so they clear when their cause does.
+  const [weatherFetch, setWeatherFetch] = useState<WeatherFetchResult | null>(
+    null
+  );
+
   const airportRunways = useAirportRunways(state.airport);
 
   const [overlay, setOverlay] = useState<"instructions" | "checklist" | null>(
@@ -100,9 +110,14 @@ export default function AppContainer() {
   const handleOpenChecklist = () => setOverlay("checklist");
   const handleCloseOverlay = () => setOverlay(null);
 
+  const notifications = useMemo(
+    () => deriveNotifications(state, weatherFetch),
+    [state, weatherFetch]
+  );
+
   const stepStatuses = useMemo(
-    () => deriveStepStatuses(state, weatherLastUpdated),
-    [state, weatherLastUpdated]
+    () => deriveStepStatuses(state, weatherLastUpdated, notifications),
+    [state, weatherLastUpdated, notifications]
   );
 
   const actionBarState = useMemo(
@@ -112,9 +127,27 @@ export default function AppContainer() {
 
   const steps = useMemo<StepperStep[]>(
     () => [
-      { id: "step-sortie", number: 1, label: "Sortie Details", status: stepStatuses.sortie },
-      { id: "step-weather", number: 2, label: "Weather", status: stepStatuses.weather },
-      { id: "step-decision", number: 3, label: "Decision", status: stepStatuses.decision },
+      {
+        id: "step-sortie",
+        number: 1,
+        label: "Sortie Details",
+        status: stepStatuses.sortie,
+        badge: formatStepBadge(stepStatuses.counts.sortie),
+      },
+      {
+        id: "step-weather",
+        number: 2,
+        label: "Weather",
+        status: stepStatuses.weather,
+        badge: formatStepBadge(stepStatuses.counts.weather),
+      },
+      {
+        id: "step-decision",
+        number: 3,
+        label: "Decision",
+        status: stepStatuses.decision,
+        badge: formatStepBadge(stepStatuses.counts.decision),
+      },
     ],
     [stepStatuses]
   );
@@ -173,6 +206,7 @@ export default function AppContainer() {
         worksheetData={state}
         onDataUpdate={handleWeatherDataUpdate}
         onTimestampUpdate={handleWeatherTimestampUpdate}
+        onFetchResult={setWeatherFetch}
         hideBox
         renderButton={({ onClick, disabled, isLoading }) => (
           <ActionBar
@@ -194,11 +228,14 @@ export default function AppContainer() {
             onStateUpdate={handleUpdate}
             useFahrenheit={useFahrenheit}
             airportRunways={airportRunways}
+            notifications={notifications}
+            stepStatuses={stepStatuses}
           />
           <StepShell
             id="step-decision"
             number={3}
             status={stepStatuses.decision}
+            badge={formatStepBadge(stepStatuses.counts.decision)}
             title="Decision"
             subtitle="Go / no-go summary, with detailed calculations below"
             showSpine={false}

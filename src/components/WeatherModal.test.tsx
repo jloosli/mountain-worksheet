@@ -3,14 +3,11 @@
  */
 
 import "@testing-library/jest-dom";
+import * as WeatherModalModule from "./WeatherModal";
 import WeatherModal, {
-  WeatherErrorModal,
   WeatherLoadingModal,
-  AirportNotFoundModal,
   type WeatherModalProps,
-  type WeatherErrorModalProps,
   type WeatherLoadingModalProps,
-  type AirportNotFoundModalProps,
 } from "./WeatherModal";
 
 // Mock Headless UI components for testing
@@ -30,9 +27,12 @@ jest.mock("@headlessui/react", () => ({
 describe("WeatherModal Components", () => {
   it("should export all modal components", () => {
     expect(WeatherModal).toBeDefined();
-    expect(WeatherErrorModal).toBeDefined();
     expect(WeatherLoadingModal).toBeDefined();
-    expect(AirportNotFoundModal).toBeDefined();
+  });
+
+  it("no longer offers blocking modals for data problems (ADR 0001)", () => {
+    expect(WeatherModalModule).not.toHaveProperty("WeatherErrorModal");
+    expect(WeatherModalModule).not.toHaveProperty("AirportNotFoundModal");
   });
 
   it("should have correct prop types", () => {
@@ -43,33 +43,13 @@ describe("WeatherModal Components", () => {
       children: <div>Test</div>,
     };
 
-    const errorModalProps: WeatherErrorModalProps = {
-      isOpen: true,
-      onClose: jest.fn(),
-      onRetry: jest.fn(),
-      error: {
-        title: "Error",
-        message: "Test error",
-        retryable: true,
-      },
-    };
-
     const loadingModalProps: WeatherLoadingModalProps = {
       isOpen: true,
       title: "Loading",
       message: "Please wait",
     };
 
-    const airportNotFoundProps: AirportNotFoundModalProps = {
-      isOpen: true,
-      onClose: jest.fn(),
-      airportCode: "KXYZ",
-      onRetry: jest.fn(),
-    };
-
     expect(weatherModalProps).toBeDefined();
-    expect(errorModalProps).toBeDefined();
     expect(loadingModalProps).toBeDefined();
-    expect(airportNotFoundProps).toBeDefined();
   });
 });

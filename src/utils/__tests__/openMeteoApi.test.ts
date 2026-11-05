@@ -102,6 +102,27 @@ describe("openMeteoApi", () => {
       ]);
     });
 
+    it("raises a Warning note and returns nulls when no level has a height", () => {
+      const noHeights = {
+        ...sample,
+        heightsFtByLevel: Object.fromEntries(
+          Object.keys(sample.heightsFtByLevel).map((k) => [k, NaN])
+        ) as typeof sample.heightsFtByLevel,
+      };
+      const r = interpolateAtAltitude(9000, noHeights);
+      expect(r).toEqual({
+        temp: null,
+        wspd: null,
+        wdir: null,
+        notes: [
+          {
+            level: "warning",
+            message: "No pressure-level heights available for interpolation",
+          },
+        ],
+      });
+    });
+
     it("converts metres to feet via M_TO_FT", () => {
       expect(M_TO_FT).toBeCloseTo(3.28084, 4);
     });

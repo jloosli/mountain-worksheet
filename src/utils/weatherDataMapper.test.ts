@@ -502,6 +502,35 @@ describe("Weather Data Mapper", () => {
       ]);
     });
 
+    it("blanks an out-of-range airport temperature or altimeter with a Warning", () => {
+      const result = mapWeatherDataToWorksheet(
+        {
+          metar: [{ ...mockApiData.metar[0], temp: 80, altim: 1200 }],
+        },
+        null,
+        null,
+        {
+          departureAirport: "KORD",
+          arrivalAirport: "KORD",
+          flightDate: "2024-01-15",
+          flightTime: "12:00",
+          validateData: true,
+        }
+      );
+      expect(result.data.temp?.[0]).toBeNull();
+      expect(result.data.altimeter?.[0]).toBeNull();
+      expect(result.notifications).toContainEqual({
+        level: "warning",
+        subject: fieldSubject("temp", 0),
+        message: expect.stringMatching(/Departure temperature 80°C from KORD is out of valid range/),
+      });
+      expect(result.notifications).toContainEqual({
+        level: "warning",
+        subject: fieldSubject("altimeter", 0),
+        message: expect.stringMatching(/Departure altimeter .* from KORD is out of valid range/),
+      });
+    });
+
     it("fills a sea-level field elevation of 0 ft", () => {
       const result = mapWeatherDataToWorksheet(
         {
