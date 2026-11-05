@@ -5,6 +5,7 @@ import {
   derivePerformanceNotifications,
   findAircraft,
   maneuveringNotifications,
+  toldValueSubjects,
 } from "../derived";
 import type { WorksheetData } from "../types";
 import { fieldSubject, valueSubject } from "../notifications";
@@ -575,5 +576,32 @@ describe("dependsOn (value → input Subjects)", () => {
     expect(deps(vm.va)).toEqual([f("acType"), f("weight")]);
     expect(deps(vm.vra)).toEqual([f("acType")]);
     expect(deps(vm.serviceCeiling[0])).toEqual([f("acType"), f("altimeter", 0), f("temp", 0)]);
+  });
+});
+
+describe("toldValueSubjects", () => {
+  const told = (id: string) => valueSubject(id, "decision");
+
+  it("ties a takeoff distance to its airport and the takeoff phase", () => {
+    expect(toldValueSubjects("departure", "takeoff50ftObstacle")).toEqual([
+      told("told.departure"),
+      told("told.departure.takeoff"),
+    ]);
+  });
+
+  it("ties a landing distance to its airport and the landing phase", () => {
+    expect(toldValueSubjects("arrival", "landingGroundRoll")).toEqual([
+      told("told.arrival"),
+      told("told.arrival.landing"),
+    ]);
+  });
+
+  it("ties runway remaining to both phases and the airport's runway", () => {
+    expect(toldValueSubjects("arrival", "runwayRemaining50ft")).toEqual([
+      told("told.arrival"),
+      told("told.arrival.takeoff"),
+      told("told.arrival.landing"),
+      fieldSubject("rwy", 1),
+    ]);
   });
 });

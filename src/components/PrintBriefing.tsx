@@ -6,7 +6,7 @@ import {
   computePressureColumns,
   computeTOLDViewModel,
   pressureColumnDependsOn,
-  toldSubject,
+  toldValueSubjects,
   type AirportSlot,
   type ComputedValue,
   type TOLDValueKey,
@@ -150,7 +150,6 @@ const ENV_ROWS: ReadonlyArray<{
 ];
 
 const SLOTS: AirportSlot[] = ["departure", "arrival"];
-const RWY_INDEX: Record<AirportSlot, 0 | 1> = { departure: 0, arrival: 1 };
 
 const TOLD_ROWS: ReadonlyArray<{
   label: string;
@@ -163,19 +162,6 @@ const TOLD_ROWS: ReadonlyArray<{
   { label: "Landing over 50' obstacle", key: "landing50ftObstacle" },
   { label: "Runway remaining (50' obstacle)", key: "runwayRemaining50ft", colorNegative: true },
 ];
-
-/** The value Subjects whose notes concern a TOLD cell. */
-function toldCellRefs(b: BriefingNotes, slot: AirportSlot, key: TOLDValueKey): number[] {
-  const subjects = [valueSubject(`told.${slot}`, "decision")];
-  if (key.startsWith("takeoff") || key.startsWith("runwayRemaining")) {
-    subjects.push(toldSubject(slot, "takeoff"));
-  }
-  if (key.startsWith("landing") || key.startsWith("runwayRemaining")) {
-    subjects.push(toldSubject(slot, "landing"));
-  }
-  if (key.startsWith("runwayRemaining")) subjects.push(fieldSubject("rwy", RWY_INDEX[slot]));
-  return b.refsOn(...subjects);
-}
 
 export default function PrintBriefing({ state, notifications = [] }: PrintBriefingProps) {
   const [dep, arr] = state.airport;
@@ -439,7 +425,7 @@ export default function PrintBriefing({ state, notifications = [] }: PrintBriefi
                   <ValueCell
                     key={slot}
                     value={told[slot].values[key]}
-                    refs={toldCellRefs(b, slot, key)}
+                    refs={b.refsOn(...toldValueSubjects(slot, key))}
                     briefing={b}
                     format={fmtFt}
                     colorNegative={colorNegative}

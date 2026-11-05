@@ -5,7 +5,13 @@
  * notifications the screen shows.
  */
 import { inputCautions, type MarkableValue } from "./markers";
-import { subjectKey, type Notification, type Subject } from "./notifications";
+import {
+  notificationKey,
+  subjectKey,
+  valueSubjectGroup,
+  type Notification,
+  type Subject,
+} from "./notifications";
 
 /** The Briefing sections a note can be printed under, in print order. */
 export const BRIEFING_SECTIONS = [
@@ -53,22 +59,17 @@ export function briefingSection(subject: Subject): BriefingSection {
       if (subject.step === "sortie") return "sortie";
       if (subject.step === "weather") return "conditions";
       return "general";
-    case "value": {
-      const head = subject.id.split(".")[0];
-      if (head === "told" || head === "climb" || head === "maneuvering") return head;
-      return "general";
-    }
+    case "value":
+      return valueSubjectGroup(subject) ?? "general";
   }
 }
-
-const noteKey = (n: Notification) => `${n.level}|${subjectKey(n.subject)}|${n.message}`;
 
 export function briefingNotes(notifications: readonly Notification[]): BriefingNotes {
   const seen = new Set<string>();
   const kept: Omit<BriefingNote, "ref">[] = [];
   for (const n of notifications) {
     if (n.level === "advisory") continue;
-    const key = noteKey(n);
+    const key = notificationKey(n);
     if (seen.has(key)) continue;
     seen.add(key);
     kept.push({ level: n.level, subject: n.subject, message: n.message, section: briefingSection(n.subject) });
@@ -81,7 +82,7 @@ export function briefingNotes(notifications: readonly Notification[]): BriefingN
     .map(({ n }, i) => ({ ...n, ref: i + 1 }));
 
   const refByKey = new Map<string, number>();
-  for (const note of notes) refByKey.set(noteKey(note), note.ref);
+  for (const note of notes) refByKey.set(notificationKey(note), note.ref);
 
   return {
     notes,
@@ -92,7 +93,7 @@ export function briefingNotes(notifications: readonly Notification[]): BriefingN
     },
     markersOn: (value) => {
       const refs = inputCautions(notifications, value)
-        .map((n) => refByKey.get(noteKey(n)))
+        .map((n) => refByKey.get(notificationKey(n)))
         .filter((r): r is number => r !== undefined);
       return [...new Set(refs)];
     },

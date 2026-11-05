@@ -77,6 +77,24 @@ export function subjectKey(subject: Subject): string {
   }
 }
 
+/** Stable identity of a notification, for removing duplicates. */
+export const notificationKey = (n: Notification): string =>
+  `${n.level}|${subjectKey(n.subject)}|${n.message}`;
+
+/** The groups of computed values; a value Subject id starts with its group. */
+export const VALUE_SUBJECT_GROUPS = ["told", "climb", "maneuvering"] as const;
+export type ValueSubjectGroup = (typeof VALUE_SUBJECT_GROUPS)[number];
+
+/**
+ * The group of computed values a value Subject belongs to ("told" for
+ * `told.arrival.landing`), or undefined for other Subjects and unknown ids.
+ */
+export function valueSubjectGroup(subject: Subject): ValueSubjectGroup | undefined {
+  if (subject.kind !== "value") return undefined;
+  const head = subject.id.split(".", 1)[0];
+  return VALUE_SUBJECT_GROUPS.find((g) => g === head);
+}
+
 const SORTIE_FIELDS: ReadonlySet<FieldName> = new Set<FieldName>([
   "pilot",
   "date",

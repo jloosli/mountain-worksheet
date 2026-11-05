@@ -7,7 +7,7 @@ import {
 import type { Aircraft, WorksheetData } from "./types";
 import {
   fieldSubject,
-  subjectKey,
+  notificationKey,
   valueSubject,
   type Notification,
   type Subject,
@@ -132,6 +132,32 @@ const RWY_INDEX: Record<AirportSlot, 0 | 1> = { departure: 0, arrival: 1 };
 /** Subject for a TOLD phase's distances at one airport. */
 export const toldSubject = (slot: AirportSlot, phase: "takeoff" | "landing") =>
   valueSubject(`told.${slot}.${phase}`, "decision");
+
+/** Which phases' notifications concern each TOLD value, and whether its runway's do. */
+const TOLD_VALUE_INPUTS: Record<
+  TOLDValueKey,
+  { phases: ("takeoff" | "landing")[]; runway: boolean }
+> = {
+  takeoffGroundRoll: { phases: ["takeoff"], runway: false },
+  takeoff50ftObstacle: { phases: ["takeoff"], runway: false },
+  landingGroundRoll: { phases: ["landing"], runway: false },
+  landing50ftObstacle: { phases: ["landing"], runway: false },
+  runwayRemainingGroundRoll: { phases: ["takeoff", "landing"], runway: true },
+  runwayRemaining50ft: { phases: ["takeoff", "landing"], runway: true },
+};
+
+/**
+ * The Subjects whose notifications concern a TOLD value: its airport, the
+ * phase(s) it comes from, and for runway remaining the runway length.
+ */
+export function toldValueSubjects(slot: AirportSlot, key: TOLDValueKey): Subject[] {
+  const { phases, runway } = TOLD_VALUE_INPUTS[key];
+  return [
+    valueSubject(`told.${slot}`, "decision"),
+    ...phases.map((phase) => toldSubject(slot, phase)),
+    ...(runway ? [fieldSubject("rwy", RWY_INDEX[slot])] : []),
+  ];
+}
 
 const SLOT_NAME: Record<AirportSlot, string> = { departure: "Departure", arrival: "Arrival" };
 
@@ -764,7 +790,7 @@ export function derivePerformanceNotifications(state: WorksheetData): Notificati
   ];
   const seen = new Set<string>();
   return all.filter((n) => {
-    const key = `${n.level}|${subjectKey(n.subject)}|${n.message}`;
+    const key = notificationKey(n);
     if (seen.has(key)) return false;
     seen.add(key);
     return true;

@@ -2,7 +2,9 @@ import {
   countByLevel,
   deriveNotifications,
   fieldSubject,
+  notificationKey,
   notificationsFor,
+  valueSubjectGroup,
   stepOf,
   stepSubject,
   subjectKey,
@@ -222,5 +224,39 @@ describe("deriveNotifications", () => {
         fetchFor([step])
       )
     ).toEqual([step]);
+  });
+});
+
+describe("notificationKey", () => {
+  const n: Notification = {
+    level: "caution",
+    subject: fieldSubject("temp", 2),
+    message: "Nearest TAF period",
+  };
+
+  it("is the same for notifications with the same level, Subject and message", () => {
+    expect(notificationKey({ ...n })).toBe(notificationKey(n));
+  });
+
+  it("differs when the level, Subject or message differs", () => {
+    const key = notificationKey(n);
+    expect(notificationKey({ ...n, level: "warning" })).not.toBe(key);
+    expect(notificationKey({ ...n, subject: fieldSubject("temp", 0) })).not.toBe(key);
+    expect(notificationKey({ ...n, message: "Other" })).not.toBe(key);
+  });
+});
+
+describe("valueSubjectGroup", () => {
+  it("names the group of computed values a value Subject belongs to", () => {
+    expect(valueSubjectGroup(valueSubject("told.arrival.landing", "decision"))).toBe("told");
+    expect(valueSubjectGroup(valueSubject("told.departure", "decision"))).toBe("told");
+    expect(valueSubjectGroup(valueSubject("climb.vy.operating", "decision"))).toBe("climb");
+    expect(valueSubjectGroup(valueSubject("maneuvering", "decision"))).toBe("maneuvering");
+  });
+
+  it("is undefined for an unknown value id and for non-value Subjects", () => {
+    expect(valueSubjectGroup(valueSubject("tolds.arrival", "decision"))).toBeUndefined();
+    expect(valueSubjectGroup(fieldSubject("temp", 1))).toBeUndefined();
+    expect(valueSubjectGroup(stepSubject("decision"))).toBeUndefined();
   });
 });
