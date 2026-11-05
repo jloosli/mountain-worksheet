@@ -44,15 +44,38 @@ export interface WeatherMappingResult {
   notifications: Notification[];
 }
 
+/**
+ * What an airport's identity means for the fields it fills (#216):
+ * - `unknown`: matches nothing; elevation, runway and weather need input.
+ * - `non-reporting`: exists but publishes no METAR/TAF; weather needs input.
+ * Either way those fields are left blank without a Warning, since the
+ * airport's own notification already says why.
+ */
+export type AirportCondition = "unknown" | "non-reporting";
+
 export interface WeatherMappingOptions {
   flightDate?: string; // ISO date string
   flightTime?: string; // HH:MM format
   durationHours?: number | null;
   departureAirport?: string;
   arrivalAirport?: string;
+  airportConditions?: {
+    departure?: AirportCondition;
+    arrival?: AirportCondition;
+  };
   position?: [number | null, number | null];
   opAltitudeFt?: number | null;
   validateData?: boolean;
+}
+
+/** The identity condition of the airport filling triple slot 0 or 2. */
+function conditionOf(
+  options: WeatherMappingOptions,
+  slot: 0 | 2
+): AirportCondition | undefined {
+  return slot === 0
+    ? options.airportConditions?.departure
+    : options.airportConditions?.arrival;
 }
 
 /**
@@ -106,6 +129,11 @@ export function mapAirportSpecificWeatherData(
     index: 0 | 2
   ): void => {
     if (!airportCode) return;
+    if (conditionOf(options, index)) {
+      setSlot("temp", index, null);
+      setSlot("altimeter", index, null);
+      return;
+    }
     const code = airportCode.toUpperCase();
     const metar = safeMetar.find((m) => m.icaoId?.toUpperCase() === code);
     const taf = safeTaf.find((t) => t.icaoId?.toUpperCase() === code);
@@ -439,16 +467,22 @@ function blankFieldWarnings(
     const where = ["Departure", "Operating", "Arrival"][i];
     const code = i === 0 ? dep : i === 2 ? arr : undefined;
     if (i !== 1 && !code) return;
-    if (data.temp?.[i] === null)
-      blank(fieldSubject("temp", i), slot(code, `${where} temperature`));
-    if (data.altimeter?.[i] === null)
-      blank(fieldSubject("altimeter", i), slot(code, `${where} altimeter`));
+    // An Unknown or Non-reporting airport's fields need input; its own
+    // notification explains why, so no generic Warning.
+    const condition = i === 1 ? undefined : conditionOf(options, i);
+    if (condition === "unknown") return;
+    if (condition !== "non-reporting") {
+      if (data.temp?.[i] === null)
+        blank(fieldSubject("temp", i), slot(code, `${where} temperature`));
+      if (data.altimeter?.[i] === null)
+        blank(fieldSubject("altimeter", i), slot(code, `${where} altimeter`));
+    }
     if (i !== 1 && data.altitude?.[i] === null)
       blank(fieldSubject("altitude", i), slot(code, `${where} field elevation`));
   });
-  if (dep && data.rwy?.[0] === null)
+  if (dep && data.rwy?.[0] === null && conditionOf(options, 0) !== "unknown")
     blank(fieldSubject("rwy", 0), slot(dep, "Departure runway length"));
-  if (arr && data.rwy?.[1] === null)
+  if (arr && data.rwy?.[1] === null && conditionOf(options, 2) !== "unknown")
     blank(fieldSubject("rwy", 1), slot(arr, "Arrival runway length"));
 
   const wind = data.wind;
@@ -617,6 +651,11 @@ export function mergeWeatherData(
 
   if (apiData.rwy) {
     result.rwy = apiData.rwy;
+  }
+
+  // Airport IDs: a confirmed auto-correction (#216) is written back.
+  if (apiData.airport) {
+    result.airport = [...apiData.airport] as [string, string];
   }
 
   if (apiData.altitude) {

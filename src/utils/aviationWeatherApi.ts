@@ -353,7 +353,11 @@ export interface WeatherDataBatch {
   airport?: AirportResponse[];
   /** One Warning per request that failed; its data comes back as `[]`. */
   notifications: Notification[];
+  /** Which requests failed, so `[]` can be told apart from "none found". */
+  failed?: WeatherRequestKind[];
 }
+
+export type WeatherRequestKind = "metar" | "taf" | "airport";
 
 function describeFailure(reason: unknown): string {
   if (reason instanceof APIError) return `${reason.code} ${reason.message}`;
@@ -385,6 +389,7 @@ export async function getWeatherDataBatch(
 
   const response: WeatherDataBatch = { notifications: [] };
   const failures: (Notification | null)[] = [];
+  const failedKinds: (WeatherRequestKind | undefined)[] = [];
   const settle = async <K extends "metar" | "taf" | "airport">(
     slot: number,
     key: K,
@@ -395,6 +400,7 @@ export async function getWeatherDataBatch(
       response[key] = await request();
     } catch (error) {
       response[key] = [] as NonNullable<WeatherDataBatch[K]>;
+      failedKinds[slot] = key;
       failures[slot] = {
         level: "warning",
         subject: stepSubject("weather"),
@@ -414,6 +420,7 @@ export async function getWeatherDataBatch(
 
   // Report in a fixed order regardless of which request settled first.
   response.notifications = failures.filter((n): n is Notification => !!n);
+  response.failed = failedKinds.filter((k): k is WeatherRequestKind => !!k);
   return response;
 }
 

@@ -321,7 +321,7 @@ describe("Aviation Weather API", () => {
       const result = await getWeatherDataBatch(["KORD"]);
 
       expect(fetch).toHaveBeenCalledTimes(3);
-      expect(result).toEqual({ ...mockBatchResponse, notifications: [] });
+      expect(result).toEqual({ ...mockBatchResponse, notifications: [], failed: [] });
     });
 
     it.each([
@@ -355,6 +355,8 @@ describe("Aviation Weather API", () => {
         ]);
         const key = (["metar", "taf", "airport"] as const)[failingCall];
         expect(result[key]).toEqual([]);
+        // So an empty result can be told apart from "nothing found" (#216).
+        expect(result.failed).toEqual([key]);
       }
     );
 
