@@ -816,6 +816,22 @@ describe("Weather Data Mapper", () => {
       expect(result.rwy![0]).toBe(10000); // API data should overwrite
     });
 
+    it("never writes the -1 marker into runway or elevation when preserveUserData is false (issue #227)", () => {
+      const existing: Partial<WorksheetData> = {
+        rwy: [5000, 4200],
+        altitude: [4000, 10000, 2800],
+      };
+      const apiData: Partial<WorksheetData> = {
+        rwy: [12000, -1],
+        altitude: [5433, -1, -1],
+      };
+
+      const merged = mergeWeatherData(existing, apiData, false);
+
+      expect(merged.rwy).toEqual([12000, 4200]);
+      expect(merged.altitude).toEqual([5433, 10000, 2800]);
+    });
+
     it("keeps an unmatched arrival's runway and elevation, including manual entries (issue #227)", () => {
       const existing: Partial<WorksheetData> = {
         rwy: [5000, 4200], // arrival runway entered by hand

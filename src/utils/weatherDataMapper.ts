@@ -491,7 +491,20 @@ export function mergeWeatherData(
   const result = { ...existingData };
 
   if (!preserveUserData) {
-    return { ...result, ...apiData };
+    // Overwrite everything, but still honour the -1 "don't update" marker in
+    // runway and elevation so it never lands in state (#227).
+    const overwritten = { ...result, ...apiData };
+    if (apiData.rwy) {
+      overwritten.rwy = mergeSlots(result.rwy, apiData.rwy, [null, null]);
+    }
+    if (apiData.altitude) {
+      overwritten.altitude = mergeSlots(result.altitude, apiData.altitude, [
+        null,
+        null,
+        null,
+      ]);
+    }
+    return overwritten;
   }
 
   // Always overwrite with API data when available
