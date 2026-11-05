@@ -48,6 +48,14 @@ const LABEL: Partial<Record<keyof WorksheetData, string>> = {
 const DATE_RE = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
 
+/** A YYYY-MM-DD string naming a day that exists on the calendar. */
+const isCalendarDate = (raw: string): boolean => {
+  if (!DATE_RE.test(raw)) return false;
+  const [y, m, d] = raw.split("-").map(Number);
+  const date = new Date(Date.UTC(y, m - 1, d));
+  return date.getUTCMonth() === m - 1 && date.getUTCDate() === d;
+};
+
 const isMalformedNumber = (v: unknown) =>
   v !== null && v !== undefined && !(typeof v === "number" && Number.isFinite(v));
 
@@ -118,12 +126,12 @@ export function sanitizeWorksheetUrlState(
 
   (
     [
-      ["date", DATE_RE, "YYYY-MM-DD"],
-      ["time", TIME_RE, "HH:MM UTC"],
+      ["date", isCalendarDate, "YYYY-MM-DD"],
+      ["time", (raw: string) => TIME_RE.test(raw), "HH:MM UTC"],
     ] as const
-  ).forEach(([key, re, format]) => {
+  ).forEach(([key, isValid, format]) => {
     const raw = params.get(key);
-    if (raw === null || re.test(raw)) return;
+    if (raw === null || isValid(raw)) return;
     next[key] = initialState[key];
     notifications.push({
       level: "warning",

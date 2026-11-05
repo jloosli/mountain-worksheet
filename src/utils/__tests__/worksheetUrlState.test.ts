@@ -104,6 +104,24 @@ describe("sanitizeWorksheetUrlState", () => {
       fieldSubject("time"),
     ]);
   });
+
+  it("restores the default date when the link's date doesn't exist on the calendar", () => {
+    const r = load("date=2026-02-31");
+    expect(r.state.date).toBe("2026-11-04");
+    expect(r.notifications).toEqual([
+      {
+        level: "warning",
+        subject: fieldSubject("date"),
+        message: expect.stringMatching(/"2026-02-31"/),
+      },
+    ]);
+  });
+
+  it("keeps a real leap day from the link", () => {
+    const r = load("date=2028-02-29");
+    expect(r.state.date).toBe("2028-02-29");
+    expect(r.notifications).toEqual([]);
+  });
 });
 
 describe("deriveUrlNotifications", () => {
