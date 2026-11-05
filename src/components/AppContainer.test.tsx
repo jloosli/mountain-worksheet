@@ -89,6 +89,19 @@ describe("AppContainer — malformed link (#225)", () => {
   });
 });
 
+describe("AppContainer — link Warnings retire for good", () => {
+  it("doesn't bring back a link's weight Warning after the pilot replaces and then clears the weight", () => {
+    mockSearchParams.mockReturnValue(new URLSearchParams("weight=abc"));
+    render(<AppContainer />);
+    const weight = screen.getByLabelText("Aircraft Takeoff Weight (lbs)");
+    expect(onScreen().getByText(/"abc" isn't a number/)).toBeInTheDocument();
+    fireEvent.change(weight, { target: { value: "2300" } });
+    expect(onScreen().queryByText(/"abc" isn't a number/)).not.toBeInTheDocument();
+    fireEvent.change(weight, { target: { value: "" } });
+    expect(onScreen().queryByText(/"abc" isn't a number/)).not.toBeInTheDocument();
+  });
+});
+
 describe("AppContainer — print wiring", () => {
   it("renders the Print briefing button", () => {
     render(<AppContainer />);

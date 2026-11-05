@@ -1,6 +1,7 @@
 import { deserializeState } from "../urlState";
 import {
   deriveUrlNotifications,
+  retireUrlNotifications,
   sanitizeWorksheetUrlState,
 } from "../worksheetUrlState";
 import { fieldSubject } from "../notifications";
@@ -234,5 +235,30 @@ describe("deriveUrlNotifications", () => {
     const fixed = speedChanged.map((row) => [...row]) as WorksheetData["wind"];
     fixed[0][0] = 270;
     expect(deriveUrlNotifications({ ...r.state, wind: fixed }, r)).toEqual([]);
+  });
+});
+
+describe("retireUrlNotifications", () => {
+  it("retires a link Warning for good once its value is superseded", () => {
+    const r = load("weight=abc");
+    const entered = { ...r.state, weight: 2300 };
+    const retired = retireUrlNotifications(r, entered);
+    // Clearing the weight again doesn't bring back the link's Warning.
+    expect(deriveUrlNotifications({ ...entered, weight: null }, retired)).toEqual([]);
+  });
+
+  it("retires a link Warning when a weather fetch fills that cell, even with the same value", () => {
+    const r = load("wind=abc,90,90,90,90||5,10,10,10,10||1,1,1,1,1");
+    const fetchedWind = r.state.wind; // the fetch couldn't get it either: still blank
+    const retired = retireUrlNotifications(r, r.state, { wind: fetchedWind });
+    expect(deriveUrlNotifications(r.state, retired)).toEqual([]);
+  });
+
+  it("keeps Warnings whose values are untouched", () => {
+    const r = load("weight=abc&altimeter=29.92,x,30.01");
+    const retired = retireUrlNotifications(r, { ...r.state, weight: 2300 });
+    expect(deriveUrlNotifications(retired.state, retired).map((n) => n.subject)).toEqual([
+      fieldSubject("altimeter", 1),
+    ]);
   });
 });

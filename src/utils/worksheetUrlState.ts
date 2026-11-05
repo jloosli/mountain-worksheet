@@ -274,3 +274,27 @@ export function deriveUrlNotifications(
     sameValue(readCell(state, load.cells[i]), readCell(load.state, load.cells[i]))
   );
 }
+
+/**
+ * The link load with notifications retired for good once superseded: the
+ * value each is about has changed in `next`, or a weather fetch filled it
+ * (`replaced`, even with the same value). A retired notification never
+ * comes back, even if the value later returns to what the link left.
+ */
+export function retireUrlNotifications(
+  load: UrlLoadResult,
+  next: WorksheetData,
+  replaced?: Partial<WorksheetData>
+): UrlLoadResult {
+  const keep = load.cells.map(
+    (cell) =>
+      sameValue(readCell(next, cell), readCell(load.state, cell)) &&
+      (!replaced || readCell(replaced, cell) === undefined)
+  );
+  if (keep.every(Boolean)) return load;
+  return {
+    state: load.state,
+    notifications: load.notifications.filter((_, i) => keep[i]),
+    cells: load.cells.filter((_, i) => keep[i]),
+  };
+}

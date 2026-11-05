@@ -43,6 +43,7 @@ import { useUrlState } from "@/utils/useUrlState";
 import { useAirportRunwayLookup } from "@/utils/useAirportRunways";
 import {
   deriveUrlNotifications,
+  retireUrlNotifications,
   sanitizeWorksheetUrlState,
 } from "@/utils/worksheetUrlState";
 
@@ -120,6 +121,10 @@ export default function AppContainer() {
       sanitizeWorksheetUrlState(loaded, query, initialWorksheet)
   );
 
+  // The link's notifications still in force; each is retired for good once
+  // the pilot or a weather fetch supersedes the value it is about.
+  const [linkLoad, setLinkLoad] = useState(urlLoad);
+
   const [weatherLastUpdated, setWeatherLastUpdated] = useState<Date | null>(
     null
   );
@@ -159,7 +164,7 @@ export default function AppContainer() {
       ...staleFetchNotifications(state, weatherFetch),
       ...runwayLookup.notifications,
       ...opTempChangeNotifications(state, opTempChange),
-      ...deriveUrlNotifications(state, urlLoad),
+      ...deriveUrlNotifications(state, linkLoad),
       ...unverifiedWeatherNotifications(state, weatherLastUpdated),
       ...derivePerformanceNotifications(state),
       ...rejectedEntryNotifications(state, rejectedEntries),
@@ -169,7 +174,7 @@ export default function AppContainer() {
       weatherFetch,
       runwayLookup.notifications,
       opTempChange,
-      urlLoad,
+      linkLoad,
       weatherLastUpdated,
       rejectedEntries,
     ]
@@ -213,17 +218,15 @@ export default function AppContainer() {
   );
 
   /**
-   * `fetched` marks an update a weather fetch applied: rejected entries for
-   * the fields it filled are retired even when the value is unchanged.
+   * `fetched` marks an update a weather fetch applied: rejected entries and
+   * link notifications for the fields it filled are retired even when the
+   * value is unchanged.
    */
   const handleUpdate = (updates: Partial<WorksheetData>, fetched = false) => {
-    setRejectedEntries((prev) =>
-      retireRejectedEntries(
-        { ...state, ...updates } as WorksheetData,
-        prev,
-        fetched ? updates : undefined
-      )
-    );
+    const merged = { ...state, ...updates } as WorksheetData;
+    const replaced = fetched ? updates : undefined;
+    setRejectedEntries((prev) => retireRejectedEntries(merged, prev, replaced));
+    setLinkLoad((prev) => prev && retireUrlNotifications(prev, merged, replaced));
     const change = describeOpTempChange(state, updates, {
       fetchedOpTemp: weatherFetch?.applied.temp?.[1] ?? null,
       previous: opTempChange,
