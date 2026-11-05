@@ -10,6 +10,7 @@ import {
   stepSubject,
   withSubject,
   type Notification,
+  type NotificationDraft,
 } from "./notifications";
 
 export const TARGET_ALTITUDES_FT = [3000, 6000, 9000, 12000, 15000];
@@ -283,6 +284,10 @@ function emptyWindsAloft() {
 
 export function buildAreaOfOpsWeather(opts: BuildOptions): AreaOfOpsWeather {
   const notifications: Notification[] = [];
+  // Substitutions that affect every area-of-ops value (midpoint position,
+  // snapped forecast time). They are attached to each field the fetch fills,
+  // so values computed from those fields carry their marker.
+  const areaWide: NotificationDraft[] = [];
 
   let position: [number, number] | null = null;
   let positionSource: AreaOfOpsPositionSource = "none";
@@ -296,9 +301,8 @@ export function buildAreaOfOpsWeather(opts: BuildOptions): AreaOfOpsWeather {
       opts.arrAirportLatLon
     );
     positionSource = "midpoint";
-    notifications.push({
+    areaWide.push({
       level: "caution",
-      subject: stepSubject("weather"),
       message:
         "Operating area position not entered; winds aloft and operating conditions use the midpoint of the departure↔arrival airports",
     });
@@ -322,15 +326,15 @@ export function buildAreaOfOpsWeather(opts: BuildOptions): AreaOfOpsWeather {
       opTemp: null,
       opAltimeter: null,
       notifications: [
-        ...notifications,
+        // Nothing was filled, so the midpoint Caution stays on the step.
+        ...areaWide.map((n) => withSubject(n, stepSubject("weather"))),
         ...areaOfOpsUnavailable("Open-Meteo response had no hourly times"),
       ],
     };
   }
   if (deltaMs > TIME_SNAP_THRESHOLD_MS) {
-    notifications.push({
+    areaWide.push({
       level: "caution",
-      subject: stepSubject("weather"),
       message: `Operating area forecast time snapped to ${
         opts.raw.hourly.time[idx]
       }Z (Δt = ${Math.round(deltaMs / 60000)} min from requested ${opts.midTime
@@ -377,13 +381,27 @@ export function buildAreaOfOpsWeather(opts: BuildOptions): AreaOfOpsWeather {
     });
   }
 
+  const filled = [
+    ...TARGET_ALTITUDES_FT.map((_, i) => ({
+      subject: fieldSubject("wind", i),
+      value: [wind.direction[i], wind.speed[i], wind.temp[i]],
+    })),
+    { subject: fieldSubject("temp", 1), value: [opTemp] },
+    { subject: fieldSubject("altimeter", 1), value: [opAltimeter] },
+  ]
+    .filter(({ value }) => value.some((v) => v !== null))
+    .map(({ subject }) => subject);
+
   return {
     position,
     positionSource,
     windsAloft: wind,
     opTemp,
     opAltimeter,
-    notifications,
+    notifications: [
+      ...areaWide.flatMap((n) => filled.map((subject) => withSubject(n, subject))),
+      ...notifications,
+    ],
   };
 }
 

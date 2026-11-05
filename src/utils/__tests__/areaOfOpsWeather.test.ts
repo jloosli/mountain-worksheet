@@ -7,7 +7,7 @@ import {
   interpolateOpTempFromAloft,
 } from "../areaOfOpsWeather";
 import type { OpenMeteoPointForecast } from "../openMeteoApi";
-import { fieldSubject, stepSubject } from "../notifications";
+import { fieldSubject, stepSubject, type Notification } from "../notifications";
 
 const mockRaw: OpenMeteoPointForecast = {
   hourly: {
@@ -59,7 +59,37 @@ describe("greatCircleMidpoint", () => {
   });
 });
 
+const AREA_FIELDS = [
+  ...[0, 1, 2, 3, 4].map((i) => fieldSubject("wind", i)),
+  fieldSubject("temp", 1),
+  fieldSubject("altimeter", 1),
+];
+
+const cautionSubjects = (
+  notifications: Notification[],
+  message: RegExp
+) =>
+  notifications
+    .filter((n) => n.level === "caution" && message.test(n.message))
+    .map((n) => n.subject);
+
 describe("buildAreaOfOpsWeather", () => {
+  it("puts a midpoint Caution only on the fields the fetch filled", () => {
+    const { pressure_msl: _omit, ...hourly } = mockRaw.hourly;
+    void _omit;
+    const r = buildAreaOfOpsWeather({
+      position: [null, null],
+      depAirportLatLon: [40.2, -111.7],
+      arrAirportLatLon: [37.1, -113.6],
+      midTime: new Date("2026-05-12T16:00:00Z"),
+      opAltitudeFt: null,
+      raw: { hourly: hourly as OpenMeteoPointForecast["hourly"] },
+    });
+    expect(cautionSubjects(r.notifications, /position not entered/i)).toEqual(
+      [0, 1, 2, 3, 4].map((i) => fieldSubject("wind", i))
+    );
+  });
+
   it("uses user position when both coords present", () => {
     const r = buildAreaOfOpsWeather({
       position: [40.5, -112.0],
@@ -83,12 +113,11 @@ describe("buildAreaOfOpsWeather", () => {
       raw: mockRaw,
     });
     expect(r.positionSource).toBe("midpoint");
-    // A midpoint position is a Substitution for the whole area-of-ops fetch.
-    expect(r.notifications).toContainEqual({
-      level: "caution",
-      subject: stepSubject("weather"),
-      message: expect.stringMatching(/position not entered/i),
-    });
+    // A midpoint position is a Substitution for every area-of-ops field it
+    // filled, so values computed from them carry its marker.
+    expect(cautionSubjects(r.notifications, /position not entered/i)).toEqual(
+      AREA_FIELDS
+    );
   });
 
   it("populates 5-altitude wind table from interpolation", () => {
@@ -172,11 +201,9 @@ describe("buildAreaOfOpsWeather", () => {
       opAltitudeFt: 9000,
       raw: mockRaw,
     });
-    expect(r.notifications).toContainEqual({
-      level: "caution",
-      subject: stepSubject("weather"),
-      message: expect.stringMatching(/forecast time snapped/i),
-    });
+    expect(cautionSubjects(r.notifications, /forecast time snapped/i)).toEqual(
+      AREA_FIELDS
+    );
   });
 
   it("raises a Caution on the winds-aloft column whose altitude was snapped", () => {
