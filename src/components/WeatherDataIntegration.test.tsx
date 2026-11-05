@@ -142,6 +142,67 @@ describe("WeatherDataIntegration", () => {
     });
   });
 
+  describe("with hideBox (as mounted in production, issue #220)", () => {
+    const setupFetch = (warnings: string[]) => {
+      const { mapWeatherDataToWorksheet, mergeWeatherData } =
+        jest.requireMock("@/utils/weatherDataMapper");
+      mapWeatherDataToWorksheet.mockReturnValue({
+        success: true,
+        data: {},
+        errors: [],
+        warnings,
+      });
+      mergeWeatherData.mockImplementation((existing: object, api: object) => ({
+        ...existing,
+        ...api,
+      }));
+      const { getWeatherDataBatch } = jest.requireMock(
+        "@/utils/aviationWeatherApi"
+      );
+      getWeatherDataBatch.mockResolvedValue({ metar: [], taf: [], airport: [] });
+    };
+
+    const renderHidden = () =>
+      render(
+        <WeatherDataIntegration
+          {...defaultProps}
+          hideBox
+          renderButton={({ onClick }) => (
+            <button type="button" onClick={onClick}>
+              Fetch
+            </button>
+          )}
+        />
+      );
+
+    it("renders fetch warnings even though the box is hidden", async () => {
+      setupFetch([
+        "BOI: no METAR or TAF data available for requested time 2024-01-15T12:00:00.000Z",
+      ]);
+      renderHidden();
+      expect(screen.queryByText("Aviation Weather Data")).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByText("Fetch"));
+
+      expect(
+        await screen.findByText(/BOI: no METAR or TAF data available/)
+      ).toBeInTheDocument();
+      expect(screen.getByText("Weather Data Warnings")).toBeInTheDocument();
+    });
+
+    it("renders no warnings panel when the fetch produced no warnings", async () => {
+      setupFetch([]);
+      renderHidden();
+
+      fireEvent.click(screen.getByText("Fetch"));
+
+      await waitFor(() => {
+        expect(defaultProps.onDataUpdate).toHaveBeenCalled();
+      });
+      expect(screen.queryByText("Weather Data Warnings")).not.toBeInTheDocument();
+    });
+  });
+
   it("emits skipped warning when opPos is unavailable", async () => {
     const { mapWeatherDataToWorksheet, mergeWeatherData, isApiPopulatedData } =
       jest.requireMock("@/utils/weatherDataMapper");

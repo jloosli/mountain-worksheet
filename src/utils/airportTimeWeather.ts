@@ -97,7 +97,8 @@ function fmtDelta(ms: number): string {
 export function selectAirportWeather(
   metar: METARResponse | undefined,
   taf: TAFResponse | undefined,
-  requestedTime: Date
+  requestedTime: Date,
+  airportId: string
 ): AirportWeatherAtTime {
   const warnings: string[] = [];
   const requestedIso = requestedTime.toISOString();
@@ -154,9 +155,8 @@ export function selectAirportWeather(
   // 3) Nearest TAF period as fallback
   const closest = findClosestFcst(fcsts, requestedTime);
   if (closest) {
-    const id = taf?.icaoId ?? metar?.icaoId ?? "airport";
     warnings.push(
-      `${id}: forecast unavailable for ${requestedIso}; using nearest TAF period (Δt = ${fmtDelta(
+      `${airportId}: forecast unavailable for ${requestedIso}; using nearest TAF period (Δt = ${fmtDelta(
         closest.deltaMs
       )})`
     );
@@ -176,7 +176,6 @@ export function selectAirportWeather(
   // 4) Stale METAR as last-resort fallback (better than nothing for airports
   //    without TAF service — small / uncontrolled fields).
   if (metar != null && (metar.temp != null || metar.altim != null)) {
-    const id = metar.icaoId ?? "airport";
     const delta = Number.isFinite(obsMs)
       ? fmtDelta(Math.abs(requestedTime.getTime() - obsMs))
       : "unknown";
@@ -185,7 +184,7 @@ export function selectAirportWeather(
         ? "no TAF available"
         : "no usable TAF forecast period";
     warnings.push(
-      `${id}: ${reason}; using current METAR observation as fallback (Δt = ${delta})`
+      `${airportId}: ${reason}; using current METAR observation as fallback (Δt = ${delta})`
     );
     return {
       temp: metar.temp != null ? Math.round(metar.temp) : null,
@@ -196,9 +195,8 @@ export function selectAirportWeather(
   }
 
   // 5) Nothing
-  const id = taf?.icaoId ?? metar?.icaoId ?? "airport";
   warnings.push(
-    `${id}: no METAR or TAF data available for requested time ${requestedIso}`
+    `${airportId}: no METAR or TAF data available for requested time ${requestedIso}`
   );
   return { temp: null, altimeter: null, source: "none", warnings };
 }

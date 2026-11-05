@@ -55,7 +55,7 @@ const baseTaf: TAFResponse = {
 describe("selectAirportWeather", () => {
   it("uses METAR when requested time is within ~90 min of obsTime", () => {
     const requested = new Date("2026-05-12T15:30:00Z");
-    const result = selectAirportWeather(baseMetar, baseTaf, requested);
+    const result = selectAirportWeather(baseMetar, baseTaf, requested, "KSLC");
     expect(result.source).toBe("metar");
     expect(result.temp).toBe(18);
     expect(result.altimeter).toBeCloseTo(29.97, 2); // 1015 hPa → ~29.97 inHg
@@ -64,7 +64,7 @@ describe("selectAirportWeather", () => {
 
   it("uses TAF period covering requested time when METAR is stale", () => {
     const requested = new Date("2026-05-12T19:30:00Z"); // > 90 min from METAR
-    const result = selectAirportWeather(baseMetar, baseTaf, requested);
+    const result = selectAirportWeather(baseMetar, baseTaf, requested, "KSLC");
     expect(result.source).toBe("taf-fcst");
     expect(result.temp).toBe(24);
     expect(result.altimeter).toBe(30.05);
@@ -77,7 +77,7 @@ describe("selectAirportWeather", () => {
       fcsts: [{ ...tafFcsts[0], temp: undefined }, tafFcsts[1]],
     };
     const requested = new Date("2026-05-12T17:00:00Z"); // > 90 min from METAR, in fcst[0]
-    const result = selectAirportWeather(baseMetar, tafNoTemp, requested);
+    const result = selectAirportWeather(baseMetar, tafNoTemp, requested, "KSLC");
     expect(result.source).toBe("taf-fcst");
     expect(result.temp).toBe(18); // fell back to METAR
     expect(result.warnings.length).toBeGreaterThan(0);
@@ -86,7 +86,7 @@ describe("selectAirportWeather", () => {
 
   it("emits stale warning when no TAF period covers requested time", () => {
     const requested = new Date("2026-05-15T12:00:00Z"); // 3 days past TAF end
-    const result = selectAirportWeather(baseMetar, baseTaf, requested);
+    const result = selectAirportWeather(baseMetar, baseTaf, requested, "KSLC");
     expect(result.source).toBe("taf-nearest");
     expect(result.warnings.length).toBeGreaterThan(0);
     expect(result.warnings[0]).toMatch(/forecast unavailable/i);
@@ -94,11 +94,19 @@ describe("selectAirportWeather", () => {
 
   it("returns source 'none' when neither METAR nor TAF available", () => {
     const requested = new Date("2026-05-12T15:00:00Z");
-    const result = selectAirportWeather(undefined, undefined, requested);
+    const result = selectAirportWeather(undefined, undefined, requested, "KSLC");
     expect(result.source).toBe("none");
     expect(result.temp).toBeNull();
     expect(result.altimeter).toBeNull();
     expect(result.warnings.length).toBeGreaterThan(0);
+  });
+
+  it("names the requested airport ID when neither METAR nor TAF exists (issue #220)", () => {
+    const requested = new Date("2026-05-12T15:00:00Z");
+    const result = selectAirportWeather(undefined, undefined, requested, "BOI");
+    expect(result.warnings).toEqual([
+      "BOI: no METAR or TAF data available for requested time 2026-05-12T15:00:00.000Z",
+    ]);
   });
 
   it("parses numeric obsTime (Unix epoch seconds) — live API shape", () => {
@@ -108,7 +116,7 @@ describe("selectAirportWeather", () => {
       obsTime: Math.floor(Date.parse("2026-05-12T15:00:00Z") / 1000),
     };
     const requested = new Date("2026-05-12T15:30:00Z"); // within 90 min
-    const result = selectAirportWeather(epochMetar, baseTaf, requested);
+    const result = selectAirportWeather(epochMetar, baseTaf, requested, "KSLC");
     expect(result.source).toBe("metar");
     expect(result.temp).toBe(18);
   });
@@ -124,7 +132,7 @@ describe("selectAirportWeather", () => {
       obsTime: Math.floor(Date.parse("2026-05-10T15:22:00Z") / 1000),
     };
     const requested = new Date("2026-05-10T20:30:00Z"); // arrival 5 h later
-    const result = selectAirportWeather(ktvyMetar, undefined, requested);
+    const result = selectAirportWeather(ktvyMetar, undefined, requested, "KTVY");
     expect(result.source).toBe("metar-stale");
     expect(result.temp).toBe(19);
     expect(result.altimeter).toBeCloseTo(30.19, 2);
@@ -133,14 +141,14 @@ describe("selectAirportWeather", () => {
 
   it("returns 'none' only when no METAR data exists either", () => {
     const requested = new Date("2026-05-12T15:00:00Z");
-    const result = selectAirportWeather(undefined, undefined, requested);
+    const result = selectAirportWeather(undefined, undefined, requested, "KSLC");
     expect(result.source).toBe("none");
   });
 
   it("warns when METAR obsTime is unparseable but still attempts TAF", () => {
     const broken = { ...baseMetar, obsTime: "INVALID" };
     const requested = new Date("2026-05-12T19:30:00Z");
-    const result = selectAirportWeather(broken, baseTaf, requested);
+    const result = selectAirportWeather(broken, baseTaf, requested, "KSLC");
     expect(result.source).toBe("taf-fcst");
     expect(result.warnings.some((w) => /could not be parsed/i.test(w))).toBe(true);
   });
@@ -162,7 +170,7 @@ describe("selectAirportWeather", () => {
     };
     // Requested time falls outside TAF coverage → "taf-nearest" branch
     const requested = new Date("2026-06-02T18:00:00Z");
-    const result = selectAirportWeather(baseMetar, tafWithNullAltim, requested);
+    const result = selectAirportWeather(baseMetar, tafWithNullAltim, requested, "KSLC");
     expect(result.source).toBe("taf-nearest");
     // METAR altim is 1015 hPa → ~29.97 inHg, NOT NaN from null * 0.0295
     expect(result.altimeter).toBeCloseTo(29.97, 2);
@@ -181,7 +189,7 @@ describe("selectAirportWeather", () => {
       ],
     };
     const requested = new Date("2026-05-12T17:00:00Z"); // covered, METAR stale (>90 min)
-    const result = selectAirportWeather(baseMetar, tafWithNullAltim, requested);
+    const result = selectAirportWeather(baseMetar, tafWithNullAltim, requested, "KSLC");
     expect(result.source).toBe("taf-fcst");
     expect(result.altimeter).toBeCloseTo(29.97, 2);
   });
@@ -207,7 +215,7 @@ describe("selectAirportWeather", () => {
     const tafArray: TAFResponse = { ...baseTaf, fcsts: arrayTempFcsts };
     // Requested time near 19:00 (closer to sfcTemp 26)
     const requested = new Date("2026-05-12T18:45:00Z");
-    const result = selectAirportWeather(baseMetar, tafArray, requested);
+    const result = selectAirportWeather(baseMetar, tafArray, requested, "KSLC");
     expect(result.source).toBe("taf-fcst");
     expect(result.temp).toBe(26);
   });
