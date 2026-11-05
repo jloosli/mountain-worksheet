@@ -406,5 +406,32 @@ describe("useAirportRunways", () => {
       ]);
       jest.restoreAllMocks();
     });
+
+    it("downgrades a failed lookup to an Advisory once that runway length is filled", async () => {
+      jest.spyOn(console, "warn").mockImplementation(() => {});
+      mockedGetAirportInfo.mockRejectedValue(new Error("network down"));
+      const { result } = renderHook(() =>
+        useAirportRunwayLookup(["KDEN", "KSLC"], [5500, null])
+      );
+      act(() => {
+        jest.advanceTimersByTime(400);
+      });
+      await waitFor(() => {
+        expect(result.current.status).toEqual(["failed", "failed"]);
+      });
+      expect(result.current.notifications).toEqual([
+        {
+          level: "advisory",
+          subject: fieldSubject("rwy", 0),
+          message: expect.stringMatching(/KDEN.*network down/),
+        },
+        {
+          level: "warning",
+          subject: fieldSubject("rwy", 1),
+          message: expect.stringMatching(/KSLC.*network down/),
+        },
+      ]);
+      jest.restoreAllMocks();
+    });
   });
 });

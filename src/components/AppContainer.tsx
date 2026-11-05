@@ -130,7 +130,7 @@ export default function AppContainer() {
     null
   );
 
-  const runwayLookup = useAirportRunwayLookup(state.airport);
+  const runwayLookup = useAirportRunwayLookup(state.airport, state.rwy);
 
   // The latest operating-temperature re-derivation (#117). Its notifications
   // are derived from it plus current state, so they clear once the pilot

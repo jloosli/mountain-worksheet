@@ -24,7 +24,11 @@ export type RunwayLookupStatus =
 export interface RunwayLookup {
   runways: RunwaysTuple;
   status: [RunwayLookupStatus, RunwayLookupStatus];
-  /** A Warning on `rwy[slot]` for each slot whose lookup failed. */
+  /**
+   * For each slot whose lookup failed: a Warning on `rwy[slot]` while the
+   * runway length is blank, or an Advisory once a length is filled (by a
+   * weather fetch or the pilot), since only the choice of runway is missing.
+   */
   notifications: Notification[];
 }
 
@@ -58,10 +62,12 @@ export function useAirportRunways(airports: [string, string]): RunwaysTuple {
 /**
  * Looks up runways for the departure and arrival airports (debounced), and
  * reports whether each lookup never ran, is pending, found runways, found
- * none, or failed. A failed lookup raises a Warning on that slot's runway.
+ * none, or failed. A failed lookup raises a Warning on that slot's runway
+ * while its length is blank; with a length, it is only an Advisory.
  */
 export function useAirportRunwayLookup(
-  airports: [string, string]
+  airports: [string, string],
+  runwayLengths: [number | null, number | null] = [null, null]
 ): RunwayLookup {
   const [state, setState] = useState<RunwaysState>({
     resolvedFor: ["", ""],
@@ -151,10 +157,14 @@ export function useAirportRunwayLookup(
   ];
   const notifications: Notification[] = ([0, 1] as const)
     .filter((i) => status[i] === "failed")
-    .map((i) => ({
-      level: "warning",
-      subject: fieldSubject("rwy", i),
-      message: `Couldn't look up runways for ${codes[i]} (${state.error}), so no runway can be selected.`,
-    }));
+    .map((i): Notification => {
+      const length = runwayLengths[i];
+      const filled = length !== null && length !== undefined;
+      return {
+        level: filled ? "advisory" : "warning",
+        subject: fieldSubject("rwy", i),
+        message: `Couldn't look up runways for ${codes[i]} (${state.error}), so no runway can be selected.`,
+      };
+    });
   return { runways, status, notifications };
 }
