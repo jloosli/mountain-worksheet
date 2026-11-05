@@ -321,8 +321,42 @@ describe("Aviation Weather API", () => {
       const result = await getWeatherDataBatch(["KORD"]);
 
       expect(fetch).toHaveBeenCalledTimes(3);
-      expect(result).toEqual(mockBatchResponse);
+      expect(result).toEqual({ ...mockBatchResponse, notifications: [] });
     });
+
+    it.each([
+      ["METAR", 0],
+      ["TAF", 1],
+      ["Airport", 2],
+    ])(
+      "reports a failed %s request as a Warning on the weather step instead of swallowing it",
+      async (label, failingCall) => {
+        const responses = [
+          mockBatchResponse.metar,
+          mockBatchResponse.taf,
+          mockBatchResponse.airport,
+        ];
+        responses.forEach((body, i) => {
+          (fetch as jest.Mock).mockResolvedValueOnce(
+            i === failingCall
+              ? { ok: false, status: 400, text: async () => "Bad request" }
+              : { ok: true, json: async () => body }
+          );
+        });
+
+        const result = await getWeatherDataBatch(["KORD"]);
+
+        expect(result.notifications).toEqual([
+          {
+            level: "warning",
+            subject: { kind: "step", step: "weather" },
+            message: expect.stringContaining(`${label} request failed`),
+          },
+        ]);
+        const key = (["metar", "taf", "airport"] as const)[failingCall];
+        expect(result[key]).toEqual([]);
+      }
+    );
 
     it("should handle partial failures in batch requests", async () => {
       (fetch as jest.Mock)

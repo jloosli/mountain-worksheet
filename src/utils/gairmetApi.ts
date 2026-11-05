@@ -1,3 +1,5 @@
+import { fieldSubject, stepSubject, type Notification } from "./notifications";
+
 const BASE_URL = "/api/aviation-weather";
 
 export interface GAirmetCoord {
@@ -17,7 +19,20 @@ export interface AirmetClassification {
   turb: boolean | null;
   cielVis: boolean | null;
   mtnObsc: boolean | null;
-  warnings: string[];
+  notifications: Notification[];
+}
+
+/**
+ * Warning raised when the AIRMET flags could not be updated. The flags are
+ * left as they were (clearing a turbulence flag on a failed fetch would be
+ * worse), so the pilot must check them.
+ */
+export function airmetFlagsUnavailable(reason: string): Notification {
+  return {
+    level: "warning",
+    subject: stepSubject("weather"),
+    message: `${reason}; turbulence, ceiling/visibility and mountain obscuration flags were not updated. Check AIRMETs manually.`,
+  };
 }
 
 const VALID_TIME_THRESHOLD_MS = 3 * 60 * 60 * 1000;
@@ -61,7 +76,7 @@ export function classifyAirmets(
   position: [number, number],
   midTime: Date
 ): AirmetClassification {
-  const warnings: string[] = [];
+  const notifications: Notification[] = [];
   const targetMs = midTime.getTime();
   const eligible = features.filter((f) =>
     ["TURB", "IFR", "MTN OBSC"].includes(f.hazard)
@@ -71,7 +86,7 @@ export function classifyAirmets(
   // (Genuine unavailability — fetch failure or no features in the time window
   // — is signaled with null sentinels below.)
   if (eligible.length === 0) {
-    return { turb: false, cielVis: false, mtnObsc: false, warnings };
+    return { turb: false, cielVis: false, mtnObsc: false, notifications };
   }
 
   // Group by hazard
@@ -86,7 +101,7 @@ export function classifyAirmets(
     turb: false,
     cielVis: false,
     mtnObsc: false,
-    warnings,
+    notifications,
   };
 
   let anyWithinThreshold = false;
@@ -114,16 +129,25 @@ export function classifyAirmets(
   }
 
   if (ifrWithinThreshold) {
-    result.warnings.push(
-      "AIRMET IFR auto-flag uses 1000 ft / 3 sm threshold, not the worksheet's 2000 ft / 10 sm threshold"
-    );
+    notifications.push({
+      level: "caution",
+      subject: fieldSubject("cielVis"),
+      message:
+        "AIRMET IFR auto-flag uses 1000 ft / 3 sm threshold, not the worksheet's 2000 ft / 10 sm threshold",
+    });
   }
 
   if (!anyWithinThreshold) {
-    warnings.push(
-      `G-AIRMET data unavailable within 3 hr of ${midTime.toISOString()}; turb / cielVis / mtnObsc flags not updated`
-    );
-    return { turb: null, cielVis: null, mtnObsc: null, warnings };
+    return {
+      turb: null,
+      cielVis: null,
+      mtnObsc: null,
+      notifications: [
+        airmetFlagsUnavailable(
+          `G-AIRMET data unavailable within 3 hr of ${midTime.toISOString()}`
+        ),
+      ],
+    };
   }
   return result;
 }

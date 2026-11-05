@@ -5,6 +5,8 @@
  * for retrieving METAR, TAF, airport information, and wind/temperature data.
  */
 
+import { stepSubject, type Notification } from "./notifications";
+
 // Base URL for AviationWeather.gov API
 const BASE_URL = "/api/aviation-weather";
 
@@ -345,8 +347,23 @@ export async function getNavaidInfo(
   return makeApiRequest<NavaidResponse[]>("navaid", params);
 }
 
+export interface WeatherDataBatch {
+  metar?: METARResponse[];
+  taf?: TAFResponse[];
+  airport?: AirportResponse[];
+  /** One Warning per request that failed; its data comes back as `[]`. */
+  notifications: Notification[];
+}
+
+function describeFailure(reason: unknown): string {
+  if (reason instanceof APIError) return `${reason.code} ${reason.message}`;
+  if (reason instanceof Error) return reason.message;
+  return "unknown error";
+}
+
 /**
- * Batch multiple API requests efficiently
+ * Batch multiple API requests efficiently. A failed request does not fail
+ * the batch: its data is `[]` and it is reported as a Warning.
  */
 export async function getWeatherDataBatch(
   airports: string[],
@@ -357,11 +374,7 @@ export async function getWeatherDataBatch(
     metarHours?: number;
     tafHours?: number;
   } = {}
-): Promise<{
-  metar?: METARResponse[];
-  taf?: TAFResponse[];
-  airport?: AirportResponse[];
-}> {
+): Promise<WeatherDataBatch> {
   const {
     includeMETAR = true,
     includeTAF = true,
@@ -370,51 +383,37 @@ export async function getWeatherDataBatch(
     tafHours = 24,
   } = options;
 
-  const promises: Promise<METARResponse[] | TAFResponse[] | AirportResponse[]>[] = [];
+  const response: WeatherDataBatch = { notifications: [] };
+  const failures: (Notification | null)[] = [];
+  const settle = async <K extends "metar" | "taf" | "airport">(
+    slot: number,
+    key: K,
+    label: string,
+    request: () => Promise<NonNullable<WeatherDataBatch[K]>>
+  ) => {
+    try {
+      response[key] = await request();
+    } catch (error) {
+      response[key] = [] as NonNullable<WeatherDataBatch[K]>;
+      failures[slot] = {
+        level: "warning",
+        subject: stepSubject("weather"),
+        message: `${label} request failed for ${airports.join(", ")} (${describeFailure(error)})`,
+      };
+    }
+  };
 
-  if (includeMETAR) {
-    promises.push(getMETAR(airports, metarHours));
-  }
-  if (includeTAF) {
-    promises.push(getTAF(airports, tafHours));
-  }
-  if (includeAirport) {
-    promises.push(getAirportInfo(airports));
-  }
+  const requests: Promise<void>[] = [];
+  if (includeMETAR)
+    requests.push(settle(0, "metar", "METAR", () => getMETAR(airports, metarHours)));
+  if (includeTAF)
+    requests.push(settle(1, "taf", "TAF", () => getTAF(airports, tafHours)));
+  if (includeAirport)
+    requests.push(settle(2, "airport", "Airport", () => getAirportInfo(airports)));
+  await Promise.all(requests);
 
-  const results = await Promise.allSettled(promises);
-
-  const response: {
-    metar?: METARResponse[];
-    taf?: TAFResponse[];
-    airport?: AirportResponse[];
-  } = {};
-  let resultIndex = 0;
-
-  if (includeMETAR) {
-    response.metar =
-      results[resultIndex].status === "fulfilled"
-        ? (results[resultIndex] as PromiseFulfilledResult<METARResponse[]>)
-            .value
-        : [];
-    resultIndex++;
-  }
-  if (includeTAF) {
-    response.taf =
-      results[resultIndex].status === "fulfilled"
-        ? (results[resultIndex] as PromiseFulfilledResult<TAFResponse[]>).value
-        : [];
-    resultIndex++;
-  }
-  if (includeAirport) {
-    response.airport =
-      results[resultIndex].status === "fulfilled"
-        ? (results[resultIndex] as PromiseFulfilledResult<AirportResponse[]>)
-            .value
-        : [];
-    resultIndex++;
-  }
-
+  // Report in a fixed order regardless of which request settled first.
+  response.notifications = failures.filter((n): n is Notification => !!n);
   return response;
 }
 
