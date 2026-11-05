@@ -1,6 +1,7 @@
 import React, { useId } from "react";
 import InlineNotifications from "./InlineNotifications";
-import { valueSubject } from "@/utils/notifications";
+import ValueMarkers from "./ValueMarkers";
+import { valueSubject, type Notification } from "@/utils/notifications";
 import {
   toldSubject,
   type AirportSlot,
@@ -13,6 +14,8 @@ interface TakeoffPerformanceProps {
   aircraftModel?: string;
   airports: [string, string]; // [departure, arrival]
   told: TOLDViewModel;
+  /** All notifications in force, for markers on values whose inputs carry a Caution. */
+  inputNotifications?: readonly Notification[];
 }
 
 const SLOTS: AirportSlot[] = ["departure", "arrival"];
@@ -32,10 +35,12 @@ function ValueCell({
   value,
   margin,
   className = "",
+  inputNotifications,
 }: {
   value: ComputedValue;
   margin?: boolean;
   className?: string;
+  inputNotifications: readonly Notification[];
 }) {
   const base = `py-2 px-4 text-right ${className}`;
   if (value.status === "withheld") {
@@ -52,6 +57,7 @@ function ValueCell({
   return (
     <td className={`${base} ${negative ? "text-red-600 dark:text-red-400" : ""}`}>
       {value.value.toLocaleString()}
+      <ValueMarkers notifications={inputNotifications} value={value} />
     </td>
   );
 }
@@ -60,6 +66,7 @@ export default function TakeoffPerformance({
   aircraftModel,
   airports,
   told,
+  inputNotifications = [],
 }: TakeoffPerformanceProps) {
   const headingId = useId();
   if (!aircraftModel) return null;
@@ -102,14 +109,27 @@ export default function TakeoffPerformance({
             {ROWS.map(({ label, cells: [shortField, obstacle], margin }) => (
               <tr key={label} className="border-b dark:border-gray-700">
                 <td className="py-2 px-4">{label}</td>
-                <ValueCell value={told.departure.values[shortField]} margin={margin} />
+                <ValueCell
+                  value={told.departure.values[shortField]}
+                  margin={margin}
+                  inputNotifications={inputNotifications}
+                />
                 <ValueCell
                   value={told.arrival.values[shortField]}
                   margin={margin}
                   className="border-r dark:border-gray-700"
+                  inputNotifications={inputNotifications}
                 />
-                <ValueCell value={told.departure.values[obstacle]} margin={margin} />
-                <ValueCell value={told.arrival.values[obstacle]} margin={margin} />
+                <ValueCell
+                  value={told.departure.values[obstacle]}
+                  margin={margin}
+                  inputNotifications={inputNotifications}
+                />
+                <ValueCell
+                  value={told.arrival.values[obstacle]}
+                  margin={margin}
+                  inputNotifications={inputNotifications}
+                />
               </tr>
             ))}
           </tbody>

@@ -1,16 +1,25 @@
+import ValueMarkers from "@/components/ValueMarkers";
+import { pressureColumnDependsOn } from "@/utils/derived";
+import type { Notification } from "@/utils/notifications";
+
 type Triple = [number | null, number | null, number | null];
 
 interface AltitudesProps {
   altitudes: Triple;
   PAs: Triple;
   DAs: Triple;
+  /** All notifications in force, for markers on altitudes computed from an input with a Caution. */
+  notifications?: readonly Notification[];
 }
+
+const COLS = [0, 1, 2] as const;
+const CELL = "border border-gray-300 dark:border-gray-700 p-2 text-right";
 
 function fmt(v: number | null): string {
   return v === null ? "-" : Math.round(v).toLocaleString();
 }
 
-export default function Altitudes({ altitudes, PAs, DAs }: AltitudesProps) {
+export default function Altitudes({ altitudes, PAs, DAs, notifications = [] }: AltitudesProps) {
   return (
     <table className="min-w-full border-collapse border border-gray-300 dark:border-gray-700">
       <thead>
@@ -30,15 +39,31 @@ export default function Altitudes({ altitudes, PAs, DAs }: AltitudesProps) {
         </tr>
         <tr>
           <td className="border border-gray-300 dark:border-gray-700 p-2">Pressure Altitude (feet)</td>
-          <td className="border border-gray-300 dark:border-gray-700 p-2 text-right">{fmt(PAs[0])}</td>
-          <td className="border border-gray-300 dark:border-gray-700 p-2 text-right">{fmt(PAs[1])}</td>
-          <td className="border border-gray-300 dark:border-gray-700 p-2 text-right">{fmt(PAs[2])}</td>
+          {COLS.map((i) => (
+            <td key={i} className={CELL}>
+              {fmt(PAs[i])}
+              {PAs[i] !== null && (
+                <ValueMarkers
+                  notifications={notifications}
+                  value={{ status: "computed", dependsOn: pressureColumnDependsOn(i).pressureAltitude }}
+                />
+              )}
+            </td>
+          ))}
         </tr>
         <tr>
           <td className="border border-gray-300 dark:border-gray-700 p-2">Density Altitude (feet)</td>
-          <td className="border border-gray-300 dark:border-gray-700 p-2 text-right">{fmt(DAs[0])}</td>
-          <td className="border border-gray-300 dark:border-gray-700 p-2 text-right">{fmt(DAs[1])}</td>
-          <td className="border border-gray-300 dark:border-gray-700 p-2 text-right">{fmt(DAs[2])}</td>
+          {COLS.map((i) => (
+            <td key={i} className={CELL}>
+              {fmt(DAs[i])}
+              {DAs[i] !== null && (
+                <ValueMarkers
+                  notifications={notifications}
+                  value={{ status: "computed", dependsOn: pressureColumnDependsOn(i).densityAltitude }}
+                />
+              )}
+            </td>
+          ))}
         </tr>
       </tbody>
     </table>

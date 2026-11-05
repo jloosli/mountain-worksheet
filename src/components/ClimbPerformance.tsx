@@ -1,5 +1,7 @@
+import type React from "react";
 import { pressureAltitudeToDensityAltitude } from "@/utils/formulas";
 import InlineNotifications from "@/components/InlineNotifications";
+import ValueMarkers from "@/components/ValueMarkers";
 import type { Notification, Subject } from "@/utils/notifications";
 import {
   COLUMNS,
@@ -13,19 +15,36 @@ interface ClimbPerformanceProps {
   climb: ClimbViewModel;
   OATs?: [number | null, number | null, number | null];
   altimeters?: [number | null, number | null, number | null];
+  /** All notifications in force, for markers on values whose inputs carry a Caution. */
+  inputNotifications?: readonly Notification[];
 }
 
 const CELL = "py-2 px-4 text-right";
 const MUTED = "text-xs italic text-gray-500 dark:text-gray-400";
 
-function Value({ value, className = "" }: { value: ComputedValue; className?: string }) {
+function Value({
+  value,
+  notes,
+  className = "",
+  children,
+}: {
+  value: ComputedValue;
+  notes: readonly Notification[];
+  className?: string;
+  children?: React.ReactNode;
+}) {
   if (value.status === "withheld") {
     return <td className={`${CELL} ${MUTED}`}>{value.reason}</td>;
   }
   if (value.status === "unavailable") {
     return <td className={`${CELL} text-gray-500 dark:text-gray-400`}>—</td>;
   }
-  return <td className={`${CELL} ${className}`}>{value.value}</td>;
+  return (
+    <td className={`${CELL} ${className}`}>
+      {children ?? value.value}
+      <ValueMarkers notifications={notes} value={value} />
+    </td>
+  );
 }
 
 function percentStyle(value: ComputedValue): string {
@@ -39,15 +58,22 @@ function CeilingCell({
   ceiling,
   oat,
   altimeter,
+  notes,
 }: {
   ceiling: ServiceCeiling;
+  notes: readonly Notification[];
   oat: number | null;
   altimeter: number | null;
 }) {
   if (ceiling.status === "aboveTable") {
-    return <td className={CELL}>{`> ${ceiling.tableMax.toLocaleString()} ft`}</td>;
+    return (
+      <td className={CELL}>
+        {`> ${ceiling.tableMax.toLocaleString()} ft`}
+        <ValueMarkers notifications={notes} value={ceiling} />
+      </td>
+    );
   }
-  if (ceiling.status !== "computed") return <Value value={ceiling} />;
+  if (ceiling.status !== "computed") return <Value value={ceiling} notes={notes} />;
   const sc = ceiling.value;
   const scPA = Math.round(sc);
   const scDA = oat !== null ? Math.round(pressureAltitudeToDensityAltitude(sc, oat)) : null;
@@ -62,6 +88,7 @@ function CeilingCell({
   return (
     <td className={CELL} title={title}>
       {display}
+      <ValueMarkers notifications={notes} value={ceiling} />
     </td>
   );
 }
@@ -81,6 +108,7 @@ export default function ClimbPerformance({
   climb,
   OATs,
   altimeters,
+  inputNotifications = [],
 }: ClimbPerformanceProps) {
   if (!aircraftModel) return null;
   const empty = <td className={CELL}></td>;
@@ -103,41 +131,41 @@ export default function ClimbPerformance({
           <tbody>
             <tr className="border-b dark:border-gray-700">
               <td className="py-2 px-4">Rate of Climb (MGW)</td>
-              {COLUMNS.map((i) => <Value key={i} value={climb.rateOfClimb[i]} />)}
+              {COLUMNS.map((i) => <Value key={i} notes={inputNotifications} value={climb.rateOfClimb[i]} />)}
             </tr>
             <tr className="border-b dark:border-gray-700">
               <td className="py-2 px-4">Rate of Climb (Actual Wt, note 11)</td>
-              {COLUMNS.map((i) => <Value key={i} value={climb.rateOfClimbActual[i]} />)}
+              {COLUMNS.map((i) => <Value key={i} notes={inputNotifications} value={climb.rateOfClimbActual[i]} />)}
             </tr>
             <tr className="border-b dark:border-gray-700">
               <td className="py-2 px-4">Vx (Best Angle)</td>
-              {COLUMNS.map((i) => <Value key={i} value={climb.vx[i]} />)}
+              {COLUMNS.map((i) => <Value key={i} notes={inputNotifications} value={climb.vx[i]} />)}
             </tr>
             <tr className="border-b dark:border-gray-700">
               <td className="py-2 px-4">Vy (Best Rate)</td>
-              {COLUMNS.map((i) => <Value key={i} value={climb.vy[i]} />)}
+              {COLUMNS.map((i) => <Value key={i} notes={inputNotifications} value={climb.vy[i]} />)}
             </tr>
             <tr className="border-b dark:border-gray-700">
               <td className="py-2 px-4">Va at Actual Weight</td>
-              <Value value={climb.va} />
+              <Value value={climb.va} notes={inputNotifications} />
               {empty}
               {empty}
             </tr>
             <tr className="border-b dark:border-gray-700">
               <td className="py-2 px-4">Vra (Rough Air Speed)</td>
-              <Value value={climb.vra} />
+              <Value value={climb.vra} notes={inputNotifications} />
               {empty}
               {empty}
             </tr>
             <tr className="border-b dark:border-gray-700">
               <td className="py-2 px-4">Percent of MGW</td>
-              {climb.percentMGW.status === "computed" ? (
-                <td className={`${CELL} ${percentStyle(climb.percentMGW)}`}>
-                  {`${climb.percentMGW.value}%`}
-                </td>
-              ) : (
-                <Value value={climb.percentMGW} />
-              )}
+              <Value
+                value={climb.percentMGW}
+                notes={inputNotifications}
+                className={percentStyle(climb.percentMGW)}
+              >
+                {climb.percentMGW.status === "computed" ? `${climb.percentMGW.value}%` : null}
+              </Value>
               {empty}
               {empty}
             </tr>
@@ -149,6 +177,7 @@ export default function ClimbPerformance({
                   ceiling={climb.serviceCeiling[i]}
                   oat={OATs?.[i] ?? null}
                   altimeter={altimeters?.[i] ?? null}
+                  notes={inputNotifications}
                 />
               ))}
             </tr>

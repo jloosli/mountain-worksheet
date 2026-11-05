@@ -1,6 +1,7 @@
 import { render, screen, waitFor, within } from "../test-utils/test-utils";
 import Calculations from "./Calculations";
 import type { WorksheetData } from "../utils/types";
+import { fieldSubject, type Notification } from "../utils/notifications";
 
 // Mock the aircraft data
 jest.mock("../data/aircraft.json", () => [
@@ -410,6 +411,55 @@ describe("Calculations", () => {
       expect(screen.queryByText(/careful performance planning/)).not.toBeInTheDocument();
       expect(screen.queryByText(/Short runway operations/)).not.toBeInTheDocument();
       expect(screen.queryByText(/Extreme temperature/)).not.toBeInTheDocument();
+    });
+  });
+
+  describe("markers on values computed from a Substitution", () => {
+    const arrivalTempSubstitution: Notification = {
+      level: "caution",
+      subject: fieldSubject("temp", 2),
+      message: "KXYZ: forecast period has no temperature; using current observation",
+    };
+    const state: WorksheetData = {
+      ...mockWorksheetData,
+      altitude: [1000, 8000, 1000],
+      temp: [20, 10, 15],
+      rwy: [3000, 3000],
+    };
+    const toldCell = (row: RegExp, col: number) => {
+      const table = screen.getByRole("table", { name: /take off and landing distances/i });
+      const tr = within(table).getByText(row).closest("tr")!;
+      return tr.querySelectorAll("td")[col];
+    };
+
+    it("marks the arrival landing distance with a link to the arrival temperature Caution", () => {
+      render(<Calculations state={state} notifications={[arrivalTempSubstitution]} />);
+      const marker = within(toldCell(/^Landing Ground Roll$/, 2)).getByRole("link", {
+        name: /caution.*forecast period has no temperature/i,
+      });
+      expect(marker).toHaveAttribute("href", "#notifications-field-temp-2");
+      expect(marker).toHaveAttribute("title", expect.stringContaining("forecast period has no temperature"));
+    });
+
+    it("leaves departure values, which don't use the arrival temperature, unmarked", () => {
+      render(<Calculations state={state} notifications={[arrivalTempSubstitution]} />);
+      expect(within(toldCell(/^Landing Ground Roll$/, 1)).queryByRole("link")).toBeNull();
+      expect(within(toldCell(/^Take Off Ground Roll$/, 1)).queryByRole("link")).toBeNull();
+    });
+
+    it("marks the arrival climb rate and density altitude, not the operating ones", () => {
+      render(<Calculations state={state} notifications={[arrivalTempSubstitution]} />);
+      const rowCells = (label: RegExp) =>
+        screen.getByText(label).closest("tr")!.querySelectorAll("td");
+      const roc = rowCells(/^Rate of Climb \(MGW\)$/);
+      expect(within(roc[3] as HTMLElement).getByRole("link")).toBeInTheDocument();
+      expect(within(roc[2] as HTMLElement).queryByRole("link")).toBeNull();
+      const da = rowCells(/^Density Altitude \(feet\)$/);
+      expect(within(da[3] as HTMLElement).getByRole("link")).toBeInTheDocument();
+      expect(within(da[2] as HTMLElement).queryByRole("link")).toBeNull();
+      // Pressure altitude doesn't use temperature.
+      const pa = rowCells(/^Pressure Altitude \(feet\)$/);
+      expect(within(pa[3] as HTMLElement).queryByRole("link")).toBeNull();
     });
   });
 });

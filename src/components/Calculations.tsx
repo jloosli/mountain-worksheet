@@ -14,12 +14,15 @@ import {
   findAircraft,
   maneuveringNotifications,
 } from "@/utils/derived";
+import type { Notification } from "@/utils/notifications";
 
 interface CalculationsProps {
   state: WorksheetData;
+  /** All notifications in force; computed values whose inputs carry a Caution are marked. */
+  notifications?: readonly Notification[];
 }
 
-export default function Calculations({ state }: CalculationsProps) {
+export default function Calculations({ state, notifications = [] }: CalculationsProps) {
   const { PAs, DAs } = computePressureColumns(
     state.altitude,
     state.altimeter,
@@ -52,17 +55,19 @@ export default function Calculations({ state }: CalculationsProps) {
             no-go decision should be considered.
           </p>
         </div>
-        <Altitudes altitudes={state.altitude} PAs={PAs} DAs={DAs} />
+        <Altitudes altitudes={state.altitude} PAs={PAs} DAs={DAs} notifications={notifications} />
         <ClimbPerformance
           aircraftModel={state.acType}
           climb={climb}
           OATs={state.temp}
           altimeters={state.altimeter}
+          inputNotifications={notifications}
         />
         <TakeoffPerformance
           aircraftModel={state.acType}
           airports={state.airport}
           told={told}
+          inputNotifications={notifications}
         />
         <ManeuveringPerformance
           aircraftModel={state.acType}

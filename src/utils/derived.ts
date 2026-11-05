@@ -63,6 +63,22 @@ export function computePressureColumns(
   return { PAs, DAs };
 }
 
+/**
+ * The input Subjects a pressure/density-altitude column is computed from, for
+ * markers. Pressure altitude uses altitude and altimeter; density altitude
+ * adds temperature.
+ */
+export function pressureColumnDependsOn(col: 0 | 1 | 2): {
+  pressureAltitude: Subject[];
+  densityAltitude: Subject[];
+} {
+  const pressureAltitude = [fieldSubject("altitude", col), fieldSubject("altimeter", col)];
+  return {
+    pressureAltitude,
+    densityAltitude: [...pressureAltitude, fieldSubject("temp", col)],
+  };
+}
+
 export type AirportSlot = "departure" | "arrival";
 
 export const TOLD_VALUE_KEYS = [

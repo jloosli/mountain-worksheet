@@ -306,7 +306,7 @@ export default function AppContainer() {
               subject={stepSubject("decision")}
               className="mb-4"
             />
-            <Calculations state={state} />
+            <Calculations state={state} notifications={notifications} />
           </StepShell>
         </div>
       </main>
