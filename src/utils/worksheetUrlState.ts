@@ -5,7 +5,6 @@
  */
 import {
   fieldSubject,
-  readField,
   type Notification,
   type Subject,
 } from "./notifications";
@@ -19,11 +18,38 @@ import {
   type WindRow,
 } from "./weatherEntryLimits";
 
+/**
+ * The value a link notification is about: a whole field, one slot
+ * (`index`), or one winds-aloft cell (`row` and `index` as the column). It can
+ * be narrower than the notification's Subject, which is where it is shown
+ * (a winds-aloft column, the whole position).
+ */
+export interface UrlCell {
+  field: keyof WorksheetData;
+  index?: number;
+  row?: number;
+}
+
 export interface UrlLoadResult {
   /** The worksheet with malformed values cleared or reset. */
   state: WorksheetData;
   notifications: Notification[];
+  /** The value each notification is about, by position in `notifications`. */
+  cells: UrlCell[];
 }
+
+function readCell(data: Partial<WorksheetData>, cell: UrlCell): unknown {
+  const value = data[cell.field] as unknown;
+  if (cell.index === undefined) return value;
+  if (!Array.isArray(value)) return undefined;
+  if (cell.row !== undefined) {
+    const row = value[cell.row] as unknown;
+    return Array.isArray(row) ? row[cell.index] : undefined;
+  }
+  return value[cell.index];
+}
+
+const sameValue = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 
 const NUMERIC_SCALARS = ["weight", "duration"] as const;
 const NUMERIC_ARRAYS = [
@@ -99,11 +125,16 @@ export function sanitizeWorksheetUrlState(
   );
   const next: WorksheetData = { ...state };
   const notifications: Notification[] = [];
+  const cells: UrlCell[] = [];
+  const warn = (cell: UrlCell, notification: Notification) => {
+    notifications.push(notification);
+    cells.push(cell);
+  };
 
   for (const key of NUMERIC_SCALARS) {
     const v = next[key] as unknown;
     if (isMalformedNumber(v)) {
-      notifications.push(notANumber(fieldSubject(key), v));
+      warn({ field: key }, notANumber(fieldSubject(key), v));
       (next as unknown as Record<string, unknown>)[key] = null;
     }
   }
@@ -118,7 +149,7 @@ export function sanitizeWorksheetUrlState(
     if (!Array.isArray(raw)) {
       arr = Array(size).fill(null);
       if (raw !== null && raw !== undefined) {
-        notifications.push({
+        warn({ field: key }, {
           level: "warning",
           subject: shapeSubject,
           message: `The link's ${LABEL[key]} value isn't a list; it was cleared. Enter it again.`,
@@ -128,7 +159,7 @@ export function sanitizeWorksheetUrlState(
       arr = Array.from({ length: size }, (_, i) => raw[i] ?? null);
       const hasValue = raw.some((v) => v !== null && v !== undefined && v !== "");
       if (raw.length !== size && hasValue) {
-        notifications.push({
+        warn({ field: key }, {
           level: "warning",
           subject: shapeSubject,
           message: `The link's ${LABEL[key]} list has ${raw.length} value${
@@ -141,7 +172,7 @@ export function sanitizeWorksheetUrlState(
     }
     const cleaned = arr.map((v, i) => {
       if (key === "altimeter" && typeof v === "number" && !isValidAltimeterEntry(v)) {
-        notifications.push(outOfLimits(fieldSubject(key, i), LABEL[key]!, v, ALTIMETER_RANGE_TEXT));
+        warn({ field: key, index: i }, outOfLimits(fieldSubject(key, i), LABEL[key]!, v, ALTIMETER_RANGE_TEXT));
         return null;
       }
       if (!isMalformedNumber(v)) return v ?? null;
@@ -149,7 +180,7 @@ export function sanitizeWorksheetUrlState(
       // so its notifications are on the whole field, not one coordinate.
       const subject =
         key === "position" ? fieldSubject(key) : fieldSubject(key, i);
-      notifications.push(notANumber(subject, v));
+      warn({ field: key, index: i }, notANumber(subject, v));
       return null;
     });
     (next as unknown as Record<string, unknown>)[key] = cleaned;
@@ -160,13 +191,13 @@ export function sanitizeWorksheetUrlState(
       Array.isArray(row)
         ? row.map((v, col) => {
             if (typeof v === "number" && r <= 2 && !isValidWindEntry(r as WindRow, v)) {
-              notifications.push(
+              warn({ field: "wind", row: r, index: col }, 
                 outOfLimits(fieldSubject("wind", col), WIND_ROW_LABEL[r], v, WIND_RANGE_TEXT[r])
               );
               return null;
             }
             if (!isMalformedNumber(v)) return v ?? null;
-            notifications.push(notANumber(fieldSubject("wind", col), v));
+            warn({ field: "wind", row: r, index: col }, notANumber(fieldSubject("wind", col), v));
             return null;
           })
         : row
@@ -190,7 +221,7 @@ export function sanitizeWorksheetUrlState(
         typeof row[c] === "number" ? (row[c] as number) : null
       );
     }) as WorksheetData["wind"];
-    notifications.push({
+    warn({ field: "wind" }, {
       level: "warning",
       subject: fieldSubject("wind"),
       message:
@@ -201,7 +232,7 @@ export function sanitizeWorksheetUrlState(
   for (const key of FLAGS) {
     const raw = params.get(key);
     if (raw === null || ["0", "1", "true", "false"].includes(raw)) continue;
-    notifications.push({
+    warn({ field: key }, {
       level: "warning",
       subject: fieldSubject(key),
       message: `The link's ${LABEL[key]} value "${raw}" isn't on or off; it was read as ${
@@ -219,31 +250,27 @@ export function sanitizeWorksheetUrlState(
     const raw = params.get(key);
     if (raw === null || isValid(raw)) return;
     next[key] = initialState[key];
-    notifications.push({
+    warn({ field: key }, {
       level: "warning",
       subject: fieldSubject(key),
       message: `The link's ${key} "${raw}" isn't a valid ${format} ${key}; using ${initialState[key]} instead. Check it.`,
     });
   });
 
-  return { state: next, notifications };
+  return { state: next, notifications, cells };
 }
 
 /**
- * The link notifications still in force: each holds while its field still
- * holds the value the link load left there, and clears once the pilot
- * changes it.
+ * The link notifications still in force: each holds while the value it is
+ * about (its cell, not its whole Subject) still holds what the link load left
+ * there, and clears once that value changes.
  */
 export function deriveUrlNotifications(
   state: WorksheetData,
   load: UrlLoadResult | null
 ): Notification[] {
   if (!load) return [];
-  return load.notifications.filter((n) => {
-    if (n.subject.kind !== "field") return true;
-    return (
-      JSON.stringify(readField(state, n.subject)) ===
-      JSON.stringify(readField(load.state, n.subject))
-    );
-  });
+  return load.notifications.filter((_, i) =>
+    sameValue(readCell(state, load.cells[i]), readCell(load.state, load.cells[i]))
+  );
 }

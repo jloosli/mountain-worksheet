@@ -224,4 +224,15 @@ describe("deriveUrlNotifications", () => {
       deriveUrlNotifications({ ...r.state, weight: 2300 }, r)
     ).toEqual([]);
   });
+
+  it("keeps a malformed wind cell's Warning when only another cell in its column changes", () => {
+    const r = load("wind=abc,90,90,90,90||5,10,10,10,10||1,1,1,1,1");
+    expect(r.notifications.map((n) => n.subject)).toEqual([fieldSubject("wind", 0)]);
+    const speedChanged = r.state.wind.map((row) => [...row]) as WorksheetData["wind"];
+    speedChanged[1][0] = 20;
+    expect(deriveUrlNotifications({ ...r.state, wind: speedChanged }, r)).toHaveLength(1);
+    const fixed = speedChanged.map((row) => [...row]) as WorksheetData["wind"];
+    fixed[0][0] = 270;
+    expect(deriveUrlNotifications({ ...r.state, wind: fixed }, r)).toEqual([]);
+  });
 });
