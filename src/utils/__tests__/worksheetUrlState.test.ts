@@ -71,6 +71,18 @@ describe("sanitizeWorksheetUrlState", () => {
     ]);
   });
 
+  it("puts a malformed coordinate's Warning on the whole position, where it is shown", () => {
+    const r = load("position=abc,-112");
+    expect(r.state.position).toEqual([null, -112]);
+    expect(r.notifications).toEqual([
+      {
+        level: "warning",
+        subject: fieldSubject("position"),
+        message: expect.stringMatching(/"abc".*isn't a number/),
+      },
+    ]);
+  });
+
   it("clears a non-numeric winds-aloft cell with a Warning on its column", () => {
     const r = load("wind=,90,abc||5,10,15");
     expect(r.state.wind[0][2]).toBeNull();

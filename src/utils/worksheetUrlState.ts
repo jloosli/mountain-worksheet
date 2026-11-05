@@ -94,7 +94,11 @@ export function sanitizeWorksheetUrlState(
     if (!Array.isArray(arr)) continue;
     const cleaned = arr.map((v, i) => {
       if (!isMalformedNumber(v)) return v ?? null;
-      notifications.push(notANumber(fieldSubject(key, i), v));
+      // The position is shown and edited as one Area of Operations entry,
+      // so its notifications are on the whole field, not one coordinate.
+      const subject =
+        key === "position" ? fieldSubject(key) : fieldSubject(key, i);
+      notifications.push(notANumber(subject, v));
       return null;
     });
     (next as unknown as Record<string, unknown>)[key] = cleaned;
