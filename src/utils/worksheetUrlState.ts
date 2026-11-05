@@ -10,6 +10,14 @@ import {
   type Subject,
 } from "./notifications";
 import type { WorksheetData } from "./types";
+import {
+  ALTIMETER_RANGE_TEXT,
+  isValidAltimeterEntry,
+  isValidWindEntry,
+  WIND_RANGE_TEXT,
+  WIND_ROW_LABEL,
+  type WindRow,
+} from "./weatherEntryLimits";
 
 export interface UrlLoadResult {
   /** The worksheet with malformed values cleared or reset. */
@@ -70,6 +78,17 @@ const notANumber = (subject: Subject, raw: unknown): Notification => {
   };
 };
 
+const outOfLimits = (
+  subject: Subject,
+  label: string,
+  value: number,
+  range: string
+): Notification => ({
+  level: "warning",
+  subject,
+  message: `The link's ${label} value ${value} isn't valid (enter ${range}); it was cleared. Enter it again.`,
+});
+
 export function sanitizeWorksheetUrlState(
   state: WorksheetData,
   query: string | URLSearchParams | null,
@@ -121,6 +140,10 @@ export function sanitizeWorksheetUrlState(
       }
     }
     const cleaned = arr.map((v, i) => {
+      if (key === "altimeter" && typeof v === "number" && !isValidAltimeterEntry(v)) {
+        notifications.push(outOfLimits(fieldSubject(key, i), LABEL[key]!, v, ALTIMETER_RANGE_TEXT));
+        return null;
+      }
       if (!isMalformedNumber(v)) return v ?? null;
       // The position is shown and edited as one Area of Operations entry,
       // so its notifications are on the whole field, not one coordinate.
@@ -133,9 +156,15 @@ export function sanitizeWorksheetUrlState(
   }
 
   if (Array.isArray(next.wind)) {
-    next.wind = next.wind.map((row) =>
+    next.wind = next.wind.map((row, r) =>
       Array.isArray(row)
         ? row.map((v, col) => {
+            if (typeof v === "number" && r <= 2 && !isValidWindEntry(r as WindRow, v)) {
+              notifications.push(
+                outOfLimits(fieldSubject("wind", col), WIND_ROW_LABEL[r], v, WIND_RANGE_TEXT[r])
+              );
+              return null;
+            }
             if (!isMalformedNumber(v)) return v ?? null;
             notifications.push(notANumber(fieldSubject("wind", col), v));
             return null;

@@ -83,6 +83,29 @@ describe("sanitizeWorksheetUrlState", () => {
     ]);
   });
 
+  it("clears a linked altimeter outside the editor's limits, with a Warning on that slot", () => {
+    const r = load("altimeter=35,29.92,29.92");
+    expect(r.state.altimeter).toEqual([null, 29.92, 29.92]);
+    expect(r.notifications).toEqual([
+      {
+        level: "warning",
+        subject: fieldSubject("altimeter", 0),
+        message: expect.stringMatching(/altimeter value 35 .*28\.00–31\.00 inHg/),
+      },
+    ]);
+  });
+
+  it("clears linked winds outside the editor's limits for their row", () => {
+    const r = load("wind=400,90,90,90,90||200,10,10,10,10||-60,0,0,0,0");
+    expect(r.state.wind.map((row) => row[0])).toEqual([null, null, null]);
+    expect(r.state.wind[0][1]).toBe(90);
+    expect(r.notifications.map((n) => [n.subject, n.message])).toEqual([
+      [fieldSubject("wind", 0), expect.stringMatching(/wind direction value 400 .*0–359°/)],
+      [fieldSubject("wind", 0), expect.stringMatching(/wind speed value 200 .*0–150/)],
+      [fieldSubject("wind", 0), expect.stringMatching(/temperature aloft value -60 .*-50–50°C/)],
+    ]);
+  });
+
   it("pads a short list to its slots and warns on the first slot", () => {
     const r = load("altimeter=29.92");
     expect(r.state.altimeter).toEqual([29.92, null, null]);

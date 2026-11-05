@@ -25,6 +25,11 @@ import {
   type RejectedEntry,
   type RejectedEntryKey,
 } from "@/utils/rejectedEntries";
+import {
+  ALTIMETER_RANGE_TEXT,
+  isValidAltimeterEntry,
+  isValidWindEntry,
+} from "@/utils/weatherEntryLimits";
 
 interface WeatherSectionProps {
   state: WorksheetData;
@@ -87,12 +92,8 @@ export default function WeatherSection({
     const numValue: number | null = rawValue === "" ? null : Number(rawValue);
     let isValid = true;
     if (numValue !== null) {
-      if (row === 0) isValid = numValue >= 0 && numValue <= 359 && Number.isInteger(numValue);
-      else if (row === 1) isValid = numValue >= 0 && numValue <= 150 && Number.isInteger(numValue);
-      else {
-        const celsiusValue = useFahrenheit ? farenheitToCelcius(numValue) : numValue;
-        isValid = celsiusValue >= -50 && celsiusValue <= 50;
-      }
+      const value = row === 2 && useFahrenheit ? farenheitToCelcius(numValue) : numValue;
+      isValid = isValidWindEntry(row, value);
     }
     if (!isValid) {
       const range = [
@@ -143,7 +144,7 @@ export default function WeatherSection({
   ) => {
     const key = altimeterEntryKey(index);
     const num = rawValue === "" ? null : Number(rawValue);
-    const isValid = num === null || (num >= 28.0 && num <= 31.0);
+    const isValid = num === null || isValidAltimeterEntry(num);
     if (!isValid) {
       reject(key, {
         raw: rawValue,
@@ -151,7 +152,7 @@ export default function WeatherSection({
         notification: {
           level: "warning",
           subject: fieldSubject("altimeter", index),
-          message: `Altimeter ${rawValue} is not valid; enter 28.00–31.00 inHg. Not applied.`,
+          message: `Altimeter ${rawValue} is not valid; enter ${ALTIMETER_RANGE_TEXT}. Not applied.`,
         },
       });
       return;
