@@ -610,20 +610,30 @@ export function computeClimbViewModel(state: WorksheetData): ClimbViewModel {
   if (weight.withheldReason) {
     va = withheld(weight.withheldReason);
   } else {
-    const r = bilinearInterpolateDetailed(
-      { xAxis: [1], yAxis: aircraft.maneuvering.weights, data: [aircraft.maneuvering.Va] },
-      1,
-      state.weight as number,
-      { yAxisName: "weight" },
-    );
-    if (r.extrapolated.length > 0) {
+    const w = state.weight as number;
+    try {
+      const r = bilinearInterpolateDetailed(
+        { xAxis: [1], yAxis: aircraft.maneuvering.weights, data: [aircraft.maneuvering.Va] },
+        1,
+        w,
+        { yAxisName: "weight" },
+      );
+      if (r.extrapolated.length > 0) {
+        notifications.push({
+          level: "caution",
+          subject: climbSubject("va"),
+          message: `Va is extrapolated beyond the POH maneuvering-speed table: ${describeExtrapolations(r.extrapolated)}.`,
+        });
+      }
+      va = computed(Math.round(r.value), inputs({ weight: true }));
+    } catch {
       notifications.push({
-        level: "caution",
+        level: "warning",
         subject: climbSubject("va"),
-        message: `Va is extrapolated beyond the POH maneuvering-speed table: ${describeExtrapolations(r.extrapolated)}.`,
+        message: `Va could not be computed: the ${aircraft.id} POH maneuvering-speed table has no data for ${fmt(w)} lbs.`,
       });
+      va = { status: "unavailable" };
     }
-    va = computed(Math.round(r.value), inputs({ weight: true }));
   }
 
   const vraValue = calculateVra(aircraft);
