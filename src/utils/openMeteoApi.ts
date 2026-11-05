@@ -123,12 +123,11 @@ export function interpolateAtAltitude(
         )} ft); snapping to lowest level`,
       });
     }
-    return {
+    return withMissingComponents(targetFt, notes, {
       temp: roundFinite(s.tempByLevel[lowest]),
       wspd: roundFinite(s.wspdByLevel[lowest]),
       wdir: roundFinite(s.wdirByLevel[lowest]),
-      notes,
-    };
+    });
   }
   if (targetFt >= s.heightsFtByLevel[highest]) {
     if (targetFt > s.heightsFtByLevel[highest]) {
@@ -139,12 +138,11 @@ export function interpolateAtAltitude(
         )} ft); snapping to highest level`,
       });
     }
-    return {
+    return withMissingComponents(targetFt, notes, {
       temp: roundFinite(s.tempByLevel[highest]),
       wspd: roundFinite(s.wspdByLevel[highest]),
       wdir: roundFinite(s.wdirByLevel[highest]),
-      notes,
-    };
+    });
   }
 
   let lowerLevel: PressureLevel = lowest;
@@ -186,11 +184,22 @@ export function interpolateAtAltitude(
     Number.isFinite(wdirLow) && Number.isFinite(wdirHigh)
       ? circularInterp(wdirLow, wdirHigh, f)
       : NaN;
-  const result = {
+  return withMissingComponents(targetFt, notes, {
     temp: roundFinite(temp),
     wspd: roundFinite(wspd),
     wdir: roundFinite(wdir),
-  };
+  });
+}
+
+/**
+ * Adds a Warning note naming each component the forecast didn't provide at
+ * the target altitude. Every return path with data goes through here.
+ */
+function withMissingComponents(
+  targetFt: number,
+  notes: NotificationDraft[],
+  result: Omit<InterpolatedAloft, "notes">
+): InterpolatedAloft {
   const missing = [
     result.wdir === null && "wind direction",
     result.wspd === null && "wind speed",

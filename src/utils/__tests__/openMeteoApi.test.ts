@@ -191,6 +191,37 @@ describe("openMeteoApi", () => {
       expect(r.notes[0].message).toMatch(/wind direction, wind speed and temperature/);
     });
 
+    it("warns about a missing component when snapping above the highest level", () => {
+      const partial = {
+        ...sample,
+        wspdByLevel: { ...sample.wspdByLevel, 500: NaN },
+      };
+      const r = interpolateAtAltitude(20000, partial);
+      expect(r.wspd).toBeNull();
+      expect(r.notes).toEqual([
+        { level: "caution", message: expect.stringMatching(/snapping to highest level/) },
+        {
+          level: "warning",
+          message: expect.stringMatching(/no wind speed at 20,000 ft/i),
+        },
+      ]);
+    });
+
+    it("warns about a missing component at the lowest level", () => {
+      const partial = {
+        ...sample,
+        tempByLevel: { ...sample.tempByLevel, 925: NaN },
+      };
+      const r = interpolateAtAltitude(2500, partial);
+      expect(r.temp).toBeNull();
+      expect(r.notes).toEqual([
+        {
+          level: "warning",
+          message: expect.stringMatching(/no temperature at 2,500 ft/i),
+        },
+      ]);
+    });
+
     // A target equal to a duplicated height is always caught by an earlier
     // path: the bracket below the duplicate pair (which ends at that height)
     // or the lowest/highest-level snap. No bracket ever has zero width.
