@@ -1,6 +1,11 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import AppInputs from "./AppInputs";
 import type { WorksheetData } from "@/utils/types";
+import {
+  fieldSubject,
+  stepSubject,
+  type Notification,
+} from "@/utils/notifications";
 
 // Mock other components
 jest.mock("./SortieInfo", () => {
@@ -229,5 +234,74 @@ describe("AppInputs", () => {
     // Verify all child components are rendered
     expect(screen.getByTestId("sortie-info")).toBeInTheDocument();
     expect(screen.getByTestId("weather-section")).toBeInTheDocument();
+  });
+
+  describe("notifications", () => {
+    const notifications: Notification[] = [
+      {
+        level: "warning",
+        subject: stepSubject("weather"),
+        message: "G-AIRMET request failed (down)",
+      },
+      {
+        level: "caution",
+        subject: fieldSubject("temp", 2),
+        message: "using nearest TAF period",
+      },
+      {
+        level: "caution",
+        subject: stepSubject("sortie"),
+        message: "a sortie-step caution",
+      },
+    ];
+
+    it("shows step notifications at the top of their step", () => {
+      const { container } = render(
+        <AppInputs
+          state={defaultState}
+          onStateUpdate={() => {}}
+          airportRunways={[null, null]}
+          notifications={notifications}
+        />
+      );
+      const weather = container.querySelector("#step-weather")!;
+      const sortie = container.querySelector("#step-sortie")!;
+      expect(weather).toHaveTextContent("G-AIRMET request failed");
+      expect(sortie).not.toHaveTextContent("G-AIRMET request failed");
+      expect(sortie).toHaveTextContent("a sortie-step caution");
+    });
+
+    it("gives each step its warning status and a Warning/Caution count badge", () => {
+      const { container } = render(
+        <AppInputs
+          state={defaultState}
+          onStateUpdate={() => {}}
+          airportRunways={[null, null]}
+          notifications={notifications}
+        />
+      );
+      const weatherHeader = container.querySelector("#step-weather header")!;
+      expect(weatherHeader).toHaveTextContent("1 warning · 1 caution");
+      expect(
+        container.querySelector("#step-weather [aria-hidden] div")!.className
+      ).toMatch(/bg-red-/);
+      expect(container.querySelector("#step-sortie header")).toHaveTextContent(
+        "1 caution"
+      );
+    });
+
+    it("keeps the rest of the worksheet usable while a step has a Warning", () => {
+      render(
+        <AppInputs
+          state={defaultState}
+          onStateUpdate={mockOnStateUpdate}
+          airportRunways={[null, null]}
+          notifications={notifications}
+        />
+      );
+      fireEvent.click(screen.getByTestId("update-sortie-btn"));
+      fireEvent.click(screen.getByTestId("update-weather-btn"));
+      expect(mockOnStateUpdate).toHaveBeenCalledTimes(2);
+    });
   });
 });
