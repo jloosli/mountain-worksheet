@@ -2,6 +2,7 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import AirportCard from "./AirportCard";
 import type { RunwayOption } from "@/utils/types";
+import { fieldSubject, type Notification } from "@/utils/notifications";
 
 const noOp = () => {};
 
@@ -348,5 +349,88 @@ describe("AirportCard — runway auto-default", () => {
       />
     );
     expect(onRunwaySelect).not.toHaveBeenCalled();
+  });
+});
+
+describe("AirportCard — notifications", () => {
+  const arrivalWarnings: Notification[] = [
+    {
+      level: "warning",
+      subject: fieldSubject("temp", 2),
+      message: "BOI: no METAR or TAF (temp)",
+    },
+    {
+      level: "warning",
+      subject: fieldSubject("altimeter", 2),
+      message: "BOI: no METAR or TAF (altimeter)",
+    },
+    {
+      level: "warning",
+      subject: fieldSubject("rwy", 1),
+      message: "Arrival runway length (BOI) couldn't be fetched",
+    },
+    {
+      level: "warning",
+      subject: fieldSubject("altitude", 2),
+      message: "Arrival field elevation (BOI) couldn't be fetched",
+    },
+  ];
+
+  it("shows each arrival notification next to its field, with ARIA on the inputs", () => {
+    render(
+      <AirportCard
+        {...baseProps}
+        variant="arrival"
+        airportCode="BOI"
+        notifications={arrivalWarnings}
+        runways={[{ id: "10/28", length: 9000, alignment: 100 }]}
+        selectedRunwayLength={9000}
+        onRunwaySelect={noOp}
+      />
+    );
+    const temp = screen.getByLabelText("Temperature");
+    expect(temp).toHaveAttribute("aria-invalid", "true");
+    expect(temp).toHaveAccessibleDescription(/\(temp\)/);
+    const alt = screen.getByLabelText("Altimeter");
+    expect(alt).toHaveAttribute("aria-invalid", "true");
+    expect(alt).toHaveAccessibleDescription(/\(altimeter\)/);
+    const rwy = screen.getByLabelText("Runway");
+    expect(rwy).toHaveAttribute("aria-invalid", "true");
+    expect(rwy).toHaveAccessibleDescription(/runway length/);
+    expect(screen.getByText(/field elevation \(BOI\)/)).toBeInTheDocument();
+  });
+
+  it("ignores notifications about the other airports", () => {
+    render(
+      <AirportCard
+        {...baseProps}
+        variant="departure"
+        airportCode="KOGD"
+        notifications={arrivalWarnings}
+      />
+    );
+    expect(screen.getByLabelText("Temperature")).not.toHaveAttribute(
+      "aria-invalid"
+    );
+    expect(screen.queryByText(/BOI/)).not.toBeInTheDocument();
+  });
+
+  it("shows operating-area notifications on the operating card", () => {
+    render(
+      <AirportCard
+        {...baseProps}
+        variant="operating"
+        notifications={[
+          {
+            level: "caution",
+            subject: fieldSubject("temp", 1),
+            message: "Target altitude 20000 ft above available range",
+          },
+        ]}
+      />
+    );
+    expect(screen.getByLabelText("Temperature")).toHaveAccessibleDescription(
+      /20000 ft above/
+    );
   });
 });

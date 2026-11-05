@@ -5,6 +5,10 @@ import { useEffect, useId, useState } from "react";
 import { ArrowUpRightIcon } from "@heroicons/react/24/outline";
 import type { RunwayOption } from "@/utils/types";
 import { celciusToFarenheit } from "@/utils/formulas";
+import InlineNotifications, {
+  notificationA11yProps,
+} from "@/components/InlineNotifications";
+import { fieldSubject, type Notification } from "@/utils/notifications";
 
 type AirportCardVariant = "departure" | "operating" | "arrival";
 
@@ -16,6 +20,8 @@ interface AirportCardCommonProps {
   onAltimeterChange: (value: string) => void;
   apiPopulated: { temperature: boolean; pressure: boolean; runway: boolean };
   useFahrenheit?: boolean;
+  /** All notifications in force; the card shows those about its own fields. */
+  notifications?: readonly Notification[];
 }
 
 interface AirportCardAirportProps extends AirportCardCommonProps {
@@ -60,6 +66,13 @@ const headerVariantLabel: Record<AirportCardVariant, string> = {
   arrival: "Arrival",
 };
 
+/** Worksheet slot of each card: temp/altimeter/altitude index, and rwy index. */
+const SLOT: Record<AirportCardVariant, { triple: 0 | 1 | 2; rwy: 0 | 1 | null }> = {
+  departure: { triple: 0, rwy: 0 },
+  operating: { triple: 1, rwy: null },
+  arrival: { triple: 2, rwy: 1 },
+};
+
 const altimeterDisplayValue = (altimeter: number | null): string =>
   altimeter !== null && altimeter !== undefined ? altimeter.toString() : "";
 
@@ -69,6 +82,12 @@ export default function AirportCard(props: AirportCardProps) {
   const tempId = `${baseId}-temp`;
   const altId = `${baseId}-alt`;
   const rwyId = `${baseId}-rwy`;
+  const notifications = props.notifications ?? [];
+  const slot = SLOT[props.variant];
+  const tempSubject = fieldSubject("temp", slot.triple);
+  const altSubject = fieldSubject("altimeter", slot.triple);
+  const elevSubject = fieldSubject("altitude", slot.triple);
+  const rwySubject = slot.rwy === null ? null : fieldSubject("rwy", slot.rwy);
 
   // Local string buffers so intermediate keystrokes (e.g. "3" toward "30.05")
   // aren't rejected by the parent's range validation and reverted by the
@@ -122,8 +141,10 @@ export default function AirportCard(props: AirportCardProps) {
             min={props.useFahrenheit ? "-22" : "-30"}
             max={props.useFahrenheit ? "131" : "55"}
             className={cellInputClass(props.apiPopulated.temperature)}
+            {...notificationA11yProps(notifications, tempSubject)}
           />
         </div>
+        <InlineNotifications notifications={notifications} subject={tempSubject} />
         <div className="flex items-center justify-between gap-2">
           <label
             htmlFor={altId}
@@ -143,8 +164,10 @@ export default function AirportCard(props: AirportCardProps) {
               props.onAltimeterChange(e.target.value);
             }}
             className={cellInputClass(props.apiPopulated.pressure)}
+            {...notificationA11yProps(notifications, altSubject)}
           />
         </div>
+        <InlineNotifications notifications={notifications} subject={altSubject} />
 
         <div className="border-t border-dashed border-slate-200 -mx-4 dark:border-slate-700"></div>
 
@@ -176,13 +199,26 @@ export default function AirportCard(props: AirportCardProps) {
                   : "—"}
               </span>
             </div>
+            <InlineNotifications
+              notifications={notifications}
+              subject={elevSubject}
+            />
             <RunwayRow
               runways={props.runways ?? null}
               selectedLength={props.selectedRunwayLength ?? null}
               onSelect={props.onRunwaySelect}
               id={rwyId}
               apiPopulatedRunway={props.apiPopulated.runway}
+              a11yProps={
+                rwySubject ? notificationA11yProps(notifications, rwySubject) : {}
+              }
             />
+            {rwySubject && (
+              <InlineNotifications
+                notifications={notifications}
+                subject={rwySubject}
+              />
+            )}
           </>
         )}
       </div>
@@ -196,6 +232,7 @@ interface RunwayRowProps {
   onSelect?: (length: number) => void;
   id: string;
   apiPopulatedRunway: boolean;
+  a11yProps: ReturnType<typeof notificationA11yProps>;
 }
 
 function RunwayRow({
@@ -204,6 +241,7 @@ function RunwayRow({
   onSelect,
   id,
   apiPopulatedRunway,
+  a11yProps,
 }: RunwayRowProps) {
   // Filter helipads (alignment === null) from the list.
   const validRunways = runways?.filter((r) => r.alignment !== null) ?? null;
@@ -241,6 +279,7 @@ function RunwayRow({
           value={selectedLength ?? ""}
           onChange={(e) => onSelect?.(Number(e.target.value))}
           className={selectClass}
+          {...a11yProps}
         >
           {validRunways.map((r) => (
             <option key={r.id} value={r.length}>
