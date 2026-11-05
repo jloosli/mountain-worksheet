@@ -130,10 +130,9 @@ describe("computeTOLDViewModel", () => {
     const state = { ...baseState(), temp: [20, 10, null] as WorksheetData["temp"] };
     const vm = computeTOLDViewModel(state, [1000, 8000, null]);
 
-    expect(vm.departure.values.takeoffGroundRoll).toEqual({
-      status: "computed",
-      value: expect.any(Number),
-    });
+    expect(vm.departure.values.takeoffGroundRoll).toEqual(
+      expect.objectContaining({ status: "computed", value: expect.any(Number) }),
+    );
     expect(vm.departure.values.landingGroundRoll.status).toBe("computed");
     expect(vm.departure.values.runwayRemaining50ft.status).toBe("computed");
     for (const v of Object.values(vm.arrival.values)) {
@@ -379,7 +378,9 @@ describe("computeClimbViewModel", () => {
   it("computes each column independently and shows what a column is waiting for", () => {
     const state = { ...baseState(), temp: [20, null, 20] as WorksheetData["temp"] };
     const vm = computeClimbViewModel(state);
-    expect(vm.rateOfClimb[0]).toEqual({ status: "computed", value: expect.any(Number) });
+    expect(vm.rateOfClimb[0]).toEqual(
+      expect.objectContaining({ status: "computed", value: expect.any(Number) }),
+    );
     expect(vm.rateOfClimb[1]).toEqual({ status: "withheld", reason: "needs operating temperature" });
     expect(vm.serviceCeiling[1]).toEqual({ status: "withheld", reason: "needs operating temperature" });
     // Vx and Vy depend on pressure altitude only, not temperature.
@@ -523,5 +524,39 @@ describe("derivePerformanceNotifications", () => {
 
   it("is empty for a complete, in-range worksheet", () => {
     expect(derivePerformanceNotifications(baseState())).toEqual([]);
+  });
+});
+
+describe("dependsOn (value → input Subjects)", () => {
+  const f = fieldSubject;
+
+  it("lists each TOLD value's own inputs", () => {
+    const vm = computeTOLDViewModel(baseState(), PAS_OK);
+    const deps = (v: ReturnType<typeof computeTOLDViewModel>["departure"]["values"]["takeoffGroundRoll"]) =>
+      v.status === "computed" ? v.dependsOn : null;
+
+    expect(deps(vm.departure.values.takeoffGroundRoll)).toEqual([
+      f("acType"), f("weight"), f("altitude", 0), f("altimeter", 0), f("temp", 0),
+    ]);
+    // Landing distances don't use weight.
+    expect(deps(vm.arrival.values.landing50ftObstacle)).toEqual([
+      f("acType"), f("altitude", 2), f("altimeter", 2), f("temp", 2),
+    ]);
+    expect(deps(vm.arrival.values.runwayRemaining50ft)).toEqual([
+      f("acType"), f("weight"), f("altitude", 2), f("altimeter", 2), f("temp", 2), f("rwy", 1),
+    ]);
+  });
+
+  it("lists each climb value's own inputs", () => {
+    const vm = computeClimbViewModel(baseState());
+    const deps = (v: { status: string; dependsOn?: unknown }) => v.dependsOn ?? null;
+
+    expect(deps(vm.vx[1])).toEqual([f("acType"), f("altitude", 1), f("altimeter", 1)]);
+    expect(deps(vm.rateOfClimbActual[2])).toEqual([
+      f("acType"), f("weight"), f("altitude", 2), f("altimeter", 2), f("temp", 2),
+    ]);
+    expect(deps(vm.va)).toEqual([f("acType"), f("weight")]);
+    expect(deps(vm.vra)).toEqual([f("acType")]);
+    expect(deps(vm.serviceCeiling[0])).toEqual([f("acType"), f("altimeter", 0), f("temp", 0)]);
   });
 });
