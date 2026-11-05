@@ -254,6 +254,48 @@ describe("AppContainer — rejected entries and weather fetches", () => {
   });
 });
 
+describe("AppContainer — rejected entry across two fetches", () => {
+  const mockFetch = fetchWorksheetWeather as jest.MockedFunction<
+    typeof fetchWorksheetWeather
+  >;
+  const fetchReturning = (altimeter: [number | null, null, null]) =>
+    (async (worksheet: Parameters<typeof fetchWorksheetWeather>[0]) => ({
+      data: { altimeter },
+      result: {
+        fetchedFor: {
+          airport: [worksheet.airport[0], worksheet.airport[1]] as [string, string],
+          date: worksheet.date,
+          time: worksheet.time,
+        },
+        applied: { altimeter },
+        notifications: [],
+      },
+    })) as typeof fetchWorksheetWeather;
+
+  it("doesn't bring a rejection back when a later fetch restores the value it was rejected against", async () => {
+    render(<AppContainer />);
+    fireEvent.change(screen.getByLabelText("Departure Airport"), {
+      target: { value: "KORD" },
+    });
+    fireEvent.change(screen.getByLabelText("Arrival Airport"), {
+      target: { value: "KBOI" },
+    });
+    const altimeter = () => screen.getAllByLabelText("Altimeter")[0];
+    fireEvent.change(altimeter(), { target: { value: "35.00" } });
+    expect(onScreen().getByText(/Altimeter 35.00 is not valid/)).toBeInTheDocument();
+
+    mockFetch.mockImplementationOnce(fetchReturning([30.01, null, null]));
+    fireEvent.click(screen.getByRole("button", { name: /Fetch weather/i }));
+    await waitFor(() => expect(altimeter()).toHaveValue(30.01));
+
+    // A partial fetch can't get the altimeter: blank again, as when rejected.
+    mockFetch.mockImplementationOnce(fetchReturning([null, null, null]));
+    fireEvent.click(screen.getByRole("button", { name: /Re-fetch|Fetch weather/i }));
+    await waitFor(() => expect(altimeter()).toHaveValue(null));
+    expect(onScreen().queryByText(/Altimeter 35.00 is not valid/)).not.toBeInTheDocument();
+  });
+});
+
 describe("AppContainer — results from stale fetched weather (#222)", () => {
   const mockFetch = fetchWorksheetWeather as jest.MockedFunction<
     typeof fetchWorksheetWeather
