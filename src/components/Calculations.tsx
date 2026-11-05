@@ -6,27 +6,39 @@ import Altitudes from "@/components/Altitudes";
 import ClimbPerformance from "@/components/ClimbPerformance";
 import TakeoffPerformance from "@/components/TakeoffPerformance";
 import ManeuveringPerformance from "@/components/ManeuveringPerformance";
-import TOLDErrorBoundary from "@/components/TOLDErrorBoundary";
 import { calculateManeuveringSpeeds } from "@/utils/maneuveringCalculations";
 import {
+  computeClimbViewModel,
   computePressureColumns,
   computeTOLDViewModel,
+  findAircraft,
+  maneuveringNotifications,
 } from "@/utils/derived";
+import type { Notification } from "@/utils/notifications";
 
 interface CalculationsProps {
   state: WorksheetData;
+  /**
+   * All notifications in force. Computed values whose inputs carry a Warning
+   * are withheld; those whose inputs carry a Caution are marked.
+   */
+  notifications?: readonly Notification[];
 }
 
-export default function Calculations({ state }: CalculationsProps) {
+export default function Calculations({ state, notifications = [] }: CalculationsProps) {
   const { PAs, DAs } = computePressureColumns(
     state.altitude,
     state.altimeter,
     state.temp,
   );
-  const toldData = computeTOLDViewModel(state, PAs);
-  const maneuveringSpeeds = state.acType
-    ? calculateManeuveringSpeeds(state.acType)
-    : undefined;
+  // Values whose own inputs carry a Warning are withheld (#222).
+  const told = computeTOLDViewModel(state, PAs, notifications);
+  const climb = computeClimbViewModel(state, notifications);
+  const maneuveringWarnings = maneuveringNotifications(findAircraft(state.acType));
+  const maneuveringSpeeds =
+    state.acType && maneuveringWarnings.length === 0
+      ? calculateManeuveringSpeeds(state.acType)
+      : null;
 
   return (
     <div className="w-full">
@@ -47,28 +59,24 @@ export default function Calculations({ state }: CalculationsProps) {
             no-go decision should be considered.
           </p>
         </div>
-        <Altitudes altitudes={state.altitude} PAs={PAs} DAs={DAs} />
+        <Altitudes altitudes={state.altitude} PAs={PAs} DAs={DAs} notifications={notifications} />
         <ClimbPerformance
           aircraftModel={state.acType}
-          weight={state.weight}
+          climb={climb}
           OATs={state.temp}
-          PAs={PAs}
           altimeters={state.altimeter}
+          inputNotifications={notifications}
         />
-        <TOLDErrorBoundary
-          onError={(error, errorInfo) => {
-            console.error("TOLD calculation error:", error, errorInfo);
-          }}
-        >
-          <TakeoffPerformance
-            aircraftModel={state.acType}
-            airports={state.airport}
-            toldData={toldData}
-          />
-        </TOLDErrorBoundary>
+        <TakeoffPerformance
+          aircraftModel={state.acType}
+          airports={state.airport}
+          told={told}
+          inputNotifications={notifications}
+        />
         <ManeuveringPerformance
           aircraftModel={state.acType}
           maneuveringSpeeds={maneuveringSpeeds}
+          notifications={maneuveringWarnings}
         />
       </div>
     </div>

@@ -1,10 +1,13 @@
 import {
   applyOpTempForAltitudeChange,
+  describeOpTempChange,
+  opTempChangeNotifications,
   buildAreaOfOpsWeather,
   greatCircleMidpoint,
   interpolateOpTempFromAloft,
 } from "../areaOfOpsWeather";
 import type { OpenMeteoPointForecast } from "../openMeteoApi";
+import { fieldSubject, stepSubject, type Notification } from "../notifications";
 
 const mockRaw: OpenMeteoPointForecast = {
   hourly: {
@@ -56,7 +59,37 @@ describe("greatCircleMidpoint", () => {
   });
 });
 
+const AREA_FIELDS = [
+  ...[0, 1, 2, 3, 4].map((i) => fieldSubject("wind", i)),
+  fieldSubject("temp", 1),
+  fieldSubject("altimeter", 1),
+];
+
+const cautionSubjects = (
+  notifications: Notification[],
+  message: RegExp
+) =>
+  notifications
+    .filter((n) => n.level === "caution" && message.test(n.message))
+    .map((n) => n.subject);
+
 describe("buildAreaOfOpsWeather", () => {
+  it("puts a midpoint Caution only on the fields the fetch filled", () => {
+    const { pressure_msl: _omit, ...hourly } = mockRaw.hourly;
+    void _omit;
+    const r = buildAreaOfOpsWeather({
+      position: [null, null],
+      depAirportLatLon: [40.2, -111.7],
+      arrAirportLatLon: [37.1, -113.6],
+      midTime: new Date("2026-05-12T16:00:00Z"),
+      opAltitudeFt: null,
+      raw: { hourly: hourly as OpenMeteoPointForecast["hourly"] },
+    });
+    expect(cautionSubjects(r.notifications, /position not entered/i)).toEqual(
+      [0, 1, 2, 3, 4].map((i) => fieldSubject("wind", i))
+    );
+  });
+
   it("uses user position when both coords present", () => {
     const r = buildAreaOfOpsWeather({
       position: [40.5, -112.0],
@@ -80,7 +113,11 @@ describe("buildAreaOfOpsWeather", () => {
       raw: mockRaw,
     });
     expect(r.positionSource).toBe("midpoint");
-    expect(r.warnings.some((w) => /position not entered/i.test(w))).toBe(true);
+    // A midpoint position is a Substitution for every area-of-ops field it
+    // filled, so values computed from them carry its marker.
+    expect(cautionSubjects(r.notifications, /position not entered/i)).toEqual(
+      AREA_FIELDS
+    );
   });
 
   it("populates 5-altitude wind table from interpolation", () => {
@@ -114,6 +151,25 @@ describe("buildAreaOfOpsWeather", () => {
     expect(r.opAltimeter).toBeCloseTo(29.97, 2);
   });
 
+  it("raises a Warning on the operating altimeter when the forecast has no sea-level pressure", () => {
+    const { pressure_msl: _omit, ...hourly } = mockRaw.hourly;
+    void _omit;
+    const r = buildAreaOfOpsWeather({
+      position: [40.5, -112.0],
+      depAirportLatLon: null,
+      arrAirportLatLon: null,
+      midTime: new Date("2026-05-12T16:00:00Z"),
+      opAltitudeFt: 9000,
+      raw: { hourly: hourly as OpenMeteoPointForecast["hourly"] },
+    });
+    expect(r.opAltimeter).toBeNull();
+    expect(r.notifications).toContainEqual({
+      level: "warning",
+      subject: fieldSubject("altimeter", 1),
+      message: expect.stringMatching(/sea-level pressure/i),
+    });
+  });
+
   it("returns null op fields and warning when no airport coords either", () => {
     const r = buildAreaOfOpsWeather({
       position: [null, null],
@@ -125,7 +181,14 @@ describe("buildAreaOfOpsWeather", () => {
     });
     expect(r.positionSource).toBe("none");
     expect(r.opTemp).toBeNull();
-    expect(r.warnings.some((w) => /skipped/i.test(w))).toBe(true);
+    // Entering a position is how the pilot fixes this, so it sits on that field.
+    expect(r.notifications).toEqual([
+      {
+        level: "warning",
+        subject: fieldSubject("position"),
+        message: expect.stringMatching(/skipped/i),
+      },
+    ]);
   });
 
   it("warns when forecast time snap delta exceeds 1 hour", () => {
@@ -138,7 +201,66 @@ describe("buildAreaOfOpsWeather", () => {
       opAltitudeFt: 9000,
       raw: mockRaw,
     });
-    expect(r.warnings.some((w) => /forecast time snapped/i.test(w))).toBe(true);
+    expect(cautionSubjects(r.notifications, /forecast time snapped/i)).toEqual(
+      AREA_FIELDS
+    );
+  });
+
+  it("raises a Caution on the winds-aloft column whose altitude was snapped", () => {
+    const r = buildAreaOfOpsWeather({
+      position: [40.5, -112.0],
+      depAirportLatLon: null,
+      arrAirportLatLon: null,
+      midTime: new Date("2026-05-12T16:00:00Z"),
+      opAltitudeFt: 9000,
+      // Drop 925/900 hPa so the lowest level (850 hPa, ~5,000 ft) sits above 3,000 ft.
+      raw: {
+        hourly: {
+          ...mockRaw.hourly,
+          geopotential_height_925hPa: [NaN, NaN],
+          geopotential_height_900hPa: [NaN, NaN],
+        },
+      },
+    });
+    expect(r.notifications).toEqual([
+      {
+        level: "caution",
+        subject: fieldSubject("wind", 0),
+        message: expect.stringMatching(/3000 ft below/i),
+      },
+    ]);
+  });
+
+  it("raises a Caution on the operating temperature when its altitude was snapped", () => {
+    const r = buildAreaOfOpsWeather({
+      position: [40.5, -112.0],
+      depAirportLatLon: null,
+      arrAirportLatLon: null,
+      midTime: new Date("2026-05-12T16:00:00Z"),
+      opAltitudeFt: 20000,
+      raw: mockRaw,
+    });
+    expect(r.notifications).toContainEqual({
+      level: "caution",
+      subject: fieldSubject("temp", 1),
+      message: expect.stringMatching(/20000 ft above/i),
+    });
+  });
+
+  it("raises Warnings on the winds aloft and operating values when the forecast has no times", () => {
+    const r = buildAreaOfOpsWeather({
+      position: [40.5, -112.0],
+      depAirportLatLon: null,
+      arrAirportLatLon: null,
+      midTime: new Date("2026-05-12T16:00:00Z"),
+      opAltitudeFt: 9000,
+      raw: { hourly: { ...mockRaw.hourly, time: [] } },
+    });
+    expect(r.notifications.map((n) => [n.level, n.subject])).toEqual([
+      ["warning", fieldSubject("wind")],
+      ["warning", fieldSubject("temp", 1)],
+      ["warning", fieldSubject("altimeter", 1)],
+    ]);
   });
 });
 
@@ -294,5 +416,126 @@ describe("applyOpTempForAltitudeChange", () => {
     };
     // Interpolation rounds to 14 again → no change → null
     expect(applyOpTempForAltitudeChange(prev, updates)).toBeNull();
+  });
+});
+
+describe("operating temperature re-derivation notifications (#225)", () => {
+  type Triple = [number | null, number | null, number | null];
+  const wind: [(number | null)[], (number | null)[], (number | null)[]] = [
+    [0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0],
+    [20, 14, 8, 2, -10],
+  ];
+  const prev = {
+    altitude: [4500, 6000, 4490] as Triple,
+    temp: [21, 5, 19] as Triple,
+    wind,
+  };
+  const at = (altitude: number, opTemp: number | null) => ({
+    altitude: [4500, altitude, 4490] as Triple,
+    temp: [21, opTemp, 19] as Triple,
+  });
+
+  it("raises a Caution when the re-derived value replaced the pilot's entry", () => {
+    const change = describeOpTempChange(
+      prev,
+      { altitude: [4500, 9000, 4490] },
+      { fetchedOpTemp: 14 }
+    );
+    expect(change).toEqual({
+      value: 8,
+      altitudeFt: 9000,
+      replaced: 5,
+      snappedToFt: null,
+    });
+    expect(opTempChangeNotifications(at(9000, 8), change)).toEqual([
+      {
+        level: "caution",
+        subject: fieldSubject("temp", 1),
+        message: expect.stringMatching(
+          /re-derived from winds aloft at 9,000 ft \(8°C\).*your entry of 5°C/
+        ),
+      },
+    ]);
+  });
+
+  it("does not call a fetched value a manual entry", () => {
+    const change = describeOpTempChange(
+      prev,
+      { altitude: [4500, 9000, 4490] },
+      { fetchedOpTemp: 5 }
+    );
+    expect(change?.replaced).toBeNull();
+    expect(opTempChangeNotifications(at(9000, 8), change)).toEqual([]);
+  });
+
+  it("does not call its own earlier re-derivation a manual entry", () => {
+    const earlier = { value: 5, altitudeFt: 6000, replaced: null, snappedToFt: null };
+    const change = describeOpTempChange(
+      prev,
+      { altitude: [4500, 9000, 4490] },
+      { fetchedOpTemp: null, previous: earlier }
+    );
+    expect(change?.replaced).toBeNull();
+  });
+
+  it("raises a Caution when the altitude is outside the winds-aloft temperatures and the value snapped", () => {
+    const change = describeOpTempChange(
+      prev,
+      { altitude: [4500, 17000, 4490] },
+      { fetchedOpTemp: 5 }
+    );
+    expect(change?.snappedToFt).toBe(15000);
+    expect(opTempChangeNotifications(at(17000, -10), change)).toEqual([
+      {
+        level: "caution",
+        subject: fieldSubject("temp", 1),
+        message: expect.stringMatching(
+          /17,000 ft is above the winds-aloft temperatures; using the 15,000 ft temperature/
+        ),
+      },
+    ]);
+  });
+
+  it("keeps the snap Caution when the new altitude's temperature equals the stored one", () => {
+    // 15,000 → 17,000 ft: both use the 15,000 ft bucket (-10°C), so the
+    // stored temperature doesn't change, but the value is still snapped.
+    const atTop = { altitude: [4500, 15000, 4490] as Triple, temp: [21, -10, 19] as Triple, wind };
+    const change = describeOpTempChange(
+      atTop,
+      { altitude: [4500, 17000, 4490] },
+      { fetchedOpTemp: 5 }
+    );
+    expect(change).toEqual({
+      value: -10,
+      altitudeFt: 17000,
+      replaced: null,
+      snappedToFt: 15000,
+    });
+    expect(opTempChangeNotifications(at(17000, -10), change)).toEqual([
+      {
+        level: "caution",
+        subject: fieldSubject("temp", 1),
+        message: expect.stringMatching(/17,000 ft is above the winds-aloft temperatures/),
+      },
+    ]);
+  });
+
+  it("drops the notifications once the pilot overrides the temperature or changes altitude again", () => {
+    const change = describeOpTempChange(
+      prev,
+      { altitude: [4500, 17000, 4490] },
+      { fetchedOpTemp: null }
+    );
+    expect(opTempChangeNotifications(at(17000, -10), change)).toHaveLength(2);
+    expect(opTempChangeNotifications(at(17000, -4), change)).toEqual([]);
+    expect(opTempChangeNotifications(at(16000, -10), change)).toEqual([]);
+    expect(opTempChangeNotifications(at(17000, -10), null)).toEqual([]);
+  });
+
+  it("returns null when no re-derivation applies", () => {
+    expect(
+      describeOpTempChange(prev, { altitude: [4500, 6000, 4490] }, {})
+    ).toBeNull();
   });
 });

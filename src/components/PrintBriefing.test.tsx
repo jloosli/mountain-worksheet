@@ -2,6 +2,12 @@
 import { render, screen } from "../test-utils/test-utils";
 import PrintBriefing from "./PrintBriefing";
 import type { WorksheetData } from "@/utils/types";
+import {
+  fieldSubject,
+  stepSubject,
+  type Notification,
+} from "@/utils/notifications";
+import { computeTOLDViewModel, computePressureColumns, derivePerformanceNotifications } from "@/utils/derived";
 
 const emptyState: WorksheetData = {
   pilot: "",
@@ -234,8 +240,8 @@ describe("PrintBriefing — footer + no-aircraft fallback", () => {
   });
 });
 
-describe("PrintBriefing — Vx fallback when pressure altitude is missing", () => {
-  it("renders Vx as em-dash for each phase when altitude inputs are unset", () => {
+describe("PrintBriefing — Vx withheld when pressure altitude is missing", () => {
+  it("prints what Vx is waiting for in each phase when altitude inputs are unset", () => {
     // stateWithPerf has acType but no env inputs unset → PAs computed as nulls
     const noEnv: WorksheetData = {
       ...stateWithPerf,
@@ -253,9 +259,142 @@ describe("PrintBriefing — Vx fallback when pressure altitude is missing", () =
     const cells = Array.from(vxRow!.querySelectorAll("td"));
     // 4 cells: label + 3 values. All 3 values must be em-dashes.
     expect(cells.length).toBe(4);
-    expect(cells[1].textContent).toBe("—");
-    expect(cells[2].textContent).toBe("—");
-    expect(cells[3].textContent).toBe("—");
+    expect(cells[1].textContent).toBe("needs departure field elevation and altimeter");
+    expect(cells[2].textContent).toBe("needs operating altitude and altimeter");
+    expect(cells[3].textContent).toBe("needs arrival field elevation and altimeter");
+  });
+});
+
+describe("PrintBriefing — notifications", () => {
+  const arrivalTempSubstitution: Notification = {
+    level: "caution",
+    subject: fieldSubject("temp", 2),
+    message: "KLGU: forecast period has no temperature; using current observation",
+  };
+  const row = (container: HTMLElement, label: RegExp) => {
+    const tr = Array.from(container.querySelectorAll("tr")).find((r) =>
+      label.test(r.querySelector("td")?.textContent ?? "")
+    );
+    if (!tr) throw new Error(`no row ${label}`);
+    return Array.from(tr.querySelectorAll("td"));
+  };
+  const refs = (cell: Element) =>
+    Array.from(cell.querySelectorAll("[data-ref]")).map((e) => e.getAttribute("data-ref"));
+
+  it("withholds values whose own inputs have a Warning, naming the input, and keeps the rest", () => {
+    const stale: Notification = {
+      level: "warning",
+      subject: fieldSubject("altimeter", 0),
+      message: "Fetched for KOGD at 2026-05-17 18:00; refetch weather.",
+    };
+    const { container } = render(
+      <PrintBriefing state={stateWithPerf} notifications={[stale]} />
+    );
+    expect(row(container, /^TO Ground Roll/)[1].textContent).toMatch(/departure altimeter/);
+    expect(row(container, /^Pressure Alt/)[1].textContent).toMatch(/departure altimeter/);
+    expect(row(container, /^Pressure Alt/)[3].textContent).toMatch(/^[\d,]+/);
+    expect(row(container, /^TO Ground Roll/)[2].textContent).toMatch(/^[\d,]+/);
+  });
+
+  it("prints the arrival temperature Caution next to the arrival temperature", () => {
+    const { container } = render(
+      <PrintBriefing state={stateWithPerf} notifications={[arrivalTempSubstitution]} />
+    );
+    const note = screen.getByText(/forecast period has no temperature/);
+    expect(note.closest("li")).toHaveAttribute("data-ref", "1");
+    expect(note.closest("li")?.textContent).toMatch(/Caution/);
+    const oat = row(container, /^OAT/);
+    expect(refs(oat[3])).toEqual(["1"]);
+    expect(refs(oat[1])).toEqual([]);
+  });
+
+  it("marks the arrival landing distance, and only values that use the arrival temperature", () => {
+    const { container } = render(
+      <PrintBriefing state={stateWithPerf} notifications={[arrivalTempSubstitution]} />
+    );
+    const landing = row(container, /^Landing Ground Roll/);
+    expect(refs(landing[2])).toEqual(["1"]);
+    expect(refs(landing[1])).toEqual([]);
+    expect(refs(row(container, /^Density Alt/)[3])).toEqual(["1"]);
+    expect(refs(row(container, /^Pressure Alt/)[3])).toEqual([]);
+    expect(refs(row(container, /^Rate of Climb \(MGW\)/)[3])).toEqual(["1"]);
+    expect(refs(row(container, /^Rate of Climb \(MGW\)/)[2])).toEqual([]);
+    expect(refs(row(container, /^Vx/)[3])).toEqual([]);
+  });
+
+  it("omits Advisories", () => {
+    render(
+      <PrintBriefing
+        state={stateWithPerf}
+        notifications={[
+          {
+            level: "advisory",
+            subject: fieldSubject("altitude", 1),
+            message: "Operating temperature re-derived from winds aloft",
+          },
+        ]}
+      />
+    );
+    expect(screen.queryByText(/re-derived from winds aloft/)).not.toBeInTheDocument();
+  });
+
+  it("prints a Warning next to the value it concerns, including ones with no table cell", () => {
+    const overweight: WorksheetData = { ...stateWithPerf, weight: 3400 };
+    const notifications: Notification[] = [
+      {
+        level: "warning",
+        subject: stepSubject("weather"),
+        message: "TAF request for KLGU failed.",
+      },
+      ...derivePerformanceNotifications(overweight),
+    ];
+    const { container } = render(
+      <PrintBriefing state={overweight} notifications={notifications} />
+    );
+    const weightNote = screen.getByText(/maximum gross weight/i).closest("li")!;
+    expect(weightNote.textContent).toMatch(/Warning/);
+    const weight = container.querySelector("[data-field='weight']")!;
+    expect(weight.textContent).toMatch(/3,400/);
+    expect(refs(weight)).toEqual([weightNote.getAttribute("data-ref")]);
+    expect(screen.getByText(/TAF request for KLGU failed/).closest("li")).toHaveAttribute(
+      "data-level",
+      "warning"
+    );
+    // Values that depend on weight print what they are waiting for.
+    expect(row(container, /^TO Ground Roll/)[1].textContent).toBe("needs valid weight");
+    expect(row(container, /^% MGW/)[1].textContent).toBe("needs valid weight");
+  });
+
+  it("prints every Warning and Caution the screen shows, once each", () => {
+    const extrapolated: WorksheetData = {
+      ...stateWithPerf,
+      altitude: [9000, 10000, 9000],
+      temp: [-25, 10, 38],
+    };
+    const { PAs } = computePressureColumns(
+      extrapolated.altitude,
+      extrapolated.altimeter,
+      extrapolated.temp
+    );
+    const notifications = derivePerformanceNotifications(extrapolated);
+    const expected = notifications.filter((n) => n.level !== "advisory");
+    expect(expected.length).toBeGreaterThan(0);
+    const { container } = render(
+      <PrintBriefing state={extrapolated} notifications={notifications} />
+    );
+    const printed = Array.from(container.querySelectorAll("li[data-ref]")).map(
+      (li) => li.querySelector("[data-message]")?.textContent
+    );
+    expect(printed.sort()).toEqual(expected.map((n) => n.message).sort());
+    // The takeoff Caution is referenced from the departure takeoff cells.
+    const ref = screen
+      .getByText(/Departure \(KOGD\) takeoff distances are extrapolated/)
+      .closest("li")!
+      .getAttribute("data-ref");
+    expect(computeTOLDViewModel(extrapolated, PAs).departure.values.takeoffGroundRoll.status).toBe(
+      "computed"
+    );
+    expect(refs(row(container, /^TO Ground Roll/)[1])).toContain(ref);
   });
 });
 

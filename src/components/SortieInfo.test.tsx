@@ -1,6 +1,7 @@
 import { render, screen, fireEvent, act } from "@testing-library/react";
 import SortieInfo from "./SortieInfo";
 import type { WorksheetData } from "@/utils/types";
+import { fieldSubject } from "@/utils/notifications";
 
 const defaultInitialData: WorksheetData = {
   pilot: "",
@@ -344,5 +345,51 @@ describe("SortieInfo - airport code whitespace (#208)", () => {
     mockOnUpdate.mockClear();
     fireEvent.blur(departure);
     expect(mockOnUpdate).not.toHaveBeenCalled();
+  });
+
+  it("shows a position notification next to the Area of Operations field", () => {
+    render(
+      <SortieInfo
+        onUpdate={mockOnUpdate}
+        initialData={defaultInitialData}
+        notifications={[
+          {
+            level: "warning",
+            subject: fieldSubject("position"),
+            message: "Operating area weather skipped: enter a position",
+          },
+        ]}
+      />
+    );
+    const input = screen.getByLabelText("Area of Operations (position)");
+    expect(input).toHaveAttribute("aria-invalid", "true");
+    expect(input).toHaveAccessibleDescription(/Operating area weather skipped/);
+  });
+
+  it("shows airport-ID notifications next to the ID they are about (#216)", () => {
+    render(
+      <SortieInfo
+        initialData={{ ...defaultInitialData, airport: ["XQZ", "KBOI"] }}
+        onUpdate={jest.fn()}
+        notifications={[
+          {
+            level: "caution",
+            subject: fieldSubject("airport", 0),
+            message: "No airport found for XQZ or KXQZ. Check the ID",
+          },
+          {
+            level: "advisory",
+            subject: fieldSubject("airport", 1),
+            message: "Using KBOI for BOI",
+          },
+        ]}
+      />
+    );
+    const departure = screen.getByLabelText("Departure Airport");
+    const arrival = screen.getByLabelText("Arrival Airport");
+    expect(departure).toHaveAccessibleDescription(/No airport found for XQZ/);
+    expect(departure).not.toHaveAttribute("aria-invalid");
+    expect(arrival).toHaveAccessibleDescription(/Using KBOI for BOI/);
+    expect(screen.getByText(/Using KBOI for BOI/)).toBeVisible();
   });
 });

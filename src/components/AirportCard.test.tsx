@@ -2,6 +2,7 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import AirportCard from "./AirportCard";
 import type { RunwayOption } from "@/utils/types";
+import { fieldSubject, type Notification } from "@/utils/notifications";
 
 const noOp = () => {};
 
@@ -69,21 +70,32 @@ describe("AirportCard — departure variant", () => {
     expect(select).toHaveValue("5500");
   });
 
-  it("renders 'Fetch weather to load runways' placeholder when runways is null", () => {
-    render(
-      <AirportCard
-        {...baseProps}
-        variant="departure"
-        airportCode="KOGD"
-        fieldElev={4473}
-        runways={null}
-        selectedRunwayLength={null}
-        onRunwaySelect={noOp}
-      />
-    );
-    expect(screen.queryByRole("combobox", { name: /Runway/i })).not.toBeInTheDocument();
-    expect(screen.getByText(/Fetch weather to load runways/i)).toBeInTheDocument();
-  });
+  it.each([
+    ["idle", /Enter an airport ID to load runways/i],
+    ["pending", /Loading runways/i],
+    ["failed", /Runway lookup failed/i],
+    ["no-runways", /No runway data for KOGD/i],
+  ] as const)(
+    "says why there is no runway list when the lookup is %s",
+    (runwayStatus, text) => {
+      render(
+        <AirportCard
+          {...baseProps}
+          variant="departure"
+          airportCode="KOGD"
+          fieldElev={4473}
+          runways={null}
+          runwayStatus={runwayStatus}
+          selectedRunwayLength={null}
+          onRunwaySelect={noOp}
+        />
+      );
+      expect(
+        screen.queryByRole("combobox", { name: /Runway/i })
+      ).not.toBeInTheDocument();
+      expect(screen.getByText(text)).toBeInTheDocument();
+    }
+  );
 
   it("calls onRunwaySelect with the chosen runway length", () => {
     const onRunwaySelect = jest.fn();
@@ -133,11 +145,12 @@ describe("AirportCard — departure variant", () => {
         variant="departure"
         airportCode="KOGD"
         runways={runways}
+        runwayStatus="found"
         selectedRunwayLength={null}
       />
     );
     expect(screen.queryByRole("combobox", { name: /Runway/i })).not.toBeInTheDocument();
-    expect(screen.getByText(/Fetch weather to load runways/i)).toBeInTheDocument();
+    expect(screen.getByText(/No runway data for KOGD/i)).toBeInTheDocument();
   });
 
   it("calls onTemperatureChange and onAltimeterChange on input", () => {
@@ -163,6 +176,25 @@ describe("AirportCard — departure variant", () => {
       target: { value: "30.01" },
     });
     expect(onAltimeterChange).toHaveBeenCalledWith("30.01");
+  });
+});
+
+describe("AirportCard — rejected altimeter entry", () => {
+  it("shows the stored altimeter again once the rejection is retired, even if the number didn't change", () => {
+    const props = {
+      ...baseProps,
+      variant: "departure" as const,
+      airportCode: "KOGD",
+      altimeter: 29.92,
+    };
+    const { rerender } = render(<AirportCard {...props} />);
+    const input = screen.getByLabelText(/Altimeter/i);
+    fireEvent.change(input, { target: { value: "35" } });
+    rerender(<AirportCard {...props} rejectedAltimeterText="35" />);
+    expect(input).toHaveValue(35);
+
+    rerender(<AirportCard {...props} />);
+    expect(input).toHaveValue(29.92);
   });
 });
 
@@ -348,5 +380,88 @@ describe("AirportCard — runway auto-default", () => {
       />
     );
     expect(onRunwaySelect).not.toHaveBeenCalled();
+  });
+});
+
+describe("AirportCard — notifications", () => {
+  const arrivalWarnings: Notification[] = [
+    {
+      level: "warning",
+      subject: fieldSubject("temp", 2),
+      message: "BOI: no METAR or TAF (temp)",
+    },
+    {
+      level: "warning",
+      subject: fieldSubject("altimeter", 2),
+      message: "BOI: no METAR or TAF (altimeter)",
+    },
+    {
+      level: "warning",
+      subject: fieldSubject("rwy", 1),
+      message: "Arrival runway length (BOI) couldn't be fetched",
+    },
+    {
+      level: "warning",
+      subject: fieldSubject("altitude", 2),
+      message: "Arrival field elevation (BOI) couldn't be fetched",
+    },
+  ];
+
+  it("shows each arrival notification next to its field, with ARIA on the inputs", () => {
+    render(
+      <AirportCard
+        {...baseProps}
+        variant="arrival"
+        airportCode="BOI"
+        notifications={arrivalWarnings}
+        runways={[{ id: "10/28", length: 9000, alignment: 100 }]}
+        selectedRunwayLength={9000}
+        onRunwaySelect={noOp}
+      />
+    );
+    const temp = screen.getByLabelText("Temperature");
+    expect(temp).toHaveAttribute("aria-invalid", "true");
+    expect(temp).toHaveAccessibleDescription(/\(temp\)/);
+    const alt = screen.getByLabelText("Altimeter");
+    expect(alt).toHaveAttribute("aria-invalid", "true");
+    expect(alt).toHaveAccessibleDescription(/\(altimeter\)/);
+    const rwy = screen.getByLabelText("Runway");
+    expect(rwy).toHaveAttribute("aria-invalid", "true");
+    expect(rwy).toHaveAccessibleDescription(/runway length/);
+    expect(screen.getByText(/field elevation \(BOI\)/)).toBeInTheDocument();
+  });
+
+  it("ignores notifications about the other airports", () => {
+    render(
+      <AirportCard
+        {...baseProps}
+        variant="departure"
+        airportCode="KOGD"
+        notifications={arrivalWarnings}
+      />
+    );
+    expect(screen.getByLabelText("Temperature")).not.toHaveAttribute(
+      "aria-invalid"
+    );
+    expect(screen.queryByText(/BOI/)).not.toBeInTheDocument();
+  });
+
+  it("shows operating-area notifications on the operating card", () => {
+    render(
+      <AirportCard
+        {...baseProps}
+        variant="operating"
+        notifications={[
+          {
+            level: "caution",
+            subject: fieldSubject("temp", 1),
+            message: "Target altitude 20000 ft above available range",
+          },
+        ]}
+      />
+    );
+    expect(screen.getByLabelText("Temperature")).toHaveAccessibleDescription(
+      /20000 ft above/
+    );
   });
 });

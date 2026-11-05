@@ -74,4 +74,22 @@ describe("StepShell", () => {
     );
     expect(container.querySelector('[data-testid="step-spine"]')).toBeNull();
   });
+
+  it("shows the warning status and its badge in red (a Warning, per ADR 0001)", () => {
+    const { container } = render(
+      <StepShell
+        id="step-weather"
+        number={2}
+        status="warning"
+        title="Weather"
+        badge="2 warnings"
+      >
+        <p>body</p>
+      </StepShell>
+    );
+    const circle = screen.getByText("2", { selector: "div" });
+    expect(circle.className).toMatch(/bg-red-/);
+    expect(screen.getByText("2 warnings").className).toMatch(/text-red-/);
+    expect(container.innerHTML).not.toMatch(/amber/);
+  });
 });

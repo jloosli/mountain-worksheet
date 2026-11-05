@@ -1,3 +1,5 @@
+import type { NotificationDraft } from "./notifications";
+
 export const PRESSURE_LEVELS = [925, 900, 850, 800, 700, 600, 500] as const;
 export type PressureLevel = (typeof PRESSURE_LEVELS)[number];
 
@@ -74,7 +76,8 @@ export interface InterpolatedAloft {
   temp: number | null;
   wspd: number | null;
   wdir: number | null;
-  warnings: string[];
+  /** Caveats about this altitude; the caller attaches the Subject. */
+  notes: NotificationDraft[];
 }
 
 function circularInterp(low: number, high: number, f: number): number {
@@ -93,7 +96,7 @@ export function interpolateAtAltitude(
   targetFt: number,
   s: InterpolationSample
 ): InterpolatedAloft {
-  const warnings: string[] = [];
+  const notes: NotificationDraft[] = [];
   // Only consider levels with a finite geopotential height; missing heights
   // would otherwise collapse to 0 ft and pollute bracket selection.
   const sortedLevels = [...PRESSURE_LEVELS]
@@ -101,8 +104,11 @@ export function interpolateAtAltitude(
     .sort((a, b) => s.heightsFtByLevel[a] - s.heightsFtByLevel[b]);
 
   if (sortedLevels.length === 0) {
-    warnings.push("No pressure-level heights available for interpolation");
-    return { temp: null, wspd: null, wdir: null, warnings };
+    notes.push({
+      level: "warning",
+      message: "No pressure-level heights available for interpolation",
+    });
+    return { temp: null, wspd: null, wdir: null, notes };
   }
 
   const lowest = sortedLevels[0];
@@ -110,33 +116,33 @@ export function interpolateAtAltitude(
 
   if (targetFt <= s.heightsFtByLevel[lowest]) {
     if (targetFt < s.heightsFtByLevel[lowest]) {
-      warnings.push(
-        `Target altitude ${targetFt} ft below available pressure-level range (${Math.round(
+      notes.push({
+        level: "caution",
+        message: `Target altitude ${targetFt} ft below available pressure-level range (${Math.round(
           s.heightsFtByLevel[lowest]
-        )} ft); snapping to lowest level`
-      );
+        )} ft); snapping to lowest level`,
+      });
     }
-    return {
+    return withMissingComponents(targetFt, notes, {
       temp: roundFinite(s.tempByLevel[lowest]),
       wspd: roundFinite(s.wspdByLevel[lowest]),
       wdir: roundFinite(s.wdirByLevel[lowest]),
-      warnings,
-    };
+    });
   }
   if (targetFt >= s.heightsFtByLevel[highest]) {
     if (targetFt > s.heightsFtByLevel[highest]) {
-      warnings.push(
-        `Target altitude ${targetFt} ft above available pressure-level range (${Math.round(
+      notes.push({
+        level: "caution",
+        message: `Target altitude ${targetFt} ft above available pressure-level range (${Math.round(
           s.heightsFtByLevel[highest]
-        )} ft); snapping to highest level`
-      );
+        )} ft); snapping to highest level`,
+      });
     }
-    return {
+    return withMissingComponents(targetFt, notes, {
       temp: roundFinite(s.tempByLevel[highest]),
       wspd: roundFinite(s.wspdByLevel[highest]),
       wdir: roundFinite(s.wdirByLevel[highest]),
-      warnings,
-    };
+    });
   }
 
   let lowerLevel: PressureLevel = lowest;
@@ -154,16 +160,8 @@ export function interpolateAtAltitude(
   const lowerHeight = s.heightsFtByLevel[lowerLevel];
   const upperHeight = s.heightsFtByLevel[upperLevel];
 
-  // Duplicate heights would produce a 0/0 fraction (NaN) that propagates into
-  // worksheet wind/temp fields. Snap to the lower level instead.
-  if (upperHeight === lowerHeight) {
-    return {
-      temp: roundFinite(s.tempByLevel[lowerLevel]),
-      wspd: roundFinite(s.wspdByLevel[lowerLevel]),
-      wdir: roundFinite(s.wdirByLevel[lowerLevel]),
-      warnings,
-    };
-  }
+  // No bracket has zero width here: a target equal to a duplicated height
+  // matches the bracket below the pair first, or the lowest/highest snap.
 
   const f = (targetFt - lowerHeight) / (upperHeight - lowerHeight);
 
@@ -186,12 +184,41 @@ export function interpolateAtAltitude(
     Number.isFinite(wdirLow) && Number.isFinite(wdirHigh)
       ? circularInterp(wdirLow, wdirHigh, f)
       : NaN;
-  return {
+  return withMissingComponents(targetFt, notes, {
     temp: roundFinite(temp),
     wspd: roundFinite(wspd),
     wdir: roundFinite(wdir),
-    warnings,
-  };
+  });
+}
+
+/**
+ * Adds a Warning note naming each component the forecast didn't provide at
+ * the target altitude. Every return path with data goes through here.
+ */
+function withMissingComponents(
+  targetFt: number,
+  notes: NotificationDraft[],
+  result: Omit<InterpolatedAloft, "notes">
+): InterpolatedAloft {
+  const missing = [
+    result.wdir === null && "wind direction",
+    result.wspd === null && "wind speed",
+    result.temp === null && "temperature",
+  ].filter((m): m is string => typeof m === "string");
+  if (missing.length > 0) {
+    notes.push({
+      level: "warning",
+      message: `Forecast had no ${joinList(missing)} at ${targetFt.toLocaleString(
+        "en-US"
+      )} ft; enter ${missing.length > 1 ? "them" : "it"} manually`,
+    });
+  }
+  return { ...result, notes };
+}
+
+function joinList(items: string[]): string {
+  if (items.length <= 1) return items.join("");
+  return `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
 }
 
 export function buildSampleAtTime(

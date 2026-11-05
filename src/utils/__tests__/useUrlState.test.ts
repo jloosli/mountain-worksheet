@@ -178,4 +178,23 @@ describe("useUrlState", () => {
       { scroll: false }
     );
   });
+
+  it("runs a load check over the state opened from the link and returns its result", () => {
+    const initialState = { count: 0 };
+    (nextNavigation.useSearchParams as jest.Mock).mockReturnValue(
+      new URLSearchParams("count=abc")
+    );
+    const check = jest.fn((state: { count: unknown }, query: string) => ({
+      state: { count: 0 },
+      problem: `${query} -> ${String(state.count)}`,
+    }));
+
+    const { result } = renderHook(() => useUrlState(initialState, check));
+
+    expect(result.current[0]).toEqual({ count: 0 });
+    expect(result.current[2]).toEqual({
+      state: { count: 0 },
+      problem: "count=abc -> NaN",
+    });
+  });
 });

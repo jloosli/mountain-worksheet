@@ -1,5 +1,10 @@
 // src/utils/stepStatuses.test.ts
-import { deriveStepStatuses } from "./stepStatuses";
+import { deriveStepStatuses, formatStepBadge } from "./stepStatuses";
+import {
+  fieldSubject,
+  stepSubject,
+  type Notification,
+} from "@/utils/notifications";
 import type { WorksheetData } from "@/utils/types";
 
 const empty: WorksheetData = {
@@ -38,7 +43,7 @@ const readyForWeather: WorksheetData = {
 
 describe("deriveStepStatuses", () => {
   it("returns active / pending / pending when nothing is filled and weather not fetched", () => {
-    expect(deriveStepStatuses(empty, null)).toEqual({
+    expect(deriveStepStatuses(empty, null)).toMatchObject({
       sortie: "active",
       weather: "pending",
       decision: "pending",
@@ -46,7 +51,7 @@ describe("deriveStepStatuses", () => {
   });
 
   it("returns complete / active / pending when sortie is ready to fetch but weather hasn't been fetched", () => {
-    expect(deriveStepStatuses(readyForWeather, null)).toEqual({
+    expect(deriveStepStatuses(readyForWeather, null)).toMatchObject({
       sortie: "complete",
       weather: "active",
       decision: "pending",
@@ -54,7 +59,7 @@ describe("deriveStepStatuses", () => {
   });
 
   it("returns complete / complete / active when weather has been fetched", () => {
-    expect(deriveStepStatuses(readyForWeather, new Date())).toEqual({
+    expect(deriveStepStatuses(readyForWeather, new Date())).toMatchObject({
       sortie: "complete",
       weather: "complete",
       decision: "active",
@@ -66,7 +71,7 @@ describe("deriveStepStatuses", () => {
     // current state (incomplete), but weather/decision reflect fetched
     // history.
     const wiped = { ...readyForWeather, airport: ["", ""] as [string, string] };
-    expect(deriveStepStatuses(wiped, new Date())).toEqual({
+    expect(deriveStepStatuses(wiped, new Date())).toMatchObject({
       sortie: "active",
       weather: "complete",
       decision: "active",
@@ -82,10 +87,68 @@ describe("deriveStepStatuses", () => {
         Array(5).fill(null) as (number | null)[],
       ] as [(number | null)[], (number | null)[], (number | null)[]],
     };
-    expect(deriveStepStatuses(withWind, null)).toEqual({
+    expect(deriveStepStatuses(withWind, null)).toMatchObject({
       sortie: "complete",
       weather: "complete",
       decision: "active",
     });
+  });
+
+  it("counts no notifications on any step by default", () => {
+    expect(deriveStepStatuses(readyForWeather, new Date()).counts).toEqual({
+      sortie: { warning: 0, caution: 0, advisory: 0 },
+      weather: { warning: 0, caution: 0, advisory: 0 },
+      decision: { warning: 0, caution: 0, advisory: 0 },
+    });
+  });
+
+  it("marks a step `warning` when any of its Subjects has a Warning, and counts per step", () => {
+    const notifications: Notification[] = [
+      { level: "warning", subject: fieldSubject("temp", 2), message: "a" },
+      { level: "caution", subject: stepSubject("weather"), message: "b" },
+      { level: "advisory", subject: fieldSubject("temp", 0), message: "c" },
+      { level: "caution", subject: fieldSubject("position"), message: "d" },
+    ];
+    const result = deriveStepStatuses(readyForWeather, new Date(), notifications);
+    expect(result).toMatchObject({
+      sortie: "complete",
+      weather: "warning",
+      decision: "active",
+    });
+    expect(result.counts.weather).toEqual({ warning: 1, caution: 1, advisory: 1 });
+    expect(result.counts.sortie).toEqual({ warning: 0, caution: 1, advisory: 0 });
+  });
+
+  it("does not change status for Cautions or Advisories alone", () => {
+    const notifications: Notification[] = [
+      { level: "caution", subject: stepSubject("weather"), message: "b" },
+    ];
+    expect(
+      deriveStepStatuses(readyForWeather, new Date(), notifications).weather
+    ).toBe("complete");
+  });
+
+  it("marks the weather step `warning` after a total fetch failure, before any weather is applied", () => {
+    const notifications: Notification[] = [
+      { level: "warning", subject: stepSubject("weather"), message: "fetch failed" },
+    ];
+    const result = deriveStepStatuses(readyForWeather, null, notifications);
+    expect(result.weather).toBe("warning");
+    // Warnings never block the other steps.
+    expect(result.sortie).toBe("complete");
+  });
+});
+
+describe("formatStepBadge", () => {
+  it("is empty when the step has no Warnings or Cautions", () => {
+    expect(formatStepBadge({ warning: 0, caution: 0, advisory: 3 })).toBeUndefined();
+  });
+
+  it("counts Warnings and Cautions", () => {
+    expect(formatStepBadge({ warning: 1, caution: 0, advisory: 0 })).toBe("1 warning");
+    expect(formatStepBadge({ warning: 2, caution: 1, advisory: 5 })).toBe(
+      "2 warnings · 1 caution"
+    );
+    expect(formatStepBadge({ warning: 0, caution: 3, advisory: 0 })).toBe("3 cautions");
   });
 });

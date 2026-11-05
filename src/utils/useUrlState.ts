@@ -3,17 +3,27 @@ import { useSearchParams } from "next/navigation";
 import { useRouter, usePathname } from "next/navigation";
 import { serializeState, deserializeState } from "./urlState";
 
-export function useUrlState<T>(
-  initialState: T
-): readonly [T, (newState: T | ((prev: T) => T)) => void] {
+/**
+ * State persisted to the URL query string. `check`, if given, runs once over
+ * the state opened from the link (with the raw query) and may correct it; its
+ * result is returned as the third element so the caller can report problems.
+ */
+export function useUrlState<T, R extends { state: T } = { state: T }>(
+  initialState: T,
+  check?: (state: T, query: string) => R
+): readonly [T, (newState: T | ((prev: T) => T)) => void, R | null] {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [state, setState] = useState<T>(() => {
+  const [loaded] = useState<{ state: T; check: R | null }>(() => {
     // Convert URLSearchParams to string for deserialization
     const queryString = searchParams.toString();
-    return deserializeState(queryString || null, initialState);
+    const state = deserializeState(queryString || null, initialState);
+    if (!check || !queryString) return { state, check: null };
+    const result = check(state, queryString);
+    return { state: result.state, check: result };
   });
+  const [state, setState] = useState<T>(loaded.state);
 
   const pendingStateRef = useRef<T | null>(null);
 
@@ -59,5 +69,5 @@ export function useUrlState<T>(
     [state]
   );
 
-  return [state, updateState] as const;
+  return [state, updateState, loaded.check] as const;
 }

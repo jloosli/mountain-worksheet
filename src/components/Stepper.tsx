@@ -25,7 +25,7 @@ const circleBg: Record<StepStatus, string> = {
   pending:  "bg-slate-300 dark:bg-slate-700",
   active:   "bg-slate-900 dark:bg-slate-100",
   complete: "bg-emerald-500",
-  warning:  "bg-amber-500",
+  warning:  "bg-red-600",
 };
 
 const circleText: Record<StepStatus, string> = {
@@ -39,7 +39,7 @@ const badgeColor: Record<StepStatus, string> = {
   pending:  "text-slate-500 dark:text-slate-500",
   active:   "text-slate-900 dark:text-slate-100",
   complete: "text-emerald-600 dark:text-emerald-400",
-  warning:  "text-amber-600 dark:text-amber-400",
+  warning:  "text-red-600 dark:text-red-400",
 };
 
 export default function Stepper({ steps, activeId }: StepperProps) {

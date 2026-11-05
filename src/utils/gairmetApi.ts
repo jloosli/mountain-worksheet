@@ -1,3 +1,5 @@
+import { fieldSubject, stepSubject, type Notification } from "./notifications";
+
 const BASE_URL = "/api/aviation-weather";
 
 export interface GAirmetCoord {
@@ -17,10 +19,32 @@ export interface AirmetClassification {
   turb: boolean | null;
   cielVis: boolean | null;
   mtnObsc: boolean | null;
-  warnings: string[];
+  notifications: Notification[];
+}
+
+/**
+ * Warning raised when the AIRMET flags could not be updated. The flags are
+ * left as they were (clearing a turbulence flag on a failed fetch would be
+ * worse), so the pilot must check them.
+ */
+export function airmetFlagsUnavailable(reason: string): Notification {
+  return {
+    level: "warning",
+    subject: stepSubject("weather"),
+    message: `${reason}; turbulence, ceiling/visibility and mountain obscuration flags were not updated. Check AIRMETs manually.`,
+  };
 }
 
 const VALID_TIME_THRESHOLD_MS = 3 * 60 * 60 * 1000;
+
+const HAZARD_FLAG: Record<
+  string,
+  { field: "turb" | "cielVis" | "mtnObsc"; label: string } | undefined
+> = {
+  TURB: { field: "turb", label: "turbulence" },
+  IFR: { field: "cielVis", label: "IFR" },
+  "MTN OBSC": { field: "mtnObsc", label: "mountain obscuration" },
+};
 
 export async function fetchGAirmets(): Promise<GAirmetFeature[]> {
   const url = `${BASE_URL}?endpoint=gairmet&format=json`;
@@ -61,7 +85,7 @@ export function classifyAirmets(
   position: [number, number],
   midTime: Date
 ): AirmetClassification {
-  const warnings: string[] = [];
+  const notifications: Notification[] = [];
   const targetMs = midTime.getTime();
   const eligible = features.filter((f) =>
     ["TURB", "IFR", "MTN OBSC"].includes(f.hazard)
@@ -71,7 +95,13 @@ export function classifyAirmets(
   // (Genuine unavailability — fetch failure or no features in the time window
   // — is signaled with null sentinels below.)
   if (eligible.length === 0) {
-    return { turb: false, cielVis: false, mtnObsc: false, warnings };
+    notifications.push({
+      level: "advisory",
+      subject: stepSubject("weather"),
+      message:
+        "No turbulence, IFR or mountain obscuration G-AIRMETs in effect; those flags were cleared",
+    });
+    return { turb: false, cielVis: false, mtnObsc: false, notifications };
   }
 
   // Group by hazard
@@ -86,9 +116,10 @@ export function classifyAirmets(
     turb: false,
     cielVis: false,
     mtnObsc: false,
-    warnings,
+    notifications,
   };
 
+  const staleHazards: { hazard: string; deltaMs: number }[] = [];
   let anyWithinThreshold = false;
   let ifrWithinThreshold = false;
   for (const [hazard, list] of byHazard.entries()) {
@@ -99,7 +130,10 @@ export function classifyAirmets(
         Math.abs(Date.parse(b.validTime) - targetMs)
     );
     const bestDelta = Math.abs(Date.parse(sorted[0].validTime) - targetMs);
-    if (bestDelta > VALID_TIME_THRESHOLD_MS) continue;
+    if (bestDelta > VALID_TIME_THRESHOLD_MS) {
+      staleHazards.push({ hazard, deltaMs: bestDelta });
+      continue;
+    }
     anyWithinThreshold = true;
     if (hazard === "IFR") ifrWithinThreshold = true;
 
@@ -114,16 +148,39 @@ export function classifyAirmets(
   }
 
   if (ifrWithinThreshold) {
-    result.warnings.push(
-      "AIRMET IFR auto-flag uses 1000 ft / 3 sm threshold, not the worksheet's 2000 ft / 10 sm threshold"
-    );
+    notifications.push({
+      level: "caution",
+      subject: fieldSubject("cielVis"),
+      message:
+        "AIRMET IFR auto-flag uses 1000 ft / 3 sm threshold, not the worksheet's 2000 ft / 10 sm threshold",
+    });
+  }
+
+  if (anyWithinThreshold) {
+    for (const { hazard, deltaMs } of staleHazards) {
+      const flag = HAZARD_FLAG[hazard];
+      if (!flag) continue;
+      notifications.push({
+        level: "caution",
+        subject: fieldSubject(flag.field),
+        message: `No ${flag.label} G-AIRMET within 3 hr of the sortie (nearest is ${(
+          deltaMs / 3_600_000
+        ).toFixed(1)} hr away); flag left off. Check AIRMETs manually.`,
+      });
+    }
   }
 
   if (!anyWithinThreshold) {
-    warnings.push(
-      `G-AIRMET data unavailable within 3 hr of ${midTime.toISOString()}; turb / cielVis / mtnObsc flags not updated`
-    );
-    return { turb: null, cielVis: null, mtnObsc: null, warnings };
+    return {
+      turb: null,
+      cielVis: null,
+      mtnObsc: null,
+      notifications: [
+        airmetFlagsUnavailable(
+          `G-AIRMET data unavailable within 3 hr of ${midTime.toISOString()}`
+        ),
+      ],
+    };
   }
   return result;
 }

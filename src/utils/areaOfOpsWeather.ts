@@ -5,6 +5,13 @@ import {
   HPA_TO_INHG,
   type OpenMeteoPointForecast,
 } from "./openMeteoApi";
+import {
+  fieldSubject,
+  stepSubject,
+  withSubject,
+  type Notification,
+  type NotificationDraft,
+} from "./notifications";
 
 export const TARGET_ALTITUDES_FT = [3000, 6000, 9000, 12000, 15000];
 
@@ -85,18 +92,131 @@ export function applyOpTempForAltitudeChange(
     ];
   }
 ): [number | null, number | null, number | null] | null {
-  if (updates.altitude === undefined) return null;
-  if (updates.altitude[1] === prev.altitude?.[1]) return null;
-  if (updates.temp !== undefined) return null;
-
-  const aloftTemps = (updates.wind ?? prev.wind)?.[2];
-  const newOpTemp = interpolateOpTempFromAloft(updates.altitude[1], aloftTemps);
+  const newOpTemp = rederivedOpTemp(prev, updates);
   if (newOpTemp === null) return null;
 
   const curTemp = prev.temp ?? [null, null, null];
   if (newOpTemp === curTemp[1]) return null;
 
   return [curTemp[0] ?? null, newOpTemp, curTemp[2] ?? null];
+}
+
+/**
+ * The operating temperature an altitude change re-derives from the
+ * winds-aloft temperatures, whether or not it differs from the stored one;
+ * null when no re-derivation applies.
+ */
+function rederivedOpTemp(
+  prev: Parameters<typeof applyOpTempForAltitudeChange>[0],
+  updates: Parameters<typeof applyOpTempForAltitudeChange>[1]
+): number | null {
+  if (updates.altitude === undefined) return null;
+  if (updates.altitude[1] === prev.altitude?.[1]) return null;
+  if (updates.temp !== undefined) return null;
+  const aloftTemps = (updates.wind ?? prev.wind)?.[2];
+  return interpolateOpTempFromAloft(updates.altitude[1], aloftTemps);
+}
+
+/**
+ * A re-derivation of the operating temperature after an altitude change
+ * (#117), with what it means for the pilot: whether it replaced a value the
+ * pilot entered, and whether the altitude was outside the winds-aloft
+ * temperatures so the value snapped to the nearest one.
+ */
+export interface OpTempChange {
+  value: number;
+  altitudeFt: number;
+  /** The pilot's entry it replaced, or null if it replaced fetched/derived data. */
+  replaced: number | null;
+  /** The winds-aloft altitude it snapped to, or null if interpolated. */
+  snappedToFt: number | null;
+}
+
+/**
+ * Describes the operating temperature an altitude change re-derives, or null
+ * if none applies (`applyOpTempForAltitudeChange` writes it only when it
+ * differs from the stored value). `fetchedOpTemp` is the operating temperature the
+ * latest weather fetch applied, and `previous` the re-derivation before this
+ * one; a prior value equal to either is not the pilot's entry.
+ */
+export function describeOpTempChange(
+  prev: Parameters<typeof applyOpTempForAltitudeChange>[0],
+  updates: Parameters<typeof applyOpTempForAltitudeChange>[1],
+  context: { fetchedOpTemp?: number | null; previous?: OpTempChange | null }
+): OpTempChange | null {
+  // Described even when the stored temperature already equals the new one:
+  // the value may still be snapped to the edge of the winds-aloft table.
+  const value = rederivedOpTemp(prev, updates);
+  const altitudeFt = updates.altitude?.[1];
+  if (value === null || typeof altitudeFt !== "number") return null;
+
+  const prior = prev.temp?.[1] ?? null;
+  const replaced =
+    prior === null ||
+    prior === value ||
+    prior === context.fetchedOpTemp ||
+    prior === context.previous?.value
+      ? null
+      : prior;
+
+  const aloftTemps = (updates.wind ?? prev.wind)?.[2] ?? [];
+  const available = TARGET_ALTITUDES_FT.filter(
+    (_, i) => typeof aloftTemps[i] === "number" && Number.isFinite(aloftTemps[i])
+  );
+  const lowest = available[0];
+  const highest = available[available.length - 1];
+  const snappedToFt =
+    altitudeFt < lowest ? lowest : altitudeFt > highest ? highest : null;
+
+  return { value, altitudeFt, replaced, snappedToFt };
+}
+
+const formatFt = (ft: number) => `${ft.toLocaleString("en-US")} ft`;
+
+/**
+ * Notifications about an operating-temperature re-derivation, while the
+ * worksheet still holds it (same operating altitude and temperature):
+ * a Caution when it replaced the pilot's entry (a Substitution), and a
+ * Caution when the altitude was outside the winds-aloft temperatures.
+ */
+export function opTempChangeNotifications(
+  state: {
+    altitude: [number | null, number | null, number | null];
+    temp: [number | null, number | null, number | null];
+  },
+  change: OpTempChange | null
+): Notification[] {
+  if (
+    !change ||
+    state.altitude[1] !== change.altitudeFt ||
+    state.temp[1] !== change.value
+  ) {
+    return [];
+  }
+  const subject = fieldSubject("temp", 1);
+  const out: Notification[] = [];
+  if (change.replaced !== null) {
+    out.push({
+      level: "caution",
+      subject,
+      message: `Operating temperature re-derived from winds aloft at ${formatFt(
+        change.altitudeFt
+      )} (${change.value}°C), replacing your entry of ${change.replaced}°C. Re-enter it to keep your value.`,
+    });
+  }
+  if (change.snappedToFt !== null) {
+    const side = change.altitudeFt > change.snappedToFt ? "above" : "below";
+    out.push({
+      level: "caution",
+      subject,
+      message: `Operating altitude ${formatFt(
+        change.altitudeFt
+      )} is ${side} the winds-aloft temperatures; using the ${formatFt(
+        change.snappedToFt
+      )} temperature.`,
+    });
+  }
+  return out;
 }
 
 export type AreaOfOpsPositionSource = "user" | "midpoint" | "none";
@@ -111,7 +231,7 @@ export interface AreaOfOpsWeather {
   };
   opTemp: number | null;
   opAltimeter: number | null;
-  warnings: string[];
+  notifications: Notification[];
 }
 
 export function greatCircleMidpoint(
@@ -163,7 +283,11 @@ function emptyWindsAloft() {
 }
 
 export function buildAreaOfOpsWeather(opts: BuildOptions): AreaOfOpsWeather {
-  const warnings: string[] = [];
+  const notifications: Notification[] = [];
+  // Substitutions that affect every area-of-ops value (midpoint position,
+  // snapped forecast time). They are attached to each field the fetch fills,
+  // so values computed from those fields carry their marker.
+  const areaWide: NotificationDraft[] = [];
 
   let position: [number, number] | null = null;
   let positionSource: AreaOfOpsPositionSource = "none";
@@ -177,43 +301,46 @@ export function buildAreaOfOpsWeather(opts: BuildOptions): AreaOfOpsWeather {
       opts.arrAirportLatLon
     );
     positionSource = "midpoint";
-    warnings.push(
-      "Operating area position not entered; using midpoint of departure↔arrival airports"
-    );
+    areaWide.push({
+      level: "caution",
+      message:
+        "Operating area position not entered; winds aloft and operating conditions use the midpoint of the departure↔arrival airports",
+    });
   } else {
-    warnings.push(
-      "Operating area weather skipped: position and airport coordinates unavailable"
-    );
     return {
       position: null,
       positionSource,
       windsAloft: emptyWindsAloft(),
       opTemp: null,
       opAltimeter: null,
-      warnings,
+      notifications: [noPositionWarning()],
     };
   }
 
   const { idx, deltaMs } = pickClosestTimeIdx(opts.raw, opts.midTime);
   if (idx < 0) {
-    warnings.push("Open-Meteo response had no hourly times");
     return {
       position,
       positionSource,
       windsAloft: emptyWindsAloft(),
       opTemp: null,
       opAltimeter: null,
-      warnings,
+      notifications: [
+        // Nothing was filled, so the midpoint Caution stays on the step.
+        ...areaWide.map((n) => withSubject(n, stepSubject("weather"))),
+        ...areaOfOpsUnavailable("Open-Meteo response had no hourly times"),
+      ],
     };
   }
   if (deltaMs > TIME_SNAP_THRESHOLD_MS) {
-    warnings.push(
-      `Operating area forecast time snapped to ${
+    areaWide.push({
+      level: "caution",
+      message: `Operating area forecast time snapped to ${
         opts.raw.hourly.time[idx]
       }Z (Δt = ${Math.round(deltaMs / 60000)} min from requested ${opts.midTime
         .toISOString()
-        .slice(0, 16)}Z)`
-    );
+        .slice(0, 16)}Z)`,
+    });
   }
 
   const sample = buildSampleAtTime(opts.raw, idx);
@@ -224,23 +351,46 @@ export function buildAreaOfOpsWeather(opts: BuildOptions): AreaOfOpsWeather {
     wind.direction[i] = r.wdir;
     wind.speed[i] = r.wspd;
     wind.temp[i] = r.temp;
-    warnings.push(...r.warnings);
+    notifications.push(
+      ...r.notes.map((n) => withSubject(n, fieldSubject("wind", i)))
+    );
   });
 
   let opTemp: number | null = null;
   if (typeof opts.opAltitudeFt === "number" && opts.opAltitudeFt > 0) {
     const r = interpolateAtAltitude(opts.opAltitudeFt, sample);
     opTemp = r.temp;
-    warnings.push(...r.warnings);
+    notifications.push(
+      ...r.notes.map((n) => withSubject(n, fieldSubject("temp", 1)))
+    );
   }
 
   const pressureMsl = (opts.raw.hourly.pressure_msl as number[] | undefined)?.[
     idx
   ];
   const opAltimeter =
-    typeof pressureMsl === "number"
+    typeof pressureMsl === "number" && Number.isFinite(pressureMsl)
       ? Math.round(pressureMsl * HPA_TO_INHG * 100) / 100
       : null;
+  if (opAltimeter === null) {
+    notifications.push({
+      level: "warning",
+      subject: fieldSubject("altimeter", 1),
+      message:
+        "Operating area forecast had no sea-level pressure; enter the operating altimeter manually",
+    });
+  }
+
+  const filled = [
+    ...TARGET_ALTITUDES_FT.map((_, i) => ({
+      subject: fieldSubject("wind", i),
+      value: [wind.direction[i], wind.speed[i], wind.temp[i]],
+    })),
+    { subject: fieldSubject("temp", 1), value: [opTemp] },
+    { subject: fieldSubject("altimeter", 1), value: [opAltimeter] },
+  ]
+    .filter(({ value }) => value.some((v) => v !== null))
+    .map(({ subject }) => subject);
 
   return {
     position,
@@ -248,6 +398,31 @@ export function buildAreaOfOpsWeather(opts: BuildOptions): AreaOfOpsWeather {
     windsAloft: wind,
     opTemp,
     opAltimeter,
-    warnings,
+    notifications: [
+      ...areaWide.flatMap((n) => filled.map((subject) => withSubject(n, subject))),
+      ...notifications,
+    ],
   };
+}
+
+/** Warning raised when there is no position to fetch area-of-ops weather for. */
+export function noPositionWarning(): Notification {
+  return {
+    level: "warning",
+    subject: fieldSubject("position"),
+    message:
+      "Operating area weather skipped: position and airport coordinates unavailable. Enter an operating area position and fetch again.",
+  };
+}
+
+/**
+ * Warnings for every area-of-ops field that could not be filled: the
+ * winds-aloft table and the operating temperature and altimeter.
+ */
+export function areaOfOpsUnavailable(reason: string): Notification[] {
+  return [
+    fieldSubject("wind"),
+    fieldSubject("temp", 1),
+    fieldSubject("altimeter", 1),
+  ].map((subject) => ({ level: "warning" as const, subject, message: reason }));
 }
