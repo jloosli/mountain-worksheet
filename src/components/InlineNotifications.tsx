@@ -56,7 +56,10 @@ interface InlineNotificationsProps {
   className?: string;
 }
 
-/** The notifications about one Subject, shown next to it, most urgent first. */
+/**
+ * The notifications about one Subject, shown next to it, most urgent first,
+ * in a polite live region so newly raised ones are announced.
+ */
 export default function InlineNotifications({
   notifications,
   subject,
@@ -65,19 +68,24 @@ export default function InlineNotifications({
   const mine = notificationsFor(notifications, subject).sort(
     (a, b) => LEVEL_ORDER[a.level] - LEVEL_ORDER[b.level]
   );
-  if (mine.length === 0) return null;
+  // A polite live region, mounted even when empty so screen readers hear a
+  // notification raised later (e.g. by a weather fetch) without moving focus.
   return (
-    <ul id={notificationsDomId(subject)} className={`space-y-1 ${className}`}>
-      {mine.map((n, i) => (
-        <li
-          key={i}
-          data-level={n.level}
-          className={`rounded border px-2 py-1 text-xs ${LEVEL_STYLE[n.level]}`}
-        >
-          <span className="font-semibold">{LEVEL_LABEL[n.level]}:</span>{" "}
-          {n.message}
-        </li>
-      ))}
-    </ul>
+    <div aria-live="polite" className={mine.length === 0 ? "contents" : className}>
+      {mine.length > 0 && (
+        <ul id={notificationsDomId(subject)} className="space-y-1">
+          {mine.map((n, i) => (
+            <li
+              key={i}
+              data-level={n.level}
+              className={`rounded border px-2 py-1 text-xs ${LEVEL_STYLE[n.level]}`}
+            >
+              <span className="font-semibold">{LEVEL_LABEL[n.level]}:</span>{" "}
+              {n.message}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }

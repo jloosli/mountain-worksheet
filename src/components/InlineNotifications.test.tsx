@@ -42,14 +42,30 @@ function Field({ notifications }: { notifications: Notification[] }) {
 }
 
 describe("InlineNotifications", () => {
-  it("renders nothing when its Subject has no notifications", () => {
+  it("keeps an empty live region mounted when its Subject has no notifications", () => {
     const { container } = render(
       <InlineNotifications
         notifications={[elsewhere]}
         subject={fieldSubject("temp", 2)}
       />
     );
-    expect(container).toBeEmptyDOMElement();
+    const region = container.firstElementChild as HTMLElement;
+    expect(region).toHaveAttribute("aria-live", "polite");
+    expect(region).toBeEmptyDOMElement();
+  });
+
+  it("announces a newly raised Warning politely, inside a list in the live region", () => {
+    const subject = fieldSubject("temp", 2);
+    const { container, rerender } = render(
+      <InlineNotifications notifications={[]} subject={subject} />
+    );
+    const region = container.firstElementChild as HTMLElement;
+    rerender(<InlineNotifications notifications={[warning]} subject={subject} />);
+    // Same node: a live region must exist before its content changes.
+    expect(container.firstElementChild).toBe(region);
+    expect(region).toHaveAttribute("aria-live", "polite");
+    expect(region.querySelector("ul > li")).toHaveTextContent(/BOI: no METAR or TAF/);
+    expect(screen.getByRole("list")).toBeInTheDocument();
   });
 
   it("shows only the notifications about its Subject, labelled by level", () => {
