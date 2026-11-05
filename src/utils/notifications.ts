@@ -249,8 +249,9 @@ const AREA_WEATHER_FIELDS: FieldSubject[] = [
 /**
  * A Warning on each fetched weather field that still holds the fetched value
  * after the airport, date or time it was fetched for has changed. An
- * airport's fields go stale when that airport changes; every fetched field
- * goes stale when the date or time changes. Each Warning clears once the
+ * airport's fields (including its runway length) go stale when that airport
+ * changes; every fetched weather field goes stale when the date or time
+ * changes. Each Warning clears once the
  * pilot enters their own value or weather is fetched for the current inputs.
  * Nothing is blanked. Field Cautions from the fetch still follow their values
  * (`deriveNotifications`).
@@ -270,7 +271,11 @@ export function staleFetchNotifications(
   ([0, 1] as const).forEach((i) => {
     if (!timeChanged && !airportChanged(i)) return;
     stale.push({
-      subjects: AIRPORT_WEATHER_FIELDS(i === 0 ? 0 : 2),
+      subjects: [
+        ...AIRPORT_WEATHER_FIELDS(i === 0 ? 0 : 2),
+        // A runway length belongs to the airport, not the time.
+        ...(airportChanged(i) ? [{ kind: "field" as const, field: "rwy" as const, index: i }] : []),
+      ],
       message: `Fetched for ${normalizeAirportCode(fetchedFor.airport[i])} at ${when}; refetch weather.`,
     });
   });

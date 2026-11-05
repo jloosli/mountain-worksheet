@@ -326,6 +326,17 @@ describe("staleFetchNotifications", () => {
     );
   });
 
+  it("warns on a fetched runway length when its airport changes, but not when only the time does", () => {
+    const withRunways = fetchFor([], { ...applied, rwy: [5500, 5861] });
+    const state = { ...fetched, rwy: [5500, 5861] as WorksheetData["rwy"] };
+    const moved = { ...state, airport: ["KOGD", "KSLC"] as WorksheetData["airport"] };
+    expect(subjects(staleFetchNotifications(moved, withRunways))).toContain("field:rwy.1");
+    expect(subjects(staleFetchNotifications(moved, withRunways))).not.toContain("field:rwy.0");
+    expect(
+      subjects(staleFetchNotifications({ ...state, time: "20:00" }, withRunways))
+    ).not.toContain("field:rwy.0");
+  });
+
   it("leaves a field the pilot has since changed", () => {
     const state = {
       ...fetched,

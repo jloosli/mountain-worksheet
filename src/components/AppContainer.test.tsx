@@ -254,6 +254,58 @@ describe("AppContainer — rejected entries and weather fetches", () => {
   });
 });
 
+describe("AppContainer — results from stale fetched weather (#222)", () => {
+  const mockFetch = fetchWorksheetWeather as jest.MockedFunction<
+    typeof fetchWorksheetWeather
+  >;
+
+  it("withholds departure results, including runway remaining, once the departure airport changes", async () => {
+    const data = {
+      temp: [20, null, null],
+      altimeter: [29.92, null, null],
+      altitude: [4473, -1, null],
+      rwy: [5500, null],
+    } as Partial<import("@/utils/types").WorksheetData>;
+    mockFetch.mockImplementation(async (worksheet) => ({
+      data,
+      result: {
+        fetchedFor: {
+          airport: [worksheet.airport[0], worksheet.airport[1]],
+          date: worksheet.date,
+          time: worksheet.time,
+        },
+        applied: data,
+        notifications: [],
+      },
+    }));
+    render(<AppContainer />);
+    fireEvent.change(screen.getByLabelText("Aircraft Model"), {
+      target: { value: "C182T" },
+    });
+    fireEvent.change(screen.getByLabelText("Aircraft Takeoff Weight (lbs)"), {
+      target: { value: "2800" },
+    });
+    fireEvent.change(screen.getByLabelText("Departure Airport"), {
+      target: { value: "KOGD" },
+    });
+    fireEvent.change(screen.getByLabelText("Arrival Airport"), {
+      target: { value: "KLGU" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Fetch weather/i }));
+    await waitFor(() =>
+      expect(screen.getAllByLabelText("Temperature")[0]).toHaveValue(20)
+    );
+    expect(onScreen().queryAllByText(/checked \(Warning\)/)).toHaveLength(0);
+
+    fireEvent.change(screen.getByLabelText("Departure Airport"), {
+      target: { value: "KSLC" },
+    });
+    const withheld = onScreen().getAllByText(/checked \(Warning\)/);
+    expect(withheld.length).toBeGreaterThan(0);
+    expect(withheld.map((e) => e.textContent).join(" ")).toMatch(/departure runway length/);
+  });
+});
+
 describe("AppContainer — performance notifications (#222)", () => {
   it("shows a weight Warning at the weight input, marks Sortie Details, and clears when fixed", () => {
     const { container } = render(<AppContainer />);
