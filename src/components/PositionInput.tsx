@@ -10,6 +10,8 @@ interface PositionInputProps {
   rawValue: string;
   cachedPosition: [number | null, number | null];
   onChange: (route: string, position: [number | null, number | null]) => void;
+  /** ARIA props for the input, e.g. from `notificationA11yProps`. */
+  inputA11yProps?: { "aria-invalid"?: true; "aria-describedby"?: string };
 }
 
 const formatLatLon = (lat: number, lon: number): string =>
@@ -59,6 +61,7 @@ export default function PositionInput({
   rawValue,
   cachedPosition,
   onChange,
+  inputA11yProps,
 }: PositionInputProps) {
   const [localRaw, setLocalRaw] = useState(rawValue);
   const lastPushed = useRef(rawValue);
@@ -159,6 +162,7 @@ export default function PositionInput({
         value={localRaw}
         onChange={(e) => setLocalRaw(e.target.value.toUpperCase())}
         className="w-full px-3 py-2 border rounded-md dark:bg-black/[.15] dark:border-white/[.145]"
+        {...inputA11yProps}
       />
       {hint && (
         <div

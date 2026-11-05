@@ -4,13 +4,21 @@ import { ChangeEvent, useCallback, useEffect, useMemo, useState } from "react";
 import aircraftData from "@/data/aircraft.json";
 import type { WorksheetData } from "@/utils/types";
 import PositionInput from "@/components/PositionInput";
+import InlineNotifications, {
+  notificationA11yProps,
+} from "@/components/InlineNotifications";
+import { fieldSubject, type Notification } from "@/utils/notifications";
 import { buildSkyvectorUrl } from "@/utils/skyvector";
 import { normalizeAirportCode } from "@/utils/airportCode";
 
 interface SortieInfoProps {
   initialData?: WorksheetData;
   onUpdate: (data: Partial<WorksheetData>) => void;
+  /** All notifications in force; each is shown next to its Subject. */
+  notifications?: readonly Notification[];
 }
+
+const POSITION_SUBJECT = fieldSubject("position");
 
 type SortieInfoData = Pick<
   WorksheetData,
@@ -29,7 +37,11 @@ type SortieInfoData = Pick<
   | "mtnCert"
 >;
 
-export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
+export default function SortieInfo({
+  initialData,
+  onUpdate,
+  notifications = [],
+}: SortieInfoProps) {
   const [formData, setFormData] = useState<SortieInfoData>({
     pilot: "",
     date: "",
@@ -400,6 +412,11 @@ export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
             rawValue={formData.route || ""}
             cachedPosition={formData.position ?? [null, null]}
             onChange={handlePositionChange}
+            inputA11yProps={notificationA11yProps(notifications, POSITION_SUBJECT)}
+          />
+          <InlineNotifications
+            notifications={notifications}
+            subject={POSITION_SUBJECT}
           />
 
           <div className="space-y-2">

@@ -1,6 +1,7 @@
 import { render, screen, fireEvent, act } from "@testing-library/react";
 import SortieInfo from "./SortieInfo";
 import type { WorksheetData } from "@/utils/types";
+import { fieldSubject } from "@/utils/notifications";
 
 const defaultInitialData: WorksheetData = {
   pilot: "",
@@ -344,5 +345,24 @@ describe("SortieInfo - airport code whitespace (#208)", () => {
     mockOnUpdate.mockClear();
     fireEvent.blur(departure);
     expect(mockOnUpdate).not.toHaveBeenCalled();
+  });
+
+  it("shows a position notification next to the Area of Operations field", () => {
+    render(
+      <SortieInfo
+        onUpdate={mockOnUpdate}
+        initialData={defaultInitialData}
+        notifications={[
+          {
+            level: "warning",
+            subject: fieldSubject("position"),
+            message: "Operating area weather skipped: enter a position",
+          },
+        ]}
+      />
+    );
+    const input = screen.getByLabelText("Area of Operations (position)");
+    expect(input).toHaveAttribute("aria-invalid", "true");
+    expect(input).toHaveAccessibleDescription(/Operating area weather skipped/);
   });
 });
