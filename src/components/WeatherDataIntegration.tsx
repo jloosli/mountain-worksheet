@@ -426,7 +426,10 @@ export default function WeatherDataIntegration({
 
       {renderButton && renderButton(buttonProps)}
 
-      <WeatherWarningsPanel warnings={apiState.warnings} />
+      {/* Width-matched to the ActionBar; stopgap until the notification model (#219) replaces this panel. */}
+      <div className="mx-auto w-full max-w-5xl px-4 md:px-6 print:hidden">
+        <WeatherWarningsPanel warnings={apiState.warnings} />
+      </div>
 
       {/* Loading Modal */}
       <WeatherLoadingModal
