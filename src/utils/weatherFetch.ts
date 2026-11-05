@@ -164,6 +164,7 @@ export async function fetchWorksheetWeather(
     airport: [enteredDeparture, enteredArrival],
     date: worksheet.date,
     time: worksheet.time,
+    duration: worksheet.duration,
   };
 
   try {

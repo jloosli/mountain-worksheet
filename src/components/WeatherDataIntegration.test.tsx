@@ -107,7 +107,7 @@ describe("WeatherDataIntegration", () => {
 
   describe("fetching", () => {
     const fetchResult: WeatherFetchResult = {
-      fetchedFor: { airport: ["KORD", "KLAX"], date: "2024-01-15", time: "12:00" },
+      fetchedFor: { airport: ["KORD", "KLAX"], date: "2024-01-15", time: "12:00", duration: null },
       applied: { temp: [20, null, null] },
       notifications: [
         {

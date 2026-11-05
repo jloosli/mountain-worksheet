@@ -46,7 +46,7 @@ const fetchFor = (
   notifications: Notification[],
   applied: Partial<WorksheetData> = {}
 ): WeatherFetchResult => ({
-  fetchedFor: { airport: ["KOGD", "KLGU"], date: "2026-05-12", time: "18:00" },
+  fetchedFor: { airport: ["KOGD", "KLGU"], date: "2026-05-12", time: "18:00", duration: null },
   applied,
   notifications,
 });
@@ -213,6 +213,24 @@ describe("deriveNotifications", () => {
     expect(deriveNotifications({ ...base, time: "19:00" }, result)).toEqual([]);
   });
 
+  it("drops step notifications and field Warnings when the duration changes", () => {
+    const step: Notification = {
+      level: "warning",
+      subject: stepSubject("weather"),
+      message: "no TAF period covers the arrival time",
+    };
+    expect(deriveNotifications({ ...base, duration: 3 }, fetchFor([step]))).toEqual([]);
+  });
+
+  it("treats a blank and a zero duration as the same fetch input", () => {
+    const step: Notification = {
+      level: "warning",
+      subject: stepSubject("weather"),
+      message: "fetch failed",
+    };
+    expect(deriveNotifications({ ...base, duration: 0 }, fetchFor([step]))).toEqual([step]);
+  });
+
   it("treats airport codes case- and whitespace-insensitively when comparing fetch inputs", () => {
     const step: Notification = {
       level: "warning",
@@ -324,6 +342,35 @@ describe("staleFetchNotifications", () => {
     expect(list.find((n) => n.subject.kind === "field" && n.subject.field === "wind")?.message).toBe(
       "Fetched for 2026-05-12 18:00; refetch weather."
     );
+  });
+
+  // The arrival temperature is fetched for departure time + duration and the
+  // operating temperature for the midpoint, so a duration change leaves the
+  // landing and climb calculations on temperatures for a different time.
+  it("warns on the arrival and area fields, not departure, when the duration changes", () => {
+    const list = staleFetchNotifications({ ...fetched, duration: 3 }, fetch);
+    expect(subjects(list)).toEqual([
+      "field:temp.2",
+      "field:altimeter.2",
+      "field:altitude.2",
+      "field:temp.1",
+      "field:altimeter.1",
+      "field:wind.0",
+      "field:turb",
+    ]);
+    expect(list[0]).toEqual({
+      level: "warning",
+      subject: fieldSubject("temp", 2),
+      message: "Fetched for KLGU at 2026-05-12 18:00 with no duration; refetch weather.",
+    });
+    const fetchedWith2h = {
+      ...fetch,
+      fetchedFor: { ...fetch.fetchedFor, duration: 2 },
+    };
+    expect(
+      staleFetchNotifications({ ...fetched, duration: 3 }, fetchedWith2h)[0].message
+    ).toBe("Fetched for KLGU at 2026-05-12 18:00 with a 2 h duration; refetch weather.");
+    expect(staleFetchNotifications({ ...fetched, duration: 2 }, fetchedWith2h)).toEqual([]);
   });
 
   it("warns on a fetched runway length when its airport changes, but not when only the time does", () => {

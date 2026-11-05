@@ -13,7 +13,7 @@ Pilots were not being told when the worksheet used substitute data or failed to 
 | What happened | Level |
 |---|---|
 | Couldn't fetch or compute something; input invalid or beyond a hard limit | Warning |
-| Fetched weather no longer matches the inputs it was fetched for (an airport, date or time changed); raised on each fetched field still holding the fetched value, kept alongside that field's Caution, and cleared by a refetch or the pilot's own value. The data is not blanked | Warning |
+| Fetched weather no longer matches the inputs it was fetched for (an airport, date, time or duration changed); raised on each fetched field still holding the fetched value, kept alongside that field's Caution, and cleared by a refetch or the pilot's own value. The data is not blanked | Warning |
 | A Substitution: stale or nearest forecast, snapped time or altitude, midpoint position, averaged table gaps, extrapolation beyond tables, an auto-flag computed with a weaker threshold, an Unknown airport | Caution |
 | An announced auto-correction; a value within limits but close to one; a Non-reporting airport | Advisory |
 

@@ -77,7 +77,7 @@ function fetchOverMidpoint() {
   const applied = mergeWeatherData(worksheet, mapping.data, true);
   const state = { ...worksheet, ...applied } as WorksheetData;
   const fetch: WeatherFetchResult = {
-    fetchedFor: { airport: worksheet.airport, date: worksheet.date, time: worksheet.time },
+    fetchedFor: { airport: worksheet.airport, date: worksheet.date, time: worksheet.time, duration: worksheet.duration },
     applied,
     notifications: mapping.notifications,
   };

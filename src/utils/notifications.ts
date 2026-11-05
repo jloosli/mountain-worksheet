@@ -145,8 +145,16 @@ export function countByLevel(notifications: readonly Notification[]): LevelCount
 
 /** The latest weather fetch, as needed to derive its notifications. */
 export interface WeatherFetchResult {
-  /** The sortie inputs the fetch was made for. */
-  fetchedFor: { airport: [string, string]; date: string; time: string };
+  /**
+   * The sortie inputs the fetch was made for. `duration` sets the arrival
+   * time (departure + duration) and the area-of-ops midpoint time.
+   */
+  fetchedFor: {
+    airport: [string, string];
+    date: string;
+    time: string;
+    duration: number | null;
+  };
   /** The worksheet values the fetch applied (after merging). */
   applied: Partial<WorksheetData>;
   notifications: Notification[];
@@ -179,6 +187,23 @@ function sameValue(a: unknown, b: unknown): boolean {
   return JSON.stringify(a) === JSON.stringify(b);
 }
 
+/**
+ * Hours from departure to arrival as the weather fetch uses them: a blank,
+ * zero or invalid duration all mean arrival at the departure time.
+ */
+function effectiveDuration(duration: number | null | undefined): number {
+  return typeof duration === "number" && Number.isFinite(duration) && duration > 0
+    ? duration
+    : 0;
+}
+
+function durationChanged(
+  state: WorksheetData,
+  fetchedFor: WeatherFetchResult["fetchedFor"]
+): boolean {
+  return effectiveDuration(state.duration) !== effectiveDuration(fetchedFor.duration);
+}
+
 function fetchInputsUnchanged(
   state: WorksheetData,
   fetchedFor: WeatherFetchResult["fetchedFor"]
@@ -189,7 +214,8 @@ function fetchInputsUnchanged(
     normalizeAirportCode(state.airport[1]) ===
       normalizeAirportCode(fetchedFor.airport[1]) &&
     state.date === fetchedFor.date &&
-    state.time === fetchedFor.time
+    state.time === fetchedFor.time &&
+    !durationChanged(state, fetchedFor)
   );
 }
 
@@ -201,8 +227,8 @@ function fetchInputsUnchanged(
  * - on a field, a Warning holds while the field is blank (the pilot clears it
  *   by entering a value); a Caution or Advisory holds while the field still
  *   holds the value the fetch applied (the pilot clears it by overriding);
- * - Warnings and step notifications also need the fetch's airports, date and
- *   time to be unchanged, since they describe that fetch. A field Caution
+ * - Warnings and step notifications also need the fetch's airports, date,
+ *   time and duration to be unchanged, since they describe that fetch. A field Caution
  *   follows the value it describes, so it survives an input change.
  */
 export function deriveNotifications(
@@ -251,7 +277,9 @@ const AREA_WEATHER_FIELDS: FieldSubject[] = [
  * after the airport, date or time it was fetched for has changed. An
  * airport's fields (including its runway length) go stale when that airport
  * changes; every fetched weather field goes stale when the date or time
- * changes. Each Warning clears once the
+ * changes. A duration change moves the arrival time (departure + duration)
+ * and the area-of-ops midpoint time, so it stales the arrival airport's
+ * weather and the area weather, but not the departure's. Each Warning clears once the
  * pilot enters their own value or weather is fetched for the current inputs.
  * Nothing is blanked. Field Cautions from the fetch still follow their values
  * (`deriveNotifications`).
@@ -262,14 +290,27 @@ export function staleFetchNotifications(
 ): Notification[] {
   if (!fetch) return [];
   const { fetchedFor, applied } = fetch;
-  const when = `${fetchedFor.date} ${fetchedFor.time}`;
-  const timeChanged = state.date !== fetchedFor.date || state.time !== fetchedFor.time;
+  const departureChanged =
+    state.date !== fetchedFor.date || state.time !== fetchedFor.time;
+  const durationMoved = durationChanged(state, fetchedFor);
+  const fetchedDuration = effectiveDuration(fetchedFor.duration);
+  const when =
+    `${fetchedFor.date} ${fetchedFor.time}` +
+    (durationMoved
+      ? fetchedDuration > 0
+        ? ` with a ${fetchedDuration} h duration`
+        : " with no duration"
+      : "");
+  // Departure weather is for the departure time; arrival and area weather
+  // are for times that also depend on the duration.
+  const timeChanged = (i: 0 | 1) => departureChanged || (i === 1 && durationMoved);
+  const areaTimeChanged = departureChanged || durationMoved;
   const airportChanged = (i: 0 | 1) =>
     normalizeAirportCode(state.airport[i]) !== normalizeAirportCode(fetchedFor.airport[i]);
 
   const stale: { subjects: FieldSubject[]; message: string }[] = [];
   ([0, 1] as const).forEach((i) => {
-    if (!timeChanged && !airportChanged(i)) return;
+    if (!timeChanged(i) && !airportChanged(i)) return;
     stale.push({
       subjects: [
         ...AIRPORT_WEATHER_FIELDS(i === 0 ? 0 : 2),
@@ -279,7 +320,7 @@ export function staleFetchNotifications(
       message: `Fetched for ${normalizeAirportCode(fetchedFor.airport[i])} at ${when}; refetch weather.`,
     });
   });
-  if (timeChanged) {
+  if (areaTimeChanged) {
     stale.push({ subjects: AREA_WEATHER_FIELDS, message: `Fetched for ${when}; refetch weather.` });
   }
 

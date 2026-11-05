@@ -158,6 +158,7 @@ describe("fetchWorksheetWeather", () => {
       airport: ["KORD", "KXYZ"],
       date: "2026-05-12",
       time: "16:00",
+      duration: worksheet.duration,
     });
     const state = { ...worksheet, ...data } as WorksheetData;
     const live = deriveNotifications(state, result);
