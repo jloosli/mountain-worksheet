@@ -45,6 +45,8 @@ Weather-data mappers in `src/utils/weatherDataMapper.ts` must also return new ar
 
 ## Development
 
+**Always create a new git worktree before making changes.** Never edit files directly in the main checkout. Branch off an up-to-date `main` into its own worktree (e.g. `git worktree add ../mountain-worksheet-<branch> -b <branch> main`), do all work there, and remove the worktree once the PR is merged. The main checkout may hold someone else's in-progress, uncommitted work. Run `npm install` in the new worktree before running tests or the build.
+
 ```bash
 npm run dev          # Dev server (Turbopack)
 npm run build        # Production build
