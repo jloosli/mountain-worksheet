@@ -169,4 +169,40 @@ describe("classifyAirmets", () => {
     expect(r.cielVis).toBe(false);
     expect(r.mtnObsc).toBe(false);
   });
+
+  it("raises a Caution on a flag whose hazard has no G-AIRMET within 3 hr while another hazard does", () => {
+    const staleTurb: GAirmetFeature = {
+      ...turbAirmet,
+      validTime: "2026-05-12T22:00:00.000Z",
+    };
+    const r = classifyAirmets(
+      [staleTurb, mtnObscAirmet],
+      [41, -112],
+      new Date("2026-05-12T16:00:00Z")
+    );
+    expect(r.turb).toBe(false);
+    expect(r.mtnObsc).toBe(true);
+    expect(r.notifications).toEqual([
+      {
+        level: "caution",
+        subject: fieldSubject("turb"),
+        message: expect.stringMatching(/no turbulence G-AIRMET within 3 hr/i),
+      },
+    ]);
+  });
+
+  it("raises an Advisory on the weather step when flags are cleared because no relevant G-AIRMETs are in effect", () => {
+    const r = classifyAirmets(
+      [],
+      [41, -112],
+      new Date("2026-05-12T16:00:00Z")
+    );
+    expect(r.notifications).toEqual([
+      {
+        level: "advisory",
+        subject: stepSubject("weather"),
+        message: expect.stringMatching(/no turbulence, IFR or mountain obscuration G-AIRMETs/i),
+      },
+    ]);
+  });
 });
