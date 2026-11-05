@@ -18,6 +18,19 @@ import type {
   AirportResponse,
 } from "./aviationWeatherApi";
 import type { WorksheetData } from "@/utils/types";
+import {
+  fieldSubject,
+  stepSubject,
+  subjectKey,
+  type Notification,
+} from "@/utils/notifications";
+import type { AreaOfOpsWeather } from "@/utils/areaOfOpsWeather";
+
+const warnedSubjects = (notifications: Notification[]) =>
+  notifications
+    .filter((n) => n.level === "warning")
+    .map((n) => subjectKey(n.subject))
+    .sort();
 
 describe("Weather Data Mapper", () => {
   describe("mapRunwayData", () => {
@@ -381,32 +394,142 @@ describe("Weather Data Mapper", () => {
       expect(result.data.temp).toBeDefined();
       expect(result.data.altimeter).toBeDefined();
       expect(result.data.rwy).toBeDefined();
-      expect(result.errors).toHaveLength(0);
-    });
-
-    it("should handle missing data gracefully", () => {
-      const emptyApiData = {};
-
-      const result = mapWeatherDataToWorksheet(emptyApiData, null, null);
-
-      expect(result.success).toBe(true);
-      expect(result.warnings).toContain("No wind/temperature data available");
-      expect(result.warnings).toContain(
-        "No METAR/TAF data available for airport-specific temperature/pressure"
-      );
-      expect(result.warnings).toContain(
-        "No airport data available for runway information"
+      expect(warnedSubjects(result.notifications)).not.toContain(
+        "field:temp.0"
       );
     });
 
-    it("should validate data when validation is enabled", () => {
+    it("leaves every field it couldn't fill blank with a Warning", () => {
       const result = mapWeatherDataToWorksheet({}, null, null, {
-        validateData: true,
+        departureAirport: "KORD",
+        arrivalAirport: "KLAX",
+        flightDate: "2024-01-15",
+        flightTime: "12:00",
+        opAltitudeFt: 9000,
       });
 
       expect(result.success).toBe(true);
-      // No areaOfOps → wind warning is emitted
-      expect(result.warnings.length).toBeGreaterThan(0);
+      expect(warnedSubjects(result.notifications)).toEqual(
+        [
+          "field:altimeter.0",
+          "field:altimeter.1",
+          "field:altimeter.2",
+          "field:altitude.0",
+          "field:altitude.2",
+          "field:rwy.0",
+          "field:rwy.1",
+          "field:temp.0",
+          "field:temp.1",
+          "field:temp.2",
+          "field:wind",
+        ].sort()
+      );
+      // Blank, not "don't update": an earlier fetch's values must not survive.
+      expect(result.data.temp).toEqual([null, null, null]);
+      expect(result.data.altimeter).toEqual([null, null, null]);
+      expect(result.data.rwy).toEqual([null, null]);
+      expect(result.data.altitude).toEqual([null, -1, null]);
+      expect(result.data.wind).toEqual([
+        Array(5).fill(null),
+        Array(5).fill(null),
+        Array(5).fill(null),
+      ]);
+    });
+
+    it("does not expect an operating temperature when no operating altitude is set", () => {
+      const result = mapWeatherDataToWorksheet({}, null, null, {
+        departureAirport: "KORD",
+        arrivalAirport: "KLAX",
+        flightDate: "2024-01-15",
+        flightTime: "12:00",
+      });
+      expect(warnedSubjects(result.notifications)).not.toContain(
+        "field:temp.1"
+      );
+      expect(result.data.temp?.[1]).toBe(-1);
+    });
+
+    it("fills one airport and blanks the other with Warnings when only one airport reports", () => {
+      const result = mapWeatherDataToWorksheet(mockApiData, null, null, {
+        departureAirport: "KORD",
+        arrivalAirport: "KXYZ",
+        flightDate: "2024-01-15",
+        flightTime: "12:00",
+        validateData: true,
+      });
+
+      expect(result.data.temp?.[0]).toBe(21);
+      expect(result.data.altimeter?.[0]).toBeCloseTo(29.92, 2);
+      expect(result.data.rwy?.[0]).toBe(10000);
+      expect(result.data.altitude?.[0]).toBe(Math.round(672 * 3.28084));
+
+      expect(result.data.temp?.[2]).toBeNull();
+      expect(result.data.altimeter?.[2]).toBeNull();
+      expect(result.data.rwy?.[1]).toBeNull();
+      expect(result.data.altitude?.[2]).toBeNull();
+
+      const warned = warnedSubjects(result.notifications);
+      expect(warned).toEqual(
+        expect.arrayContaining([
+          "field:temp.2",
+          "field:altimeter.2",
+          "field:rwy.1",
+          "field:altitude.2",
+        ])
+      );
+      expect(warned).not.toContain("field:temp.0");
+      expect(warned).not.toContain("field:altimeter.0");
+      expect(warned).not.toContain("field:rwy.0");
+      expect(warned).not.toContain("field:altitude.0");
+    });
+
+    it("raises exactly one Warning per blank field, keeping the producer's reason", () => {
+      const result = mapWeatherDataToWorksheet({ metar: [], taf: [] }, null, null, {
+        departureAirport: "KORD",
+        arrivalAirport: "BOI",
+        flightDate: "2024-01-15",
+        flightTime: "12:00",
+      });
+      const onArrivalTemp = result.notifications.filter(
+        (n) => subjectKey(n.subject) === "field:temp.2"
+      );
+      expect(onArrivalTemp).toEqual([
+        {
+          level: "warning",
+          subject: fieldSubject("temp", 2),
+          message: expect.stringMatching(/^BOI: no METAR or TAF/),
+        },
+      ]);
+    });
+
+    it("fills a sea-level field elevation of 0 ft", () => {
+      const result = mapWeatherDataToWorksheet(
+        {
+          airport: [{ ...mockApiData.airport[0], elev: 0 }],
+        },
+        null,
+        null,
+        { departureAirport: "KORD", arrivalAirport: "KORD" }
+      );
+      expect(result.data.altitude?.[0]).toBe(0);
+      expect(warnedSubjects(result.notifications)).not.toContain(
+        "field:altitude.0"
+      );
+    });
+
+    it("passes through request-failure notifications from the batch", () => {
+      const failure: Notification = {
+        level: "warning",
+        subject: stepSubject("weather"),
+        message: "METAR request failed for KORD (500 Internal Server Error)",
+      };
+      const result = mapWeatherDataToWorksheet(
+        { ...mockApiData, notifications: [failure] },
+        null,
+        null,
+        { departureAirport: "KORD", arrivalAirport: "KORD" }
+      );
+      expect(result.notifications).toContainEqual(failure);
     });
 
     it("should handle mapping errors", () => {
@@ -475,7 +598,7 @@ describe("Weather Data Mapper", () => {
       expect(result.success).toBe(true);
       expect(result.data.altimeter).toBeDefined();
       expect(result.data.altimeter![0]).toBeCloseTo(29.9, 2); // Departure (converted from 1012.4 hPa)
-      expect(result.data.altimeter![1]).toBe(-1); // Operating (placeholder, won't overwrite when areaOfOps is null)
+      expect(result.data.altimeter![1]).toBeNull(); // Operating: no area-of-ops weather, so blank (with a Warning)
       expect(result.data.altimeter![2]).toBeCloseTo(29.95, 2); // Arrival (converted from 1014.2 hPa)
       expect(result.data.temp).toBeDefined();
       expect(result.data.temp![0]).toBe(21); // Departure
@@ -493,8 +616,14 @@ describe("Weather Data Mapper", () => {
         },
         opTemp: 8,
         opAltimeter: 30.05,
-        warnings: ["test warning from areaOfOps"],
-      };
+        notifications: [
+          {
+            level: "caution",
+            subject: stepSubject("weather"),
+            message: "test caution from areaOfOps",
+          },
+        ],
+      } satisfies AreaOfOpsWeather;
 
       const result = mapWeatherDataToWorksheet({}, mockAreaOfOps, null);
 
@@ -506,11 +635,29 @@ describe("Weather Data Mapper", () => {
       // opTemp and opAltimeter go to index 1
       expect(result.data.temp![1]).toBe(8);
       expect(result.data.altimeter![1]).toBe(30.05);
-      // Warnings from areaOfOps are propagated
-      expect(result.warnings).toContain("test warning from areaOfOps");
+      // Notifications from areaOfOps are propagated
+      expect(result.notifications).toContainEqual(
+        expect.objectContaining({ message: "test caution from areaOfOps" })
+      );
     });
 
-    it("skips out-of-range opTemp and opAltimeter when validateData is on", () => {
+    it("propagates AIRMET classification notifications", () => {
+      const caution: Notification = {
+        level: "caution",
+        subject: fieldSubject("cielVis"),
+        message: "IFR threshold",
+      };
+      const result = mapWeatherDataToWorksheet({}, null, {
+        turb: false,
+        cielVis: true,
+        mtnObsc: false,
+        notifications: [caution],
+      });
+      expect(result.data.cielVis).toBe(true);
+      expect(result.notifications).toContainEqual(caution);
+    });
+
+    it("blanks out-of-range opTemp and opAltimeter with Warnings when validateData is on", () => {
       const mockAreaOfOps = {
         position: [40.0, -111.0] as [number, number],
         positionSource: "midpoint" as const,
@@ -521,24 +668,29 @@ describe("Weather Data Mapper", () => {
         },
         opTemp: 200, // out of range (max 50)
         opAltimeter: 99, // out of range (max 31.0)
-        warnings: [],
+        notifications: [],
       };
 
       const result = mapWeatherDataToWorksheet({}, mockAreaOfOps, null, {
         validateData: true,
+        opAltitudeFt: 9000,
       });
 
-      expect(result.data.temp).toBeUndefined();
-      expect(result.data.altimeter).toBeUndefined();
-      expect(
-        result.warnings.some((w) => /Operating temperature.*out of valid range/.test(w))
-      ).toBe(true);
-      expect(
-        result.warnings.some((w) => /Operating altimeter.*out of valid range/.test(w))
-      ).toBe(true);
+      expect(result.data.temp?.[1]).toBeNull();
+      expect(result.data.altimeter?.[1]).toBeNull();
+      expect(result.notifications).toContainEqual({
+        level: "warning",
+        subject: fieldSubject("temp", 1),
+        message: expect.stringMatching(/Operating temperature.*out of valid range/),
+      });
+      expect(result.notifications).toContainEqual({
+        level: "warning",
+        subject: fieldSubject("altimeter", 1),
+        message: expect.stringMatching(/Operating altimeter.*out of valid range/),
+      });
     });
 
-    it("includes altitude labels in wind validation errors", () => {
+    it("blanks an out-of-range winds-aloft value with a Warning on its altitude column", () => {
       const mockAreaOfOps = {
         position: [40.0, -111.0] as [number, number],
         positionSource: "midpoint" as const,
@@ -549,14 +701,17 @@ describe("Weather Data Mapper", () => {
         },
         opTemp: null,
         opAltimeter: null,
-        warnings: [],
+        notifications: [],
       };
       const result = mapWeatherDataToWorksheet({}, mockAreaOfOps, null, {
         validateData: true,
       });
-      expect(
-        result.errors.some((e) => /Invalid wind direction at 3000 ft/.test(e))
-      ).toBe(true);
+      expect(result.data.wind?.[0]).toEqual([null, 280, 290, 300, 310]);
+      expect(result.notifications).toContainEqual({
+        level: "warning",
+        subject: fieldSubject("wind", 0),
+        message: expect.stringMatching(/Invalid wind direction at 3000 ft/),
+      });
     });
   });
 
@@ -879,10 +1034,12 @@ describe("Weather Data Mapper", () => {
         arrivalAirport: "BOI",
       });
 
-      expect(result.warnings).toContain(
+      expect(result.notifications.map((n) => n.message)).toContain(
         "BOI: no METAR or TAF data available for requested time 2026-05-12T16:00:00.000Z"
       );
-      expect(result.warnings.some((w) => w.startsWith("airport:"))).toBe(false);
+      expect(
+        result.notifications.some((n) => n.message.startsWith("airport:"))
+      ).toBe(false);
     });
   });
 
@@ -914,12 +1071,12 @@ describe("Weather Data Mapper", () => {
       };
 
       // Should not crash; data is empty because there is no METAR/TAF input
-      const { data, warnings } = mapAirportSpecificWeatherData([], [], options);
+      const { data, notifications } = mapAirportSpecificWeatherData([], [], options);
 
-      expect(data.temp).toBeUndefined();
-      expect(data.altimeter).toBeUndefined();
-      // Warnings may be emitted (e.g. "no data available") but no crash
-      expect(Array.isArray(warnings)).toBe(true);
+      // No METAR/TAF to read, so the departure slots are blank, never stale.
+      expect(data.temp?.[0] ?? null).toBeNull();
+      expect(data.altimeter?.[0] ?? null).toBeNull();
+      expect(Array.isArray(notifications)).toBe(true);
     });
 
     it("should handle empty arrays in API responses", () => {
@@ -932,7 +1089,7 @@ describe("Weather Data Mapper", () => {
       const result = mapWeatherDataToWorksheet(emptyApiData, null, null);
 
       expect(result.success).toBe(true);
-      expect(result.warnings.length).toBeGreaterThan(0);
+      expect(result.notifications.length).toBeGreaterThan(0);
     });
   });
 
