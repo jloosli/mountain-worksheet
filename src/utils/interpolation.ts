@@ -267,6 +267,69 @@ export function createInterpolationTable<T extends string>(
 }
 
 /**
+ * How many of the table corners bracketing (weight, pressureAltitude,
+ * temperature) are blank, i.e. how many `trilinearInterpolate` replaced with
+ * the average of the others: a Substitution the caller should announce.
+ * 0 when every corner has data, and also when every corner is blank (then no
+ * value is produced, so nothing was substituted).
+ */
+export function trilinearTableGaps(
+  table: TrilinearInterpolationTable,
+  weight: number,
+  pressureAltitude: number,
+  temperature: number
+): number {
+  const { weights, pressureAltitudes, temperatures, data } = table;
+  // Each bracketing index with its interpolation weight; a blank corner whose
+  // weight is zero (the lookup sits exactly on a table row) changes nothing.
+  const bracket = (axis: number[], value: number): [number, number][] => {
+    const i = findSurroundingIndex(axis, value);
+    if (axis.length === 1) return [[i, 1]];
+    const f = (value - axis[i]) / (axis[i + 1] - axis[i]);
+    return [
+      [i, 1 - f],
+      [i + 1, f],
+    ];
+  };
+  let blank = 0;
+  let filled = 0;
+  for (const [w, fw] of bracket(weights, weight)) {
+    for (const [p, fp] of bracket(pressureAltitudes, pressureAltitude)) {
+      for (const [t, ft] of bracket(temperatures, temperature)) {
+        if (data[w]?.[p]?.[t] != null) filled++;
+        else if (fw * fp * ft !== 0) blank++;
+      }
+    }
+  }
+  return filled === 0 ? 0 : blank;
+}
+
+/**
+ * Whether `x`, a result of `findInverseXgivenYandZ` at `yVal`, lies outside
+ * the X range the table has data for at that Y: "below" or "above" means it
+ * was extrapolated (e.g. a service ceiling beyond the climb table).
+ */
+export function inverseLookupExtrapolation(
+  data: (number | null)[][],
+  xAxis: number[],
+  yAxis: number[],
+  yVal: number,
+  x: number
+): "below" | "above" | null {
+  const exact = yAxis.indexOf(yVal);
+  const yIdx = findSurroundingIndex(yAxis, yVal);
+  const validX = xAxis.filter((_, i) =>
+    exact !== -1
+      ? data[i]?.[exact] != null
+      : data[i]?.[yIdx] != null && data[i]?.[yIdx + 1] != null
+  );
+  if (validX.length === 0) return null;
+  if (x < Math.min(...validX)) return "below";
+  if (x > Math.max(...validX)) return "above";
+  return null;
+}
+
+/**
  * Find the X value that produces a target Z value at a given Y value.
  * For example: find the altitude (X) where climb rate (Z) is 300 fpm at 30°C (Y)
  * @param data 2D array of Z values indexed by [x][y]
