@@ -222,3 +222,34 @@ describe("AppContainer — runway lookup (#225)", () => {
     );
   });
 });
+
+describe("AppContainer — share (#225)", () => {
+  const setClipboard = (writeText: jest.Mock) =>
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText },
+      configurable: true,
+    });
+
+  it("confirms a copied link inline without window.alert", async () => {
+    const alertSpy = jest.spyOn(window, "alert").mockImplementation(() => {});
+    setClipboard(jest.fn().mockResolvedValue(undefined));
+    render(<AppContainer />);
+    fireEvent.click(screen.getByRole("button", { name: /Copy link/i }));
+    expect(await screen.findByRole("status")).toHaveTextContent(/Link copied/i);
+    expect(alertSpy).not.toHaveBeenCalled();
+    alertSpy.mockRestore();
+  });
+
+  it("shows a copy failure with the link to copy by hand", async () => {
+    jest.spyOn(console, "error").mockImplementation(() => {});
+    setClipboard(jest.fn().mockRejectedValue(new Error("denied")));
+    render(<AppContainer />);
+    fireEvent.click(screen.getByRole("button", { name: /Copy link/i }));
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent(/Couldn't copy the link \(denied\)/);
+    expect(screen.getByLabelText(/Worksheet link/i)).toHaveValue(
+      window.location.href
+    );
+    jest.restoreAllMocks();
+  });
+});

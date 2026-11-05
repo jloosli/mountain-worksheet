@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import ActionBar from "@/components/ActionBar";
 import AppInputs from "@/components/AppInputs";
 import Calculations from "@/components/Calculations";
@@ -11,7 +11,7 @@ import SlideOver from "@/components/SlideOver";
 import Stepper, { type StepperStep } from "@/components/Stepper";
 import StepShell from "@/components/StepShell";
 import WeatherDataIntegration from "@/components/WeatherDataIntegration";
-import WorksheetHeader from "@/components/WorksheetHeader";
+import WorksheetHeader, { type ShareStatus } from "@/components/WorksheetHeader";
 import { deriveActionBarState } from "@/utils/actionBarState";
 import { applyOpTempForAltitudeChange } from "@/utils/areaOfOpsWeather";
 import { deriveStepStatuses, formatStepBadge } from "@/utils/stepStatuses";
@@ -181,13 +181,28 @@ export default function AppContainer() {
     window.location.reload();
   };
 
+  const [shareStatus, setShareStatus] = useState<ShareStatus | null>(null);
+
+  // A successful copy is confirmed briefly; a failure stays until the next try.
+  useEffect(() => {
+    if (shareStatus?.kind !== "copied") return;
+    const timer = setTimeout(() => setShareStatus(null), 4000);
+    return () => clearTimeout(timer);
+  }, [shareStatus]);
+
   const handleShare = async () => {
     const shareLink = window.location.href.replace(/%22/g, '"');
     try {
       await navigator.clipboard.writeText(shareLink);
-      alert("URL copied to clipboard!");
+      setShareStatus({ kind: "copied" });
     } catch (error) {
+      // Developer diagnostic; the pilot sees the failure in the header.
       console.error("Error sharing:", error);
+      setShareStatus({
+        kind: "failed",
+        link: shareLink,
+        reason: error instanceof Error ? error.message : "clipboard unavailable",
+      });
     }
   };
 
@@ -200,6 +215,7 @@ export default function AppContainer() {
       <WorksheetHeader
         onReset={handleReset}
         onShare={handleShare}
+        shareStatus={shareStatus}
         useFahrenheit={useFahrenheit}
         onToggleTempUnit={toggleTempUnit}
         onOpenInstructions={handleOpenInstructions}
