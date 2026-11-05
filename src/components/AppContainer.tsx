@@ -324,7 +324,7 @@ export default function AppContainer() {
       >
         <ChecklistPanel />
       </SlideOver>
-      <PrintBriefing state={state} />
+      <PrintBriefing state={state} notifications={notifications} />
       <footer className="w-full py-4 px-2 md:px-8 text-center text-sm text-gray-600 dark:text-gray-400 border-t border-gray-200 dark:border-gray-800 print:hidden">
         Found an issue or bug?{" "}
         <a

@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from "../test-utils/test-utils";
+import { render, screen, fireEvent, waitFor, within } from "../test-utils/test-utils";
 import AppContainer from "./AppContainer";
 import { fetchWorksheetWeather } from "@/utils/weatherFetch";
 import { useSearchParams } from "next/navigation";
@@ -27,6 +27,12 @@ const idleLookup: RunwayLookup = {
 };
 
 const mockSearchParams = useSearchParams as jest.Mock;
+
+/**
+ * Queries scoped to the on-screen worksheet. The print-only Briefing is in
+ * the DOM too and repeats every Warning and Caution.
+ */
+const onScreen = () => within(screen.getByRole("main"));
 
 beforeEach(() => {
   mockRunwayLookup.mockReturnValue(idleLookup);
@@ -136,7 +142,7 @@ describe("AppContainer — notifications (#221)", () => {
     fireEvent.click(screen.getByRole("button", { name: /Fetch weather/i }));
 
     expect(
-      await screen.findByText(/BOI: no METAR or TAF data available/)
+      await onScreen().findByText(/BOI: no METAR or TAF data available/)
     ).toBeInTheDocument();
     expect(arrivalTemperature()).toHaveAttribute("aria-invalid", "true");
     expect(container.querySelector("#step-weather header")).toHaveTextContent(
@@ -149,7 +155,7 @@ describe("AppContainer — notifications (#221)", () => {
     fireEvent.change(arrivalTemperature(), { target: { value: "12" } });
 
     expect(
-      screen.queryByText(/BOI: no METAR or TAF data available/)
+      onScreen().queryByText(/BOI: no METAR or TAF data available/)
     ).not.toBeInTheDocument();
     expect(arrivalTemperature()).not.toHaveAttribute("aria-invalid");
     expect(container.querySelector("#step-weather header")).not.toHaveTextContent(
@@ -161,14 +167,14 @@ describe("AppContainer — notifications (#221)", () => {
     render(<AppContainer />);
     enterAirports();
     fireEvent.click(screen.getByRole("button", { name: /Fetch weather/i }));
-    await screen.findByText(/BOI: no METAR or TAF data available/);
+    await onScreen().findByText(/BOI: no METAR or TAF data available/);
 
     fireEvent.change(screen.getByLabelText("Arrival Airport"), {
       target: { value: "KSLC" },
     });
 
     expect(
-      screen.queryByText(/BOI: no METAR or TAF data available/)
+      onScreen().queryByText(/BOI: no METAR or TAF data available/)
     ).not.toBeInTheDocument();
   });
 
@@ -195,7 +201,7 @@ describe("AppContainer — notifications (#221)", () => {
     enterAirports();
     fireEvent.click(screen.getByRole("button", { name: /Fetch weather/i }));
 
-    const message = await screen.findByText(/Weather fetch failed \(boom\)/);
+    const message = await onScreen().findByText(/Weather fetch failed \(boom\)/);
     expect(container.querySelector("#step-weather")).toContainElement(message);
     await waitFor(() =>
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
@@ -218,14 +224,14 @@ describe("AppContainer — performance notifications (#222)", () => {
     fireEvent.change(weight, { target: { value: "3200" } });
 
     expect(
-      screen.getByText(/Weight 3,200 lbs exceeds the C182T maximum gross weight/)
+      onScreen().getByText(/Weight 3,200 lbs exceeds the C182T maximum gross weight/)
     ).toBeInTheDocument();
     expect(weight).toHaveAttribute("aria-invalid", "true");
     expect(container.querySelector("#step-sortie header")).toHaveTextContent("1 warning");
 
     fireEvent.change(weight, { target: { value: "2976" } });
     expect(
-      screen.getByText(/Weight 2,976 lbs is 96% of the C182T maximum gross weight/)
+      onScreen().getByText(/Weight 2,976 lbs is 96% of the C182T maximum gross weight/)
     ).toBeInTheDocument();
     expect(weight).not.toHaveAttribute("aria-invalid");
     expect(container.querySelector("#step-sortie header")).not.toHaveTextContent("warning");
@@ -247,9 +253,9 @@ describe("AppContainer — runway lookup (#225)", () => {
     });
     const { container } = render(<AppContainer />);
     expect(
-      screen.getByText(/Couldn't look up runways for KDEN \(network down\)/)
+      onScreen().getByText(/Couldn't look up runways for KDEN \(network down\)/)
     ).toBeInTheDocument();
-    expect(screen.getByText(/Runway lookup failed/)).toBeInTheDocument();
+    expect(onScreen().getByText(/Runway lookup failed/)).toBeInTheDocument();
     expect(container.querySelector("#step-weather header")).toHaveTextContent(
       "1 warning"
     );
@@ -307,11 +313,11 @@ describe("AppContainer — operating temperature re-derivation (#225)", () => {
 
     expect(operatingTemperature()).toHaveValue(8);
     expect(
-      screen.getByText(/replacing your entry of 5°C/)
+      onScreen().getByText(/replacing your entry of 5°C/)
     ).toBeInTheDocument();
 
     fireEvent.change(operatingTemperature(), { target: { value: "5" } });
-    expect(screen.queryByText(/replacing your entry/)).not.toBeInTheDocument();
+    expect(onScreen().queryByText(/replacing your entry/)).not.toBeInTheDocument();
   });
 
   it("announces a Caution when the operating altitude is outside the winds-aloft temperatures", () => {
@@ -319,7 +325,7 @@ describe("AppContainer — operating temperature re-derivation (#225)", () => {
     enterAloftTemps([20, 14, 8, 2, -10]);
     fireEvent.change(operatingAltitude(), { target: { value: "17000" } });
     expect(
-      screen.getByText(/17,000 ft is above the winds-aloft temperatures/)
+      onScreen().getByText(/17,000 ft is above the winds-aloft temperatures/)
     ).toBeInTheDocument();
   });
 });
@@ -330,13 +336,13 @@ describe("AppContainer — malformed link values (#225)", () => {
     const { container } = render(<AppContainer />);
     const weight = screen.getByLabelText(/Aircraft Takeoff Weight/i);
     expect(weight).toHaveValue(null);
-    expect(screen.getByText(/"heavy" isn't a number/)).toBeInTheDocument();
+    expect(onScreen().getByText(/"heavy" isn't a number/)).toBeInTheDocument();
     expect(container.querySelector("#step-sortie header")).toHaveTextContent(
       "1 warning"
     );
 
     fireEvent.change(weight, { target: { value: "2300" } });
-    expect(screen.queryByText(/"heavy" isn't a number/)).not.toBeInTheDocument();
+    expect(onScreen().queryByText(/"heavy" isn't a number/)).not.toBeInTheDocument();
   });
 });
 
@@ -379,7 +385,7 @@ describe("AppContainer — unverified weather (#224)", () => {
     openSharedLink("airport=KORD,KBOI&temp=21,,");
     const { container } = render(<AppContainer />);
 
-    const caution = screen.getByText(unverified);
+    const caution = onScreen().getByText(unverified);
     expect(container.querySelector("#step-weather")).toContainElement(caution);
     expect(container.querySelector("#step-weather header")).toHaveTextContent(
       "1 caution"
@@ -391,12 +397,12 @@ describe("AppContainer — unverified weather (#224)", () => {
   it("removes the Caution after weather is fetched this session", async () => {
     openSharedLink("airport=KORD,KBOI&temp=21,,");
     const { container } = render(<AppContainer />);
-    expect(screen.getByText(unverified)).toBeInTheDocument();
+    expect(onScreen().getByText(unverified)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /Re-fetch/i }));
 
     await waitFor(() =>
-      expect(screen.queryByText(unverified)).not.toBeInTheDocument()
+      expect(onScreen().queryByText(unverified)).not.toBeInTheDocument()
     );
     expect(
       container.querySelector("#step-weather header")
@@ -405,6 +411,61 @@ describe("AppContainer — unverified weather (#224)", () => {
 
   it("shows no Caution on a fresh worksheet with no weather values", () => {
     render(<AppContainer />);
-    expect(screen.queryByText(unverified)).not.toBeInTheDocument();
+    expect(onScreen().queryByText(unverified)).not.toBeInTheDocument();
+  });
+});
+
+describe("AppContainer — markers from a Substitution (#223)", () => {
+  const mockFetch = fetchWorksheetWeather as jest.MockedFunction<
+    typeof fetchWorksheetWeather
+  >;
+  const substitution = "KLGU: forecast period has no temperature; using current observation";
+
+  beforeEach(() => {
+    mockSearchParams.mockReturnValue(
+      new URLSearchParams(
+        "acType=T182T&weight=3000&airport=KOGD,KLGU&altitude=4000,8000,4500" +
+          "&altimeter=29.92,29.92,29.92&temp=20,10,15&rwy=4000,6500"
+      )
+    );
+    mockFetch.mockImplementation(async (worksheet) => ({
+      data: { temp: [20, 10, 15] },
+      result: {
+        fetchedFor: {
+          airport: [worksheet.airport[0], worksheet.airport[1]],
+          date: worksheet.date,
+          time: worksheet.time,
+        },
+        applied: { temp: [20, 10, 15] },
+        notifications: [
+          { level: "caution", subject: { kind: "field", field: "temp", index: 2 }, message: substitution },
+        ],
+      },
+    }));
+  });
+
+  it("marks the arrival landing distance on screen and on the Briefing, linked to the arrival temperature Caution", async () => {
+    const { container } = render(<AppContainer />);
+    fireEvent.click(screen.getByRole("button", { name: /Fetch weather|Re-fetch/i }));
+    await screen.findAllByText(substitution);
+
+    const toldTable = screen.getByRole("table", { name: /take off and landing distances/i });
+    const screenLanding = Array.from(toldTable.querySelectorAll("tr"))
+      .find((tr) => tr.querySelector("td")?.textContent === "Landing Ground Roll")!
+      .querySelectorAll("td");
+    const marker = screenLanding[2].querySelector("a[data-marker]");
+    expect(marker).toHaveAttribute("href", "#notifications-field-temp-2");
+    expect(container.querySelector("#notifications-field-temp-2")).toHaveTextContent(substitution);
+    expect(screenLanding[1].querySelector("a[data-marker]")).toBeNull();
+
+    const briefing = screen.getByLabelText("Print briefing");
+    const note = Array.from(briefing.querySelectorAll("li[data-ref]")).find((li) =>
+      li.textContent?.includes(substitution)
+    )!;
+    const printedLanding = Array.from(briefing.querySelectorAll("tr"))
+      .find((tr) => tr.querySelector("td")?.textContent === "Landing Ground Roll")!
+      .querySelectorAll("td");
+    expect(printedLanding[2].querySelector(`[data-ref="${note.getAttribute("data-ref")}"]`)).not.toBeNull();
+    expect(printedLanding[1].querySelector("[data-ref]")).toBeNull();
   });
 });

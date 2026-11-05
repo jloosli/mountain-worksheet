@@ -1,18 +1,39 @@
 import type { WorksheetData } from "@/utils/types";
 import {
+  COLUMNS,
+  climbSubject,
+  computeClimbViewModel,
   computePressureColumns,
   computeTOLDViewModel,
+  pressureColumnDependsOn,
+  toldSubject,
+  type AirportSlot,
   type ComputedValue,
+  type TOLDValueKey,
   type Triple,
 } from "@/utils/derived";
-import aircraftData from "@/data/aircraft.json";
-import { bilinearInterpolateFlexible } from "@/utils/interpolation";
-import { calculateVra, calculateVx } from "@/utils/formulas";
 import { calculateManeuveringSpeeds } from "@/utils/maneuveringCalculations";
-import type { Aircraft } from "@/utils/types";
+import {
+  fieldSubject,
+  valueSubject,
+  type FieldName,
+  type Notification,
+} from "@/utils/notifications";
+import {
+  briefingNotes,
+  type BriefingNote,
+  type BriefingNotes,
+  type BriefingSection,
+} from "@/utils/briefingNotes";
 
 interface PrintBriefingProps {
   state: WorksheetData;
+  /**
+   * All notifications in force (the same derived list the screen shows).
+   * Warnings and Cautions are printed next to the values they concern;
+   * Advisories are left off.
+   */
+  notifications?: readonly Notification[];
 }
 
 const WIND_LABELS = ["3,000", "6,000", "9,000", "12,000", "15,000"] as const;
@@ -31,125 +52,132 @@ const fmtFt = (v: number | null | undefined): string =>
 const fmtNum = (v: number | null | undefined): string =>
   v === null || v === undefined ? "—" : v.toLocaleString();
 
-type EnvReader = (
-  s: WorksheetData,
-  PAs: Triple,
-  DAs: Triple,
-) => [number | null, number | null, number | null];
-
-const ENV_ROWS: ReadonlyArray<{
-  label: string;
-  read: EnvReader;
-  fmt: (v: number | null) => string;
-}> = [
-  {
-    label: "Actual Altitude (ft)",
-    read: (s) => s.altitude,
-    fmt: fmtFt,
-  },
-  {
-    label: "OAT (°C)",
-    read: (s) => s.temp,
-    fmt: fmtNum,
-  },
-  {
-    label: "Altimeter (inHg)",
-    read: (s) => s.altimeter,
-    fmt: (v) => (v === null ? "—" : v.toFixed(2)),
-  },
-  {
-    label: "Pressure Alt (ft)",
-    read: (_s, PAs) => PAs,
-    fmt: fmtFt,
-  },
-  {
-    label: "Density Alt (ft)",
-    read: (_s, _PAs, DAs) => DAs,
-    fmt: fmtFt,
-  },
-];
-
-function lookupAircraft(model: string): Aircraft | null {
-  return (aircraftData.find((a) => a.id === model) as Aircraft | undefined) ?? null;
-}
-
-function computeClimbRow(aircraft: Aircraft, PAs: Triple, OATs: Triple): Triple {
-  const rates: Triple = [null, null, null];
-  for (let i = 0; i < 3; i++) {
-    const pa = PAs[i];
-    const oat = OATs[i];
-    if (pa !== null && oat !== null) {
-      try {
-        rates[i] = Math.round(
-          bilinearInterpolateFlexible(aircraft.climbPerformance, pa, oat, {
-            xAxisName: "pressureAltitudes",
-            yAxisName: "temperatures",
-          }),
-        );
-      } catch {
-        rates[i] = null;
-      }
-    }
-  }
-  return rates;
-}
-
-function vySpeed(aircraft: Aircraft, pa: number | null): number | null {
-  if (pa === null) return null;
-  const alts = aircraft.climbPerformance.pressureAltitudes;
-  let idx = alts.findIndex((p) => p >= pa);
-  if (idx === -1) idx = 0;
-  return aircraft.climbPerformance.climbSpeeds[idx] ?? null;
-}
-
-function vaSpeed(aircraft: Aircraft, weight: number | null): number | null {
-  if (weight === null) return null;
-  const { weights, Va } = aircraft.maneuvering;
-  if (!weights || !Va || weights.length === 0) return null;
-  if (weights.length === 1) return Math.round(Va[0]);
-  // linear interpolation / extrapolation
-  let lo = 0;
-  for (let i = 0; i < weights.length - 1; i++) {
-    if (weight <= weights[i + 1]) { lo = i; break; }
-    lo = i;
-  }
-  const hi = Math.min(lo + 1, weights.length - 1);
-  if (lo === hi) return Math.round(Va[lo]);
-  const t = (weight - weights[lo]) / (weights[hi] - weights[lo]);
-  return Math.round(Va[lo] + t * (Va[hi] - Va[lo]));
-}
-
-/** A computed value's number, or null when it is withheld or unavailable. */
-const shownValue = (v: ComputedValue): number | null =>
-  v.status === "computed" ? v.value : null;
-
-function TOLDRow({
-  label,
-  dep,
-  arr,
-  colorNegative,
-}: {
-  label: string;
-  dep: number | null;
-  arr: number | null;
-  colorNegative?: boolean;
-}) {
-  const cellClass = (v: number | null) => {
-    if (colorNegative && v !== null && v < 0) {
-      return "py-0.5 text-right print-keep-color print-margin-bad text-red-700 font-semibold";
-    }
-    return "py-0.5 text-right";
-  };
+/** Reference numbers of the notes a value concerns (or rests on), as a superscript. */
+function Refs({ refs }: { refs: readonly number[] }) {
+  if (refs.length === 0) return null;
   return (
-    <tr className="border-b border-slate-200">
-      <td className="py-0.5 pr-2">{label}</td>
-      <td className={cellClass(dep) + " pr-2"}>{fmtFt(dep)}</td>
-      <td className={cellClass(arr)}>{fmtFt(arr)}</td>
-    </tr>
+    <sup className="ml-0.5 text-[6.5pt] font-semibold">
+      {refs.map((r, i) => (
+        <span key={r} data-ref={r}>
+          {i > 0 ? "," : ""}
+          {r}
+        </span>
+      ))}
+    </sup>
   );
 }
 
-export default function PrintBriefing({ state }: PrintBriefingProps) {
+const LEVEL_LABEL = { warning: "Warning", caution: "Caution" } as const;
+const LEVEL_CLASS = {
+  warning: "print-keep-color text-red-700",
+  caution: "print-keep-color text-amber-700",
+} as const;
+
+/** The numbered Warnings and Cautions printed under one section. */
+function Notes({ notes }: { notes: readonly BriefingNote[] }) {
+  if (notes.length === 0) return null;
+  return (
+    <ul className="mb-2 -mt-1 space-y-0.5 text-[7.5pt]">
+      {notes.map((n) => (
+        <li key={n.ref} data-ref={n.ref} data-level={n.level}>
+          <span className="font-semibold">{n.ref}.</span>{" "}
+          <span className={`font-semibold ${LEVEL_CLASS[n.level]}`}>
+            {LEVEL_LABEL[n.level]}:
+          </span>{" "}
+          <span data-message>{n.message}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/**
+ * A computed value: its number with the references of the notes about it and
+ * of the Cautions it rests on; what it is waiting for when withheld; a dash
+ * (with the Warning's reference) when it couldn't be computed.
+ */
+function ValueCell({
+  value,
+  refs,
+  briefing,
+  format = fmtNum,
+  className = "py-0.5 pr-2 text-right",
+  colorNegative,
+}: {
+  value: ComputedValue;
+  refs: number[];
+  briefing: BriefingNotes;
+  format?: (v: number) => string;
+  className?: string;
+  colorNegative?: boolean;
+}) {
+  if (value.status === "withheld") {
+    return <td className={`${className} italic text-slate-600`}>{value.reason}</td>;
+  }
+  if (value.status === "unavailable") {
+    return (
+      <td className={className}>
+        —<Refs refs={refs} />
+      </td>
+    );
+  }
+  const bad = colorNegative && value.value < 0;
+  const all = [...new Set([...refs, ...briefing.markersOn(value)])].sort((a, b) => a - b);
+  return (
+    <td
+      className={
+        bad ? `${className} print-keep-color print-margin-bad text-red-700 font-semibold` : className
+      }
+    >
+      {format(value.value)}
+      <Refs refs={all} />
+    </td>
+  );
+}
+
+const ENV_ROWS: ReadonlyArray<{
+  label: string;
+  field: "altitude" | "temp" | "altimeter";
+  fmt: (v: number | null) => string;
+}> = [
+  { label: "Actual Altitude (ft)", field: "altitude", fmt: fmtFt },
+  { label: "OAT (°C)", field: "temp", fmt: fmtNum },
+  {
+    label: "Altimeter (inHg)",
+    field: "altimeter",
+    fmt: (v) => (v === null ? "—" : v.toFixed(2)),
+  },
+];
+
+const SLOTS: AirportSlot[] = ["departure", "arrival"];
+const RWY_INDEX: Record<AirportSlot, 0 | 1> = { departure: 0, arrival: 1 };
+
+const TOLD_ROWS: ReadonlyArray<{
+  label: string;
+  key: TOLDValueKey;
+  colorNegative?: boolean;
+}> = [
+  { label: "TO Ground Roll", key: "takeoffGroundRoll" },
+  { label: "TO over 50' obstacle", key: "takeoff50ftObstacle" },
+  { label: "Landing Ground Roll", key: "landingGroundRoll" },
+  { label: "Landing over 50' obstacle", key: "landing50ftObstacle" },
+  { label: "Runway remaining (50' obstacle)", key: "runwayRemaining50ft", colorNegative: true },
+];
+
+/** The value Subjects whose notes concern a TOLD cell. */
+function toldCellRefs(b: BriefingNotes, slot: AirportSlot, key: TOLDValueKey): number[] {
+  const subjects = [valueSubject(`told.${slot}`, "decision")];
+  if (key.startsWith("takeoff") || key.startsWith("runwayRemaining")) {
+    subjects.push(toldSubject(slot, "takeoff"));
+  }
+  if (key.startsWith("landing") || key.startsWith("runwayRemaining")) {
+    subjects.push(toldSubject(slot, "landing"));
+  }
+  if (key.startsWith("runwayRemaining")) subjects.push(fieldSubject("rwy", RWY_INDEX[slot]));
+  return b.refsOn(...subjects);
+}
+
+export default function PrintBriefing({ state, notifications = [] }: PrintBriefingProps) {
   const [dep, arr] = state.airport;
   const [lat, lon] = state.position;
   const position =
@@ -163,6 +191,57 @@ export default function PrintBriefing({ state }: PrintBriefingProps) {
     state.temp,
   );
   const told = computeTOLDViewModel(state, PAs);
+  const climb = computeClimbViewModel(state);
+  const b = briefingNotes(notifications);
+  const notesIn = (section: BriefingSection) => <Notes notes={b.inSection(section)} />;
+  const on = (field: FieldName, index?: number) => <Refs refs={b.refsOn(fieldSubject(field, index))} />;
+
+  /** A pressure/density-altitude cell, marked when its inputs carry a Caution. */
+  const altitudeCell = (values: Triple, col: 0 | 1 | 2, kind: "pressureAltitude" | "densityAltitude") => {
+    const v = values[col];
+    const refs =
+      v === null
+        ? []
+        : b.markersOn({ status: "computed", dependsOn: pressureColumnDependsOn(col)[kind] });
+    return (
+      <>
+        {fmtFt(v)}
+        <Refs refs={refs} />
+      </>
+    );
+  };
+
+  const climbCells = (row: "rateOfClimb" | "rateOfClimbActual" | "vx" | "vy", label: string) => (
+    <tr className="border-b border-slate-200">
+      <td className="py-0.5 pr-2">{label}</td>
+      {COLUMNS.map((col) => (
+        <ValueCell
+          key={col}
+          value={climb[row][col]}
+          refs={b.refsOn(climbSubject(row, col), climbSubject(row))}
+          briefing={b}
+          className={col === 2 ? "py-0.5 text-right" : "py-0.5 pr-2 text-right"}
+        />
+      ))}
+    </tr>
+  );
+  const singleClimbRow = (
+    row: "va" | "vra" | "percentMGW",
+    label: string,
+    format: (v: number) => string = fmtNum,
+  ) => (
+    <tr className="border-b border-slate-200">
+      <td className="py-0.5 pr-2">{label}</td>
+      <ValueCell
+        value={climb[row]}
+        refs={b.refsOn(climbSubject(row))}
+        briefing={b}
+        format={format}
+      />
+      <td className="py-0.5 pr-2 text-right"></td>
+      <td className="py-0.5 text-right"></td>
+    </tr>
+  );
 
   return (
     <section
@@ -178,16 +257,28 @@ export default function PrintBriefing({ state }: PrintBriefingProps) {
       <div className="mb-1.5">
         <span className="font-semibold">Pilot:</span>{" "}
         <span>{dash(state.pilot)}</span>
+        {on("pilot")}
         <span className="mx-2">·</span>
         <span className="font-semibold">AC:</span>{" "}
-        <span>{dash(state.acType)}</span> / <span>{dash(state.tailN)}</span>
+        <span>{dash(state.acType)}</span>
+        {on("acType")} / <span>{dash(state.tailN)}</span>
+        {on("tailN")}
+        <span className="mx-2">·</span>
+        <span data-field="weight">
+          <span className="font-semibold">Weight:</span>{" "}
+          {state.weight !== null ? `${state.weight.toLocaleString()} lbs` : "—"}
+          {on("weight")}
+        </span>
         <span className="mx-2">·</span>
         <span className="font-semibold">UTC:</span>{" "}
-        <span>{dash(state.date)}</span>{" "}
+        <span>{dash(state.date)}</span>
+        {on("date")}{" "}
         <span>{dash(state.time)}</span>
+        {on("time")}
         <span className="mx-2">·</span>
         <span className="font-semibold">Duration:</span>{" "}
         <span>{state.duration !== null ? `${state.duration} h` : "—"}</span>
+        {on("duration")}
         <span className="mx-2">·</span>
         <span>Mtn Endorse {tick(state.mtnEndorse)}</span>
         <span className="mx-2">·</span>
@@ -196,27 +287,37 @@ export default function PrintBriefing({ state }: PrintBriefingProps) {
 
       <div className="mb-2">
         <span className="font-semibold">Route:</span>{" "}
-        <span>{dash(dep)}</span> →{" "}
+        <span>{dash(dep)}</span>
+        {on("airport", 0)} →{" "}
         <span>{dash(arr)}</span>
+        {on("airport", 1)}
+        <Refs refs={b.refsOn(fieldSubject("airport"))} />
         <span className="mx-2">·</span>
         <span className="font-semibold">Area:</span>{" "}
         <span>{dash(state.route)}</span>
+        {on("route")}
         <span className="mx-2">·</span>
         <span className="font-semibold">Position:</span>{" "}
         <span>{position}</span>
+        {on("position")}
       </div>
+      {notesIn("sortie")}
 
       {/* ---- Conditions ---- */}
       <div className="mb-2 grid grid-cols-[1fr_auto] gap-x-4 break-inside-avoid">
         <div>
-          <div className="font-semibold mb-0.5">Winds aloft</div>
+          <div className="font-semibold mb-0.5">
+            Winds aloft
+            {on("wind")}
+          </div>
           <table className="w-full border-collapse text-[8pt]">
             <thead>
               <tr className="border-b border-slate-400">
                 <th className="text-left pr-2 font-medium"></th>
-                {WIND_LABELS.map((label) => (
+                {WIND_LABELS.map((label, colIdx) => (
                   <th key={label} className="text-right pr-2 font-medium last:pr-0">
                     {label}
+                    {on("wind", colIdx)}
                   </th>
                 ))}
               </tr>
@@ -239,26 +340,30 @@ export default function PrintBriefing({ state }: PrintBriefingProps) {
           </table>
         </div>
         <div className="self-start">
-          <div className="font-semibold mb-0.5">Advisories</div>
+          <div className="font-semibold mb-0.5">AIRMETs</div>
           <ul className="space-y-0.5 text-[8pt]">
             <li>
               <span className={state.turb ? "print-keep-color text-amber-700 font-semibold" : "text-slate-500"}>
                 Turb {tick(state.turb)}
               </span>
+              {on("turb")}
             </li>
             <li>
               <span className={state.cielVis ? "print-keep-color text-amber-700 font-semibold" : "text-slate-500"}>
                 Ceil/Vis {tick(state.cielVis)}
               </span>
+              {on("cielVis")}
             </li>
             <li>
               <span className={state.mtnObsc ? "print-keep-color text-amber-700 font-semibold" : "text-slate-500"}>
                 Mtn Obsc {tick(state.mtnObsc)}
               </span>
+              {on("mtnObsc")}
             </li>
           </ul>
         </div>
       </div>
+      {notesIn("conditions")}
 
       {/* ---- Per-phase environment ---- */}
       <table className="w-full border-collapse text-[8pt] mb-2 break-inside-avoid">
@@ -274,13 +379,33 @@ export default function PrintBriefing({ state }: PrintBriefingProps) {
           {ENV_ROWS.map((row) => (
             <tr key={row.label} className="border-b border-slate-200">
               <td className="py-0.5 pr-2">{row.label}</td>
-              <td className="py-0.5 pr-2 text-right">{row.fmt(row.read(state, PAs, DAs)[0])}</td>
-              <td className="py-0.5 pr-2 text-right">{row.fmt(row.read(state, PAs, DAs)[1])}</td>
-              <td className="py-0.5 text-right">{row.fmt(row.read(state, PAs, DAs)[2])}</td>
+              {COLUMNS.map((col) => (
+                <td key={col} className={col === 2 ? "py-0.5 text-right" : "py-0.5 pr-2 text-right"}>
+                  {row.fmt(state[row.field][col])}
+                  {on(row.field, col)}
+                </td>
+              ))}
             </tr>
           ))}
+          <tr className="border-b border-slate-200">
+            <td className="py-0.5 pr-2">Pressure Alt (ft)</td>
+            {COLUMNS.map((col) => (
+              <td key={col} className={col === 2 ? "py-0.5 text-right" : "py-0.5 pr-2 text-right"}>
+                {altitudeCell(PAs, col, "pressureAltitude")}
+              </td>
+            ))}
+          </tr>
+          <tr className="border-b border-slate-200">
+            <td className="py-0.5 pr-2">Density Alt (ft)</td>
+            {COLUMNS.map((col) => (
+              <td key={col} className={col === 2 ? "py-0.5 text-right" : "py-0.5 pr-2 text-right"}>
+                {altitudeCell(DAs, col, "densityAltitude")}
+              </td>
+            ))}
+          </tr>
         </tbody>
       </table>
+      {notesIn("environment")}
 
       {!state.acType && (
         <p className="text-[8pt] italic text-slate-700 mb-2">
@@ -307,115 +432,54 @@ export default function PrintBriefing({ state }: PrintBriefingProps) {
             </tr>
           </thead>
           <tbody>
-            <TOLDRow
-              label="TO Ground Roll"
-              dep={shownValue(told.departure.values.takeoffGroundRoll)}
-              arr={shownValue(told.arrival.values.takeoffGroundRoll)}
-            />
-            <TOLDRow
-              label="TO over 50' obstacle"
-              dep={shownValue(told.departure.values.takeoff50ftObstacle)}
-              arr={shownValue(told.arrival.values.takeoff50ftObstacle)}
-            />
-            <TOLDRow
-              label="Landing Ground Roll"
-              dep={shownValue(told.departure.values.landingGroundRoll)}
-              arr={shownValue(told.arrival.values.landingGroundRoll)}
-            />
-            <TOLDRow
-              label="Landing over 50' obstacle"
-              dep={shownValue(told.departure.values.landing50ftObstacle)}
-              arr={shownValue(told.arrival.values.landing50ftObstacle)}
-            />
-            <TOLDRow
-              label="Runway remaining (50' obstacle)"
-              dep={shownValue(told.departure.values.runwayRemaining50ft)}
-              arr={shownValue(told.arrival.values.runwayRemaining50ft)}
-              colorNegative
-            />
+            {TOLD_ROWS.map(({ label, key, colorNegative }) => (
+              <tr key={key} className="border-b border-slate-200">
+                <td className="py-0.5 pr-2">{label}</td>
+                {SLOTS.map((slot) => (
+                  <ValueCell
+                    key={slot}
+                    value={told[slot].values[key]}
+                    refs={toldCellRefs(b, slot, key)}
+                    briefing={b}
+                    format={fmtFt}
+                    colorNegative={colorNegative}
+                    className={slot === "arrival" ? "py-0.5 text-right" : "py-0.5 pr-2 text-right"}
+                  />
+                ))}
+              </tr>
+            ))}
           </tbody>
         </table>
       )}
+      {notesIn("told")}
       {/* ---- Climb + V-speeds ---- */}
-      {(() => {
-        if (!state.acType) return null;
-        const aircraft = lookupAircraft(state.acType);
-        if (!aircraft) return null;
-        const ROC = computeClimbRow(aircraft, PAs, state.temp);
-        const percentMGW =
-          state.weight !== null
-            ? Math.round((state.weight / aircraft.maxGrossWeight) * 100)
-            : null;
-        const ROCActual: Triple = ROC.map((r) =>
-          r === null || percentMGW === null
-            ? null
-            : Math.round(r * (1 + (1 - percentMGW / 100))),
-        ) as Triple;
-        const vra = calculateVra(aircraft);
-        return (
-          <table className="w-full border-collapse text-[8pt] mb-2 break-inside-avoid">
-            <thead>
-              <tr className="border-b border-slate-400">
-                <th className="text-left pr-2 font-medium" colSpan={4}>
-                  Climb &amp; V-speeds ({state.acType})
-                </th>
-              </tr>
-              <tr className="border-b border-slate-300">
-                <th className="text-left pr-2 font-medium"></th>
-                <th className="text-right pr-2 font-medium">Dep</th>
-                <th className="text-right pr-2 font-medium">Op</th>
-                <th className="text-right font-medium">Arr</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr className="border-b border-slate-200">
-                <td className="py-0.5 pr-2">Rate of Climb (MGW)</td>
-                <td className="py-0.5 pr-2 text-right">{fmtNum(ROC[0])}</td>
-                <td className="py-0.5 pr-2 text-right">{fmtNum(ROC[1])}</td>
-                <td className="py-0.5 text-right">{fmtNum(ROC[2])}</td>
-              </tr>
-              <tr className="border-b border-slate-200">
-                <td className="py-0.5 pr-2">Rate of Climb (Actual wt)</td>
-                <td className="py-0.5 pr-2 text-right">{fmtNum(ROCActual[0])}</td>
-                <td className="py-0.5 pr-2 text-right">{fmtNum(ROCActual[1])}</td>
-                <td className="py-0.5 text-right">{fmtNum(ROCActual[2])}</td>
-              </tr>
-              <tr className="border-b border-slate-200">
-                <td className="py-0.5 pr-2">Vx</td>
-                <td className="py-0.5 pr-2 text-right">{fmtNum(PAs[0] !== null ? calculateVx(aircraft, PAs[0]) : null)}</td>
-                <td className="py-0.5 pr-2 text-right">{fmtNum(PAs[1] !== null ? calculateVx(aircraft, PAs[1]) : null)}</td>
-                <td className="py-0.5 text-right">{fmtNum(PAs[2] !== null ? calculateVx(aircraft, PAs[2]) : null)}</td>
-              </tr>
-              <tr className="border-b border-slate-200">
-                <td className="py-0.5 pr-2">Vy</td>
-                <td className="py-0.5 pr-2 text-right">{fmtNum(vySpeed(aircraft, PAs[0]))}</td>
-                <td className="py-0.5 pr-2 text-right">{fmtNum(vySpeed(aircraft, PAs[1]))}</td>
-                <td className="py-0.5 text-right">{fmtNum(vySpeed(aircraft, PAs[2]))}</td>
-              </tr>
-              <tr className="border-b border-slate-200">
-                <td className="py-0.5 pr-2">Va (actual weight)</td>
-                <td className="py-0.5 pr-2 text-right">{fmtNum(vaSpeed(aircraft, state.weight))}</td>
-                <td className="py-0.5 pr-2 text-right"></td>
-                <td className="py-0.5 text-right"></td>
-              </tr>
-              <tr className="border-b border-slate-200">
-                <td className="py-0.5 pr-2">Vra</td>
-                <td className="py-0.5 pr-2 text-right">{fmtNum(vra)}</td>
-                <td className="py-0.5 pr-2 text-right"></td>
-                <td className="py-0.5 text-right"></td>
-              </tr>
-              <tr className="border-b border-slate-200">
-                <td className="py-0.5 pr-2">% MGW</td>
-                <td className="py-0.5 pr-2 text-right">
-                  {percentMGW !== null ? `${percentMGW}%` : "—"}
-                </td>
-                <td className="py-0.5 pr-2 text-right"></td>
-                <td className="py-0.5 text-right"></td>
-              </tr>
-            </tbody>
-          </table>
-        );
-      })()}
+      {state.acType && (
+        <table className="w-full border-collapse text-[8pt] mb-2 break-inside-avoid">
+          <thead>
+            <tr className="border-b border-slate-400">
+              <th className="text-left pr-2 font-medium" colSpan={4}>
+                Climb &amp; V-speeds ({state.acType})
+              </th>
+            </tr>
+            <tr className="border-b border-slate-300">
+              <th className="text-left pr-2 font-medium"></th>
+              <th className="text-right pr-2 font-medium">Dep</th>
+              <th className="text-right pr-2 font-medium">Op</th>
+              <th className="text-right font-medium">Arr</th>
+            </tr>
+          </thead>
+          <tbody>
+            {climbCells("rateOfClimb", "Rate of Climb (MGW)")}
+            {climbCells("rateOfClimbActual", "Rate of Climb (Actual wt)")}
+            {climbCells("vx", "Vx")}
+            {climbCells("vy", "Vy")}
+            {singleClimbRow("va", "Va (actual weight)")}
+            {singleClimbRow("vra", "Vra")}
+            {singleClimbRow("percentMGW", "% MGW", (v) => `${v}%`)}
+          </tbody>
+        </table>
+      )}
+      {notesIn("climb")}
 
       {/* ---- Maneuvering / canyon-turn speeds ---- */}
       {(() => {
@@ -429,13 +493,14 @@ export default function PrintBriefing({ state }: PrintBriefingProps) {
               <tr className="border-b border-slate-400">
                 <th className="text-left pr-2 font-medium" colSpan={4}>
                   Maneuvering speeds (kts) ({state.acType})
+                  <Refs refs={b.refsOn(valueSubject("maneuvering", "decision"))} />
                 </th>
               </tr>
               <tr className="border-b border-slate-300">
                 <th className="text-left pr-2 font-medium">Flaps</th>
-                {banks.map((b) => (
-                  <th key={b} className="text-right pr-2 font-medium">
-                    {b}°
+                {banks.map((bank) => (
+                  <th key={bank} className="text-right pr-2 font-medium">
+                    {bank}°
                   </th>
                 ))}
               </tr>
@@ -444,12 +509,12 @@ export default function PrintBriefing({ state }: PrintBriefingProps) {
               {ms.flapSettings.map((flap) => (
                 <tr key={flap} className="border-b border-slate-200">
                   <td className="py-0.5 pr-2">{flap}°</td>
-                  {banks.map((b) => {
+                  {banks.map((bank) => {
                     const found = ms.speeds.find(
-                      (s) => s.flapSetting === flap && s.bankAngle === b,
+                      (s) => s.flapSetting === flap && s.bankAngle === bank,
                     );
                     return (
-                      <td key={b} className="py-0.5 pr-2 text-right">
+                      <td key={bank} className="py-0.5 pr-2 text-right">
                         {fmtNum(found ? found.speed : null)}
                       </td>
                     );
@@ -460,6 +525,8 @@ export default function PrintBriefing({ state }: PrintBriefingProps) {
           </table>
         );
       })()}
+      {notesIn("maneuvering")}
+      {notesIn("general")}
 
       <footer className="border-t border-slate-400 pt-1 mt-1 text-[7pt] text-slate-700 flex justify-between">
         <span>
