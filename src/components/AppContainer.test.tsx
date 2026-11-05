@@ -489,3 +489,70 @@ describe("AppContainer — rejected weather entries", () => {
     ).toBeInTheDocument();
   });
 });
+
+describe("AppContainer — weather fetched for other inputs", () => {
+  const mockFetch = fetchWorksheetWeather as jest.MockedFunction<
+    typeof fetchWorksheetWeather
+  >;
+  const fetched = {
+    temp: [21, null, 15] as [number | null, number | null, number | null],
+    altimeter: [30.01, null, 29.95] as [number | null, number | null, number | null],
+  };
+
+  beforeEach(() => {
+    mockFetch.mockImplementation(async (worksheet) => ({
+      data: fetched,
+      result: {
+        fetchedFor: {
+          airport: [worksheet.airport[0], worksheet.airport[1]],
+          date: worksheet.date,
+          time: worksheet.time,
+        },
+        applied: fetched,
+        notifications: [],
+      },
+    }));
+  });
+
+  const stale = /Fetched for BOI at .*; refetch weather/;
+  const arrivalTemperature = () => onScreen().getAllByLabelText("Temperature")[2];
+  const departureTemperature = () => onScreen().getAllByLabelText("Temperature")[0];
+  const weatherHeader = (container: HTMLElement) =>
+    container.querySelector("#step-weather header");
+
+  async function fetchThenChangeArrival() {
+    const utils = render(<AppContainer />);
+    fireEvent.change(screen.getByLabelText("Departure Airport"), { target: { value: "KORD" } });
+    fireEvent.change(screen.getByLabelText("Arrival Airport"), { target: { value: "BOI" } });
+    fireEvent.click(screen.getByRole("button", { name: /Fetch weather/i }));
+    await waitFor(() => expect(arrivalTemperature()).toHaveValue(15));
+    fireEvent.change(screen.getByLabelText("Arrival Airport"), { target: { value: "KSLC" } });
+    return utils;
+  }
+
+  it("warns on the arrival weather fields, counts on the step and prints on the Briefing", async () => {
+    const { container } = await fetchThenChangeArrival();
+    expect(onScreen().getAllByText(stale)).toHaveLength(2); // temperature + altimeter
+    expect(arrivalTemperature()).toHaveAttribute("aria-invalid", "true");
+    expect(arrivalTemperature()).toHaveValue(15); // data kept
+    expect(departureTemperature()).not.toHaveAttribute("aria-invalid");
+    expect(weatherHeader(container)).toHaveTextContent("2 warnings");
+    expect(
+      within(screen.getByLabelText("Print briefing")).getAllByText(stale).length
+    ).toBeGreaterThan(0);
+  });
+
+  it("clears once the pilot enters their own value", async () => {
+    const { container } = await fetchThenChangeArrival();
+    fireEvent.change(arrivalTemperature(), { target: { value: "12" } });
+    expect(arrivalTemperature()).not.toHaveAttribute("aria-invalid");
+    expect(weatherHeader(container)).toHaveTextContent("1 warning");
+  });
+
+  it("clears on a refetch", async () => {
+    const { container } = await fetchThenChangeArrival();
+    fireEvent.click(screen.getByRole("button", { name: /Re-fetch|Fetch weather/i }));
+    await waitFor(() => expect(onScreen().queryByText(stale)).not.toBeInTheDocument());
+    expect(weatherHeader(container)).not.toHaveTextContent("warning");
+  });
+});

@@ -227,3 +227,68 @@ export function deriveNotifications(
     return sameValue(current, readField(fetch.applied, subject));
   });
 }
+
+type FieldSubject = Extract<Subject, { kind: "field" }>;
+
+const AIRPORT_WEATHER_FIELDS = (slot: 0 | 2): FieldSubject[] => [
+  { kind: "field", field: "temp", index: slot },
+  { kind: "field", field: "altimeter", index: slot },
+  { kind: "field", field: "altitude", index: slot },
+];
+
+/** Fetched fields that belong to the sortie area and time, not to one airport. */
+const AREA_WEATHER_FIELDS: FieldSubject[] = [
+  { kind: "field", field: "temp", index: 1 },
+  { kind: "field", field: "altimeter", index: 1 },
+  ...[0, 1, 2, 3, 4].map((index): FieldSubject => ({ kind: "field", field: "wind", index })),
+  { kind: "field", field: "turb" },
+  { kind: "field", field: "cielVis" },
+  { kind: "field", field: "mtnObsc" },
+];
+
+/**
+ * A Warning on each fetched weather field that still holds the fetched value
+ * after the airport, date or time it was fetched for has changed. An
+ * airport's fields go stale when that airport changes; every fetched field
+ * goes stale when the date or time changes. Each Warning clears once the
+ * pilot enters their own value or weather is fetched for the current inputs.
+ * Nothing is blanked. Field Cautions from the fetch still follow their values
+ * (`deriveNotifications`).
+ */
+export function staleFetchNotifications(
+  state: WorksheetData,
+  fetch: WeatherFetchResult | null
+): Notification[] {
+  if (!fetch) return [];
+  const { fetchedFor, applied } = fetch;
+  const when = `${fetchedFor.date} ${fetchedFor.time}`;
+  const timeChanged = state.date !== fetchedFor.date || state.time !== fetchedFor.time;
+  const airportChanged = (i: 0 | 1) =>
+    normalizeAirportCode(state.airport[i]) !== normalizeAirportCode(fetchedFor.airport[i]);
+
+  const stale: { subjects: FieldSubject[]; message: string }[] = [];
+  ([0, 1] as const).forEach((i) => {
+    if (!timeChanged && !airportChanged(i)) return;
+    stale.push({
+      subjects: AIRPORT_WEATHER_FIELDS(i === 0 ? 0 : 2),
+      message: `Fetched for ${normalizeAirportCode(fetchedFor.airport[i])} at ${when}; refetch weather.`,
+    });
+  });
+  if (timeChanged) {
+    stale.push({ subjects: AREA_WEATHER_FIELDS, message: `Fetched for ${when}; refetch weather.` });
+  }
+
+  return stale.flatMap(({ subjects, message }) =>
+    subjects
+      .filter((subject) => {
+        const fetchedValue = readField(applied, subject);
+        return (
+          fetchedValue !== undefined &&
+          fetchedValue !== -1 &&
+          !isBlank(fetchedValue) &&
+          sameValue(readField(state, subject), fetchedValue)
+        );
+      })
+      .map((subject): Notification => ({ level: "warning", subject, message }))
+  );
+}

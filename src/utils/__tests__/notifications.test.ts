@@ -4,6 +4,7 @@ import {
   fieldSubject,
   notificationKey,
   notificationsFor,
+  staleFetchNotifications,
   valueSubjectGroup,
   stepOf,
   stepSubject,
@@ -258,5 +259,82 @@ describe("valueSubjectGroup", () => {
     expect(valueSubjectGroup(valueSubject("tolds.arrival", "decision"))).toBeUndefined();
     expect(valueSubjectGroup(fieldSubject("temp", 1))).toBeUndefined();
     expect(valueSubjectGroup(stepSubject("decision"))).toBeUndefined();
+  });
+});
+
+describe("staleFetchNotifications", () => {
+  const fetched: WorksheetData = {
+    ...base,
+    airport: ["KOGD", "KLGU"],
+    temp: [21, 5, 15],
+    altimeter: [30.01, 30.0, 29.95],
+    altitude: [4473, 11500, 4457],
+    wind: [
+      [270, null, null, null, null],
+      [15, null, null, null, null],
+      [10, null, null, null, null],
+    ],
+    turb: true,
+  };
+  const applied: Partial<WorksheetData> = {
+    temp: fetched.temp,
+    altimeter: fetched.altimeter,
+    altitude: [4473, -1, 4457] as WorksheetData["altitude"],
+    wind: fetched.wind,
+    turb: true,
+  };
+  const fetch = fetchFor([], applied);
+  const subjects = (list: Notification[]) => list.map((n) => subjectKey(n.subject));
+
+  it("raises nothing while the fetch's airports, date and time are unchanged", () => {
+    expect(staleFetchNotifications(fetched, fetch)).toEqual([]);
+    expect(staleFetchNotifications(fetched, null)).toEqual([]);
+  });
+
+  it("warns on the arrival airport's fetched fields when the arrival airport changes", () => {
+    const state = { ...fetched, airport: ["KOGD", "KSLC"] as WorksheetData["airport"] };
+    const list = staleFetchNotifications(state, fetch);
+    expect(subjects(list)).toEqual(["field:temp.2", "field:altimeter.2", "field:altitude.2"]);
+    expect(list[0]).toEqual({
+      level: "warning",
+      subject: fieldSubject("temp", 2),
+      message: "Fetched for KLGU at 2026-05-12 18:00; refetch weather.",
+    });
+  });
+
+  it("ignores a change only in letter case or spacing", () => {
+    const state = { ...fetched, airport: ["kogd ", "KLGU"] as WorksheetData["airport"] };
+    expect(staleFetchNotifications(state, fetch)).toEqual([]);
+  });
+
+  it("warns on every fetched field when the date or time changes", () => {
+    const list = staleFetchNotifications({ ...fetched, time: "20:00" }, fetch);
+    expect(subjects(list)).toEqual([
+      "field:temp.0",
+      "field:altimeter.0",
+      "field:altitude.0",
+      "field:temp.2",
+      "field:altimeter.2",
+      "field:altitude.2",
+      "field:temp.1",
+      "field:altimeter.1",
+      "field:wind.0",
+      "field:turb",
+    ]);
+    expect(list.find((n) => n.subject.kind === "field" && n.subject.field === "wind")?.message).toBe(
+      "Fetched for 2026-05-12 18:00; refetch weather."
+    );
+  });
+
+  it("leaves a field the pilot has since changed", () => {
+    const state = {
+      ...fetched,
+      airport: ["KOGD", "KSLC"] as WorksheetData["airport"],
+      temp: [21, 5, 12] as WorksheetData["temp"],
+    };
+    expect(subjects(staleFetchNotifications(state, fetch))).toEqual([
+      "field:altimeter.2",
+      "field:altitude.2",
+    ]);
   });
 });

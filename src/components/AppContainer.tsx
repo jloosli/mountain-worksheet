@@ -23,6 +23,7 @@ import { deriveStepStatuses, formatStepBadge } from "@/utils/stepStatuses";
 import InlineNotifications from "@/components/InlineNotifications";
 import {
   deriveNotifications,
+  staleFetchNotifications,
   stepSubject,
   type WeatherFetchResult,
 } from "@/utils/notifications";
@@ -154,6 +155,7 @@ export default function AppContainer() {
   const notifications = useMemo(
     () => [
       ...deriveNotifications(state, weatherFetch),
+      ...staleFetchNotifications(state, weatherFetch),
       ...runwayLookup.notifications,
       ...opTempChangeNotifications(state, opTempChange),
       ...deriveUrlNotifications(state, urlLoad),
