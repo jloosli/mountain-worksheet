@@ -421,6 +421,23 @@ describe("computeClimbViewModel", () => {
     });
   });
 
+  it("puts a Caution on a Vy whose pressure altitude is above the climb table", () => {
+    // C182T climb-speed table tops out at 14,000 ft PA.
+    const vm = computeClimbViewModel({ ...baseState(), altitude: [1000, 15000, 1000] });
+    expect(vm.vy[1].status).toBe("computed");
+    expect(vm.notifications).toContainEqual({
+      level: "caution",
+      subject: valueSubject("climb.vy.operating", "decision"),
+      message:
+        "Operating altitude Vy is a POH climb-table entry, not a value for this altitude: pressure altitude 15,000 ft is outside 0–14,000 ft.",
+    });
+  });
+
+  it("raises no Vy Caution within the climb table", () => {
+    const vm = computeClimbViewModel({ ...baseState(), altitude: [1000, 14000, 1000] });
+    expect(vm.notifications.filter((n) => n.subject.kind === "value" && n.subject.id.startsWith("climb.vy"))).toEqual([]);
+  });
+
   it("puts a Caution on Va extrapolated beyond the maneuvering table (single-axis)", () => {
     // C172S Va table covers 1,900–2,550 lbs; empty weight is 1,663 lbs.
     const vm = computeClimbViewModel({ ...baseState(), acType: "C172S", weight: 1800 });

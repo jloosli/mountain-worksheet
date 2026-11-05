@@ -591,8 +591,18 @@ export function computeClimbViewModel(state: WorksheetData): ClimbViewModel {
   const vy = COLUMNS.map((col): ComputedValue => {
     const pa = paFor(col);
     if (typeof pa === "string") return withheld(pa);
+    const outside = findExtrapolations([
+      { axis: "pressureAltitude", values: climb.pressureAltitudes, value: pa },
+    ]);
+    if (outside.length > 0) {
+      notifications.push({
+        level: "caution",
+        subject: climbSubject("vy", col),
+        message: `${columnLabel(state, col)} Vy is a POH climb-table entry, not a value for this altitude: ${describeExtrapolations(outside)}.`,
+      });
+    }
     let idx = climb.pressureAltitudes.findIndex((p) => p >= pa);
-    if (idx === -1) idx = 0;
+    if (idx === -1) idx = 0; // Above the table; which entry to show is #228.
     return computed(climb.climbSpeeds[idx] ?? null, inputs({ altitude: col, altimeter: col }));
   }) as Columns<ComputedValue>;
 
