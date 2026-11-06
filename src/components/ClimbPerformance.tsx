@@ -1,122 +1,117 @@
-import aircraftData from "@/data/aircraft.json";
+import type React from "react";
+import { pressureAltitudeToDensityAltitude } from "@/utils/formulas";
+import InlineNotifications from "@/components/InlineNotifications";
+import ValueMarkers from "@/components/ValueMarkers";
+import type { Notification, Subject } from "@/utils/notifications";
 import {
-  bilinearInterpolate,
-  bilinearInterpolateFlexible,
-  findInverseXgivenYandZ,
-  FlexibleInterpolationTable,
-} from "@/utils/interpolation";
-import {
-  calculateVra,
-  calculateVx,
-  pressureAltitudeToDensityAltitude,
-} from "@/utils/formulas";
-import { Aircraft } from "@/utils/types";
-import { vyForPressureAltitude } from "@/utils/derived";
+  COLUMNS,
+  type ClimbViewModel,
+  type ComputedValue,
+  type ServiceCeiling,
+} from "@/utils/derived";
 
 interface ClimbPerformanceProps {
   aircraftModel?: string;
-  weight?: number | null;
+  climb: ClimbViewModel;
   OATs?: [number | null, number | null, number | null];
-  PAs?: [number | null, number | null, number | null];
   altimeters?: [number | null, number | null, number | null];
+  /** All notifications in force, for markers on values whose inputs carry a Caution. */
+  inputNotifications?: readonly Notification[];
+}
+
+const CELL = "py-2 px-4 text-right";
+const MUTED = "text-xs italic text-gray-500 dark:text-gray-400";
+
+function Value({
+  value,
+  notes,
+  className = "",
+  children,
+}: {
+  value: ComputedValue;
+  notes: readonly Notification[];
+  className?: string;
+  children?: React.ReactNode;
+}) {
+  if (value.status === "withheld") {
+    return <td className={`${CELL} ${MUTED}`}>{value.reason}</td>;
+  }
+  if (value.status === "unavailable") {
+    return <td className={`${CELL} text-gray-500 dark:text-gray-400`}>—</td>;
+  }
+  return (
+    <td className={`${CELL} ${className}`}>
+      {children ?? value.value}
+      <ValueMarkers notifications={notes} value={value} />
+    </td>
+  );
+}
+
+function percentStyle(value: ComputedValue): string {
+  if (value.status !== "computed") return "";
+  if (value.value > 100) return "text-red-500 font-bold";
+  if (value.value >= 90) return "text-yellow-500 font-bold";
+  return "";
+}
+
+function CeilingCell({
+  ceiling,
+  oat,
+  altimeter,
+  notes,
+}: {
+  ceiling: ServiceCeiling;
+  notes: readonly Notification[];
+  oat: number | null;
+  altimeter: number | null;
+}) {
+  if (ceiling.status === "aboveTable") {
+    return (
+      <td className={CELL}>
+        {`> ${ceiling.tableMax.toLocaleString()} ft`}
+        <ValueMarkers notifications={notes} value={ceiling} />
+      </td>
+    );
+  }
+  if (ceiling.status !== "computed") return <Value value={ceiling} notes={notes} />;
+  const sc = ceiling.value;
+  const scPA = Math.round(sc);
+  const scDA = oat !== null ? Math.round(pressureAltitudeToDensityAltitude(sc, oat)) : null;
+  const title =
+    scDA !== null
+      ? `Pressure Alt: ${scPA.toLocaleString()} ft\nDensity Alt: ${scDA.toLocaleString()} ft`
+      : `Pressure Alt: ${scPA.toLocaleString()} ft`;
+  const display =
+    altimeter !== null && altimeter >= 28
+      ? `${Math.round(sc + (altimeter - 29.92) * 1000).toLocaleString()} ft`
+      : `${scPA.toLocaleString()} ft (PA)`;
+  return (
+    <td className={CELL} title={title}>
+      {display}
+      <ValueMarkers notifications={notes} value={ceiling} />
+    </td>
+  );
+}
+
+/** Every distinct value Subject among the climb notifications, in order. */
+function subjectsOf(notifications: readonly Notification[]): Subject[] {
+  const seen = new Map<string, Subject>();
+  for (const n of notifications) {
+    if (n.subject.kind !== "value") continue;
+    seen.set(n.subject.id, n.subject);
+  }
+  return [...seen.values()];
 }
 
 export default function ClimbPerformance({
   aircraftModel,
-  weight,
+  climb,
   OATs,
-  PAs,
   altimeters,
+  inputNotifications = [],
 }: ClimbPerformanceProps) {
   if (!aircraftModel) return null;
-
-  const aircraft: Aircraft | null =
-    (aircraftData.find((a) => a.id === aircraftModel) as Aircraft | undefined) ?? null;
-
-  const ratesOfClimb: [number | null, number | null, number | null] = [null, null, null];
-  if (aircraft) {
-    const climbTable: FlexibleInterpolationTable = aircraft.climbPerformance;
-    const options = { xAxisName: "pressureAltitudes", yAxisName: "temperatures" };
-    for (let i = 0; i < 3; i++) {
-      const pa = PAs?.[i];
-      const oat = OATs?.[i];
-      if (pa != null && oat != null) {
-        try {
-          ratesOfClimb[i] = Math.round(
-            bilinearInterpolateFlexible(climbTable, pa, oat, options)
-          );
-        } catch {
-          ratesOfClimb[i] = null;
-        }
-      }
-    }
-  }
-
-  const percentMGW: number | null =
-    weight && aircraft?.maxGrossWeight
-      ? Math.round((weight / aircraft.maxGrossWeight) * 100)
-      : null;
-
-  // Helper function to determine cell styling based on value
-  const getPercentageStyle = (percent: number | null) => {
-    if (percent === null) return "";
-    if (percent > 100) return "text-red-500 font-bold";
-    if (percent >= 90) return "text-yellow-500 font-bold";
-    return "";
-  };
-
-  const actROC = (roc: number | null): number | null => {
-    if (roc === null || percentMGW === null) return null;
-    return Math.round(roc * (1 + (1 - percentMGW / 100)));
-  };
-
-  const Vy = (pa: number | null): number | null => {
-    if (pa === null || !aircraft) return null;
-    return vyForPressureAltitude(aircraft.climbPerformance, pa);
-  };
-
-  const Va = (): number | null => {
-    if (!weight || !aircraft) return null;
-    return Math.round(
-      bilinearInterpolate(
-        {
-          xAxis: [1],
-          yAxis: aircraft.maneuvering.weights,
-          data: [aircraft.maneuvering.Va],
-        },
-        1,
-        weight
-      )
-    );
-  };
-
-  const Vra = (): number | string => {
-    if (!aircraft) return "N/A";
-    const vraValue = calculateVra(aircraft);
-    return vraValue !== null ? vraValue : "N/A";
-  };
-
-  const Vx = (pa: number | null): number | null => {
-    if (pa === null || !aircraft) return null;
-    return calculateVx(aircraft, pa);
-  };
-
-  const serviceCeiling = (oat: number | null): number | "exceeds_table" | null => {
-    if (oat === null || !aircraft) return null;
-    try {
-      const alts = aircraft.climbPerformance.pressureAltitudes;
-      const computed = findInverseXgivenYandZ(
-        aircraft.climbPerformance.data,
-        alts,
-        aircraft.climbPerformance.temperatures,
-        300,
-        oat
-      );
-      return computed > alts[alts.length - 1] ? "exceeds_table" : computed;
-    } catch {
-      return null;
-    }
-  };
+  const empty = <td className={CELL}></td>;
 
   return (
     <div className="mt-6">
@@ -136,93 +131,67 @@ export default function ClimbPerformance({
           <tbody>
             <tr className="border-b dark:border-gray-700">
               <td className="py-2 px-4">Rate of Climb (MGW)</td>
-              <td className="py-2 px-4 text-right">{ratesOfClimb[0] ?? "-"}</td>
-              <td className="py-2 px-4 text-right">{ratesOfClimb[1] ?? "-"}</td>
-              <td className="py-2 px-4 text-right">{ratesOfClimb[2] ?? "-"}</td>
+              {COLUMNS.map((i) => <Value key={i} notes={inputNotifications} value={climb.rateOfClimb[i]} />)}
             </tr>
             <tr className="border-b dark:border-gray-700">
               <td className="py-2 px-4">Rate of Climb (Actual Wt, note 11)</td>
-              <td className="py-2 px-4 text-right">
-                {actROC(ratesOfClimb[0]) ?? "-"}
-              </td>
-              <td className="py-2 px-4 text-right">
-                {actROC(ratesOfClimb[1]) ?? "-"}
-              </td>
-              <td className="py-2 px-4 text-right">
-                {actROC(ratesOfClimb[2]) ?? "-"}
-              </td>
+              {COLUMNS.map((i) => <Value key={i} notes={inputNotifications} value={climb.rateOfClimbActual[i]} />)}
             </tr>
             <tr className="border-b dark:border-gray-700">
               <td className="py-2 px-4">Vx (Best Angle)</td>
-              <td className="py-2 px-4 text-right">{Vx(PAs?.[0] ?? null) ?? "-"}</td>
-              <td className="py-2 px-4 text-right">{Vx(PAs?.[1] ?? null) ?? "-"}</td>
-              <td className="py-2 px-4 text-right">{Vx(PAs?.[2] ?? null) ?? "-"}</td>
+              {COLUMNS.map((i) => <Value key={i} notes={inputNotifications} value={climb.vx[i]} />)}
             </tr>
             <tr className="border-b dark:border-gray-700">
               <td className="py-2 px-4">Vy (Best Rate)</td>
-              <td className="py-2 px-4 text-right">{Vy(PAs?.[0] ?? null) ?? "-"}</td>
-              <td className="py-2 px-4 text-right">{Vy(PAs?.[1] ?? null) ?? "-"}</td>
-              <td className="py-2 px-4 text-right">{Vy(PAs?.[2] ?? null) ?? "-"}</td>
+              {COLUMNS.map((i) => <Value key={i} notes={inputNotifications} value={climb.vy[i]} />)}
             </tr>
             <tr className="border-b dark:border-gray-700">
               <td className="py-2 px-4">Va at Actual Weight</td>
-              <td className="py-2 px-4 text-right">{Va() ?? "-"}</td>
-              <td className="py-2 px-4 text-right"></td>
-              <td className="py-2 px-4 text-right"></td>
+              <Value value={climb.va} notes={inputNotifications} />
+              {empty}
+              {empty}
             </tr>
             <tr className="border-b dark:border-gray-700">
               <td className="py-2 px-4">Vra (Rough Air Speed)</td>
-              <td className="py-2 px-4 text-right">{Vra()}</td>
-              <td className="py-2 px-4 text-right"></td>
-              <td className="py-2 px-4 text-right"></td>
+              <Value value={climb.vra} notes={inputNotifications} />
+              {empty}
+              {empty}
             </tr>
             <tr className="border-b dark:border-gray-700">
               <td className="py-2 px-4">Percent of MGW</td>
-              <td
-                className={`py-2 px-4 text-right ${getPercentageStyle(
-                  percentMGW
-                )}`}
+              <Value
+                value={climb.percentMGW}
+                notes={inputNotifications}
+                className={percentStyle(climb.percentMGW)}
               >
-                {percentMGW !== null ? `${percentMGW}%` : "-"}
-              </td>
-              <td className="py-2 px-4 text-right"></td>
-              <td className="py-2 px-4 text-right"></td>
+                {climb.percentMGW.status === "computed" ? `${climb.percentMGW.value}%` : null}
+              </Value>
+              {empty}
+              {empty}
             </tr>
             <tr className="border-b dark:border-gray-700">
               <td className="py-2 px-4">Service Ceiling (300 ft/min ROC, MSL)</td>
-              {([0, 1, 2] as const).map((i) => {
-                const sc = serviceCeiling(OATs?.[i] ?? null);
-                if (sc === null) {
-                  return <td key={i} className="py-2 px-4 text-right">-</td>;
-                }
-                const alts = aircraft?.climbPerformance.pressureAltitudes;
-                const maxTableAlt = alts ? alts[alts.length - 1] : null;
-                if (sc === "exceeds_table") {
-                  return (
-                    <td key={i} className="py-2 px-4 text-right">
-                      {`> ${maxTableAlt?.toLocaleString()} ft`}
-                    </td>
-                  );
-                }
-                const oat = OATs?.[i] ?? null;
-                const altimeter = altimeters?.[i] ?? null;
-                const scPARounded = Math.round(sc);
-                const scDA = oat !== null ? Math.round(pressureAltitudeToDensityAltitude(sc, oat)) : null;
-                const titleText = scDA !== null
-                  ? `Pressure Alt: ${scPARounded.toLocaleString()} ft\nDensity Alt: ${scDA.toLocaleString()} ft`
-                  : `Pressure Alt: ${scPARounded.toLocaleString()} ft`;
-                const displayValue = altimeter !== null && altimeter >= 28
-                  ? `${Math.round(sc + (altimeter - 29.92) * 1000).toLocaleString()} ft`
-                  : `${scPARounded.toLocaleString()} ft (PA)`;
-                return (
-                  <td key={i} className="py-2 px-4 text-right" title={titleText}>
-                    {displayValue}
-                  </td>
-                );
-              })}
+              {COLUMNS.map((i) => (
+                <CeilingCell
+                  key={i}
+                  ceiling={climb.serviceCeiling[i]}
+                  oat={OATs?.[i] ?? null}
+                  altimeter={altimeters?.[i] ?? null}
+                  notes={inputNotifications}
+                />
+              ))}
             </tr>
           </tbody>
         </table>
+      </div>
+      <div className="mt-2 space-y-1">
+        {subjectsOf(climb.notifications).map((subject) => (
+          <InlineNotifications
+            key={subject.kind === "value" ? subject.id : ""}
+            notifications={climb.notifications}
+            subject={subject}
+          />
+        ))}
       </div>
     </div>
   );

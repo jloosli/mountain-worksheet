@@ -4,13 +4,24 @@ import { ChangeEvent, useCallback, useEffect, useMemo, useState } from "react";
 import aircraftData from "@/data/aircraft.json";
 import type { WorksheetData } from "@/utils/types";
 import PositionInput from "@/components/PositionInput";
+import InlineNotifications, {
+  notificationA11yProps,
+} from "@/components/InlineNotifications";
+import { fieldSubject, type Notification } from "@/utils/notifications";
 import { buildSkyvectorUrl } from "@/utils/skyvector";
 import { normalizeAirportCode } from "@/utils/airportCode";
 
 interface SortieInfoProps {
   initialData?: WorksheetData;
   onUpdate: (data: Partial<WorksheetData>) => void;
+  /** All notifications in force; each is shown next to its Subject. */
+  notifications?: readonly Notification[];
 }
+
+const POSITION_SUBJECT = fieldSubject("position");
+const AC_TYPE_SUBJECT = fieldSubject("acType");
+const WEIGHT_SUBJECT = fieldSubject("weight");
+const AIRPORT_SUBJECTS = [fieldSubject("airport", 0), fieldSubject("airport", 1)];
 
 type SortieInfoData = Pick<
   WorksheetData,
@@ -29,7 +40,11 @@ type SortieInfoData = Pick<
   | "mtnCert"
 >;
 
-export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
+export default function SortieInfo({
+  initialData,
+  onUpdate,
+  notifications = [],
+}: SortieInfoProps) {
   const [formData, setFormData] = useState<SortieInfoData>({
     pilot: "",
     date: "",
@@ -268,6 +283,7 @@ export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
               value={formData.acType || ""}
               onChange={handleInputChange}
               className="w-full px-3 py-2 border rounded-md dark:bg-black/[.15] dark:border-white/[.145]"
+              {...notificationA11yProps(notifications, AC_TYPE_SUBJECT)}
             >
               <option value="">Select Aircraft</option>
               {aircraftData.map((aircraft) => (
@@ -276,6 +292,7 @@ export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
                 </option>
               ))}
             </select>
+            <InlineNotifications notifications={notifications} subject={AC_TYPE_SUBJECT} />
           </div>
 
           <div className="space-y-2">
@@ -306,11 +323,13 @@ export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
             <input
               type="date"
               id="date"
+              {...notificationA11yProps(notifications, fieldSubject("date"))}
               name="date"
               value={formData.date}
               onChange={handleInputChange}
               className="w-full px-3 py-2 border rounded-md dark:bg-black/[.15] dark:border-white/[.145]"
             />
+            <InlineNotifications notifications={notifications} subject={fieldSubject("date")} />
           </div>
 
           <div className="space-y-2">
@@ -319,6 +338,7 @@ export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
             </label>
             <select
               id="time"
+              {...notificationA11yProps(notifications, fieldSubject("time"))}
               name="time"
               value={formData.time}
               onChange={handleInputChange}
@@ -331,6 +351,7 @@ export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
                 </option>
               ))}
             </select>
+            <InlineNotifications notifications={notifications} subject={fieldSubject("time")} />
           </div>
 
           <div className="space-y-2">
@@ -339,6 +360,7 @@ export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
             </label>
             <select
               id="duration"
+              {...notificationA11yProps(notifications, fieldSubject("duration"))}
               name="duration"
               value={formData.duration ?? ""}
               onChange={handleDurationChange}
@@ -351,6 +373,7 @@ export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
                 </option>
               ))}
             </select>
+            <InlineNotifications notifications={notifications} subject={fieldSubject("duration")} />
           </div>
         </div>
         {sortieLocalTiming && (
@@ -379,6 +402,11 @@ export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
               onChange={(e) => handleAirportChange(0, e.target.value)}
               onBlur={() => handleAirportBlur(0)}
               className="w-full px-3 py-2 border rounded-md dark:bg-black/[.15] dark:border-white/[.145]"
+              {...notificationA11yProps(notifications, AIRPORT_SUBJECTS[0])}
+            />
+            <InlineNotifications
+              notifications={notifications}
+              subject={AIRPORT_SUBJECTS[0]}
             />
           </div>
 
@@ -393,6 +421,11 @@ export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
               onChange={(e) => handleAirportChange(1, e.target.value)}
               onBlur={() => handleAirportBlur(1)}
               className="w-full px-3 py-2 border rounded-md dark:bg-black/[.15] dark:border-white/[.145]"
+              {...notificationA11yProps(notifications, AIRPORT_SUBJECTS[1])}
+            />
+            <InlineNotifications
+              notifications={notifications}
+              subject={AIRPORT_SUBJECTS[1]}
             />
           </div>
 
@@ -400,6 +433,11 @@ export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
             rawValue={formData.route || ""}
             cachedPosition={formData.position ?? [null, null]}
             onChange={handlePositionChange}
+            inputA11yProps={notificationA11yProps(notifications, POSITION_SUBJECT)}
+          />
+          <InlineNotifications
+            notifications={notifications}
+            subject={POSITION_SUBJECT}
           />
 
           <div className="space-y-2">
@@ -409,10 +447,12 @@ export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
             <input
               type="number"
               id="operatingAltitude"
+              {...notificationA11yProps(notifications, fieldSubject("altitude", 1))}
               value={formData.altitude?.[1] ?? ""}
               onChange={handleOperatingAltitudeChange}
               className="w-full px-3 py-2 border rounded-md dark:bg-black/[.15] dark:border-white/[.145]"
             />
+            <InlineNotifications notifications={notifications} subject={fieldSubject("altitude", 1)} />
           </div>
 
           <div className="space-y-2">
@@ -428,7 +468,9 @@ export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
               min={2200}
               max={3600}
               className="w-full px-3 py-2 border rounded-md dark:bg-black/[.15] dark:border-white/[.145]"
+              {...notificationA11yProps(notifications, WEIGHT_SUBJECT)}
             />
+            <InlineNotifications notifications={notifications} subject={WEIGHT_SUBJECT} />
           </div>
         </div>
         {(() => {
@@ -468,6 +510,7 @@ export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
               type="checkbox"
               checked={formData.mtnEndorse}
               onChange={handleQualChange("mtnEndorse")}
+              {...notificationA11yProps(notifications, fieldSubject("mtnEndorse"))}
             />
             Current CAPF 70-5 Mountain Flight Endorsement?
           </label>
@@ -476,9 +519,12 @@ export default function SortieInfo({ initialData, onUpdate }: SortieInfoProps) {
               type="checkbox"
               checked={formData.mtnCert}
               onChange={handleQualChange("mtnCert")}
+              {...notificationA11yProps(notifications, fieldSubject("mtnCert"))}
             />
             Current CAPF 70-91 and Mountain Flying Certification?
           </label>
+          <InlineNotifications notifications={notifications} subject={fieldSubject("mtnEndorse")} />
+          <InlineNotifications notifications={notifications} subject={fieldSubject("mtnCert")} />
         </div>
       </div>
     </div>

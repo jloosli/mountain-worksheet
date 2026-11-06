@@ -1,4 +1,5 @@
 import { pointInPolygon, classifyAirmets, type GAirmetFeature } from "../gairmetApi";
+import { fieldSubject, stepSubject } from "../notifications";
 
 describe("pointInPolygon", () => {
   const square: [number, number][] = [
@@ -65,8 +66,15 @@ describe("classifyAirmets", () => {
     expect(r.turb).toBe(true);
     expect(r.mtnObsc).toBe(true);
     expect(r.cielVis).toBe(true);
-    // IFR threshold-mismatch note is always emitted when IFR is within threshold
-    expect(r.warnings.some((w) => /1000 ft \/ 3 sm/i.test(w))).toBe(true);
+    // IFR threshold-mismatch note is always emitted when IFR is within threshold:
+    // an auto-flag computed with a weaker threshold is a Caution on that flag.
+    expect(r.notifications).toEqual([
+      {
+        level: "caution",
+        subject: fieldSubject("cielVis"),
+        message: expect.stringMatching(/1000 ft \/ 3 sm/i),
+      },
+    ]);
   });
 
   it("does not flag hazards whose polygon excludes the position", () => {
@@ -110,7 +118,13 @@ describe("classifyAirmets", () => {
       [41, -112],
       new Date("2026-06-01T00:00:00Z")
     );
-    expect(r.warnings.some((w) => /unavailable/i.test(w))).toBe(true);
+    expect(r.notifications).toEqual([
+      {
+        level: "warning",
+        subject: stepSubject("weather"),
+        message: expect.stringMatching(/unavailable/i),
+      },
+    ]);
   });
 
   it("emits the IFR threshold-mismatch note whenever IFR was classified", () => {
@@ -119,7 +133,7 @@ describe("classifyAirmets", () => {
       [41, -112],
       new Date("2026-05-12T16:00:00Z")
     );
-    expect(r.warnings.some((w) => /1000 ft \/ 3 sm/i.test(w))).toBe(true);
+    expect(r.notifications.some((n) => /1000 ft \/ 3 sm/i.test(n.message))).toBe(true);
   });
 
   it("does not emit the IFR threshold-mismatch note when no IFR AIRMET was within threshold", () => {
@@ -128,7 +142,7 @@ describe("classifyAirmets", () => {
       [41, -112],
       new Date("2026-05-12T16:00:00Z")
     );
-    expect(r.warnings.some((w) => /1000 ft \/ 3 sm/i.test(w))).toBe(false);
+    expect(r.notifications.some((n) => /1000 ft \/ 3 sm/i.test(n.message))).toBe(false);
   });
 
   it("clears flags to false when response has no TURB/IFR/MTN OBSC features", () => {
@@ -154,5 +168,41 @@ describe("classifyAirmets", () => {
     expect(r.turb).toBe(false);
     expect(r.cielVis).toBe(false);
     expect(r.mtnObsc).toBe(false);
+  });
+
+  it("raises a Caution on a flag whose hazard has no G-AIRMET within 3 hr while another hazard does", () => {
+    const staleTurb: GAirmetFeature = {
+      ...turbAirmet,
+      validTime: "2026-05-12T22:00:00.000Z",
+    };
+    const r = classifyAirmets(
+      [staleTurb, mtnObscAirmet],
+      [41, -112],
+      new Date("2026-05-12T16:00:00Z")
+    );
+    expect(r.turb).toBe(false);
+    expect(r.mtnObsc).toBe(true);
+    expect(r.notifications).toEqual([
+      {
+        level: "caution",
+        subject: fieldSubject("turb"),
+        message: expect.stringMatching(/no turbulence G-AIRMET within 3 hr/i),
+      },
+    ]);
+  });
+
+  it("raises an Advisory on the weather step when flags are cleared because no relevant G-AIRMETs are in effect", () => {
+    const r = classifyAirmets(
+      [],
+      [41, -112],
+      new Date("2026-05-12T16:00:00Z")
+    );
+    expect(r.notifications).toEqual([
+      {
+        level: "advisory",
+        subject: stepSubject("weather"),
+        message: expect.stringMatching(/no turbulence, IFR or mountain obscuration G-AIRMETs/i),
+      },
+    ]);
   });
 });

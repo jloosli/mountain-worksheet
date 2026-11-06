@@ -1,6 +1,7 @@
-import { render, screen, waitFor } from "../test-utils/test-utils";
+import { render, screen, waitFor, within } from "../test-utils/test-utils";
 import Calculations from "./Calculations";
 import type { WorksheetData } from "../utils/types";
+import { fieldSubject, type Notification } from "../utils/notifications";
 
 // Mock the aircraft data
 jest.mock("../data/aircraft.json", () => [
@@ -171,6 +172,20 @@ describe("Calculations", () => {
     mtnEndorse: true,
     mtnCert: true,
   };
+
+  it("withholds results whose own inputs have a Warning, naming the input", () => {
+    const rejected: Notification = {
+      level: "warning",
+      subject: fieldSubject("altimeter", 0),
+      message: "Altimeter 35.00 is not valid; enter 28.00–31.00 inHg. Not applied.",
+    };
+    render(<Calculations state={mockWorksheetData} notifications={[rejected]} />);
+    expect(
+      screen.getAllByText(/needs departure altimeter checked/).length
+    ).toBeGreaterThan(0);
+    // The arrival column doesn't use the departure altimeter.
+    expect(screen.queryAllByText(/needs arrival/)).toHaveLength(0);
+  });
 
   it("renders without crashing", () => {
     render(<Calculations state={mockWorksheetData} />);
@@ -353,5 +368,112 @@ describe("Calculations", () => {
       .querySelectorAll("td")[2].textContent;
 
     expect(secondROC).not.toBe(firstROC);
+  });
+
+  describe("TOLD notifications", () => {
+    const toldTable = () =>
+      screen.getByRole("table", { name: /take off and landing distances/i });
+
+    it("computes departure TOLD and shows what arrival is waiting for", () => {
+      render(
+        <Calculations
+          state={{
+            ...mockWorksheetData,
+            altitude: [1000, 8000, 1000],
+            temp: [20, 10, null],
+            rwy: [3000, 3000],
+          }}
+        />
+      );
+      const table = within(toldTable());
+      expect(table.getAllByText("needs arrival temperature")).toHaveLength(6);
+      expect(table.getAllByText(/^\d{1,3}(,\d{3})*$/).length).toBe(6);
+      expect(table.queryByText("Error")).not.toBeInTheDocument();
+    });
+
+    it("shows a Caution naming the airport when landing distances are extrapolated", () => {
+      render(
+        <Calculations
+          state={{
+            ...mockWorksheetData,
+            altitude: [1000, 10000, 9000],
+            temp: [20, 10, 20],
+            rwy: [3000, 3000],
+          }}
+        />
+      );
+      const caution = screen.getByText(
+        /Arrival \(KXYZ\) landing distances are extrapolated beyond the POH table/
+      );
+      expect(caution.closest("li")).toHaveAttribute("data-level", "caution");
+    });
+
+    it("shows a value that can't be trusted only once, with no generic reminders", () => {
+      render(
+        <Calculations
+          state={{
+            ...mockWorksheetData,
+            altitude: [9000, 10000, 9000],
+            temp: [-25, 10, 38],
+            rwy: [1500, 2500],
+          }}
+        />
+      );
+      expect(
+        screen.getAllByText(/Departure \(KABC\) takeoff distances are extrapolated/)
+      ).toHaveLength(1);
+      expect(screen.queryByText(/careful performance planning/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Short runway operations/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Extreme temperature/)).not.toBeInTheDocument();
+    });
+  });
+
+  describe("markers on values computed from a Substitution", () => {
+    const arrivalTempSubstitution: Notification = {
+      level: "caution",
+      subject: fieldSubject("temp", 2),
+      message: "KXYZ: forecast period has no temperature; using current observation",
+    };
+    const state: WorksheetData = {
+      ...mockWorksheetData,
+      altitude: [1000, 8000, 1000],
+      temp: [20, 10, 15],
+      rwy: [3000, 3000],
+    };
+    const toldCell = (row: RegExp, col: number) => {
+      const table = screen.getByRole("table", { name: /take off and landing distances/i });
+      const tr = within(table).getByText(row).closest("tr")!;
+      return tr.querySelectorAll("td")[col];
+    };
+
+    it("marks the arrival landing distance with a link to the arrival temperature Caution", () => {
+      render(<Calculations state={state} notifications={[arrivalTempSubstitution]} />);
+      const marker = within(toldCell(/^Landing Ground Roll$/, 2)).getByRole("link", {
+        name: /caution.*forecast period has no temperature/i,
+      });
+      expect(marker).toHaveAttribute("href", "#notifications-field-temp-2");
+      expect(marker).toHaveAttribute("title", expect.stringContaining("forecast period has no temperature"));
+    });
+
+    it("leaves departure values, which don't use the arrival temperature, unmarked", () => {
+      render(<Calculations state={state} notifications={[arrivalTempSubstitution]} />);
+      expect(within(toldCell(/^Landing Ground Roll$/, 1)).queryByRole("link")).toBeNull();
+      expect(within(toldCell(/^Take Off Ground Roll$/, 1)).queryByRole("link")).toBeNull();
+    });
+
+    it("marks the arrival climb rate and density altitude, not the operating ones", () => {
+      render(<Calculations state={state} notifications={[arrivalTempSubstitution]} />);
+      const rowCells = (label: RegExp) =>
+        screen.getByText(label).closest("tr")!.querySelectorAll("td");
+      const roc = rowCells(/^Rate of Climb \(MGW\)$/);
+      expect(within(roc[3] as HTMLElement).getByRole("link")).toBeInTheDocument();
+      expect(within(roc[2] as HTMLElement).queryByRole("link")).toBeNull();
+      const da = rowCells(/^Density Altitude \(feet\)$/);
+      expect(within(da[3] as HTMLElement).getByRole("link")).toBeInTheDocument();
+      expect(within(da[2] as HTMLElement).queryByRole("link")).toBeNull();
+      // Pressure altitude doesn't use temperature.
+      const pa = rowCells(/^Pressure Altitude \(feet\)$/);
+      expect(within(pa[3] as HTMLElement).queryByRole("link")).toBeNull();
+    });
   });
 });

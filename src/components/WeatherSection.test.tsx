@@ -1,6 +1,9 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import WeatherSection from "./WeatherSection";
 import type { RunwayOption, WorksheetData } from "@/utils/types";
+import { fieldSubject, type Notification } from "@/utils/notifications";
+import { deserializeState } from "@/utils/urlState";
+import { sanitizeWorksheetUrlState } from "@/utils/worksheetUrlState";
 
 const empty: WorksheetData = {
   pilot: "",
@@ -144,5 +147,168 @@ describe("WeatherSection — winds aloft", () => {
     expect(onUpdate).toHaveBeenCalled();
     const call = onUpdate.mock.calls[0][0];
     expect(call.wind[0][0]).toBe(270);
+  });
+});
+
+describe("WeatherSection — notifications", () => {
+  const renderWith = (notifications: Notification[]) =>
+    render(
+      <WeatherSection
+        state={populated}
+        onUpdate={() => {}}
+        airportRunways={[null, null]}
+        notifications={notifications}
+      />
+    );
+
+  it("shows a whole-table winds-aloft Warning and marks every cell invalid", () => {
+    renderWith([
+      {
+        level: "warning",
+        subject: fieldSubject("wind"),
+        message: "Open-Meteo request failed (network down)",
+      },
+    ]);
+    expect(screen.getByText(/Open-Meteo request failed/)).toBeInTheDocument();
+    const cell = screen.getByLabelText("Wind direction at 9,000 ft");
+    expect(cell).toHaveAttribute("aria-invalid", "true");
+    expect(cell).toHaveAccessibleDescription(/Open-Meteo request failed/);
+  });
+
+  it("shows a per-altitude winds-aloft notification on that column only", () => {
+    renderWith([
+      {
+        level: "caution",
+        subject: fieldSubject("wind", 0),
+        message: "Target altitude 3000 ft below available pressure-level range",
+      },
+    ]);
+    expect(
+      screen.getByLabelText("Temperature at 3,000 ft")
+    ).toHaveAccessibleDescription(/3000 ft below/);
+    expect(
+      screen.getByLabelText("Temperature at 6,000 ft")
+    ).not.toHaveAttribute("aria-describedby");
+  });
+
+  it("passes airport-field notifications to the matching card", () => {
+    renderWith([
+      {
+        level: "warning",
+        subject: fieldSubject("temp", 2),
+        message: "KLGU: no METAR or TAF",
+      },
+    ]);
+    expect(screen.getByText(/KLGU: no METAR or TAF/)).toBeInTheDocument();
+  });
+
+  it("shows AIRMET flag notifications next to the flag", () => {
+    renderWith([
+      {
+        level: "caution",
+        subject: fieldSubject("cielVis"),
+        message: "AIRMET IFR auto-flag uses 1000 ft / 3 sm threshold",
+      },
+    ]);
+    expect(
+      screen.getByRole("checkbox", { name: /Ceiling \/ Vis/ })
+    ).toHaveAccessibleDescription(/1000 ft \/ 3 sm/);
+  });
+});
+
+describe("WeatherSection — invalid entries (#225)", () => {
+  it("shows a Warning on the winds-aloft column instead of silently dropping an out-of-range direction", () => {
+    const onUpdate = jest.fn();
+    render(
+      <WeatherSection
+        state={empty}
+        onUpdate={onUpdate}
+        airportRunways={[null, null]}
+      />
+    );
+    const cell = screen.getByLabelText("Wind direction at 9,000 ft");
+    fireEvent.change(cell, { target: { value: "400" } });
+    expect(onUpdate).not.toHaveBeenCalled();
+    expect(cell).toHaveValue(400);
+    expect(cell).toHaveAttribute("aria-invalid", "true");
+    expect(
+      screen.getByText(/Wind direction 400 at 9,000 ft is not valid/i)
+    ).toBeInTheDocument();
+  });
+
+  it("clears the Warning once the pilot enters a valid value", () => {
+    const onUpdate = jest.fn();
+    render(
+      <WeatherSection
+        state={empty}
+        onUpdate={onUpdate}
+        airportRunways={[null, null]}
+      />
+    );
+    const cell = screen.getByLabelText("Wind velocity at 3,000 ft");
+    fireEvent.change(cell, { target: { value: "200" } });
+    expect(screen.getByText(/Wind velocity 200 at 3,000 ft is not valid/i)).toBeInTheDocument();
+    fireEvent.change(cell, { target: { value: "20" } });
+    expect(onUpdate).toHaveBeenCalled();
+    expect(
+      screen.queryByText(/Wind velocity 200 at 3,000 ft/i)
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows a Warning for an out-of-range winds-aloft temperature", () => {
+    render(
+      <WeatherSection
+        state={empty}
+        onUpdate={() => {}}
+        airportRunways={[null, null]}
+      />
+    );
+    fireEvent.change(screen.getByLabelText("Temperature at 15,000 ft"), {
+      target: { value: "-70" },
+    });
+    expect(
+      screen.getByText(/Temperature -70 at 15,000 ft is not valid/i)
+    ).toBeInTheDocument();
+  });
+
+  it("shows a Warning on the airport altimeter instead of silently dropping it", () => {
+    const onUpdate = jest.fn();
+    render(
+      <WeatherSection
+        state={empty}
+        onUpdate={onUpdate}
+        airportRunways={[null, null]}
+      />
+    );
+    const altimeter = screen.getAllByLabelText("Altimeter")[0];
+    fireEvent.change(altimeter, { target: { value: "35.00" } });
+    expect(onUpdate).not.toHaveBeenCalled();
+    expect(altimeter).toHaveAttribute("aria-invalid", "true");
+    expect(
+      screen.getByText(/Altimeter 35.00 is not valid; enter 28.00–31.00 inHg/i)
+    ).toBeInTheDocument();
+  });
+});
+
+describe("WeatherSection — worksheet opened from a link", () => {
+  it("renders a truncated winds-aloft table and explains it, instead of crashing", () => {
+    const query = "wind=90,90,90||5,10,15";
+    const loaded = sanitizeWorksheetUrlState(
+      deserializeState(query, empty),
+      query,
+      empty
+    );
+    render(
+      <WeatherSection
+        state={loaded.state}
+        onUpdate={() => {}}
+        airportRunways={[null, null]}
+        notifications={loaded.notifications}
+      />
+    );
+    expect(screen.getByText("Aloft")).toBeInTheDocument();
+    expect(
+      screen.getByText(/winds aloft.*direction, speed and temperature/)
+    ).toBeInTheDocument();
   });
 });

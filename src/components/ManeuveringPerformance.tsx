@@ -1,13 +1,18 @@
 import type { ManeuveringSpeeds } from "@/utils/types";
+import type { Notification } from "@/utils/notifications";
+import { MANEUVERING_SUBJECT } from "@/utils/derived";
+import InlineNotifications from "@/components/InlineNotifications";
 
 interface ManeuveringPerformanceProps {
   aircraftModel?: string;
   maneuveringSpeeds?: ManeuveringSpeeds | null;
+  notifications?: readonly Notification[];
 }
 
 export default function ManeuveringPerformance({
   aircraftModel,
   maneuveringSpeeds,
+  notifications = [],
 }: ManeuveringPerformanceProps) {
   if (!aircraftModel) return null;
 
@@ -84,6 +89,11 @@ export default function ManeuveringPerformance({
             ))}
           </tbody>
         </table>
+        <InlineNotifications
+          notifications={notifications}
+          subject={MANEUVERING_SUBJECT}
+          className="mt-2"
+        />
       </div>
   );
 }

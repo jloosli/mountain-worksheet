@@ -6,14 +6,16 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import WeatherDataIntegration from "./WeatherDataIntegration";
 import { isApiPopulatedData } from "@/utils/weatherDataMapper";
+import { fetchWorksheetWeather } from "@/utils/weatherFetch";
+import type { WeatherFetchResult } from "@/utils/notifications";
 import type { WorksheetData } from "@/utils/types";
 
-// Mock the API functions
-jest.mock("@/utils/aviationWeatherApi");
 jest.mock("@/utils/weatherDataMapper");
-jest.mock("@/utils/openMeteoApi");
-jest.mock("@/utils/areaOfOpsWeather");
-jest.mock("@/utils/gairmetApi");
+jest.mock("@/utils/weatherFetch");
+
+const mockFetch = fetchWorksheetWeather as jest.MockedFunction<
+  typeof fetchWorksheetWeather
+>;
 
 // Mock functions are available but not used in simplified tests
 const mockIsApiPopulatedData = isApiPopulatedData as jest.MockedFunction<
@@ -30,7 +32,7 @@ describe("WeatherDataIntegration", () => {
       temp: [21, 21, 21],
       altimeter: [29.92, 29.92, 29.92],
       rwy: [null, null],
-    } as Partial<WorksheetData>,
+    } as WorksheetData,
     onDataUpdate: jest.fn(),
   };
 
@@ -83,7 +85,7 @@ describe("WeatherDataIntegration", () => {
     const incompleteData = {
       ...defaultProps.worksheetData,
       airport: ["", ""] as [string, string], // Missing airports
-    };
+    } as WorksheetData;
 
     render(
       <WeatherDataIntegration
@@ -103,66 +105,20 @@ describe("WeatherDataIntegration", () => {
     expect(fetchButton).toBeDisabled();
   });
 
-  it("renders WeatherWarningsPanel with mapping warnings after successful fetch", async () => {
-    const { mapWeatherDataToWorksheet, mergeWeatherData, isApiPopulatedData } =
-      jest.requireMock("@/utils/weatherDataMapper");
-    mapWeatherDataToWorksheet.mockReturnValue({
-      success: true,
-      data: { temp: [20, null, 22] },
-      errors: [],
-      warnings: [
-        "KPVU: forecast unavailable for 2026-05-20T17:00Z; using nearest TAF period (Δt = 5.0 d)",
+  describe("fetching", () => {
+    const fetchResult: WeatherFetchResult = {
+      fetchedFor: { airport: ["KORD", "KLAX"], date: "2024-01-15", time: "12:00", duration: null },
+      applied: { temp: [20, null, null] },
+      notifications: [
+        {
+          level: "warning",
+          subject: { kind: "field", field: "temp", index: 2 },
+          message: "KLAX: no METAR or TAF",
+        },
       ],
-    });
-    mergeWeatherData.mockImplementation((existing: object, api: object) => ({
-      ...existing,
-      ...api,
-    }));
-    isApiPopulatedData.mockReturnValue({
-      wind: false,
-      temperature: false,
-      pressure: false,
-      runway: false,
-      altitude: false,
-    });
-    const { getWeatherDataBatch } = jest.requireMock(
-      "@/utils/aviationWeatherApi"
-    );
-    getWeatherDataBatch.mockResolvedValue({
-      metar: [],
-      taf: [],
-      airport: [],
-    });
-
-    render(<WeatherDataIntegration {...defaultProps} />);
-    fireEvent.click(screen.getByText("Fetch Weather"));
-
-    await waitFor(() => {
-      expect(screen.getByText(/forecast unavailable/i)).toBeInTheDocument();
-    });
-  });
-
-  describe("with hideBox (as mounted in production, issue #220)", () => {
-    const setupFetch = (warnings: string[]) => {
-      const { mapWeatherDataToWorksheet, mergeWeatherData } =
-        jest.requireMock("@/utils/weatherDataMapper");
-      mapWeatherDataToWorksheet.mockReturnValue({
-        success: true,
-        data: {},
-        errors: [],
-        warnings,
-      });
-      mergeWeatherData.mockImplementation((existing: object, api: object) => ({
-        ...existing,
-        ...api,
-      }));
-      const { getWeatherDataBatch } = jest.requireMock(
-        "@/utils/aviationWeatherApi"
-      );
-      getWeatherDataBatch.mockResolvedValue({ metar: [], taf: [], airport: [] });
     };
 
-    const renderHidden = () =>
+    const renderHidden = (props: Partial<React.ComponentProps<typeof WeatherDataIntegration>> = {}) =>
       render(
         <WeatherDataIntegration
           {...defaultProps}
@@ -172,224 +128,65 @@ describe("WeatherDataIntegration", () => {
               Fetch
             </button>
           )}
+          {...props}
         />
       );
 
-    it("renders fetch warnings even though the box is hidden", async () => {
-      setupFetch([
-        "BOI: no METAR or TAF data available for requested time 2024-01-15T12:00:00.000Z",
-      ]);
-      renderHidden();
-      expect(screen.queryByText("Aviation Weather Data")).not.toBeInTheDocument();
+    it("applies a Partial fetch and hands its result up for notifications", async () => {
+      mockFetch.mockResolvedValue({ data: { temp: [20, null, null] }, result: fetchResult });
+      const onDataUpdate = jest.fn();
+      const onFetchResult = jest.fn();
+      const onTimestampUpdate = jest.fn();
+      renderHidden({ onDataUpdate, onFetchResult, onTimestampUpdate });
 
       fireEvent.click(screen.getByText("Fetch"));
 
-      expect(
-        await screen.findByText(/BOI: no METAR or TAF data available/)
-      ).toBeInTheDocument();
-      expect(screen.getByText("Weather Data Warnings")).toBeInTheDocument();
+      await waitFor(() => expect(onFetchResult).toHaveBeenCalledWith(fetchResult));
+      expect(mockFetch).toHaveBeenCalledWith(defaultProps.worksheetData);
+      expect(onDataUpdate).toHaveBeenCalledWith({ temp: [20, null, null] });
+      expect(onTimestampUpdate).toHaveBeenCalledWith(expect.any(Date));
     });
 
-    it("renders no warnings panel when the fetch produced no warnings", async () => {
-      setupFetch([]);
-      renderHidden();
+    it("shows no blocking modal and applies nothing on a total failure", async () => {
+      const failed: WeatherFetchResult = {
+        ...fetchResult,
+        applied: {},
+        notifications: [
+          {
+            level: "warning",
+            subject: { kind: "step", step: "weather" },
+            message: "Weather fetch failed (boom)",
+          },
+        ],
+      };
+      mockFetch.mockResolvedValue({ data: null, result: failed });
+      const onDataUpdate = jest.fn();
+      const onFetchResult = jest.fn();
+      const onTimestampUpdate = jest.fn();
+      renderHidden({ onDataUpdate, onFetchResult, onTimestampUpdate });
 
       fireEvent.click(screen.getByText("Fetch"));
 
-      await waitFor(() => {
-        expect(defaultProps.onDataUpdate).toHaveBeenCalled();
-      });
+      await waitFor(() => expect(onFetchResult).toHaveBeenCalledWith(failed));
+      expect(onDataUpdate).not.toHaveBeenCalled();
+      expect(onTimestampUpdate).not.toHaveBeenCalled();
+      // Only the loading indicator was ever a dialog, and it closes.
+      await waitFor(() =>
+        expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+      );
+      expect(screen.queryByText(/fetch failed/i)).not.toBeInTheDocument();
+    });
+
+    it("renders no warnings panel of its own: notifications are shown inline", async () => {
+      mockFetch.mockResolvedValue({ data: {}, result: fetchResult });
+      const onFetchResult = jest.fn();
+      renderHidden({ onFetchResult });
+
+      fireEvent.click(screen.getByText("Fetch"));
+
+      await waitFor(() => expect(onFetchResult).toHaveBeenCalled());
       expect(screen.queryByText("Weather Data Warnings")).not.toBeInTheDocument();
-    });
-  });
-
-  it("emits skipped warning when opPos is unavailable", async () => {
-    const { mapWeatherDataToWorksheet, mergeWeatherData, isApiPopulatedData } =
-      jest.requireMock("@/utils/weatherDataMapper");
-    let capturedAreaOfOps: unknown = null;
-    mapWeatherDataToWorksheet.mockImplementation(
-      (_apiData: unknown, areaOfOps: unknown) => {
-        capturedAreaOfOps = areaOfOps;
-        return { success: true, data: {}, errors: [], warnings: [] };
-      }
-    );
-    mergeWeatherData.mockImplementation((existing: object, api: object) => ({
-      ...existing,
-      ...api,
-    }));
-    isApiPopulatedData.mockReturnValue({
-      wind: false,
-      temperature: false,
-      pressure: false,
-      runway: false,
-      altitude: false,
-    });
-    const { getWeatherDataBatch } = jest.requireMock("@/utils/aviationWeatherApi");
-    getWeatherDataBatch.mockResolvedValue({
-      metar: [],
-      taf: [],
-      airport: [],
-    });
-
-    const propsWithoutPosition = {
-      ...defaultProps,
-      worksheetData: { ...defaultProps.worksheetData, position: [null, null] as [number | null, number | null] },
-    };
-    render(<WeatherDataIntegration {...propsWithoutPosition} />);
-    fireEvent.click(screen.getByText("Fetch Weather"));
-
-    await waitFor(() => {
-      expect(mapWeatherDataToWorksheet).toHaveBeenCalled();
-    });
-    expect(capturedAreaOfOps).toMatchObject({
-      positionSource: "none",
-      warnings: expect.arrayContaining([
-        expect.stringMatching(/skipped/i),
-      ]),
-    });
-  });
-
-  it("continues pipeline when Open-Meteo fetch fails", async () => {
-    const { fetchPointForecast } = jest.requireMock("@/utils/openMeteoApi");
-    fetchPointForecast.mockRejectedValue(new Error("network down"));
-    const { mapWeatherDataToWorksheet, mergeWeatherData, isApiPopulatedData } =
-      jest.requireMock("@/utils/weatherDataMapper");
-    mapWeatherDataToWorksheet.mockReturnValue({
-      success: true,
-      data: { temp: [20, null, 22] },
-      errors: [],
-      warnings: [],
-    });
-    mergeWeatherData.mockImplementation((existing: object, api: object) => ({
-      ...existing,
-      ...api,
-    }));
-    isApiPopulatedData.mockReturnValue({
-      wind: false,
-      temperature: false,
-      pressure: false,
-      runway: false,
-      altitude: false,
-    });
-    const { getWeatherDataBatch } = jest.requireMock("@/utils/aviationWeatherApi");
-    getWeatherDataBatch.mockResolvedValue({
-      metar: [{ icaoId: "KORD", temp: 20, altim: 1015 }],
-      taf: [],
-      airport: [
-        { icaoId: "KORD", lat: 41.97, lon: -87.91 },
-        { icaoId: "KLAX", lat: 33.94, lon: -118.40 },
-      ],
-    });
-
-    const onDataUpdate = jest.fn();
-    render(<WeatherDataIntegration {...defaultProps} onDataUpdate={onDataUpdate} />);
-    fireEvent.click(screen.getByText("Fetch Weather"));
-
-    await waitFor(() => {
-      expect(onDataUpdate).toHaveBeenCalled();
-    });
-    // Pipeline ran despite Open-Meteo failure
-    expect(mapWeatherDataToWorksheet).toHaveBeenCalled();
-  });
-
-  it("continues pipeline when G-AIRMET fetch fails", async () => {
-    const { fetchGAirmets } = jest.requireMock("@/utils/gairmetApi");
-    fetchGAirmets.mockRejectedValue(new Error("gairmet network down"));
-    const { mapWeatherDataToWorksheet, mergeWeatherData, isApiPopulatedData } =
-      jest.requireMock("@/utils/weatherDataMapper");
-    let capturedAirmets: unknown = "unset";
-    mapWeatherDataToWorksheet.mockImplementation(
-      (_apiData: unknown, _areaOfOps: unknown, airmets: unknown) => {
-        capturedAirmets = airmets;
-        return { success: true, data: {}, errors: [], warnings: [] };
-      }
-    );
-    mergeWeatherData.mockImplementation((existing: object, api: object) => ({
-      ...existing,
-      ...api,
-    }));
-    isApiPopulatedData.mockReturnValue({
-      wind: false,
-      temperature: false,
-      pressure: false,
-      runway: false,
-      altitude: false,
-    });
-    const { getWeatherDataBatch } = jest.requireMock("@/utils/aviationWeatherApi");
-    getWeatherDataBatch.mockResolvedValue({
-      metar: [],
-      taf: [],
-      airport: [
-        { icaoId: "KORD", lat: 41.97, lon: -87.91 },
-        { icaoId: "KLAX", lat: 33.94, lon: -118.40 },
-      ],
-    });
-    const { fetchPointForecast } = jest.requireMock("@/utils/openMeteoApi");
-    fetchPointForecast.mockResolvedValue({ hourly: { time: [] } });
-
-    render(<WeatherDataIntegration {...defaultProps} />);
-    fireEvent.click(screen.getByText("Fetch Weather"));
-
-    await waitFor(() => {
-      expect(mapWeatherDataToWorksheet).toHaveBeenCalled();
-    });
-    expect(capturedAirmets).toBeNull();
-  });
-
-  describe("airport code whitespace (#208)", () => {
-    const setUpSuccessfulFetch = () => {
-      const { mapWeatherDataToWorksheet, mergeWeatherData } = jest.requireMock(
-        "@/utils/weatherDataMapper"
-      );
-      mapWeatherDataToWorksheet.mockReturnValue({
-        success: true,
-        data: {},
-        errors: [],
-        warnings: [],
-      });
-      mergeWeatherData.mockImplementation((existing: object, api: object) => ({
-        ...existing,
-        ...api,
-      }));
-      const { getWeatherDataBatch } = jest.requireMock(
-        "@/utils/aviationWeatherApi"
-      );
-      getWeatherDataBatch.mockResolvedValue({ metar: [], taf: [], airport: [] });
-      return getWeatherDataBatch as jest.Mock;
-    };
-
-    it("dedupes and trims ['KOGD', 'KOGD '] into a single KOGD request", async () => {
-      const getWeatherDataBatch = setUpSuccessfulFetch();
-      render(
-        <WeatherDataIntegration
-          {...defaultProps}
-          worksheetData={{
-            ...defaultProps.worksheetData,
-            airport: ["KOGD", "KOGD "],
-          }}
-        />
-      );
-      fireEvent.click(screen.getByText("Fetch Weather"));
-
-      await waitFor(() => expect(getWeatherDataBatch).toHaveBeenCalled());
-      expect(getWeatherDataBatch.mock.calls[0][0]).toEqual(["KOGD"]);
-    });
-
-    it("trims padded codes on both airports", async () => {
-      const getWeatherDataBatch = setUpSuccessfulFetch();
-      render(
-        <WeatherDataIntegration
-          {...defaultProps}
-          worksheetData={{
-            ...defaultProps.worksheetData,
-            airport: [" kslc", "KOGD "],
-          }}
-        />
-      );
-      fireEvent.click(screen.getByText("Fetch Weather"));
-
-      await waitFor(() => expect(getWeatherDataBatch).toHaveBeenCalled());
-      expect(getWeatherDataBatch.mock.calls[0][0]).toEqual(["KSLC", "KOGD"]);
+      expect(screen.queryByText(/KLAX: no METAR or TAF/)).not.toBeInTheDocument();
     });
 
     it("disables fetch when an airport code is whitespace-only", () => {

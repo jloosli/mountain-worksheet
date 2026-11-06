@@ -14,6 +14,13 @@ import type {
 import { selectAirportWeather } from "./airportTimeWeather";
 import type { AreaOfOpsWeather } from "./areaOfOpsWeather";
 import { TARGET_ALTITUDES_FT } from "./areaOfOpsWeather";
+import type { AirmetClassification } from "./gairmetApi";
+import {
+  fieldSubject,
+  subjectKey,
+  type Notification,
+  type Subject,
+} from "./notifications";
 
 // Validation ranges
 export const VALIDATION_RANGES = {
@@ -27,10 +34,27 @@ export const VALIDATION_RANGES = {
 
 export interface WeatherMappingResult {
   success: boolean;
+  /**
+   * Values to merge into the worksheet. A weather field the fetch was
+   * expected to fill but couldn't is `null` (blank) — never left holding an
+   * earlier fetch's value. `-1` in an array slot means "don't update": runway
+   * and field elevation use it for an airport the lookup didn't match, so
+   * the worksheet keeps whatever it held (#227). Either way the field gets a
+   * Warning, which only shows while the field is blank.
+   */
   data: Partial<WorksheetData>;
-  errors: string[];
-  warnings: string[];
+  /** Every notification raised by the fetch, each with its Subject. */
+  notifications: Notification[];
 }
+
+/**
+ * What an airport's identity means for the fields it fills (#216):
+ * - `unknown`: matches nothing; elevation, runway and weather need input.
+ * - `non-reporting`: exists but publishes no METAR/TAF; weather needs input.
+ * Either way those fields are left blank without a Warning, since the
+ * airport's own notification already says why.
+ */
+export type AirportCondition = "unknown" | "non-reporting";
 
 export interface WeatherMappingOptions {
   flightDate?: string; // ISO date string
@@ -38,9 +62,23 @@ export interface WeatherMappingOptions {
   durationHours?: number | null;
   departureAirport?: string;
   arrivalAirport?: string;
+  airportConditions?: {
+    departure?: AirportCondition;
+    arrival?: AirportCondition;
+  };
   position?: [number | null, number | null];
   opAltitudeFt?: number | null;
   validateData?: boolean;
+}
+
+/** The identity condition of the airport filling triple slot 0 or 2. */
+function conditionOf(
+  options: WeatherMappingOptions,
+  slot: 0 | 2
+): AirportCondition | undefined {
+  return slot === 0
+    ? options.airportConditions?.departure
+    : options.airportConditions?.arrival;
 }
 
 /**
@@ -51,20 +89,20 @@ export function mapAirportSpecificWeatherData(
   metarData: METARResponse[],
   tafData: TAFResponse[],
   options: WeatherMappingOptions = {}
-): { data: Partial<WorksheetData>; warnings: string[] } {
+): { data: Partial<WorksheetData>; notifications: Notification[] } {
   const result: Partial<WorksheetData> = {};
-  const warnings: string[] = [];
+  const notifications: Notification[] = [];
 
   const safeMetar = Array.isArray(metarData) ? metarData : [];
   const safeTaf = Array.isArray(tafData) ? tafData : [];
 
   if (!options.flightDate || !options.flightTime) {
-    return { data: result, warnings };
+    return { data: result, notifications };
   }
 
   const depTime = new Date(`${options.flightDate}T${options.flightTime}:00Z`);
   if (Number.isNaN(depTime.getTime())) {
-    return { data: result, warnings };
+    return { data: result, notifications };
   }
   const durationHours =
     typeof options.durationHours === "number" &&
@@ -74,44 +112,69 @@ export function mapAirportSpecificWeatherData(
       : 0;
   const arrTime = new Date(depTime.getTime() + durationHours * 3600 * 1000);
 
+  const setSlot = (
+    key: "temp" | "altimeter",
+    index: 0 | 2,
+    value: number | null
+  ) => {
+    const next = (result[key] ? [...result[key]!] : [-1, -1, -1]) as [
+      number | null,
+      number | null,
+      number | null,
+    ];
+    next[index] = value;
+    result[key] = next;
+  };
+
   const applyAirportWeather = (
     airportCode: string | undefined,
     requestedTime: Date,
     index: 0 | 2
   ): void => {
     if (!airportCode) return;
+    if (conditionOf(options, index)) {
+      setSlot("temp", index, null);
+      setSlot("altimeter", index, null);
+      return;
+    }
     const code = airportCode.toUpperCase();
     const metar = safeMetar.find((m) => m.icaoId?.toUpperCase() === code);
     const taf = safeTaf.find((t) => t.icaoId?.toUpperCase() === code);
-    const sel = selectAirportWeather(metar, taf, requestedTime, code);
-    warnings.push(...sel.warnings);
-    if (sel.temp !== null) {
-      const temp = sel.temp;
-      if (!options.validateData || isValidTemperature(temp)) {
-        const next = (result.temp ? [...result.temp] : [-1, -1, -1]) as [
-          number | null,
-          number | null,
-          number | null,
-        ];
-        next[index] = temp;
-        result.temp = next;
-      }
+    const sel = selectAirportWeather(metar, taf, requestedTime, code, index);
+    notifications.push(...sel.notifications);
+    const label = index === 0 ? "Departure" : "Arrival";
+
+    let temp = sel.temp;
+    if (temp !== null && options.validateData && !isValidTemperature(temp)) {
+      notifications.push({
+        level: "warning",
+        subject: fieldSubject("temp", index),
+        message: `${label} temperature ${temp}°C from ${code} is out of valid range; not applied`,
+      });
+      temp = null;
     }
-    if (sel.altimeter !== null) {
-      if (!options.validateData || isValidAltimeter(sel.altimeter)) {
-        const next = (result.altimeter
-          ? [...result.altimeter]
-          : [-1, -1, -1]) as [number | null, number | null, number | null];
-        next[index] = sel.altimeter;
-        result.altimeter = next;
-      }
+    setSlot("temp", index, temp);
+
+    let altimeter = sel.altimeter;
+    if (
+      altimeter !== null &&
+      options.validateData &&
+      !isValidAltimeter(altimeter)
+    ) {
+      notifications.push({
+        level: "warning",
+        subject: fieldSubject("altimeter", index),
+        message: `${label} altimeter ${altimeter} inHg from ${code} is out of valid range; not applied`,
+      });
+      altimeter = null;
     }
+    setSlot("altimeter", index, altimeter);
   };
 
   applyAirportWeather(options.departureAirport, depTime, 0);
   applyAirportWeather(options.arrivalAirport, arrTime, 2);
 
-  return { data: result, warnings };
+  return { data: result, notifications };
 }
 
 /**
@@ -176,128 +239,234 @@ export function mapAirportElevationData(
   return { altitude: [departure, -1, arrival] };
 }
 
+type Triple = [number | null, number | null, number | null];
+type WindTable = [(number | null)[], (number | null)[], (number | null)[]];
+
+const ALOFT_LABELS = TARGET_ALTITUDES_FT.map(
+  (ft) => `${ft.toLocaleString("en-US")} ft`
+);
+
 /**
- * Map all weather data from API responses to WorksheetData format
+ * Map all weather data from API responses to WorksheetData format, and
+ * collect every notification the fetch raised.
+ *
+ * Every field the fetch is expected to fill ends up either holding a fetched
+ * value or blank (`null`) with a Warning on that field. Out-of-range values
+ * (when `validateData`) are blanked with a Warning rather than applied.
  */
 export function mapWeatherDataToWorksheet(
   apiData: {
     metar?: METARResponse[];
     taf?: TAFResponse[];
     airport?: AirportResponse[];
+    /** Request-failure notifications from `getWeatherDataBatch`. */
+    notifications?: Notification[];
   },
   areaOfOps: AreaOfOpsWeather | null,
-  airmets: import("./gairmetApi").AirmetClassification | null,
+  airmets: AirmetClassification | null,
   options: WeatherMappingOptions = {}
 ): WeatherMappingResult {
-  const result: WeatherMappingResult = {
-    success: true,
-    data: {},
-    errors: [],
-    warnings: [],
-  };
+  const notifications: Notification[] = [...(apiData.notifications ?? [])];
+  const data: Partial<WorksheetData> = {};
 
   try {
-    // Ensure all data types are arrays before processing
     const metarData = Array.isArray(apiData.metar) ? apiData.metar : [];
     const tafData = Array.isArray(apiData.taf) ? apiData.taf : [];
     const airportData = Array.isArray(apiData.airport) ? apiData.airport : [];
 
-    // Wind/temperature data is now supplied exclusively via areaOfOps (Open-Meteo)
-    if (!areaOfOps) {
-      result.warnings.push("No wind/temperature data available");
-    }
-
-    // Map airport-specific temperature and pressure data
-    if (metarData.length > 0 || tafData.length > 0) {
-      const { data: airportWeatherData, warnings: airportWarnings } =
-        mapAirportSpecificWeatherData(metarData, tafData, options);
-      result.data = { ...result.data, ...airportWeatherData };
-      result.warnings.push(...airportWarnings);
-    } else {
-      result.warnings.push(
-        "No METAR/TAF data available for airport-specific temperature/pressure"
-      );
-    }
-
-    // Map runway data
-    if (airportData.length > 0) {
-      const runwayData = mapRunwayData(airportData, options);
-      result.data = { ...result.data, ...runwayData };
-    } else {
-      result.warnings.push("No airport data available for runway information");
-    }
-
-    // Map airport elevation data
-    if (airportData.length > 0) {
-      const elevationData = mapAirportElevationData(airportData, options);
-      result.data = { ...result.data, ...elevationData };
-    }
-
-    // Apply area-of-ops weather (Open-Meteo) winds and operating conditions
-    if (areaOfOps) {
-      if (areaOfOps.windsAloft.direction.some((v) => v !== null)) {
-        result.data.wind = [
-          areaOfOps.windsAloft.direction,
-          areaOfOps.windsAloft.speed,
-          areaOfOps.windsAloft.temp,
-        ];
-      }
-      if (areaOfOps.opTemp !== null) {
-        if (!options.validateData || isValidTemperature(areaOfOps.opTemp)) {
-          const next = (result.data.temp
-            ? [...result.data.temp]
-            : [-1, -1, -1]) as [number | null, number | null, number | null];
-          next[1] = areaOfOps.opTemp;
-          result.data.temp = next;
-        } else {
-          result.warnings.push(
-            `Operating temperature ${areaOfOps.opTemp}°C out of valid range; skipped`
-          );
-        }
-      }
-      if (areaOfOps.opAltimeter !== null) {
-        if (!options.validateData || isValidAltimeter(areaOfOps.opAltimeter)) {
-          const next = (result.data.altimeter
-            ? [...result.data.altimeter]
-            : [-1, -1, -1]) as [number | null, number | null, number | null];
-          next[1] = areaOfOps.opAltimeter;
-          result.data.altimeter = next;
-        } else {
-          result.warnings.push(
-            `Operating altimeter ${areaOfOps.opAltimeter} inHg out of valid range; skipped`
-          );
-        }
-      }
-      result.warnings.push(...areaOfOps.warnings);
-    }
-
-    // Apply G-AIRMET classification results
-    if (airmets) {
-      if (airmets.turb !== null)
-        (result.data as Partial<WorksheetData>).turb = airmets.turb;
-      if (airmets.cielVis !== null)
-        (result.data as Partial<WorksheetData>).cielVis = airmets.cielVis;
-      if (airmets.mtnObsc !== null)
-        (result.data as Partial<WorksheetData>).mtnObsc = airmets.mtnObsc;
-      result.warnings.push(...airmets.warnings);
-    }
-
-    // Validate mapped data
-    if (options.validateData) {
-      const validationResult = validateMappedData(result.data);
-      result.errors.push(...validationResult.errors);
-      result.warnings.push(...validationResult.warnings);
-    }
-  } catch (error) {
-    result.success = false;
-    result.errors.push(
-      `Mapping error: ${
-        error instanceof Error ? error.message : "Unknown error"
-      }`
+    // Airport temperature / altimeter (departure = 0, arrival = 2)
+    const airportWeather = mapAirportSpecificWeatherData(
+      metarData,
+      tafData,
+      options
     );
+    Object.assign(data, airportWeather.data);
+    notifications.push(...airportWeather.notifications);
+
+    // Runways and field elevations
+    data.rwy = mapRunwayData(airportData, options).rwy;
+    const elevation = mapAirportElevationData(airportData, options);
+    // Neither airport matched: keep both field elevations (#227).
+    data.altitude = elevation.altitude ?? [-1, -1, -1];
+
+    // Area-of-ops weather (Open-Meteo): winds aloft and operating conditions
+    const temp = (data.temp ? [...data.temp] : [-1, -1, -1]) as Triple;
+    const altimeter = (
+      data.altimeter ? [...data.altimeter] : [-1, -1, -1]
+    ) as Triple;
+    let wind: WindTable = [
+      Array(5).fill(null),
+      Array(5).fill(null),
+      Array(5).fill(null),
+    ];
+    if (areaOfOps) {
+      notifications.push(...areaOfOps.notifications);
+      wind = [
+        [...areaOfOps.windsAloft.direction],
+        [...areaOfOps.windsAloft.speed],
+        [...areaOfOps.windsAloft.temp],
+      ];
+      if (areaOfOps.opTemp !== null) temp[1] = areaOfOps.opTemp;
+      altimeter[1] = areaOfOps.opAltimeter;
+    } else {
+      altimeter[1] = null;
+    }
+    if (typeof options.opAltitudeFt === "number" && options.opAltitudeFt > 0) {
+      // An operating temperature is expected only once there's an altitude.
+      if (temp[1] === -1) temp[1] = null;
+    }
+
+    if (options.validateData) {
+      if (temp[1] !== null && temp[1] !== -1 && !isValidTemperature(temp[1])) {
+        notifications.push({
+          level: "warning",
+          subject: fieldSubject("temp", 1),
+          message: `Operating temperature ${temp[1]}°C out of valid range; not applied`,
+        });
+        temp[1] = null;
+      }
+      if (altimeter[1] !== null && altimeter[1] !== -1 && !isValidAltimeter(altimeter[1])) {
+        notifications.push({
+          level: "warning",
+          subject: fieldSubject("altimeter", 1),
+          message: `Operating altimeter ${altimeter[1]} inHg out of valid range; not applied`,
+        });
+        altimeter[1] = null;
+      }
+      const checkedWind = rejectInvalidWinds(wind);
+      wind = checkedWind.value;
+      notifications.push(...checkedWind.notifications);
+    }
+    data.temp = temp;
+    data.altimeter = altimeter;
+    data.wind = wind;
+
+    // G-AIRMET flags. `null` means unavailable; the flag is left alone.
+    if (airmets) {
+      if (airmets.turb !== null) data.turb = airmets.turb;
+      if (airmets.cielVis !== null) data.cielVis = airmets.cielVis;
+      if (airmets.mtnObsc !== null) data.mtnObsc = airmets.mtnObsc;
+      notifications.push(...airmets.notifications);
+    }
+
+    notifications.push(...blankFieldWarnings(data, notifications, options));
+  } catch (error) {
+    return {
+      success: false,
+      data: {},
+      notifications: [
+        ...notifications,
+        {
+          level: "warning",
+          subject: { kind: "step", step: "weather" },
+          message: `Weather data could not be read: ${
+            error instanceof Error ? error.message : "unknown error"
+          }`,
+        },
+      ],
+    };
   }
 
-  return result;
+  return { success: true, data, notifications };
+}
+
+/** Blanks out-of-range winds-aloft values, with a Warning on each column. */
+function rejectInvalidWinds(wind: WindTable): {
+  value: WindTable;
+  notifications: Notification[];
+} {
+  const notifications: Notification[] = [];
+  const checks: [string, (v: number) => boolean][] = [
+    ["wind direction", isValidWindDirection],
+    ["wind speed", isValidWindSpeed],
+    ["temperature", isValidTemperature],
+  ];
+  const next = wind.map((row) => [...row]) as WindTable;
+  checks.forEach(([label, isValid], row) => {
+    next[row].forEach((value, col) => {
+      if (value === null || value === undefined || isValid(value)) return;
+      notifications.push({
+        level: "warning",
+        subject: fieldSubject("wind", col),
+        message: `Invalid ${label} at ${TARGET_ALTITUDES_FT[col]} ft: ${value}; not applied`,
+      });
+      next[row][col] = null;
+    });
+  });
+  return { value: next, notifications };
+}
+
+/**
+ * True when the fetch produced no value for a runway or elevation slot:
+ * blank (`null`) or kept as-is (`-1`, #227). A kept slot's Warning only
+ * shows if the worksheet held nothing there.
+ */
+function notFetched(value: number | null | undefined): boolean {
+  return value === null || value === -1;
+}
+
+/**
+ * A Warning for every expected field the fetch left blank, unless a producer
+ * already raised a Warning on it (so its more specific reason is kept).
+ */
+function blankFieldWarnings(
+  data: Partial<WorksheetData>,
+  existing: Notification[],
+  options: WeatherMappingOptions
+): Notification[] {
+  const warned = new Set(
+    existing.filter((n) => n.level === "warning").map((n) => subjectKey(n.subject))
+  );
+  const dep = options.departureAirport?.toUpperCase();
+  const arr = options.arrivalAirport?.toUpperCase();
+  const out: Notification[] = [];
+  const blank = (subject: Subject, what: string) => {
+    if (warned.has(subjectKey(subject))) return;
+    warned.add(subjectKey(subject));
+    out.push({
+      level: "warning",
+      subject,
+      message: `${what} couldn't be fetched; enter it manually`,
+    });
+  };
+
+  const slot = (code: string | undefined, label: string) =>
+    code ? `${label} (${code})` : label;
+  ([0, 1, 2] as const).forEach((i) => {
+    const where = ["Departure", "Operating", "Arrival"][i];
+    const code = i === 0 ? dep : i === 2 ? arr : undefined;
+    if (i !== 1 && !code) return;
+    // An Unknown or Non-reporting airport's fields need input; its own
+    // notification explains why, so no generic Warning.
+    const condition = i === 1 ? undefined : conditionOf(options, i);
+    if (condition === "unknown") return;
+    if (condition !== "non-reporting") {
+      if (data.temp?.[i] === null)
+        blank(fieldSubject("temp", i), slot(code, `${where} temperature`));
+      if (data.altimeter?.[i] === null)
+        blank(fieldSubject("altimeter", i), slot(code, `${where} altimeter`));
+    }
+    if (i !== 1 && notFetched(data.altitude?.[i]))
+      blank(fieldSubject("altitude", i), slot(code, `${where} field elevation`));
+  });
+  if (dep && notFetched(data.rwy?.[0]) && conditionOf(options, 0) !== "unknown")
+    blank(fieldSubject("rwy", 0), slot(dep, "Departure runway length"));
+  if (arr && notFetched(data.rwy?.[1]) && conditionOf(options, 2) !== "unknown")
+    blank(fieldSubject("rwy", 1), slot(arr, "Arrival runway length"));
+
+  const wind = data.wind;
+  if (wind) {
+    const colBlank = (col: number) => wind.every((row) => row[col] == null);
+    if (TARGET_ALTITUDES_FT.every((_, col) => colBlank(col))) {
+      blank(fieldSubject("wind"), "Winds aloft");
+    } else {
+      TARGET_ALTITUDES_FT.forEach((_, col) => {
+        if (colBlank(col))
+          blank(fieldSubject("wind", col), `Winds aloft at ${ALOFT_LABELS[col]}`);
+      });
+    }
+  }
+  return out;
 }
 
 /**
@@ -362,80 +531,6 @@ function isValidRunwayLength(length: number): boolean {
     length >= VALIDATION_RANGES.runwayLength.min &&
     length <= VALIDATION_RANGES.runwayLength.max
   );
-}
-
-/**
- * Validate mapped data against expected ranges
- */
-function validateMappedData(data: Partial<WorksheetData>): {
-  errors: string[];
-  warnings: string[];
-} {
-  const errors: string[] = [];
-  const warnings: string[] = [];
-
-  // Validate wind data
-  if (data.wind) {
-    const altLabel = (index: number): string => {
-      const ft = TARGET_ALTITUDES_FT[index];
-      return ft ? `${ft} ft` : `column ${index}`;
-    };
-
-    data.wind[0].forEach((dir, index) => {
-      if (dir !== null && dir !== undefined && !isValidWindDirection(dir)) {
-        errors.push(
-          `Invalid wind direction at ${altLabel(index)}: ${dir}`
-        );
-      }
-    });
-
-    data.wind[1].forEach((speed, index) => {
-      if (speed !== null && speed !== undefined && !isValidWindSpeed(speed)) {
-        errors.push(
-          `Invalid wind speed at ${altLabel(index)}: ${speed}`
-        );
-      }
-    });
-
-    data.wind[2].forEach((temp, index) => {
-      if (temp !== null && temp !== undefined && !isValidTemperature(temp)) {
-        errors.push(
-          `Invalid temperature at ${altLabel(index)}: ${temp}`
-        );
-      }
-    });
-  }
-
-  // Validate temperature data
-  if (data.temp) {
-    data.temp.forEach((temp, index) => {
-      if (temp !== null && !isValidTemperature(temp)) {
-        errors.push(`Invalid temperature for phase ${index}: ${temp}`);
-      }
-    });
-  }
-
-  // Validate altimeter data
-  if (data.altimeter) {
-    data.altimeter.forEach((altimeter, index) => {
-      if (altimeter !== null && !isValidAltimeter(altimeter)) {
-        errors.push(
-          `Invalid altimeter setting for phase ${index}: ${altimeter}`
-        );
-      }
-    });
-  }
-
-  // Validate runway data
-  if (data.rwy) {
-    data.rwy.forEach((runway, index) => {
-      if (runway !== null && runway !== -1 && !isValidRunwayLength(runway)) {
-        errors.push(`Invalid runway length for phase ${index}: ${runway}ft`);
-      }
-    });
-  }
-
-  return { errors, warnings };
 }
 
 /**
@@ -540,6 +635,11 @@ export function mergeWeatherData(
   // unmatched airport, or the manually-entered operating altitude).
   if (apiData.rwy) {
     result.rwy = mergeSlots(result.rwy, apiData.rwy, [null, null]);
+  }
+
+  // Airport IDs: a confirmed auto-correction (#216) is written back.
+  if (apiData.airport) {
+    result.airport = [...apiData.airport] as [string, string];
   }
 
   if (apiData.altitude) {

@@ -1,5 +1,6 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { useAirportRunways } from "./useAirportRunways";
+import { useAirportRunwayLookup, useAirportRunways } from "./useAirportRunways";
+import { fieldSubject } from "./notifications";
 import { getAirportInfo } from "./aviationWeatherApi";
 import type { AirportResponse } from "./aviationWeatherApi";
 
@@ -342,5 +343,95 @@ describe("useAirportRunways", () => {
 
     expect(result.current[0]).toBeNull();
     expect(result.current[1]).toEqual(kslcRunways);
+  });
+
+  describe("useAirportRunwayLookup", () => {
+    it("reports idle with no notifications when no airport ID is entered", () => {
+      const { result } = renderHook(() => useAirportRunwayLookup(["", ""]));
+      expect(result.current.status).toEqual(["idle", "idle"]);
+      expect(result.current.notifications).toEqual([]);
+    });
+
+    it("reports pending until the lookup resolves, then found", async () => {
+      mockedGetAirportInfo.mockResolvedValue([
+        fakeAirport("KDEN", [{ id: "16L/34R", length: 12000, alignment: 160 }]),
+      ]);
+      const { result } = renderHook(() => useAirportRunwayLookup(["KDEN", ""]));
+      expect(result.current.status).toEqual(["pending", "idle"]);
+      act(() => {
+        jest.advanceTimersByTime(400);
+      });
+      await waitFor(() => {
+        expect(result.current.status[0]).toBe("found");
+      });
+      expect(result.current.notifications).toEqual([]);
+    });
+
+    it("reports no-runways when the lookup returns no runways for the airport", async () => {
+      mockedGetAirportInfo.mockResolvedValue([]);
+      const { result } = renderHook(() => useAirportRunwayLookup(["KXYZ", ""]));
+      act(() => {
+        jest.advanceTimersByTime(400);
+      });
+      await waitFor(() => {
+        expect(result.current.status[0]).toBe("no-runways");
+      });
+      expect(result.current.notifications).toEqual([]);
+    });
+
+    it("raises a Warning on each runway field when the lookup fails", async () => {
+      jest.spyOn(console, "warn").mockImplementation(() => {});
+      mockedGetAirportInfo.mockRejectedValue(new Error("network down"));
+      const { result } = renderHook(() =>
+        useAirportRunwayLookup(["KDEN", "KSLC"])
+      );
+      act(() => {
+        jest.advanceTimersByTime(400);
+      });
+      await waitFor(() => {
+        expect(result.current.status).toEqual(["failed", "failed"]);
+      });
+      expect(result.current.runways).toEqual([null, null]);
+      expect(result.current.notifications).toEqual([
+        {
+          level: "warning",
+          subject: fieldSubject("rwy", 0),
+          message: expect.stringMatching(/KDEN.*network down/),
+        },
+        {
+          level: "warning",
+          subject: fieldSubject("rwy", 1),
+          message: expect.stringMatching(/KSLC.*network down/),
+        },
+      ]);
+      jest.restoreAllMocks();
+    });
+
+    it("downgrades a failed lookup to an Advisory once that runway length is filled", async () => {
+      jest.spyOn(console, "warn").mockImplementation(() => {});
+      mockedGetAirportInfo.mockRejectedValue(new Error("network down"));
+      const { result } = renderHook(() =>
+        useAirportRunwayLookup(["KDEN", "KSLC"], [5500, null])
+      );
+      act(() => {
+        jest.advanceTimersByTime(400);
+      });
+      await waitFor(() => {
+        expect(result.current.status).toEqual(["failed", "failed"]);
+      });
+      expect(result.current.notifications).toEqual([
+        {
+          level: "advisory",
+          subject: fieldSubject("rwy", 0),
+          message: expect.stringMatching(/KDEN.*network down/),
+        },
+        {
+          level: "warning",
+          subject: fieldSubject("rwy", 1),
+          message: expect.stringMatching(/KSLC.*network down/),
+        },
+      ]);
+      jest.restoreAllMocks();
+    });
   });
 });

@@ -89,15 +89,38 @@ describe("openMeteoApi", () => {
     it("snaps to highest level and warns when target above range", () => {
       const r = interpolateAtAltitude(20000, sample);
       expect(r.temp).toBe(-15); // 500 hPa value
-      expect(r.warnings.length).toBeGreaterThan(0);
-      expect(r.warnings[0]).toMatch(/above/i);
+      expect(r.notes).toEqual([
+        { level: "caution", message: expect.stringMatching(/above/i) },
+      ]);
     });
 
     it("snaps to lowest level and warns when target below range", () => {
       const r = interpolateAtAltitude(1000, sample);
       expect(r.temp).toBe(20); // 925 hPa value
-      expect(r.warnings.length).toBeGreaterThan(0);
-      expect(r.warnings[0]).toMatch(/below/i);
+      expect(r.notes).toEqual([
+        { level: "caution", message: expect.stringMatching(/below/i) },
+      ]);
+    });
+
+    it("raises a Warning note and returns nulls when no level has a height", () => {
+      const noHeights = {
+        ...sample,
+        heightsFtByLevel: Object.fromEntries(
+          Object.keys(sample.heightsFtByLevel).map((k) => [k, NaN])
+        ) as typeof sample.heightsFtByLevel,
+      };
+      const r = interpolateAtAltitude(9000, noHeights);
+      expect(r).toEqual({
+        temp: null,
+        wspd: null,
+        wdir: null,
+        notes: [
+          {
+            level: "warning",
+            message: "No pressure-level heights available for interpolation",
+          },
+        ],
+      });
     });
 
     it("converts metres to feet via M_TO_FT", () => {
@@ -139,15 +162,104 @@ describe("openMeteoApi", () => {
       expect(r.wdir).toBeNull();
     });
 
-    it("does not divide by zero when two levels share a geopotential height", () => {
+    it("raises a Warning note naming each component the forecast didn't provide", () => {
+      const partial = {
+        ...sample,
+        wspdByLevel: { ...sample.wspdByLevel, 700: NaN },
+      };
+      const r = interpolateAtAltitude(9000, partial);
+      expect(r.wspd).toBeNull();
+      expect(r.temp).not.toBeNull();
+      expect(r.notes).toEqual([
+        {
+          level: "warning",
+          message: expect.stringMatching(/no wind speed at 9,000 ft/i),
+        },
+      ]);
+    });
+
+    it("names every missing component in one Warning note", () => {
+      const partial = {
+        ...sample,
+        tempByLevel: { ...sample.tempByLevel, 850: NaN, 700: NaN },
+        wspdByLevel: { ...sample.wspdByLevel, 850: NaN, 700: NaN },
+        wdirByLevel: { ...sample.wdirByLevel, 850: NaN, 700: NaN },
+      };
+      const r = interpolateAtAltitude(9000, partial);
+      expect(r.notes).toHaveLength(1);
+      expect(r.notes[0].level).toBe("warning");
+      expect(r.notes[0].message).toMatch(/wind direction, wind speed and temperature/);
+    });
+
+    it("warns about a missing component when snapping above the highest level", () => {
+      const partial = {
+        ...sample,
+        wspdByLevel: { ...sample.wspdByLevel, 500: NaN },
+      };
+      const r = interpolateAtAltitude(20000, partial);
+      expect(r.wspd).toBeNull();
+      expect(r.notes).toEqual([
+        { level: "caution", message: expect.stringMatching(/snapping to highest level/) },
+        {
+          level: "warning",
+          message: expect.stringMatching(/no wind speed at 20,000 ft/i),
+        },
+      ]);
+    });
+
+    it("warns about a missing component at the lowest level", () => {
+      const partial = {
+        ...sample,
+        tempByLevel: { ...sample.tempByLevel, 925: NaN },
+      };
+      const r = interpolateAtAltitude(2500, partial);
+      expect(r.temp).toBeNull();
+      expect(r.notes).toEqual([
+        {
+          level: "warning",
+          message: expect.stringMatching(/no temperature at 2,500 ft/i),
+        },
+      ]);
+    });
+
+    // A target equal to a duplicated height is always caught by an earlier
+    // path: the bracket below the duplicate pair (which ends at that height)
+    // or the lowest/highest-level snap. No bracket ever has zero width.
+    it("takes a duplicated mid-range height from the bracket below it", () => {
       const collapsed = {
         ...sample,
         heightsFtByLevel: { ...sample.heightsFtByLevel, 850: 5000, 800: 5000 },
       };
-      const r = interpolateAtAltitude(5000, collapsed);
-      expect(Number.isFinite(r.temp as number)).toBe(true);
-      expect(Number.isFinite(r.wspd as number)).toBe(true);
-      expect(Number.isFinite(r.wdir as number)).toBe(true);
+      // 900 hPa (3300 ft) – 850 hPa (5000 ft) bracket, at its top: 850 hPa values.
+      expect(interpolateAtAltitude(5000, collapsed)).toEqual({
+        temp: 14,
+        wspd: 8,
+        wdir: 5,
+        notes: [],
+      });
+      // Just above the pair: 800 hPa (5000 ft) – 700 hPa (10000 ft), one fifth up.
+      expect(interpolateAtAltitude(6000, collapsed)).toEqual({
+        temp: 9, // 10 + (4 - 10) * 0.2 = 8.8
+        wspd: 11, // 10 + (14 - 10) * 0.2 = 10.8
+        wdir: 12, // 10 + (20 - 10) * 0.2
+        notes: [],
+      });
+    });
+
+    it("takes a duplicated lowest or highest height from the level snap", () => {
+      const lowPair = {
+        ...sample,
+        heightsFtByLevel: { ...sample.heightsFtByLevel, 925: 2500, 900: 2500 },
+      };
+      expect(interpolateAtAltitude(2500, lowPair).notes).toEqual([]);
+      expect(Number.isFinite(interpolateAtAltitude(2500, lowPair).temp as number)).toBe(true);
+
+      const highPair = {
+        ...sample,
+        heightsFtByLevel: { ...sample.heightsFtByLevel, 600: 18000, 500: 18000 },
+      };
+      expect(interpolateAtAltitude(18000, highPair).notes).toEqual([]);
+      expect(Number.isFinite(interpolateAtAltitude(18000, highPair).temp as number)).toBe(true);
     });
   });
 

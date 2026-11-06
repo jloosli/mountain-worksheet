@@ -5,6 +5,7 @@ import {
   createInterpolationTable,
   findInverseXgivenYandZ,
   trilinearInterpolate,
+  trilinearInterpolateDetailed,
   type InterpolationTable,
   type FlexibleInterpolationTable,
   type TrilinearInterpolationTable,
@@ -343,6 +344,7 @@ describe("Interpolation Functions", () => {
       expect(result).toEqual({
         value: 85,
         wasExtrapolated: false,
+        extrapolated: [],
         bounds: {
           xMin: 0,
           xMax: 2000,
@@ -363,11 +365,35 @@ describe("Interpolation Functions", () => {
       });
     });
 
+    it("names each extrapolated axis with its table range", () => {
+      const result = bilinearInterpolateDetailed(simpleTable, -500, 25, {
+        xAxisName: "pressureAltitude",
+        yAxisName: "temperature",
+      });
+      expect(result.extrapolated).toEqual([
+        { axis: "pressureAltitude", value: -500, min: 0, max: 2000 },
+        { axis: "temperature", value: 25, min: 0, max: 20 },
+      ]);
+    });
+
+    it("reports extrapolation along the only axis of a single-row table", () => {
+      const vaTable: InterpolationTable = {
+        xAxis: [1],
+        yAxis: [2100, 2600, 3100],
+        data: [[80, 90, 100]],
+      };
+      const result = bilinearInterpolateDetailed(vaTable, 1, 2000, { yAxisName: "weight" });
+      expect(result.extrapolated).toEqual([
+        { axis: "weight", value: 2000, min: 2100, max: 3100 },
+      ]);
+    });
+
     it("should handle single point tables", () => {
       const result = bilinearInterpolateDetailed(singlePointTable, 2000, 20);
       expect(result).toEqual({
         value: 100,
         wasExtrapolated: true,
+        extrapolated: [],
         bounds: {
           xMin: 1000,
           xMax: 1000,
@@ -397,16 +423,13 @@ describe("Interpolation Functions", () => {
       expect(result).toBe(85);
     });
 
-    it("should handle extrapolation options", () => {
+    it("extrapolates without logging", () => {
       const result = bilinearInterpolateFlexible(flexibleTable, -500, 0, {
         xAxisName: "altitude",
         yAxisName: "temperature",
         allowExtrapolation: true,
-        warnOnExtrapolation: true,
       });
-      expect(mockWarn).toHaveBeenCalledWith(
-        expect.stringContaining("Extrapolating")
-      );
+      expect(mockWarn).not.toHaveBeenCalled();
       expect(typeof result).toBe("number");
     });
 
@@ -440,17 +463,10 @@ describe("Interpolation Functions", () => {
       expect(bilinearInterpolate(singlePointTable, 500, 5)).toBe(100);
     });
 
-    it("should warn when extrapolating", () => {
+    it("does not log when extrapolating (extrapolation is reported as data)", () => {
       bilinearInterpolate(simpleTable, -500, 0);
-      expect(mockWarn).toHaveBeenCalledWith(
-        expect.stringContaining("Extrapolating outside table bounds")
-      );
-
-      mockWarn.mockClear();
       bilinearInterpolate(simpleTable, 0, 25);
-      expect(mockWarn).toHaveBeenCalledWith(
-        expect.stringContaining("Extrapolating outside table bounds")
-      );
+      expect(mockWarn).not.toHaveBeenCalled();
     });
 
     it("should throw error when extrapolation is disabled", () => {
@@ -461,11 +477,6 @@ describe("Interpolation Functions", () => {
       expect(() =>
         bilinearInterpolate(simpleTable, 0, 25, { allowExtrapolation: false })
       ).toThrow("Values outside table range");
-    });
-
-    it("should not warn when extrapolation warnings are disabled", () => {
-      bilinearInterpolate(simpleTable, -500, 0, { warnOnExtrapolation: false });
-      expect(mockWarn).not.toHaveBeenCalled();
     });
 
     describe("error handling", () => {
@@ -650,11 +661,30 @@ describe("Trilinear Interpolation", () => {
       ).toThrow("Values outside table range and extrapolation is disabled");
     });
 
-    it("should not warn when extrapolation warnings are disabled", () => {
-      trilinearInterpolate(simpleTrilinearTable, 2500, 0, 0, {
-        warnOnExtrapolation: false,
-      });
+    it("does not log when extrapolating", () => {
+      trilinearInterpolate(simpleTrilinearTable, 2500, 0, 0);
       expect(mockWarn).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("trilinearInterpolateDetailed", () => {
+    it("reports no extrapolation inside the table", () => {
+      const r = trilinearInterpolateDetailed(simpleTrilinearTable, 2950, 2000, 10);
+      expect(r.value).toBeCloseTo(1250, 0);
+      expect(r.extrapolated).toEqual([]);
+    });
+
+    it("reports each axis the lookup went beyond, with the table range", () => {
+      const r = trilinearInterpolateDetailed(simpleTrilinearTable, 2500, 9000, 20);
+      expect(r.extrapolated).toEqual([
+        { axis: "weight", value: 2500, min: 2800, max: 3100 },
+        { axis: "pressureAltitude", value: 9000, min: 0, max: 8000 },
+      ]);
+    });
+
+    it("ignores single-point axes (the table is constant along them)", () => {
+      const r = trilinearInterpolateDetailed(singlePointTrilinearTable, 3000, 2000, 10);
+      expect(r.extrapolated).toEqual([]);
     });
   });
 

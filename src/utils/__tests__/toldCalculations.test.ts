@@ -4,12 +4,8 @@ import {
   calculateLandingGroundRoll,
   calculateLanding50ftObstacle,
   calculateAvailableRunwayRemaining,
-  calculateTOLDForMultipleAirports,
-  validateAircraftWeight,
-  validatePressureAltitude,
-  validateTemperature,
-  validateRunwayLength,
-  validateTOLDInputs,
+  calculateTakeoffDistances,
+  calculateLandingDistances,
 } from "../toldCalculations";
 import type { TOLDCalculationParams } from "@/utils/types";
 
@@ -352,212 +348,46 @@ describe("TOLD Calculations", () => {
     });
   });
 
-  describe("Input Validation Functions", () => {
-    describe("validateAircraftWeight", () => {
-      it("should validate valid weight", () => {
-        const result = validateAircraftWeight(2800, "C182T");
-        expect(result.isValid).toBe(true);
-        expect(result.errors).toHaveLength(0);
-        expect(result.warnings).toHaveLength(0);
-      });
-
-      it("should return error for null weight", () => {
-        const result = validateAircraftWeight(null, "C182T");
-        expect(result.isValid).toBe(false);
-        expect(result.errors).toHaveLength(1);
-        expect(result.errors[0].type).toBe("invalid_input");
-        expect(result.errors[0].field).toBe("weight");
-      });
-
-      it("should return error for undefined weight", () => {
-        const result = validateAircraftWeight(undefined, "C182T");
-        expect(result.isValid).toBe(false);
-        expect(result.errors).toHaveLength(1);
-        expect(result.errors[0].type).toBe("invalid_input");
-      });
-
-      it("should return error for negative weight", () => {
-        const result = validateAircraftWeight(-100, "C182T");
-        expect(result.isValid).toBe(false);
-        expect(result.errors).toHaveLength(1);
-        expect(result.errors[0].type).toBe("invalid_input");
-      });
-
-      it("should return error for zero weight", () => {
-        const result = validateAircraftWeight(0, "C182T");
-        expect(result.isValid).toBe(false);
-        expect(result.errors).toHaveLength(1);
-        expect(result.errors[0].type).toBe("invalid_input");
-      });
-
-      it("should return error for unknown aircraft", () => {
-        const result = validateAircraftWeight(2800, "UNKNOWN");
-        expect(result.isValid).toBe(false);
-        expect(result.errors).toHaveLength(1);
-        expect(result.errors[0].type).toBe("aircraft_not_found");
+  describe("calculateTakeoffDistances", () => {
+    it("reports no extrapolation inside the takeoff table", () => {
+      const r = calculateTakeoffDistances("C182T", 2700, 4000, 20);
+      expect(r).toEqual({
+        groundRoll: expect.any(Number),
+        obstacle50ft: expect.any(Number),
+        extrapolated: [],
+        tableGaps: 0,
       });
     });
 
-    describe("validatePressureAltitude", () => {
-      it("should validate valid pressure altitude", () => {
-        const result = validatePressureAltitude(4000);
-        expect(result.isValid).toBe(true);
-        expect(result.errors).toHaveLength(0);
-        expect(result.warnings).toHaveLength(0);
-      });
-
-      it("should return error for null pressure altitude", () => {
-        const result = validatePressureAltitude(null);
-        expect(result.isValid).toBe(false);
-        expect(result.errors).toHaveLength(1);
-        expect(result.errors[0].type).toBe("invalid_input");
-        expect(result.errors[0].field).toBe("pressureAltitude");
-      });
-
-      it("should return error for undefined pressure altitude", () => {
-        const result = validatePressureAltitude(undefined);
-        expect(result.isValid).toBe(false);
-        expect(result.errors).toHaveLength(1);
-        expect(result.errors[0].type).toBe("invalid_input");
-      });
-
-      it("should validate negative pressure altitude as valid", () => {
-        const result = validatePressureAltitude(-1000);
-        expect(result.isValid).toBe(true);
-        expect(result.errors).toHaveLength(0);
-      });
+    it("reports each axis beyond the takeoff table once, against the full table range", () => {
+      const r = calculateTakeoffDistances("C172S", 2000, 9000, 20);
+      expect(r?.extrapolated).toEqual([
+        { axis: "weight", value: 2000, min: 2200, max: 2550 },
+        { axis: "pressureAltitude", value: 9000, min: 0, max: 8000 },
+      ]);
+      expect(mockWarn).not.toHaveBeenCalled();
     });
 
-    describe("validateTemperature", () => {
-      it("should validate valid temperature", () => {
-        const result = validateTemperature(20);
-        expect(result.isValid).toBe(true);
-        expect(result.errors).toHaveLength(0);
-        expect(result.warnings).toHaveLength(0);
-      });
-
-      it("should return error for null temperature", () => {
-        const result = validateTemperature(null);
-        expect(result.isValid).toBe(false);
-        expect(result.errors).toHaveLength(1);
-        expect(result.errors[0].type).toBe("invalid_input");
-        expect(result.errors[0].field).toBe("temperature");
-      });
-
-      it("should return error for undefined temperature", () => {
-        const result = validateTemperature(undefined);
-        expect(result.isValid).toBe(false);
-        expect(result.errors).toHaveLength(1);
-        expect(result.errors[0].type).toBe("invalid_input");
-      });
-    });
-
-    describe("validateRunwayLength", () => {
-      it("should validate valid runway length", () => {
-        const result = validateRunwayLength(3000);
-        expect(result.isValid).toBe(true);
-        expect(result.errors).toHaveLength(0);
-        expect(result.warnings).toHaveLength(0);
-      });
-
-      it("should return error for negative runway length", () => {
-        const result = validateRunwayLength(-100);
-        expect(result.isValid).toBe(false);
-        expect(result.errors).toHaveLength(1);
-        expect(result.errors[0].type).toBe("invalid_input");
-      });
-
-      it("should return error for zero runway length", () => {
-        const result = validateRunwayLength(0);
-        expect(result.isValid).toBe(false);
-        expect(result.errors).toHaveLength(1);
-        expect(result.errors[0].type).toBe("invalid_input");
-      });
-    });
-
-    describe("validateTOLDInputs", () => {
-      it("should validate all valid inputs", () => {
-        const params: TOLDCalculationParams = {
-          weight: 2800,
-          pressureAltitude: 4000,
-          temperature: 20,
-          runwayLength: 3000,
-        };
-        const result = validateTOLDInputs(params);
-        expect(result.isValid).toBe(true);
-        expect(result.errors).toHaveLength(0);
-        expect(result.warnings).toHaveLength(0);
-      });
-
-      it("should return errors for multiple invalid inputs", () => {
-        const params: TOLDCalculationParams = {
-          weight: null,
-          pressureAltitude: null,
-          temperature: null,
-          runwayLength: null,
-        };
-        const result = validateTOLDInputs(params);
-        expect(result.isValid).toBe(false);
-        expect(result.errors).toHaveLength(3); // Only weight, pressureAltitude, and temperature are validated
-        expect(
-          result.errors.every((error) => error.type === "invalid_input")
-        ).toBe(true);
-      });
+    it("returns null for an unknown aircraft", () => {
+      expect(calculateTakeoffDistances("UNKNOWN", 2700, 4000, 20)).toBeNull();
     });
   });
 
-  describe("calculateTOLDForMultipleAirports", () => {
-    it("should return results when temperature is 0°C", () => {
-      const result = calculateTOLDForMultipleAirports("C182T", {
-        weight: 2800,
-        pressureAltitudes: [1000, 1000],
-        temperatures: [0, 0], // 0°C — falsy but valid
-        runwayLengths: [3000, 3000],
-      });
-      expect(result.success).toBe(true);
-      expect(result.results?.takeoffGroundRoll.departure).not.toBeNull();
-      expect(result.results?.takeoffGroundRoll.arrival).not.toBeNull();
+  describe("calculateLandingDistances", () => {
+    it("reports landing-table extrapolation as data instead of logging it", () => {
+      const r = calculateLandingDistances("C182T", 9000, 45);
+      expect(r?.groundRoll).toEqual(expect.any(Number));
+      expect(r?.extrapolated).toEqual([
+        { axis: "pressureAltitude", value: 9000, min: 0, max: 8000 },
+        { axis: "temperature", value: 45, min: 0, max: 40 },
+      ]);
+      expect(mockWarn).not.toHaveBeenCalled();
     });
 
-    it("should return results when pressure altitude is 0 ft (sea level)", () => {
-      const result = calculateTOLDForMultipleAirports("C182T", {
-        weight: 2800,
-        pressureAltitudes: [0, 0], // 0 ft — valid sea-level PA
-        temperatures: [20, 20],
-        runwayLengths: [3000, 3000],
-      });
-      expect(result.success).toBe(true);
-      expect(result.results?.takeoffGroundRoll.departure).not.toBeNull();
-      expect(result.results?.takeoffGroundRoll.arrival).not.toBeNull();
-    });
-
-    it("should return results when both temperature is 0°C and pressure altitude is 0 ft", () => {
-      const result = calculateTOLDForMultipleAirports("C182T", {
-        weight: 2800,
-        pressureAltitudes: [0, 0],
-        temperatures: [0, 0],
-        runwayLengths: [3000, 3000],
-      });
-      expect(result.success).toBe(true);
-      expect(result.results?.takeoffGroundRoll.departure).not.toBeNull();
-      expect(result.results?.landingGroundRoll.departure).not.toBeNull();
-    });
-
-    it("should not coerce numeric results to null in combined results", () => {
-      // Regression test for || null vs ?? null bug in result combining
-      const result = calculateTOLDForMultipleAirports("C182T", {
-        weight: 2800,
-        pressureAltitudes: [0, 0],
-        temperatures: [0, 0],
-        runwayLengths: [3000, 3000],
-      });
-      // All result fields should be defined (not null from || coercion)
-      expect(result.results?.takeoffGroundRoll.departure).toBeDefined();
-      expect(result.results?.takeoffGroundRoll.arrival).toBeDefined();
-      expect(result.results?.takeoff50ftObstacle.departure).toBeDefined();
-      expect(result.results?.takeoff50ftObstacle.arrival).toBeDefined();
-      expect(result.results?.landingGroundRoll.departure).toBeDefined();
-      expect(result.results?.landingGroundRoll.arrival).toBeDefined();
+    it("returns values at 0 ft and 0°C (falsy but valid)", () => {
+      const r = calculateLandingDistances("C182T", 0, 0);
+      expect(r?.groundRoll).toEqual(expect.any(Number));
+      expect(r?.extrapolated).toEqual([]);
     });
   });
 });

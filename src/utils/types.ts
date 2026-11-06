@@ -79,46 +79,6 @@ export interface Aircraft {
 }
 
 /**
- * TOLD (Takeoff and Landing Distance) calculation results
- */
-export interface TOLDResults {
-  takeoffGroundRoll: {
-    departure: number | null;
-    arrival: number | null;
-  };
-  takeoff50ftObstacle: {
-    departure: number | null;
-    arrival: number | null;
-  };
-  landingGroundRoll: {
-    departure: number | null;
-    arrival: number | null;
-  };
-  landing50ftObstacle: {
-    departure: number | null;
-    arrival: number | null;
-  };
-  availableRunwayRemainingTakeoffGroundRoll: {
-    departure: number | null;
-    arrival: number | null;
-  };
-  availableRunwayRemainingTakeoff50ft: {
-    departure: number | null;
-    arrival: number | null;
-  };
-}
-
-/**
- * TOLD calculation input parameters
- */
-export interface TOLDInputs {
-  weight: number | null;
-  pressureAltitudes: [number | null, number | null, number | null];
-  temperatures: [number | null, number | null, number | null];
-  runwayLengths: [number | null, number | null];
-}
-
-/**
  * TOLD calculation parameters for a specific airport/condition
  */
 export interface TOLDCalculationParams {
@@ -128,51 +88,8 @@ export interface TOLDCalculationParams {
   runwayLength: number | null;
 }
 
-/**
- * TOLD calculation context - includes aircraft model and all calculation parameters
- */
-export interface TOLDCalculationContext {
-  aircraftModel: string;
-  inputs: TOLDInputs;
-}
-
-/**
- * TOLD calculation error states
- */
-export interface TOLDError {
-  type:
-    | "invalid_input"
-    | "missing_data"
-    | "extrapolation_warning"
-    | "calculation_failed"
-    | "aircraft_not_found"
-    | "runway_length_missing"
-    | "weight_out_of_range"
-    | "altitude_out_of_range"
-    | "temperature_out_of_range";
-  message: string;
-  field?: string;
-  severity?: "warning" | "error" | "info";
-}
-
-/**
- * TOLD calculation result with error handling
- */
-export interface TOLDCalculationResult {
-  success: boolean;
-  results?: TOLDResults;
-  errors?: TOLDError[];
-  warnings?: TOLDError[];
-}
-
-/**
- * TOLD validation result for input parameters
- */
-export interface TOLDValidationResult {
-  isValid: boolean;
-  errors: TOLDError[];
-  warnings: TOLDError[];
-}
+// TOLD results (per airport, with their notifications) are `TOLDViewModel`
+// in ./derived.ts.
 
 /**
  * Individual maneuvering speed data for a specific flap setting and bank angle
