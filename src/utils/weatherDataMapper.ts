@@ -569,8 +569,9 @@ export function isApiPopulatedData(data: Partial<WorksheetData>): {
     altitude: !!(
       data.altitude &&
       Array.isArray(data.altitude) &&
-      ((data.altitude[0] !== null && data.altitude[0] !== undefined) || // departure
-        (data.altitude[2] !== null && data.altitude[2] !== undefined)) // arrival
+      // -1 is the "don't update" marker for an unmatched airport (#227)
+      ((data.altitude[0] !== undefined && !notFetched(data.altitude[0])) || // departure
+        (data.altitude[2] !== undefined && !notFetched(data.altitude[2]))) // arrival
     ),
   };
 }

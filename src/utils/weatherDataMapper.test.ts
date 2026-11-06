@@ -853,6 +853,11 @@ describe("Weather Data Mapper", () => {
       expect(isApiPopulatedData({ rwy: [-1, -1] }).runway).toBe(false);
     });
 
+    it("does not treat the 'don't update' elevation marker as API-populated (issue #227)", () => {
+      expect(isApiPopulatedData({ altitude: [-1, -1, -1] }).altitude).toBe(false);
+      expect(isApiPopulatedData({ altitude: [-1, -1, 2871] }).altitude).toBe(true);
+    });
+
     it("should detect null values as not API-populated", () => {
       const data: Partial<WorksheetData> = {
         wind: [
