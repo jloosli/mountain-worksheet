@@ -137,7 +137,9 @@ describe("fetchWorksheetWeather", () => {
     expect(data?.temp?.[2]).toBeNull();
     expect(data?.altimeter?.[2]).toBeNull();
     expect(data?.rwy?.[1]).toBeNull();
-    expect(data?.altitude?.[2]).toBeNull();
+    // KXYZ has no elevation on record: the worksheet's value is kept (#227),
+    // and the Warning shows only if that value is blank.
+    expect(data?.altitude?.[2]).toBe(2000);
 
     const warned = subjectsAt(result.notifications, "warning");
     expect(warned).toEqual(
@@ -149,6 +151,15 @@ describe("fetchWorksheetWeather", () => {
       ])
     );
     expect(warned).not.toContain("field:temp.0");
+
+    // The kept elevation isn't blank, so its Warning doesn't show; the
+    // blanked runway's does.
+    const shown = deriveNotifications(
+      { ...worksheet, ...data } as WorksheetData,
+      result
+    ).map((n) => subjectKey(n.subject));
+    expect(shown).not.toContain("field:altitude.2");
+    expect(shown).toContain("field:rwy.1");
   });
 
   it("records what it fetched for and applied, so notifications derive from state", async () => {
@@ -337,11 +348,12 @@ describe("fetchWorksheetWeather", () => {
           /XQZ or KXQZ.*check the ID.*elevation, runway.*weather/i
         ),
       });
-      // Its fields need input: blank, with no Warning of their own.
+      // Its weather needs input: blank, with no Warning of its own. Its
+      // runway and elevation keep whatever the worksheet held (#227).
       expect(data?.temp?.[2]).toBeNull();
       expect(data?.altimeter?.[2]).toBeNull();
-      expect(data?.altitude?.[2]).toBeNull();
-      expect(data?.rwy?.[1]).toBeNull();
+      expect(data?.altitude?.[2]).toBe(2000);
+      expect(data?.rwy?.[1]).toBe(6000);
       expect(subjectsAt(result.notifications, "warning")).toEqual([]);
       // The other airport and the area of operations still fill in.
       expect(data?.temp?.[0]).toBe(21);

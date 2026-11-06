@@ -35,9 +35,12 @@ export const VALIDATION_RANGES = {
 export interface WeatherMappingResult {
   success: boolean;
   /**
-   * Values to merge into the worksheet. A field the fetch was expected to
-   * fill but couldn't is `null` (blank) — never left holding an earlier
-   * fetch's value. `-1` in an array slot means "don't update".
+   * Values to merge into the worksheet. A weather field the fetch was
+   * expected to fill but couldn't is `null` (blank) — never left holding an
+   * earlier fetch's value. `-1` in an array slot means "don't update": runway
+   * and field elevation use it for an airport the lookup didn't match, so
+   * the worksheet keeps whatever it held (#227). Either way the field gets a
+   * Warning, which only shows while the field is blank.
    */
   data: Partial<WorksheetData>;
   /** Every notification raised by the fetch, each with its Subject. */
@@ -181,51 +184,33 @@ export function mapRunwayData(
   airportData: AirportResponse[],
   options: WeatherMappingOptions = {}
 ): Partial<WorksheetData> {
-  const result: Partial<WorksheetData> = {
-    rwy: [null, null],
+  // -1 = no airport matched for this slot ("don't update"); null = the airport
+  // matched but has no usable runway.
+  const runwayFor = (code: string | undefined): number | null => {
+    const airport = findAirport(airportData, code);
+    if (!airport) return -1;
+    const shortestRunway = findShortestRunway(airport.runway);
+    if (
+      shortestRunway &&
+      (!options.validateData || isValidRunwayLength(shortestRunway.length))
+    ) {
+      return shortestRunway.length;
+    }
+    return null;
   };
 
-  if (airportData.length === 0) {
-    return result;
-  }
+  return {
+    rwy: [runwayFor(options.departureAirport), runwayFor(options.arrivalAirport)],
+  };
+}
 
-  // Process departure airport
-  if (options.departureAirport) {
-    const departureAirportCode = options.departureAirport.toUpperCase();
-    const departureAirport = airportData.find(
-      (airport) => airport.icaoId?.toUpperCase() === departureAirportCode
-    );
-
-    if (departureAirport?.runway) {
-      const shortestRunway = findShortestRunway(departureAirport.runway);
-      if (
-        shortestRunway &&
-        (!options.validateData || isValidRunwayLength(shortestRunway.length))
-      ) {
-        result.rwy![0] = shortestRunway.length;
-      }
-    }
-  }
-
-  // Process arrival airport
-  if (options.arrivalAirport) {
-    const arrivalAirportCode = options.arrivalAirport.toUpperCase();
-    const arrivalAirport = airportData.find(
-      (airport) => airport.icaoId?.toUpperCase() === arrivalAirportCode
-    );
-
-    if (arrivalAirport?.runway) {
-      const shortestRunway = findShortestRunway(arrivalAirport.runway);
-      if (
-        shortestRunway &&
-        (!options.validateData || isValidRunwayLength(shortestRunway.length))
-      ) {
-        result.rwy![1] = shortestRunway.length;
-      }
-    }
-  }
-
-  return result;
+function findAirport(
+  airportData: AirportResponse[],
+  code: string | undefined
+): AirportResponse | undefined {
+  if (!code) return undefined;
+  const wanted = code.toUpperCase();
+  return airportData.find((airport) => airport.icaoId?.toUpperCase() === wanted);
 }
 
 /**
@@ -235,52 +220,23 @@ export function mapAirportElevationData(
   airportData: AirportResponse[],
   options: WeatherMappingOptions = {}
 ): Partial<WorksheetData> {
-  const result: Partial<WorksheetData> = {};
+  // -1 = "don't update": used for the operating slot (manual entry only) and
+  // for any airport slot whose airport wasn't matched or has no elevation.
+  const elevationFor = (code: string | undefined): number => {
+    const elev = findAirport(airportData, code)?.elev;
+    if (typeof elev !== "number" || !Number.isFinite(elev)) return -1;
+    // Convert elevation from meters to feet (1 meter = 3.28084 feet)
+    return Math.round(elev * 3.28084);
+  };
 
-  if (airportData.length === 0) {
-    return result;
+  const departure = elevationFor(options.departureAirport);
+  const arrival = elevationFor(options.arrivalAirport);
+
+  // Neither airport matched: nothing to update
+  if (departure === -1 && arrival === -1) {
+    return {};
   }
-
-  // Only set altitude values for departure and arrival, leave operating altitude untouched
-  const altitudeUpdates: (number | undefined)[] = [];
-
-  // Process departure airport elevation (altitude[0])
-  if (options.departureAirport) {
-    const code = options.departureAirport.toUpperCase();
-    const departureAirport = airportData.find(
-      (airport) => airport.icaoId?.toUpperCase() === code
-    );
-
-    if (typeof departureAirport?.elev === "number") {
-      // Convert elevation from meters to feet (1 meter = 3.28084 feet)
-      altitudeUpdates[0] = Math.round(departureAirport.elev * 3.28084);
-    }
-  }
-
-  // Process arrival airport elevation (altitude[2])
-  if (options.arrivalAirport) {
-    const code = options.arrivalAirport.toUpperCase();
-    const arrivalAirport = airportData.find(
-      (airport) => airport.icaoId?.toUpperCase() === code
-    );
-
-    if (typeof arrivalAirport?.elev === "number") {
-      // Convert elevation from meters to feet (1 meter = 3.28084 feet)
-      altitudeUpdates[2] = Math.round(arrivalAirport.elev * 3.28084);
-    }
-  }
-
-  // Only set altitude if we have updates
-  if (altitudeUpdates.some((val) => val !== undefined)) {
-    // Convert sparse array to fixed 3-element array
-    result.altitude = [
-      altitudeUpdates[0] ?? null, // departure
-      -1, // operating (special value to indicate "don't update")
-      altitudeUpdates[2] ?? null, // arrival
-    ];
-  }
-
-  return result;
+  return { altitude: [departure, -1, arrival] };
 }
 
 type Triple = [number | null, number | null, number | null];
@@ -330,7 +286,8 @@ export function mapWeatherDataToWorksheet(
     // Runways and field elevations
     data.rwy = mapRunwayData(airportData, options).rwy;
     const elevation = mapAirportElevationData(airportData, options);
-    data.altitude = elevation.altitude ?? [null, -1, null];
+    // Neither airport matched: keep both field elevations (#227).
+    data.altitude = elevation.altitude ?? [-1, -1, -1];
 
     // Area-of-ops weather (Open-Meteo): winds aloft and operating conditions
     const temp = (data.temp ? [...data.temp] : [-1, -1, -1]) as Triple;
@@ -440,6 +397,15 @@ function rejectInvalidWinds(wind: WindTable): {
 }
 
 /**
+ * True when the fetch produced no value for a runway or elevation slot:
+ * blank (`null`) or kept as-is (`-1`, #227). A kept slot's Warning only
+ * shows if the worksheet held nothing there.
+ */
+function notFetched(value: number | null | undefined): boolean {
+  return value === null || value === -1;
+}
+
+/**
  * A Warning for every expected field the fetch left blank, unless a producer
  * already raised a Warning on it (so its more specific reason is kept).
  */
@@ -480,12 +446,12 @@ function blankFieldWarnings(
       if (data.altimeter?.[i] === null)
         blank(fieldSubject("altimeter", i), slot(code, `${where} altimeter`));
     }
-    if (i !== 1 && data.altitude?.[i] === null)
+    if (i !== 1 && notFetched(data.altitude?.[i]))
       blank(fieldSubject("altitude", i), slot(code, `${where} field elevation`));
   });
-  if (dep && data.rwy?.[0] === null && conditionOf(options, 0) !== "unknown")
+  if (dep && notFetched(data.rwy?.[0]) && conditionOf(options, 0) !== "unknown")
     blank(fieldSubject("rwy", 0), slot(dep, "Departure runway length"));
-  if (arr && data.rwy?.[1] === null && conditionOf(options, 2) !== "unknown")
+  if (arr && notFetched(data.rwy?.[1]) && conditionOf(options, 2) !== "unknown")
     blank(fieldSubject("rwy", 1), slot(arr, "Arrival runway length"));
 
   const wind = data.wind;
@@ -508,7 +474,7 @@ function blankFieldWarnings(
  * Helipads have a null alignment value and should be excluded
  */
 function findShortestRunway(
-  runways: { length: number; alignment: number | null }[]
+  runways: { length: number; alignment: number | null }[] | undefined
 ): { length: number } | null {
   if (!runways || runways.length === 0) return null;
 
@@ -598,13 +564,14 @@ export function isApiPopulatedData(data: Partial<WorksheetData>): {
     runway: !!(
       data.rwy &&
       Array.isArray(data.rwy) &&
-      data.rwy.some((val) => val !== null)
+      data.rwy.some((val) => val !== null && val !== -1)
     ),
     altitude: !!(
       data.altitude &&
       Array.isArray(data.altitude) &&
-      ((data.altitude[0] !== null && data.altitude[0] !== undefined) || // departure
-        (data.altitude[2] !== null && data.altitude[2] !== undefined)) // arrival
+      // -1 is the "don't update" marker for an unmatched airport (#227)
+      ((data.altitude[0] !== undefined && !notFetched(data.altitude[0])) || // departure
+        (data.altitude[2] !== undefined && !notFetched(data.altitude[2]))) // arrival
     ),
   };
 }
@@ -620,7 +587,20 @@ export function mergeWeatherData(
   const result = { ...existingData };
 
   if (!preserveUserData) {
-    return { ...result, ...apiData };
+    // Overwrite everything, but still honour the -1 "don't update" marker in
+    // runway and elevation so it never lands in state (#227).
+    const overwritten = { ...result, ...apiData };
+    if (apiData.rwy) {
+      overwritten.rwy = mergeSlots(result.rwy, apiData.rwy, [null, null]);
+    }
+    if (apiData.altitude) {
+      overwritten.altitude = mergeSlots(result.altitude, apiData.altitude, [
+        null,
+        null,
+        null,
+      ]);
+    }
+    return overwritten;
   }
 
   // Always overwrite with API data when available
@@ -652,8 +632,10 @@ export function mergeWeatherData(
     result.altimeter = next;
   }
 
+  // Runway and altitude merge per slot: -1 means "don't update" (an
+  // unmatched airport, or the manually-entered operating altitude).
   if (apiData.rwy) {
-    result.rwy = apiData.rwy;
+    result.rwy = mergeSlots(result.rwy, apiData.rwy, [null, null]);
   }
 
   // Airport IDs: a confirmed auto-correction (#216) is written back.
@@ -662,26 +644,11 @@ export function mergeWeatherData(
   }
 
   if (apiData.altitude) {
-    if (result.altitude) {
-      const next = [...result.altitude] as [
-        number | null,
-        number | null,
-        number | null,
-      ];
-      if (apiData.altitude[0] !== undefined) next[0] = apiData.altitude[0];
-      if (apiData.altitude[2] !== undefined) next[2] = apiData.altitude[2];
-      // Operating slot: -1 sentinel means "don't update"; otherwise overwrite.
-      if (apiData.altitude[1] !== undefined && apiData.altitude[1] !== -1) {
-        next[1] = apiData.altitude[1];
-      }
-      result.altitude = next;
-    } else {
-      result.altitude = [...apiData.altitude] as [
-        number | null,
-        number | null,
-        number | null,
-      ];
-    }
+    result.altitude = mergeSlots(result.altitude, apiData.altitude, [
+      null,
+      null,
+      null,
+    ]);
   }
 
   // AIRMET boolean flags: only overwrite when the API supplied an explicit
@@ -692,4 +659,22 @@ export function mergeWeatherData(
   if (typeof apiData.mtnObsc === "boolean") result.mtnObsc = apiData.mtnObsc;
 
   return result;
+}
+
+/**
+ * Overlay incoming slot values onto a copy of the existing array, skipping
+ * undefined and the -1 "don't update" sentinel. Never mutates its inputs.
+ */
+function mergeSlots<T extends (number | null)[]>(
+  existing: T | undefined,
+  incoming: T,
+  empty: T
+): T {
+  const next = [...(existing ?? empty)] as T;
+  incoming.forEach((val, i) => {
+    if (val !== undefined && val !== -1) {
+      next[i] = val;
+    }
+  });
+  return next;
 }

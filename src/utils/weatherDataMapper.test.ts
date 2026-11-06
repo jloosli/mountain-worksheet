@@ -5,6 +5,7 @@
 import {
   mapAirportSpecificWeatherData,
   mapRunwayData,
+  mapAirportElevationData,
   mapWeatherDataToWorksheet,
   isApiPopulatedData,
   mergeWeatherData,
@@ -127,6 +128,15 @@ describe("Weather Data Mapper", () => {
       expect(result.rwy).toEqual([8000, 11000]); // Shortest runway for each airport
     });
 
+    it("marks an unmatched arrival airport's runway as 'don't update' (issue #227)", () => {
+      const result = mapRunwayData(mockAirportData, {
+        departureAirport: "KORD",
+        arrivalAirport: "BOI",
+      });
+
+      expect(result.rwy).toEqual([8000, -1]);
+    });
+
     it("should handle missing airport data", () => {
       const options: WeatherMappingOptions = {
         departureAirport: "KORD",
@@ -135,7 +145,7 @@ describe("Weather Data Mapper", () => {
 
       const result = mapRunwayData([], options);
 
-      expect(result.rwy).toEqual([null, null]);
+      expect(result.rwy).toEqual([-1, -1]); // no airport matched: leave both untouched
     });
 
     it("should handle airports without runway data", () => {
@@ -152,7 +162,7 @@ describe("Weather Data Mapper", () => {
 
       const result = mapRunwayData(airportDataWithoutRunways, options);
 
-      expect(result.rwy).toEqual([null, null]);
+      expect(result.rwy).toEqual([null, -1]);
     });
 
     it("should validate runway length data", () => {
@@ -180,7 +190,7 @@ describe("Weather Data Mapper", () => {
 
       const result = mapRunwayData(airportDataWithInvalidRunways, options);
 
-      expect(result.rwy).toEqual([null, null]); // Should be null due to validation
+      expect(result.rwy).toEqual([null, -1]); // Should be null due to validation
     });
 
     it("should filter out helipads (runways with null alignment)", () => {
@@ -265,7 +275,7 @@ describe("Weather Data Mapper", () => {
       const result = mapRunwayData(airportDataWithHelipads, options);
 
       // Should select 4893 (shortest non-helipad runway), not 60 (helipad)
-      expect(result.rwy).toEqual([4893, null]);
+      expect(result.rwy).toEqual([4893, -1]);
     });
 
     it("should return null if only helipads are available", () => {
@@ -314,7 +324,43 @@ describe("Weather Data Mapper", () => {
       const result = mapRunwayData(airportDataWithOnlyHelipads, options);
 
       // Should return null if only helipads are available
-      expect(result.rwy).toEqual([null, null]);
+      expect(result.rwy).toEqual([null, -1]);
+    });
+  });
+
+  describe("mapAirportElevationData", () => {
+    const kden = {
+      icaoId: "KDEN",
+      elev: 1656, // meters → 5433 ft
+      runway: [],
+    } as unknown as AirportResponse;
+
+    it("marks an unmatched arrival airport's elevation as 'don't update' (issue #227)", () => {
+      const result = mapAirportElevationData([kden], {
+        departureAirport: "KDEN",
+        arrivalAirport: "BOI",
+      });
+
+      expect(result.altitude).toEqual([5433, -1, -1]);
+    });
+
+    it("maps a sea-level airport (elev 0) to 0 ft rather than skipping it", () => {
+      const ksfo = { icaoId: "KSFO", elev: 0, runway: [] } as unknown as AirportResponse;
+      const result = mapAirportElevationData([kden, ksfo], {
+        departureAirport: "kden",
+        arrivalAirport: "KSFO",
+      });
+
+      expect(result.altitude).toEqual([5433, -1, 0]);
+    });
+
+    it("returns no altitude when neither airport matched", () => {
+      const result = mapAirportElevationData([kden], {
+        departureAirport: "KPVU",
+        arrivalAirport: "BOI",
+      });
+
+      expect(result.altitude).toBeUndefined();
     });
   });
 
@@ -424,11 +470,12 @@ describe("Weather Data Mapper", () => {
           "field:wind",
         ].sort()
       );
-      // Blank, not "don't update": an earlier fetch's values must not survive.
+      // Weather is blank, not "don't update": an earlier fetch's values must
+      // not survive. Runway and elevation of unmatched airports are kept (#227).
       expect(result.data.temp).toEqual([null, null, null]);
       expect(result.data.altimeter).toEqual([null, null, null]);
-      expect(result.data.rwy).toEqual([null, null]);
-      expect(result.data.altitude).toEqual([null, -1, null]);
+      expect(result.data.rwy).toEqual([-1, -1]);
+      expect(result.data.altitude).toEqual([-1, -1, -1]);
       expect(result.data.wind).toEqual([
         Array(5).fill(null),
         Array(5).fill(null),
@@ -465,8 +512,9 @@ describe("Weather Data Mapper", () => {
 
       expect(result.data.temp?.[2]).toBeNull();
       expect(result.data.altimeter?.[2]).toBeNull();
-      expect(result.data.rwy?.[1]).toBeNull();
-      expect(result.data.altitude?.[2]).toBeNull();
+      // KXYZ isn't in the airport data: keep its runway and elevation (#227)
+      expect(result.data.rwy?.[1]).toBe(-1);
+      expect(result.data.altitude?.[2]).toBe(-1);
 
       const warned = warnedSubjects(result.notifications);
       expect(warned).toEqual(
@@ -801,6 +849,15 @@ describe("Weather Data Mapper", () => {
       expect(result.runway).toBe(true);
     });
 
+    it("does not treat the 'don't update' runway marker as API-populated (issue #227)", () => {
+      expect(isApiPopulatedData({ rwy: [-1, -1] }).runway).toBe(false);
+    });
+
+    it("does not treat the 'don't update' elevation marker as API-populated (issue #227)", () => {
+      expect(isApiPopulatedData({ altitude: [-1, -1, -1] }).altitude).toBe(false);
+      expect(isApiPopulatedData({ altitude: [-1, -1, 2871] }).altitude).toBe(true);
+    });
+
     it("should detect null values as not API-populated", () => {
       const data: Partial<WorksheetData> = {
         wind: [
@@ -936,6 +993,55 @@ describe("Weather Data Mapper", () => {
       expect(result.temp![0]).toBe(18); // API data should overwrite
       expect(result.altimeter![0]).toBe(29.85); // API data should overwrite
       expect(result.rwy![0]).toBe(10000); // API data should overwrite
+    });
+
+    it("never writes the -1 marker into runway or elevation when preserveUserData is false (issue #227)", () => {
+      const existing: Partial<WorksheetData> = {
+        rwy: [5000, 4200],
+        altitude: [4000, 10000, 2800],
+      };
+      const apiData: Partial<WorksheetData> = {
+        rwy: [12000, -1],
+        altitude: [5433, -1, -1],
+      };
+
+      const merged = mergeWeatherData(existing, apiData, false);
+
+      expect(merged.rwy).toEqual([12000, 4200]);
+      expect(merged.altitude).toEqual([5433, 10000, 2800]);
+    });
+
+    it("keeps an unmatched arrival's runway and elevation, including manual entries (issue #227)", () => {
+      const existing: Partial<WorksheetData> = {
+        rwy: [5000, 4200], // arrival runway entered by hand
+        altitude: [4000, 10000, 2800], // arrival elevation entered by hand
+      };
+      // KDEN resolved, BOI didn't
+      const apiData: Partial<WorksheetData> = {
+        rwy: [12000, -1],
+        altitude: [5433, -1, -1],
+      };
+
+      const merged = mergeWeatherData(existing, apiData, true);
+
+      expect(merged.rwy).toEqual([12000, 4200]);
+      expect(merged.altitude).toEqual([5433, 10000, 2800]);
+    });
+
+    it("updates both airports' runway and elevation when both resolve (issue #227)", () => {
+      const existing: Partial<WorksheetData> = {
+        rwy: [5000, 4200],
+        altitude: [4000, 10000, 2800],
+      };
+      const apiData: Partial<WorksheetData> = {
+        rwy: [12000, 9763],
+        altitude: [5433, -1, 2871],
+      };
+
+      const merged = mergeWeatherData(existing, apiData, true);
+
+      expect(merged.rwy).toEqual([12000, 9763]);
+      expect(merged.altitude).toEqual([5433, 10000, 2871]);
     });
 
     it("overwrites turb/cielVis/mtnObsc to false when API explicitly says false", () => {
