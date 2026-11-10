@@ -1,7 +1,13 @@
 import { render, screen } from "../test-utils/test-utils";
 import ManeuveringPerformance from "./ManeuveringPerformance";
 import type { ManeuveringSpeeds } from "../utils/types";
-import { MANEUVERING_SUBJECT } from "../utils/derived";
+import {
+  MANEUVERING_SUBJECT,
+  climbSubject,
+  computeCanyonTurnEntryRanges,
+  type ComputedValue,
+} from "../utils/derived";
+import { fieldSubject } from "../utils/notifications";
 
 describe("ManeuveringPerformance", () => {
   const mockManeuveringSpeeds: ManeuveringSpeeds = {
@@ -183,5 +189,90 @@ describe("ManeuveringPerformance", () => {
     );
     const warning = screen.getByText(/Maneuvering speeds are not available/);
     expect(warning.closest("li")).toHaveAttribute("data-level", "warning");
+  });
+
+  describe("canyon-turn entry airspeed (1.4 × Vso to Va)", () => {
+    const va = (value: number): ComputedValue => ({
+      status: "computed",
+      value,
+      dependsOn: [fieldSubject("weight")],
+    });
+    /** The last cell in the body row for a flap setting, e.g. "30°". */
+    const entryCell = (flap: string) =>
+      screen
+        .getAllByText(flap)
+        .find((el) => el.tagName === "TD")
+        ?.closest("tr")?.lastElementChild;
+
+    it("shows the range for each flap setting", () => {
+      render(
+        <ManeuveringPerformance
+          aircraftModel="C182T"
+          maneuveringSpeeds={mockManeuveringSpeeds}
+          entryRanges={computeCanyonTurnEntryRanges(mockManeuveringSpeeds, va(101))}
+        />
+      );
+      expect(screen.getByRole("columnheader", { name: /Canyon-turn entry/ })).toBeInTheDocument();
+      expect(entryCell("0°")).toHaveTextContent("71–101");
+      expect(entryCell("30°")).toHaveTextContent("57–101");
+    });
+
+    it("says there's no range instead of showing an inverted one", () => {
+      render(
+        <ManeuveringPerformance
+          aircraftModel="C182T"
+          maneuveringSpeeds={mockManeuveringSpeeds}
+          entryRanges={computeCanyonTurnEntryRanges(mockManeuveringSpeeds, va(65))}
+        />
+      );
+      expect(entryCell("0°")).toHaveTextContent("No range: Va (65) ≤ 1.4 × Vso (71)");
+      expect(entryCell("0°")).not.toHaveTextContent("71–65");
+      expect(entryCell("30°")).toHaveTextContent("57–65");
+    });
+
+    it("keeps the lower bound and says why Va is missing", () => {
+      render(
+        <ManeuveringPerformance
+          aircraftModel="C182T"
+          maneuveringSpeeds={mockManeuveringSpeeds}
+          entryRanges={computeCanyonTurnEntryRanges(mockManeuveringSpeeds, {
+            status: "withheld",
+            reason: "needs weight",
+          })}
+        />
+      );
+      expect(entryCell("0°")).toHaveTextContent("From 71 (Va: needs weight)");
+    });
+
+    it("says Va is not available when it can't be computed", () => {
+      render(
+        <ManeuveringPerformance
+          aircraftModel="C182T"
+          maneuveringSpeeds={mockManeuveringSpeeds}
+          entryRanges={computeCanyonTurnEntryRanges(mockManeuveringSpeeds, {
+            status: "unavailable",
+          })}
+        />
+      );
+      expect(entryCell("0°")).toHaveTextContent("From 71 (Va not available)");
+    });
+
+    it("marks the range when Va or its weight carries a Caution", () => {
+      render(
+        <ManeuveringPerformance
+          aircraftModel="C182T"
+          maneuveringSpeeds={mockManeuveringSpeeds}
+          entryRanges={computeCanyonTurnEntryRanges(mockManeuveringSpeeds, va(101))}
+          inputNotifications={[
+            {
+              level: "caution",
+              subject: climbSubject("va"),
+              message: "Va is extrapolated beyond the POH maneuvering-speed table.",
+            },
+          ]}
+        />
+      );
+      expect(entryCell("0°")?.querySelector('[data-marker="caution"]')).toBeInTheDocument();
+    });
   });
 });

@@ -7,7 +7,7 @@ import {
   stepSubject,
   type Notification,
 } from "@/utils/notifications";
-import { computeTOLDViewModel, computePressureColumns, derivePerformanceNotifications } from "@/utils/derived";
+import { climbSubject, computeTOLDViewModel, computePressureColumns, derivePerformanceNotifications } from "@/utils/derived";
 
 const emptyState: WorksheetData = {
   pilot: "",
@@ -205,7 +205,7 @@ describe("PrintBriefing — climb and V-speeds", () => {
     expect(screen.getByText(/Rate of Climb \(Actual/i)).toBeInTheDocument();
     expect(screen.getByText(/Vx/)).toBeInTheDocument();
     expect(screen.getAllByText(/Vy/).length).toBeGreaterThan(0);
-    expect(screen.getByText(/Va/)).toBeInTheDocument();
+    expect(screen.getByText("Va (actual weight)")).toBeInTheDocument();
     expect(screen.getByText(/Vra/)).toBeInTheDocument();
     expect(screen.getByText(/% MGW/)).toBeInTheDocument();
   });
@@ -218,6 +218,31 @@ describe("PrintBriefing — maneuvering speeds", () => {
     expect(screen.getAllByText(/0°/).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/45°/).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/60°/).length).toBeGreaterThan(0);
+  });
+
+  // Va at 3,000 lbs interpolates to 108 kts.
+  it("prints the canyon-turn entry airspeed range for each flap setting", () => {
+    render(<PrintBriefing state={stateWithPerf} />);
+    expect(screen.getByText(/Canyon-turn entry/)).toBeInTheDocument();
+    expect(screen.getByText("71–108")).toBeInTheDocument();
+    expect(screen.getByText("57–108")).toBeInTheDocument();
+  });
+
+  it("refers the range to a note on Va", () => {
+    const vaNote: Notification = {
+      level: "caution",
+      subject: climbSubject("va"),
+      message: "Va is extrapolated beyond the POH maneuvering-speed table.",
+    };
+    render(<PrintBriefing state={stateWithPerf} notifications={[vaNote]} />);
+    const cell = screen.getByText("71–108").closest("td");
+    expect(cell?.querySelector("[data-ref]")).toBeInTheDocument();
+  });
+
+  it("prints the lower bound and why Va is missing when weight is blank", () => {
+    render(<PrintBriefing state={{ ...stateWithPerf, weight: null }} />);
+    expect(screen.getByText("From 71 (Va: needs weight)")).toBeInTheDocument();
+    expect(screen.getByText("From 57 (Va: needs weight)")).toBeInTheDocument();
   });
 });
 

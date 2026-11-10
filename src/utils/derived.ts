@@ -4,7 +4,7 @@ import {
   calculateVx,
   pressureAltitudeToDensityAltitude,
 } from "./formulas";
-import type { Aircraft, WorksheetData } from "./types";
+import type { Aircraft, ManeuveringSpeeds, WorksheetData } from "./types";
 import {
   fieldSubject,
   notificationKey,
@@ -884,6 +884,49 @@ export function maneuveringNotifications(aircraft: Aircraft | undefined): Notifi
       message: `Maneuvering speeds are not available: the ${aircraft.id} POH data has no stall speed for every flap setting.`,
     },
   ];
+}
+
+/**
+ * The canyon-turn entry airspeed range for one flap setting (worksheet p.3,
+ * Canyon Turns): enter between 1.4 × Vso, the 60°-bank stall speed, and Va at
+ * actual weight. `noRange` when 1.4 × Vso is at or above Va; `noVa` when Va
+ * is withheld or unavailable, carrying it so the reason can be shown.
+ */
+export type CanyonTurnEntryRange = { flapSetting: number; min: number } & (
+  | { status: "range" | "noRange"; va: Extract<ComputedValue, { status: "computed" }> }
+  | { status: "noVa"; va: Exclude<ComputedValue, { status: "computed" }> }
+);
+
+/** 1.4 × Vso is the stall speed at this bank angle (worksheet p.3). */
+const CANYON_TURN_BANK = 60;
+
+export function computeCanyonTurnEntryRanges(
+  maneuveringSpeeds: ManeuveringSpeeds | null,
+  va: ComputedValue,
+): CanyonTurnEntryRange[] {
+  if (!maneuveringSpeeds) return [];
+  return maneuveringSpeeds.flapSettings.flatMap((flapSetting): CanyonTurnEntryRange[] => {
+    const min = maneuveringSpeeds.speeds.find(
+      (s) => s.flapSetting === flapSetting && s.bankAngle === CANYON_TURN_BANK,
+    )?.speed;
+    if (min === undefined) return [];
+    if (va.status !== "computed") return [{ flapSetting, status: "noVa", min, va }];
+    return [{ flapSetting, status: min < va.value ? "range" : "noRange", min, va }];
+  });
+}
+
+/** The range as shown on screen and on the Briefing, e.g. "71–101". */
+export function describeCanyonTurnEntryRange(range: CanyonTurnEntryRange): string {
+  switch (range.status) {
+    case "range":
+      return `${range.min}–${range.va.value}`;
+    case "noRange":
+      return `No range: Va (${range.va.value}) ≤ 1.4 × Vso (${range.min})`;
+    case "noVa":
+      return range.va.status === "withheld"
+        ? `From ${range.min} (Va: ${range.va.reason})`
+        : `From ${range.min} (Va not available)`;
+  }
 }
 
 // ---------------------------------------------------------------------------

@@ -215,6 +215,14 @@ describe("Calculations", () => {
     });
   });
 
+  // Worksheet p.3: canyon-turn entry between 1.4 × Vso and Va at actual
+  // weight. Va at 2,800 lbs interpolates to 105 kts.
+  it("shows the canyon-turn entry airspeed range for each flap setting", () => {
+    render(<Calculations state={mockWorksheetData} />);
+    expect(screen.getByText("71–105")).toBeInTheDocument();
+    expect(screen.getByText("57–105")).toBeInTheDocument();
+  });
+
   it("handles missing aircraft model gracefully", () => {
     const stateWithoutAircraft: WorksheetData = {
       ...mockWorksheetData,

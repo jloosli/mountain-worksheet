@@ -8,6 +8,7 @@ import TakeoffPerformance from "@/components/TakeoffPerformance";
 import ManeuveringPerformance from "@/components/ManeuveringPerformance";
 import { calculateManeuveringSpeeds } from "@/utils/maneuveringCalculations";
 import {
+  computeCanyonTurnEntryRanges,
   computeClimbViewModel,
   computePressureColumns,
   computeTOLDViewModel,
@@ -39,6 +40,7 @@ export default function Calculations({ state, notifications = [] }: Calculations
     state.acType && maneuveringWarnings.length === 0
       ? calculateManeuveringSpeeds(state.acType)
       : null;
+  const entryRanges = computeCanyonTurnEntryRanges(maneuveringSpeeds, climb.va);
 
   return (
     <div className="w-full">
@@ -77,6 +79,8 @@ export default function Calculations({ state, notifications = [] }: Calculations
           aircraftModel={state.acType}
           maneuveringSpeeds={maneuveringSpeeds}
           notifications={maneuveringWarnings}
+          entryRanges={entryRanges}
+          inputNotifications={notifications}
         />
       </div>
     </div>
