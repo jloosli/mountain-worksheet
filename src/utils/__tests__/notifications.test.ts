@@ -244,6 +244,34 @@ describe("deriveNotifications", () => {
     expect(deriveNotifications({ ...base, position: [40.5, -111.2] }, result)).toEqual([]);
   });
 
+  // A position that isn't fully entered still means the airport midpoint, so
+  // typing one coordinate doesn't move the point a refetch would use (#251).
+  it("keeps step notifications and field Warnings while the position is half-entered", () => {
+    const step: Notification = {
+      level: "warning",
+      subject: stepSubject("weather"),
+      message: "no TAF period covers the arrival time",
+    };
+    const field: Notification = {
+      level: "warning",
+      subject: fieldSubject("temp", 1),
+      message: "no point forecast",
+    };
+    const result = fetchFor([step, field]);
+    expect(deriveNotifications({ ...base, position: [40.5, null] }, result)).toEqual([step, field]);
+    expect(deriveNotifications({ ...base, position: [null, -111.2] }, result)).toEqual([
+      step,
+      field,
+    ]);
+
+    // And back: fetched with a half-entered position, then cleared.
+    const halfEntered = {
+      ...result,
+      fetchedFor: { ...result.fetchedFor, position: [40.5, null] as WorksheetData["position"] },
+    };
+    expect(deriveNotifications(base, halfEntered)).toEqual([step, field]);
+  });
+
   // Airport weather is fetched at the airport, not the area-of-ops position.
   it("keeps an unresolved airport-field Warning when only the position changes", () => {
     const arrival: Notification = {
@@ -487,6 +515,28 @@ describe("staleFetchNotifications", () => {
     // Clearing the position moves the area to the airport midpoint.
     expect(subjects(staleFetchNotifications(fetched, fetchedAtPosition))).toContain(
       "field:temp.1"
+    );
+  });
+
+  // A half-entered position still means the airport midpoint (#251).
+  it("doesn't warn on the area fields while the position is half-entered", () => {
+    expect(staleFetchNotifications({ ...fetched, position: [40.5, null] }, fetch)).toEqual([]);
+    expect(staleFetchNotifications({ ...fetched, position: [null, -111.2] }, fetch)).toEqual([]);
+
+    // Fetched with a half-entered position (so at the midpoint): clearing it
+    // is no change, but completing it moves the area off the midpoint.
+    const fetchedHalfEntered = {
+      ...fetch,
+      fetchedFor: { ...fetch.fetchedFor, position: [40.5, null] as WorksheetData["position"] },
+    };
+    expect(staleFetchNotifications(fetched, fetchedHalfEntered)).toEqual([]);
+    const completed = staleFetchNotifications(
+      { ...fetched, position: [40.5, -111.2] },
+      fetchedHalfEntered
+    );
+    expect(subjects(completed)).toContain("field:temp.1");
+    expect(completed[0].message).toBe(
+      "Fetched for the airport midpoint at 2026-05-12 18:00; refetch weather."
     );
   });
 
