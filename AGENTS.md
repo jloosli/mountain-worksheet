@@ -2,7 +2,17 @@
 
 A Next.js 16.x web application (App Router, TypeScript, Tailwind CSS v4, Vercel) that helps Civil Air Patrol pilots plan mountain flying operations by computing density altitude, takeoff/landing distances, maneuvering speeds, and climb performance from aircraft POH data.
 
-**Source of truth for the domain:** the app digitizes the Rocky Mountain Region CAP [Mountain Flight Worksheet v2 (PDF)](https://rmrcapgov.sharepoint.com/sites/RockyMountainReginCivilAirPatrolStaff/Shared%20Documents/Forms/AllItems.aspx?id=%2Fsites%2FRockyMountainReginCivilAirPatrolStaff%2FShared%20Documents%2FPublicly%2Daccessible%20web%20files%2FOperations%2FMission%20Training%2FMountain%20Flying%20Training%2FReference%20Materials%2FMountain%20Flight%20Worksheet%20v2%2Epdf&parent=%2Fsites%2FRockyMountainReginCivilAirPatrolStaff%2FShared%20Documents%2FPublicly%2Daccessible%20web%20files%2FOperations%2FMission%20Training%2FMountain%20Flying%20Training%2FReference%20Materials&p=true&ga=1). When a calculation or its presentation is in question, check it against that worksheet and the aircraft POHs in `poh/`.
+**Source of truth for the domain:** the app digitizes the Rocky Mountain Region CAP Mountain Flight Worksheet v2, committed at `docs/reference/mountain-flight-worksheet-v2.pdf` ([original on SharePoint](https://rmrcapgov.sharepoint.com/sites/RockyMountainReginCivilAirPatrolStaff/Shared%20Documents/Forms/AllItems.aspx?id=%2Fsites%2FRockyMountainReginCivilAirPatrolStaff%2FShared%20Documents%2FPublicly%2Daccessible%20web%20files%2FOperations%2FMission%20Training%2FMountain%20Flying%20Training%2FReference%20Materials%2FMountain%20Flight%20Worksheet%20v2%2Epdf&parent=%2Fsites%2FRockyMountainReginCivilAirPatrolStaff%2FShared%20Documents%2FPublicly%2Daccessible%20web%20files%2FOperations%2FMission%20Training%2FMountain%20Flying%20Training%2FReference%20Materials&p=true&ga=1)). When a calculation or its presentation is in question, check it against that worksheet and the aircraft POHs in `poh/`. The worksheet's limits and rules of thumb:
+
+- Mountain winds under 30 kt at every altitude (surface, 3,000', 6,000', 9,000', 12,000')
+- Ceilings and visibility much better than marginal VFR all along the route
+- Gross weight under 90% of maximum gross weight
+- Rate of climb over 300 fpm all along the route; service ceiling = the altitude where rate of climb falls to 300 fpm
+- Takeoff ground roll + landing ground roll less than runway length
+- Runway abort point: 75% of takeoff speed by the runway midpoint
+- Canyon turns: stall speed is 1.2 × Vso at 45° bank and 1.4 × Vso at 60° bank (0° and 30° flaps); entry airspeed between 1.4 × Vso and Va
+- En route at or above 2,000' AGL unless descending to land
+- Pressure and density altitude come from the worksheet's density altitude chart and its altimeter-setting conversion table
 
 ## Key Architecture
 
