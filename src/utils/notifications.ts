@@ -149,8 +149,8 @@ export interface WeatherFetchResult {
   /**
    * The sortie inputs the fetch was made for. `duration` sets the arrival
    * time (departure + duration) and the area-of-ops midpoint time.
-   * `position` is the entered area-of-ops position (`[null, null]` when the
-   * fetch used the airport midpoint).
+   * `position` is the area-of-ops position as entered; when it isn't fully
+   * entered (either coordinate null) the fetch used the airport midpoint.
    */
   fetchedFor: {
     airport: [string, string];
@@ -208,14 +208,19 @@ function durationChanged(
   return effectiveDuration(state.duration) !== effectiveDuration(fetchedFor.duration);
 }
 
+/**
+ * Whether the entered area-of-ops position differs from the one the fetch
+ * used. A position that isn't fully entered means the airport midpoint, so
+ * typing or clearing one coordinate of it is no change.
+ */
 function positionChanged(
   state: WorksheetData,
   fetchedFor: WeatherFetchResult["fetchedFor"]
 ): boolean {
-  return (
-    state.position[0] !== fetchedFor.position[0] ||
-    state.position[1] !== fetchedFor.position[1]
-  );
+  const now = enteredPosition(state.position);
+  const then = enteredPosition(fetchedFor.position);
+  if (!now || !then) return now !== then;
+  return now[0] !== then[0] || now[1] !== then[1];
 }
 
 /**
