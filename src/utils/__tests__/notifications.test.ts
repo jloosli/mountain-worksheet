@@ -219,7 +219,7 @@ describe("deriveNotifications", () => {
     expect(deriveNotifications({ ...base, time: "19:00" }, result)).toEqual([]);
   });
 
-  it("drops step notifications and field Warnings when the duration changes", () => {
+  it("drops step notifications when the duration changes", () => {
     const step: Notification = {
       level: "warning",
       subject: stepSubject("weather"),
@@ -260,6 +260,43 @@ describe("deriveNotifications", () => {
     expect(deriveNotifications({ ...base, position: [40.5, -111.2] }, result)).toEqual([
       arrival,
       departure,
+    ]);
+  });
+
+  // Departure weather is fetched for the departure time, which the duration
+  // doesn't move; arrival and area weather are for times it does. Elevations
+  // and runways belong to the airport, not a time.
+  it("keeps Warnings on fields the duration doesn't move when only the duration changes", () => {
+    const departure: Notification = {
+      level: "warning",
+      subject: fieldSubject("temp", 0),
+      message: "KOGD: no METAR",
+    };
+    const arrival: Notification = {
+      level: "warning",
+      subject: fieldSubject("temp", 2),
+      message: "KLGU: no TAF period covers the arrival time",
+    };
+    const area: Notification = {
+      level: "warning",
+      subject: fieldSubject("wind", 0),
+      message: "no winds aloft",
+    };
+    const departureRunway: Notification = {
+      level: "warning",
+      subject: fieldSubject("rwy", 0),
+      message: "KOGD: runway length not found",
+    };
+    const arrivalRunway: Notification = {
+      level: "warning",
+      subject: fieldSubject("rwy", 1),
+      message: "KLGU: runway length not found",
+    };
+    const result = fetchFor([departure, departureRunway, arrival, area, arrivalRunway]);
+    expect(deriveNotifications({ ...base, duration: 3 }, result)).toEqual([
+      departure,
+      departureRunway,
+      arrivalRunway,
     ]);
   });
 
