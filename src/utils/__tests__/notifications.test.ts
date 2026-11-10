@@ -264,8 +264,9 @@ describe("deriveNotifications", () => {
   });
 
   // Departure weather is fetched for the departure time, which the duration
-  // doesn't move; arrival and area weather are for times it does.
-  it("keeps an unresolved departure-field Warning when only the duration changes", () => {
+  // doesn't move; arrival and area weather are for times it does. Elevations
+  // and runways belong to the airport, not a time.
+  it("keeps Warnings on fields the duration doesn't move when only the duration changes", () => {
     const departure: Notification = {
       level: "warning",
       subject: fieldSubject("temp", 0),
@@ -286,10 +287,16 @@ describe("deriveNotifications", () => {
       subject: fieldSubject("rwy", 0),
       message: "KOGD: runway length not found",
     };
-    const result = fetchFor([departure, departureRunway, arrival, area]);
+    const arrivalRunway: Notification = {
+      level: "warning",
+      subject: fieldSubject("rwy", 1),
+      message: "KLGU: runway length not found",
+    };
+    const result = fetchFor([departure, departureRunway, arrival, area, arrivalRunway]);
     expect(deriveNotifications({ ...base, duration: 3 }, result)).toEqual([
       departure,
       departureRunway,
+      arrivalRunway,
     ]);
   });
 

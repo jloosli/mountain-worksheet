@@ -237,21 +237,6 @@ function fetchInputsUnchanged(
   );
 }
 
-/**
- * Fields fetched for the departure airport: its weather at the departure
- * time, its elevation and its runway. The duration moves none of them.
- */
-function isDepartureField(subject: Extract<Subject, { kind: "field" }>): boolean {
-  switch (subject.field) {
-    case "temp":
-    case "altimeter":
-    case "altitude":
-    case "rwy":
-      return subject.index === 0;
-    default:
-      return false;
-  }
-}
 
 /**
  * Fields fetched for the area-of-ops position rather than at an airport:
@@ -273,6 +258,18 @@ function isAreaField(subject: Extract<Subject, { kind: "field" }>): boolean {
 }
 
 /**
+ * Fields fetched for a time the duration moves: the arrival airport's
+ * weather (departure + duration) and the area weather (the midpoint time).
+ * Departure weather, elevations and runways don't depend on it.
+ */
+function isMovedByDuration(subject: Extract<Subject, { kind: "field" }>): boolean {
+  if (subject.field === "temp" || subject.field === "altimeter") {
+    if (subject.index === 2) return true;
+  }
+  return isAreaField(subject);
+}
+
+/**
  * Derives the notifications currently in force from worksheet state plus the
  * latest fetch result. Pure; call it during render.
  *
@@ -282,8 +279,8 @@ function isAreaField(subject: Extract<Subject, { kind: "field" }>): boolean {
  *   holds the value the fetch applied (the pilot clears it by overriding);
  * - Warnings and step notifications also need the fetch's airports, date
  *   and time to be unchanged, since they describe that fetch. The duration
- *   also counts, except for Warnings on departure fields, which are fetched
- *   for the departure time. The area-of-ops position also counts for step
+ *   also counts for step notifications and Warnings on arrival and area
+ *   weather, which are fetched for times it moves. The area-of-ops position also counts for step
  *   notifications and Warnings on area fields, but not for airport fields,
  *   which are fetched at the airport. A field Caution follows the value it
  *   describes, so it survives an input change.
@@ -311,7 +308,7 @@ export function deriveNotifications(
           : isBlank(current);
       return (
         inputsUnchanged &&
-        (!durationMoved || isDepartureField(subject)) &&
+        !(durationMoved && isMovedByDuration(subject)) &&
         !(positionMoved && isAreaField(subject)) &&
         unresolved
       );
