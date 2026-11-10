@@ -217,6 +217,14 @@ function positionChanged(
   );
 }
 
+/**
+ * The fetch uses the airport midpoint for the area weather unless both
+ * coordinates are entered, so the area then moves with either airport.
+ */
+function usesAirportMidpoint([lat, lon]: WorksheetData["position"]): boolean {
+  return lat === null || lon === null;
+}
+
 function describePosition([lat, lon]: WorksheetData["position"]): string {
   return lat !== null && lon !== null
     ? `${lat.toFixed(4)}, ${lon.toFixed(4)}`
@@ -343,7 +351,8 @@ const AREA_WEATHER_FIELDS: FieldSubject[] = [
  * changes. A duration change moves the arrival time (departure + duration)
  * and the area-of-ops midpoint time, so it stales the arrival airport's
  * weather and the area weather, but not the departure's. An area-of-ops
- * position change stales the area weather only. Each Warning clears once the
+ * position change stales the area weather only, as does an airport change
+ * when the fetch used the airport midpoint. Each Warning clears once the
  * pilot enters their own value or weather is fetched for the current inputs.
  * Nothing is blanked. Field Cautions from the fetch still follow their values
  * (`deriveNotifications`).
@@ -385,8 +394,11 @@ export function staleFetchNotifications(
       message: `Fetched for ${normalizeAirportCode(fetchedFor.airport[i])} at ${when}; refetch weather.`,
     });
   });
-  if (areaTimeChanged || positionMoved) {
-    const where = positionMoved ? `${describePosition(fetchedFor.position)} at ` : "";
+  const areaPointMoved =
+    positionMoved ||
+    (usesAirportMidpoint(fetchedFor.position) && (airportChanged(0) || airportChanged(1)));
+  if (areaTimeChanged || areaPointMoved) {
+    const where = areaPointMoved ? `${describePosition(fetchedFor.position)} at ` : "";
     stale.push({
       subjects: AREA_WEATHER_FIELDS,
       message: `Fetched for ${where}${when}; refetch weather.`,

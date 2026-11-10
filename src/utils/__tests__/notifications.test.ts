@@ -380,6 +380,11 @@ describe("staleFetchNotifications", () => {
     turb: true,
   };
   const fetch = fetchFor([], applied);
+  // Fetched for an entered position, so an airport change leaves the area
+  // weather alone.
+  const position: WorksheetData["position"] = [40.5, -111.2];
+  const fetchAtPosition = { ...fetch, fetchedFor: { ...fetch.fetchedFor, position } };
+  const fetchedAtPosition = { ...fetched, position };
   const subjects = (list: Notification[]) => list.map((n) => subjectKey(n.subject));
 
   it("raises nothing while the fetch's airports, date and time are unchanged", () => {
@@ -388,8 +393,11 @@ describe("staleFetchNotifications", () => {
   });
 
   it("warns on the arrival airport's fetched fields when the arrival airport changes", () => {
-    const state = { ...fetched, airport: ["KOGD", "KSLC"] as WorksheetData["airport"] };
-    const list = staleFetchNotifications(state, fetch);
+    const state = {
+      ...fetchedAtPosition,
+      airport: ["KOGD", "KSLC"] as WorksheetData["airport"],
+    };
+    const list = staleFetchNotifications(state, fetchAtPosition);
     expect(subjects(list)).toEqual(["field:temp.2", "field:altimeter.2", "field:altitude.2"]);
     expect(list[0]).toEqual({
       level: "warning",
@@ -482,6 +490,25 @@ describe("staleFetchNotifications", () => {
     );
   });
 
+  // With no position entered, the area weather is fetched at the midpoint of
+  // the two airports, so changing either airport moves it.
+  it("warns on the area fields when an airport change moves the midpoint", () => {
+    const state = { ...fetched, airport: ["KOGD", "KSLC"] as WorksheetData["airport"] };
+    const list = staleFetchNotifications(state, fetch);
+    expect(subjects(list)).toEqual([
+      "field:temp.2",
+      "field:altimeter.2",
+      "field:altitude.2",
+      "field:temp.1",
+      "field:altimeter.1",
+      "field:wind.0",
+      "field:turb",
+    ]);
+    expect(list.find((n) => subjectKey(n.subject) === "field:temp.1")?.message).toBe(
+      "Fetched for the airport midpoint at 2026-05-12 18:00; refetch weather."
+    );
+  });
+
   it("warns on a fetched runway length when its airport changes, but not when only the time does", () => {
     const withRunways = fetchFor([], { ...applied, rwy: [5500, 5861] });
     const state = { ...fetched, rwy: [5500, 5861] as WorksheetData["rwy"] };
@@ -495,11 +522,11 @@ describe("staleFetchNotifications", () => {
 
   it("leaves a field the pilot has since changed", () => {
     const state = {
-      ...fetched,
+      ...fetchedAtPosition,
       airport: ["KOGD", "KSLC"] as WorksheetData["airport"],
       temp: [21, 5, 12] as WorksheetData["temp"],
     };
-    expect(subjects(staleFetchNotifications(state, fetch))).toEqual([
+    expect(subjects(staleFetchNotifications(state, fetchAtPosition))).toEqual([
       "field:altimeter.2",
       "field:altitude.2",
     ]);
