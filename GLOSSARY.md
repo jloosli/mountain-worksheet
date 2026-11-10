@@ -34,7 +34,7 @@ A computed value that is not shown because one of its own inputs has a Warning o
 ### Data provenance
 
 **Substitution**:
-Any displayed value that comes from something other than the pilot's own input or data for the requested airport, time, and position. Every substitution is announced with a Caution; there are no silent substitutions. Values computed from a substitution carry a marker pointing back to it.
+Any displayed value that comes from something other than the pilot's own input or data for the requested airport, time, and position. Every substitution is announced with a Caution; there are no silent substitutions. Values and Limit checks computed from a substitution carry a marker pointing back to it, and a Limit check's state counts the same as one from the pilot's own data.
 _Avoid_: Fallback (as a user-facing term)
 
 **Auto-correction**:
@@ -58,7 +58,7 @@ _Avoid_: Missing airport, airport not found
 ### Limit checks
 
 **Limit check**:
-A comparison of trustworthy values against one of the Mountain Flight Worksheet's own mountain-flying limits, such as mountain winds under 30 kt. There is one per limit, covering every altitude or airport the limit applies to; its state is the worst state among them, and it names the ones that fail. It is not a notification: it never withholds a value and says nothing about whether the data can be trusted. Values outside an entry range or an aircraft limitation, such as weight above maximum gross, are Warnings, not Limit checks.
+A comparison of trustworthy values against one of the Mountain Flight Worksheet's own mountain-flying limits, such as mountain winds under 30 kt. There is one per limit, covering every altitude or airport the limit applies to. Its state is the worst among them, in the order Exceeded, Not checked, Near limit, Within limit, and it names the ones that fail. It is not a notification: it never withholds a value and says nothing about whether the data can be trusted. Values outside an entry range or an aircraft limitation, such as weight above maximum gross, are Warnings, not Limit checks.
 _Avoid_: Limit warning, violation
 
 **Within limit**:
@@ -73,7 +73,7 @@ The state of a Limit check where at least one value fails the limit.
 _Avoid_: Failed, no-go
 
 **Not checked**:
-The state of a Limit check that can't be evaluated because an input it needs is blank or withheld. It names what it is waiting for.
+The state of a Limit check that has no known failure but can't be fully evaluated, because a value it needs is missing or can't be trusted: blank, withheld, unavailable, or outdated by a changed input. It names what it is waiting for. A value that is trusted but beyond an aircraft limitation, such as weight above maximum gross, can still be checked.
 
 ### Outputs
 
