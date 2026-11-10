@@ -244,6 +244,25 @@ describe("deriveNotifications", () => {
     expect(deriveNotifications({ ...base, position: [40.5, -111.2] }, result)).toEqual([]);
   });
 
+  // Airport weather is fetched at the airport, not the area-of-ops position.
+  it("keeps an unresolved airport-field Warning when only the position changes", () => {
+    const arrival: Notification = {
+      level: "warning",
+      subject: fieldSubject("temp", 2),
+      message: "KLGU: no METAR",
+    };
+    const departure: Notification = {
+      level: "warning",
+      subject: fieldSubject("altimeter", 0),
+      message: "KOGD: no METAR",
+    };
+    const result = fetchFor([arrival, departure]);
+    expect(deriveNotifications({ ...base, position: [40.5, -111.2] }, result)).toEqual([
+      arrival,
+      departure,
+    ]);
+  });
+
   it("treats a blank and a zero duration as the same fetch input", () => {
     const step: Notification = {
       level: "warning",

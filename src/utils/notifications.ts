@@ -234,9 +234,27 @@ function fetchInputsUnchanged(
       normalizeAirportCode(fetchedFor.airport[1]) &&
     state.date === fetchedFor.date &&
     state.time === fetchedFor.time &&
-    !durationChanged(state, fetchedFor) &&
-    !positionChanged(state, fetchedFor)
+    !durationChanged(state, fetchedFor)
   );
+}
+
+/**
+ * Fields fetched for the area-of-ops position rather than at an airport:
+ * operating temperature and altimeter, winds aloft and the G-AIRMET flags.
+ */
+function isAreaField(subject: Extract<Subject, { kind: "field" }>): boolean {
+  switch (subject.field) {
+    case "wind":
+    case "turb":
+    case "cielVis":
+    case "mtnObsc":
+      return true;
+    case "temp":
+    case "altimeter":
+      return subject.index === 1;
+    default:
+      return false;
+  }
 }
 
 /**
@@ -248,9 +266,11 @@ function fetchInputsUnchanged(
  *   by entering a value); a Caution or Advisory holds while the field still
  *   holds the value the fetch applied (the pilot clears it by overriding);
  * - Warnings and step notifications also need the fetch's airports, date,
- *   time, duration and area-of-ops position to be unchanged, since they
- *   describe that fetch. A field Caution follows the value it describes, so
- *   it survives an input change.
+ *   time and duration to be unchanged, since they describe that fetch. The
+ *   area-of-ops position also counts for step notifications and Warnings on
+ *   area fields, but not for airport fields, which are fetched at the
+ *   airport. A field Caution follows the value it describes, so it survives
+ *   an input change.
  */
 export function deriveNotifications(
   state: WorksheetData,
@@ -258,9 +278,10 @@ export function deriveNotifications(
 ): Notification[] {
   if (!fetch) return [];
   const inputsUnchanged = fetchInputsUnchanged(state, fetch.fetchedFor);
+  const positionMoved = positionChanged(state, fetch.fetchedFor);
   return fetch.notifications.filter((n) => {
     const { subject } = n;
-    if (subject.kind !== "field") return inputsUnchanged;
+    if (subject.kind !== "field") return inputsUnchanged && !positionMoved;
     const current = readField(state, subject);
     if (n.level === "warning") {
       // A winds-aloft column needs all of dir/vel/temp, so its Warning holds
@@ -269,7 +290,9 @@ export function deriveNotifications(
         subject.field === "wind" && subject.index !== undefined
           ? Array.isArray(current) && current.some(isBlank)
           : isBlank(current);
-      return inputsUnchanged && unresolved;
+      return (
+        inputsUnchanged && !(positionMoved && isAreaField(subject)) && unresolved
+      );
     }
     return sameValue(current, readField(fetch.applied, subject));
   });
