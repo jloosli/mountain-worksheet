@@ -165,6 +165,7 @@ export async function fetchWorksheetWeather(
     date: worksheet.date,
     time: worksheet.time,
     duration: worksheet.duration,
+    position: worksheet.position,
   };
 
   try {
