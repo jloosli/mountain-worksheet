@@ -2,13 +2,16 @@ import type { WorksheetData } from "@/utils/types";
 import {
   COLUMNS,
   climbSubject,
+  computeCanyonTurnEntryRanges,
   computeClimbViewModel,
   computePressureColumns,
+  describeCanyonTurnEntryRange,
   pressureColumnValue,
   computeTOLDViewModel,
   pressureColumnDependsOn,
   toldValueSubjects,
   type AirportSlot,
+  type CanyonTurnEntryRange,
   type ComputedValue,
   type TOLDValueKey,
   type Triple,
@@ -133,6 +136,32 @@ function ValueCell({
     >
       {format(value.value)}
       <Refs refs={all} />
+    </td>
+  );
+}
+
+/**
+ * A canyon-turn entry range cell. Refs point to Va's own notes (a Warning when
+ * it can't be computed, a Caution when extrapolated) and its inputs' Cautions.
+ */
+function EntryCell({
+  range,
+  briefing,
+}: {
+  range: CanyonTurnEntryRange | undefined;
+  briefing: BriefingNotes;
+}) {
+  if (!range) return <td className="py-0.5 text-right">—</td>;
+  const refs = [
+    ...new Set([
+      ...briefing.refsOn(climbSubject("va")),
+      ...(range.status === "noVa" ? [] : briefing.markersOn(range.va)),
+    ]),
+  ].sort((x, y) => x - y);
+  return (
+    <td className={range.status === "noVa" ? "py-0.5 text-right italic text-slate-600" : "py-0.5 text-right"}>
+      {describeCanyonTurnEntryRange(range)}
+      <Refs refs={refs} />
     </td>
   );
 }
@@ -481,11 +510,12 @@ export default function PrintBriefing({ state, notifications = [] }: PrintBriefi
         const ms = calculateManeuveringSpeeds(state.acType);
         if (!ms) return null;
         const banks = [0, 45, 60];
+        const entryRanges = computeCanyonTurnEntryRanges(ms, climb.va);
         return (
           <table className="w-full border-collapse text-[8pt] mb-2 break-inside-avoid">
             <thead>
               <tr className="border-b border-slate-400">
-                <th className="text-left pr-2 font-medium" colSpan={4}>
+                <th className="text-left pr-2 font-medium" colSpan={5}>
                   Maneuvering speeds (kts) ({state.acType})
                   <Refs refs={b.refsOn(valueSubject("maneuvering", "decision"))} />
                 </th>
@@ -497,6 +527,7 @@ export default function PrintBriefing({ state, notifications = [] }: PrintBriefi
                     {bank}°
                   </th>
                 ))}
+                <th className="text-right font-medium">Canyon-turn entry (1.4 × Vso–Va)</th>
               </tr>
             </thead>
             <tbody>
@@ -513,6 +544,10 @@ export default function PrintBriefing({ state, notifications = [] }: PrintBriefi
                       </td>
                     );
                   })}
+                  <EntryCell
+                    range={entryRanges.find((r) => r.flapSetting === flap)}
+                    briefing={b}
+                  />
                 </tr>
               ))}
             </tbody>

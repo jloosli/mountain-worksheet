@@ -1,18 +1,57 @@
 import type { ManeuveringSpeeds } from "@/utils/types";
 import type { Notification } from "@/utils/notifications";
-import { MANEUVERING_SUBJECT } from "@/utils/derived";
+import {
+  MANEUVERING_SUBJECT,
+  climbSubject,
+  describeCanyonTurnEntryRange,
+  type CanyonTurnEntryRange,
+} from "@/utils/derived";
 import InlineNotifications from "@/components/InlineNotifications";
+import ValueMarkers from "@/components/ValueMarkers";
 
 interface ManeuveringPerformanceProps {
   aircraftModel?: string;
   maneuveringSpeeds?: ManeuveringSpeeds | null;
   notifications?: readonly Notification[];
+  /** Canyon-turn entry airspeed range per flap setting (1.4 × Vso to Va). */
+  entryRanges?: readonly CanyonTurnEntryRange[];
+  /** All notifications in force, for markers on a range whose Va carries a Caution. */
+  inputNotifications?: readonly Notification[];
+}
+
+function EntryRange({
+  range,
+  notes,
+}: {
+  range: CanyonTurnEntryRange | undefined;
+  notes: readonly Notification[];
+}) {
+  if (!range) return <>—</>;
+  const text = describeCanyonTurnEntryRange(range);
+  if (range.status === "noVa") {
+    return <span className="italic text-gray-500 dark:text-gray-400">{text}</span>;
+  }
+  // Va's own Cautions (e.g. extrapolated) and those on its inputs.
+  const markers = (
+    <ValueMarkers
+      notifications={notes}
+      value={{ status: "computed", dependsOn: [...range.va.dependsOn, climbSubject("va")] }}
+    />
+  );
+  return (
+    <>
+      {text}
+      {markers}
+    </>
+  );
 }
 
 export default function ManeuveringPerformance({
   aircraftModel,
   maneuveringSpeeds,
   notifications = [],
+  entryRanges = [],
+  inputNotifications = [],
 }: ManeuveringPerformanceProps) {
   if (!aircraftModel) return null;
 
@@ -44,6 +83,13 @@ export default function ManeuveringPerformance({
                 colSpan={3}
               >
                 Bank Angles
+              </th>
+              <th
+                className="border border-gray-300 dark:border-gray-700 p-2 text-center"
+                rowSpan={2}
+              >
+                Canyon-turn entry
+                <div className="text-xs font-normal">1.4 × Vso to Va</div>
               </th>
             </tr>
             <tr>
@@ -85,6 +131,12 @@ export default function ManeuveringPerformance({
                     </td>
                   );
                 })}
+                <td className="border border-gray-300 dark:border-gray-700 p-2 text-right">
+                  <EntryRange
+                    range={entryRanges.find((r) => r.flapSetting === flapSetting)}
+                    notes={inputNotifications}
+                  />
+                </td>
               </tr>
             ))}
           </tbody>
