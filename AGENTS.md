@@ -2,13 +2,25 @@
 
 A Next.js 16.x web application (App Router, TypeScript, Tailwind CSS v4, Vercel) that helps Civil Air Patrol pilots plan mountain flying operations by computing density altitude, takeoff/landing distances, maneuvering speeds, and climb performance from aircraft POH data.
 
+**Source of truth for the domain:** the app digitizes the Rocky Mountain Region CAP Mountain Flight Worksheet v2, committed at `docs/reference/mountain-flight-worksheet-v2.pdf` ([original on SharePoint](https://rmrcapgov.sharepoint.com/sites/RockyMountainReginCivilAirPatrolStaff/Shared%20Documents/Forms/AllItems.aspx?id=%2Fsites%2FRockyMountainReginCivilAirPatrolStaff%2FShared%20Documents%2FPublicly%2Daccessible%20web%20files%2FOperations%2FMission%20Training%2FMountain%20Flying%20Training%2FReference%20Materials%2FMountain%20Flight%20Worksheet%20v2%2Epdf&parent=%2Fsites%2FRockyMountainReginCivilAirPatrolStaff%2FShared%20Documents%2FPublicly%2Daccessible%20web%20files%2FOperations%2FMission%20Training%2FMountain%20Flying%20Training%2FReference%20Materials&p=true&ga=1)). When a calculation or its presentation is in question, check it against that worksheet and the aircraft POHs. The POH PDFs live in `poh/`, which is gitignored and local-only. A fresh checkout won't have them, so fall back to the transcribed tables in `src/data/aircraft.json` or ask the user. The worksheet's limits and rules of thumb:
+
+- Mountain winds under 30 kt at every altitude (surface, 3,000', 6,000', 9,000', 12,000')
+- Ceilings and visibility much better than marginal VFR all along the route
+- Gross weight under 90% of maximum gross weight
+- Rate of climb over 300 fpm all along the route; service ceiling = the altitude where rate of climb falls to 300 fpm
+- Takeoff ground roll + landing ground roll less than runway length
+- Runway abort point: 75% of takeoff speed by the runway midpoint
+- Canyon turns: stall speed is 1.2 × Vso at 45° bank and 1.4 × Vso at 60° bank (0° and 30° flaps); entry airspeed between 1.4 × Vso and Va
+- En route at or above 2,000' AGL unless descending to land
+- Pressure and density altitude come from the worksheet's density altitude chart and its altimeter-setting conversion table
+
 ## Key Architecture
 
 - `src/app/` — App Router pages and layouts
 - `src/components/` — UI components; `AppContainer` owns all state, `AppInputs` owns user inputs, `Calculations` derives results during render
 - `src/utils/types.ts` — Core types: `WorksheetData`, `Aircraft`, `TOLDCalculationParams`
 - `src/data/aircraft.json` — POH performance tables indexed by weight × altitude × temperature
-- `src/utils/interpolation.ts` — Trilinear interpolation across POH tables
+- `src/utils/interpolation.ts` — Trilinear (takeoff: weight × altitude × temperature) and bilinear (landing, from a single-weight table, and climb: altitude × temperature) interpolation across POH tables
 - `src/utils/toldCalculations.ts`, `maneuveringCalculations.ts`, `formulas.ts` — Calculations
 - `src/utils/derived.ts` — Pure helpers (`computePressureColumns`, `computeTOLDViewModel`) used by `<Calculations>` during render; TOLD results are per airport, each value `computed`/`withheld`/`unavailable`, with notifications
 - `src/app/api/aviation-weather/route.ts` — Proxy to `aviationweather.gov` (avoids CORS)
@@ -42,6 +54,10 @@ State is persisted to URL query strings via `src/utils/urlState.ts` + `src/utils
 `<Calculations>`, `<Altitudes>`, `<ClimbPerformance>`, and `<TakeoffPerformance>` derive every display value during render via pure helpers (mostly from `src/utils/derived.ts`). Do not introduce `useState`/`useEffect` to cache derived values that can be recomputed from props — table lookups in this codebase are sub-millisecond, and the previous effect-driven chain caused issue #98 (stale calculations after weather fetch when array references were mutated in place). If you need to add a new derived value, add a pure function to `derived.ts` and call it from `<Calculations>`.
 
 Weather-data mappers in `src/utils/weatherDataMapper.ts` must also return new arrays, never mutate inputs — `setState` only triggers downstream recomputation when reference equality changes.
+
+## Planning Docs Are Historical
+
+`tasks/` (early PRDs and task lists) and `docs/superpowers/` (dated specs and implementation plans) record work that has already shipped. Do not treat them as current requirements: file paths, component names, and behavior in them may be out of date. `docs/ux-assessment.md` and the `docs/*-mockup.html` files are the design rationale behind the step-based layout that has since been built. For how things work now, trust the code, `GLOSSARY.md`, and `docs/adr/`; for open work, check GitHub issues.
 
 ## Development
 
