@@ -14,6 +14,7 @@ import {
   type Triple,
 } from "@/utils/derived";
 import { calculateManeuveringSpeeds } from "@/utils/maneuveringCalculations";
+import { enteredPosition } from "@/utils/areaOfOpsWeather";
 import {
   fieldSubject,
   valueSubject,
@@ -166,11 +167,10 @@ const TOLD_ROWS: ReadonlyArray<{
 
 export default function PrintBriefing({ state, notifications = [] }: PrintBriefingProps) {
   const [dep, arr] = state.airport;
-  const [lat, lon] = state.position;
-  const position =
-    lat !== null && lon !== null
-      ? `${lat.toFixed(2)}, ${lon.toFixed(2)}`
-      : "—";
+  const entered = enteredPosition(state.position);
+  const position = entered
+    ? `${entered[0].toFixed(2)}, ${entered[1].toFixed(2)}`
+    : "—";
 
   const { PAs, DAs } = computePressureColumns(
     state.altitude,

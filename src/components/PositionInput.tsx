@@ -5,6 +5,7 @@ import { parsePosition, type ParsedPosition } from "@/utils/positionParser";
 import { geodesicDestination } from "@/utils/positionMath";
 import { magneticVariation } from "@/utils/magvar";
 import { getAirportInfo, getNavaidInfo } from "@/utils/aviationWeatherApi";
+import { enteredPosition } from "@/utils/areaOfOpsWeather";
 
 interface PositionInputProps {
   rawValue: string;
@@ -67,20 +68,22 @@ export default function PositionInput({
   const lastPushed = useRef(rawValue);
   const requestId = useRef(0);
   const [hint, setHint] = useState<{ type: "ok" | "warn"; text: string } | null>(
-    cachedPosition[0] !== null && cachedPosition[1] !== null
-      ? { type: "ok", text: `→ ${formatLatLon(cachedPosition[0]!, cachedPosition[1]!)}` }
-      : null
+    () => {
+      const cached = enteredPosition(cachedPosition);
+      return cached
+        ? { type: "ok", text: `→ ${formatLatLon(cached[0], cached[1])}` }
+        : null;
+    }
   );
 
   useEffect(() => {
     if (rawValue !== lastPushed.current) {
       setLocalRaw(rawValue);
-      const hasCachedCoords =
-        cachedPosition[0] !== null && cachedPosition[1] !== null;
-      if (hasCachedCoords) {
+      const cached = enteredPosition(cachedPosition);
+      if (cached) {
         setHint({
           type: "ok",
-          text: `→ ${formatLatLon(cachedPosition[0]!, cachedPosition[1]!)}`,
+          text: `→ ${formatLatLon(cached[0], cached[1])}`,
         });
         // Trust the URL-cached coordinates; suppress the second effect's
         // re-parse so we don't refetch airport/VOR lookups on hydration.

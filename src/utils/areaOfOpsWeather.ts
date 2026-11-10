@@ -221,6 +221,18 @@ export function opTempChangeNotifications(
 
 export type AreaOfOpsPositionSource = "user" | "midpoint" | "none";
 
+/**
+ * The entered area-of-ops position, or null when it is not fully entered.
+ * It counts only when both latitude and longitude are entered; otherwise the
+ * area weather falls back to the airport midpoint.
+ */
+export function enteredPosition([lat, lon]: readonly [
+  number | null,
+  number | null,
+]): [number, number] | null {
+  return lat !== null && lon !== null ? [lat, lon] : null;
+}
+
 export interface AreaOfOpsWeather {
   position: [number, number] | null;
   positionSource: AreaOfOpsPositionSource;
@@ -289,11 +301,10 @@ export function buildAreaOfOpsWeather(opts: BuildOptions): AreaOfOpsWeather {
   // so values computed from those fields carry their marker.
   const areaWide: NotificationDraft[] = [];
 
-  let position: [number, number] | null = null;
+  let position = enteredPosition(opts.position);
   let positionSource: AreaOfOpsPositionSource = "none";
 
-  if (opts.position[0] !== null && opts.position[1] !== null) {
-    position = [opts.position[0], opts.position[1]];
+  if (position) {
     positionSource = "user";
   } else if (opts.depAirportLatLon && opts.arrAirportLatLon) {
     position = greatCircleMidpoint(

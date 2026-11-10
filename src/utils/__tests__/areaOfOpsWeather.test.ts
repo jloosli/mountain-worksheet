@@ -3,6 +3,7 @@ import {
   describeOpTempChange,
   opTempChangeNotifications,
   buildAreaOfOpsWeather,
+  enteredPosition,
   greatCircleMidpoint,
   interpolateOpTempFromAloft,
 } from "../areaOfOpsWeather";
@@ -538,4 +539,25 @@ describe("operating temperature re-derivation notifications (#225)", () => {
       describeOpTempChange(prev, { altitude: [4500, 6000, 4490] }, {})
     ).toBeNull();
   });
+});
+
+describe("enteredPosition", () => {
+  it("returns the coordinates when both latitude and longitude are entered", () => {
+    expect(enteredPosition([39.5, -105.25])).toEqual([39.5, -105.25]);
+  });
+
+  it("treats 0 as an entered coordinate", () => {
+    expect(enteredPosition([0, 0])).toEqual([0, 0]);
+  });
+
+  it.each([
+    [[null, null]],
+    [[39.5, null]],
+    [[null, -105.25]],
+  ] as [[number | null, number | null]][])(
+    "returns null when the position %j is not fully entered",
+    (position) => {
+      expect(enteredPosition(position)).toBeNull();
+    }
+  );
 });
