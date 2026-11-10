@@ -21,6 +21,7 @@ import {
 import {
   areaOfOpsUnavailable,
   buildAreaOfOpsWeather,
+  enteredPosition,
   greatCircleMidpoint,
   noPositionWarning,
   type AreaOfOpsWeather,
@@ -212,13 +213,11 @@ export async function fetchWorksheetWeather(
 
     // Same great-circle midpoint buildAreaOfOpsWeather will pick, so the
     // point we fetch is the point we display.
-    const [lat, lon] = worksheet.position;
     const opPos: [number, number] | null =
-      lat !== null && lon !== null
-        ? [lat, lon]
-        : depLatLon && arrLatLon
-          ? greatCircleMidpoint(depLatLon, arrLatLon)
-          : null;
+      enteredPosition(worksheet.position) ??
+      (depLatLon && arrLatLon
+        ? greatCircleMidpoint(depLatLon, arrLatLon)
+        : null);
 
     let areaOfOps: AreaOfOpsWeather;
     let airmets: AirmetClassification | null = null;

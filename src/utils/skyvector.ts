@@ -1,3 +1,5 @@
+import { enteredPosition } from "./areaOfOpsWeather";
+
 const pad = (n: number, width: number): string =>
   String(n).padStart(width, "0");
 
@@ -52,8 +54,9 @@ export function buildSkyvectorUrl(input: BuildSkyvectorUrlInput): string | null 
   if (!dep || !arr) return null;
 
   const waypoints: string[] = [dep];
-  if (input.operating[0] !== null && input.operating[1] !== null) {
-    waypoints.push(latLonToDmsWaypoint(input.operating[0], input.operating[1]));
+  const operating = enteredPosition(input.operating);
+  if (operating) {
+    waypoints.push(latLonToDmsWaypoint(operating[0], operating[1]));
   }
   waypoints.push(arr);
 

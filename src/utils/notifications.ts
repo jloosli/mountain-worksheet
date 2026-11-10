@@ -9,6 +9,7 @@
  */
 import type { WorksheetData } from "./types";
 import { normalizeAirportCode } from "./airportCode";
+import { enteredPosition } from "./areaOfOpsWeather";
 
 /** FAA-style alert levels: Warning (red), Caution (amber), Advisory (neutral). */
 export type NotificationLevel = "warning" | "caution" | "advisory";
@@ -221,13 +222,14 @@ function positionChanged(
  * The fetch uses the airport midpoint for the area weather unless both
  * coordinates are entered, so the area then moves with either airport.
  */
-function usesAirportMidpoint([lat, lon]: WorksheetData["position"]): boolean {
-  return lat === null || lon === null;
+function usesAirportMidpoint(position: WorksheetData["position"]): boolean {
+  return enteredPosition(position) === null;
 }
 
-function describePosition([lat, lon]: WorksheetData["position"]): string {
-  return lat !== null && lon !== null
-    ? `${lat.toFixed(4)}, ${lon.toFixed(4)}`
+function describePosition(position: WorksheetData["position"]): string {
+  const entered = enteredPosition(position);
+  return entered
+    ? `${entered[0].toFixed(4)}, ${entered[1].toFixed(4)}`
     : "the airport midpoint";
 }
 
