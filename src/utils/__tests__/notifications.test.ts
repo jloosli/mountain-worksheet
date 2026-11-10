@@ -46,7 +46,13 @@ const fetchFor = (
   notifications: Notification[],
   applied: Partial<WorksheetData> = {}
 ): WeatherFetchResult => ({
-  fetchedFor: { airport: ["KOGD", "KLGU"], date: "2026-05-12", time: "18:00", duration: null },
+  fetchedFor: {
+    airport: ["KOGD", "KLGU"],
+    date: "2026-05-12",
+    time: "18:00",
+    duration: null,
+    position: [null, null],
+  },
   applied,
   notifications,
 });
@@ -222,6 +228,22 @@ describe("deriveNotifications", () => {
     expect(deriveNotifications({ ...base, duration: 3 }, fetchFor([step]))).toEqual([]);
   });
 
+  it("drops step notifications and field Warnings when the area-of-ops position changes", () => {
+    const step: Notification = {
+      level: "warning",
+      subject: stepSubject("weather"),
+      message: "no operating-area position",
+    };
+    const field: Notification = {
+      level: "warning",
+      subject: fieldSubject("temp", 1),
+      message: "no point forecast",
+    };
+    const result = fetchFor([step, field]);
+    expect(deriveNotifications(base, result)).toEqual([step, field]);
+    expect(deriveNotifications({ ...base, position: [40.5, -111.2] }, result)).toEqual([]);
+  });
+
   it("treats a blank and a zero duration as the same fetch input", () => {
     const step: Notification = {
       level: "warning",
@@ -371,6 +393,37 @@ describe("staleFetchNotifications", () => {
       staleFetchNotifications({ ...fetched, duration: 3 }, fetchedWith2h)[0].message
     ).toBe("Fetched for KLGU at 2026-05-12 18:00 with a 2 h duration; refetch weather.");
     expect(staleFetchNotifications({ ...fetched, duration: 2 }, fetchedWith2h)).toEqual([]);
+  });
+
+  // The area-of-ops point forecast and G-AIRMET flags are fetched for the
+  // position, so moving it leaves them describing somewhere else. Airport
+  // weather is fetched at the airports and is unaffected.
+  it("warns on the area fields, not the airports, when the position changes", () => {
+    const list = staleFetchNotifications({ ...fetched, position: [40.5, -111.2] }, fetch);
+    expect(subjects(list)).toEqual([
+      "field:temp.1",
+      "field:altimeter.1",
+      "field:wind.0",
+      "field:turb",
+    ]);
+    expect(list[0].message).toBe(
+      "Fetched for the airport midpoint at 2026-05-12 18:00; refetch weather."
+    );
+
+    const fetchedAtPosition = {
+      ...fetch,
+      fetchedFor: { ...fetch.fetchedFor, position: [40.5, -111.2] as [number, number] },
+    };
+    const atPosition = { ...fetched, position: [40.5, -111.2] as WorksheetData["position"] };
+    expect(staleFetchNotifications(atPosition, fetchedAtPosition)).toEqual([]);
+    expect(
+      staleFetchNotifications({ ...fetched, position: [40.6, -111.2] }, fetchedAtPosition)[0]
+        .message
+    ).toBe("Fetched for 40.5000, -111.2000 at 2026-05-12 18:00; refetch weather.");
+    // Clearing the position moves the area to the airport midpoint.
+    expect(subjects(staleFetchNotifications(fetched, fetchedAtPosition))).toContain(
+      "field:temp.1"
+    );
   });
 
   it("warns on a fetched runway length when its airport changes, but not when only the time does", () => {

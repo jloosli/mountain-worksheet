@@ -148,12 +148,15 @@ export interface WeatherFetchResult {
   /**
    * The sortie inputs the fetch was made for. `duration` sets the arrival
    * time (departure + duration) and the area-of-ops midpoint time.
+   * `position` is the entered area-of-ops position (`[null, null]` when the
+   * fetch used the airport midpoint).
    */
   fetchedFor: {
     airport: [string, string];
     date: string;
     time: string;
     duration: number | null;
+    position: WorksheetData["position"];
   };
   /** The worksheet values the fetch applied (after merging). */
   applied: Partial<WorksheetData>;
@@ -204,6 +207,22 @@ function durationChanged(
   return effectiveDuration(state.duration) !== effectiveDuration(fetchedFor.duration);
 }
 
+function positionChanged(
+  state: WorksheetData,
+  fetchedFor: WeatherFetchResult["fetchedFor"]
+): boolean {
+  return (
+    state.position[0] !== fetchedFor.position[0] ||
+    state.position[1] !== fetchedFor.position[1]
+  );
+}
+
+function describePosition([lat, lon]: WorksheetData["position"]): string {
+  return lat !== null && lon !== null
+    ? `${lat.toFixed(4)}, ${lon.toFixed(4)}`
+    : "the airport midpoint";
+}
+
 function fetchInputsUnchanged(
   state: WorksheetData,
   fetchedFor: WeatherFetchResult["fetchedFor"]
@@ -215,7 +234,8 @@ function fetchInputsUnchanged(
       normalizeAirportCode(fetchedFor.airport[1]) &&
     state.date === fetchedFor.date &&
     state.time === fetchedFor.time &&
-    !durationChanged(state, fetchedFor)
+    !durationChanged(state, fetchedFor) &&
+    !positionChanged(state, fetchedFor)
   );
 }
 
@@ -228,8 +248,9 @@ function fetchInputsUnchanged(
  *   by entering a value); a Caution or Advisory holds while the field still
  *   holds the value the fetch applied (the pilot clears it by overriding);
  * - Warnings and step notifications also need the fetch's airports, date,
- *   time and duration to be unchanged, since they describe that fetch. A field Caution
- *   follows the value it describes, so it survives an input change.
+ *   time, duration and area-of-ops position to be unchanged, since they
+ *   describe that fetch. A field Caution follows the value it describes, so
+ *   it survives an input change.
  */
 export function deriveNotifications(
   state: WorksheetData,
@@ -279,7 +300,8 @@ const AREA_WEATHER_FIELDS: FieldSubject[] = [
  * changes; every fetched weather field goes stale when the date or time
  * changes. A duration change moves the arrival time (departure + duration)
  * and the area-of-ops midpoint time, so it stales the arrival airport's
- * weather and the area weather, but not the departure's. Each Warning clears once the
+ * weather and the area weather, but not the departure's. An area-of-ops
+ * position change stales the area weather only. Each Warning clears once the
  * pilot enters their own value or weather is fetched for the current inputs.
  * Nothing is blanked. Field Cautions from the fetch still follow their values
  * (`deriveNotifications`).
@@ -305,6 +327,7 @@ export function staleFetchNotifications(
   // are for times that also depend on the duration.
   const timeChanged = (i: 0 | 1) => departureChanged || (i === 1 && durationMoved);
   const areaTimeChanged = departureChanged || durationMoved;
+  const positionMoved = positionChanged(state, fetchedFor);
   const airportChanged = (i: 0 | 1) =>
     normalizeAirportCode(state.airport[i]) !== normalizeAirportCode(fetchedFor.airport[i]);
 
@@ -320,8 +343,12 @@ export function staleFetchNotifications(
       message: `Fetched for ${normalizeAirportCode(fetchedFor.airport[i])} at ${when}; refetch weather.`,
     });
   });
-  if (areaTimeChanged) {
-    stale.push({ subjects: AREA_WEATHER_FIELDS, message: `Fetched for ${when}; refetch weather.` });
+  if (areaTimeChanged || positionMoved) {
+    const where = positionMoved ? `${describePosition(fetchedFor.position)} at ` : "";
+    stale.push({
+      subjects: AREA_WEATHER_FIELDS,
+      message: `Fetched for ${where}${when}; refetch weather.`,
+    });
   }
 
   return stale.flatMap(({ subjects, message }) =>
