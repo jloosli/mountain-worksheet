@@ -1,6 +1,6 @@
 # CAP Mountain Flying Worksheet
 
-Helps Civil Air Patrol pilots plan a mountain flying sortie: gathers weather and aircraft data, computes performance, and supports a go/no-go decision.
+Helps Civil Air Patrol pilots plan a mountain flying sortie: gathers weather and aircraft data, computes performance, and checks the worksheet's limits to inform the Go/No-Go decision.
 
 ## Language
 
@@ -22,7 +22,7 @@ A notification that a result was produced from substitute, stale, or extrapolate
 _Avoid_: Warning (for this meaning)
 
 **Advisory**:
-A notification that is worth knowing but needs no action, such as an announced auto-correction or a value close to a limit. Shown in a neutral color.
+A notification that is worth knowing but needs no action, such as an announced auto-correction. Shown in a neutral color. A value close to a worksheet limit is shown by a Limit check that is Near limit, not by an Advisory.
 _Avoid_: Info, notice
 
 **Needs input**:
@@ -55,11 +55,32 @@ An airport ID that matches nothing in the airport database, even after auto-corr
 An airport that exists in the airport database but publishes no METAR or TAF. It raises an Advisory, and its weather fields need input.
 _Avoid_: Missing airport, airport not found
 
+### Limit checks
+
+**Limit check**:
+A comparison of trustworthy values against one of the Mountain Flight Worksheet's own mountain-flying limits, such as mountain winds under 30 kt. There is one per limit, covering every altitude or airport the limit applies to; its state is the worst state among them, and it names the ones that fail. It is not a notification: it never withholds a value and says nothing about whether the data can be trusted. Values outside an entry range or an aircraft limitation, such as weight above maximum gross, are Warnings, not Limit checks.
+_Avoid_: Limit warning, violation
+
+**Within limit**:
+The state of a Limit check whose values all meet the limit.
+
+**Near limit**:
+The state of a Limit check whose values meet the limit but cross a caution threshold that authoritative guidance gives for it. Only limits with such a threshold have this state.
+_Avoid_: Marginal (MVFR already uses it)
+
+**Exceeded**:
+The state of a Limit check where at least one value fails the limit.
+_Avoid_: Failed, no-go
+
+**Not checked**:
+The state of a Limit check that can't be evaluated because an input it needs is blank or withheld. It names what it is waiting for.
+
 ### Outputs
 
 **Briefing**:
 The printed record of the worksheet that the pilot takes on the sortie. It carries every Warning and Caution next to the value it concerns; Advisories are left off.
 _Avoid_: Printout, report
 
-**Go/No-Go verdict**:
-The worksheet's conclusion about whether the sortie should proceed. It is a separate concept from notifications; whether it takes them into account is not yet decided.
+**Go/No-Go decision**:
+The decision by the pilot in command and the Flight Release Officer on whether the sortie proceeds. The worksheet informs it with Limit checks but never states it.
+_Avoid_: Verdict, Go/No-Go result
