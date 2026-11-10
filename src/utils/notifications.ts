@@ -233,9 +233,24 @@ function fetchInputsUnchanged(
     normalizeAirportCode(state.airport[1]) ===
       normalizeAirportCode(fetchedFor.airport[1]) &&
     state.date === fetchedFor.date &&
-    state.time === fetchedFor.time &&
-    !durationChanged(state, fetchedFor)
+    state.time === fetchedFor.time
   );
+}
+
+/**
+ * Fields fetched for the departure airport: its weather at the departure
+ * time, its elevation and its runway. The duration moves none of them.
+ */
+function isDepartureField(subject: Extract<Subject, { kind: "field" }>): boolean {
+  switch (subject.field) {
+    case "temp":
+    case "altimeter":
+    case "altitude":
+    case "rwy":
+      return subject.index === 0;
+    default:
+      return false;
+  }
 }
 
 /**
@@ -265,12 +280,13 @@ function isAreaField(subject: Extract<Subject, { kind: "field" }>): boolean {
  * - on a field, a Warning holds while the field is blank (the pilot clears it
  *   by entering a value); a Caution or Advisory holds while the field still
  *   holds the value the fetch applied (the pilot clears it by overriding);
- * - Warnings and step notifications also need the fetch's airports, date,
- *   time and duration to be unchanged, since they describe that fetch. The
- *   area-of-ops position also counts for step notifications and Warnings on
- *   area fields, but not for airport fields, which are fetched at the
- *   airport. A field Caution follows the value it describes, so it survives
- *   an input change.
+ * - Warnings and step notifications also need the fetch's airports, date
+ *   and time to be unchanged, since they describe that fetch. The duration
+ *   also counts, except for Warnings on departure fields, which are fetched
+ *   for the departure time. The area-of-ops position also counts for step
+ *   notifications and Warnings on area fields, but not for airport fields,
+ *   which are fetched at the airport. A field Caution follows the value it
+ *   describes, so it survives an input change.
  */
 export function deriveNotifications(
   state: WorksheetData,
@@ -278,10 +294,13 @@ export function deriveNotifications(
 ): Notification[] {
   if (!fetch) return [];
   const inputsUnchanged = fetchInputsUnchanged(state, fetch.fetchedFor);
+  const durationMoved = durationChanged(state, fetch.fetchedFor);
   const positionMoved = positionChanged(state, fetch.fetchedFor);
   return fetch.notifications.filter((n) => {
     const { subject } = n;
-    if (subject.kind !== "field") return inputsUnchanged && !positionMoved;
+    if (subject.kind !== "field") {
+      return inputsUnchanged && !durationMoved && !positionMoved;
+    }
     const current = readField(state, subject);
     if (n.level === "warning") {
       // A winds-aloft column needs all of dir/vel/temp, so its Warning holds
@@ -291,7 +310,10 @@ export function deriveNotifications(
           ? Array.isArray(current) && current.some(isBlank)
           : isBlank(current);
       return (
-        inputsUnchanged && !(positionMoved && isAreaField(subject)) && unresolved
+        inputsUnchanged &&
+        (!durationMoved || isDepartureField(subject)) &&
+        !(positionMoved && isAreaField(subject)) &&
+        unresolved
       );
     }
     return sameValue(current, readField(fetch.applied, subject));
