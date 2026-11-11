@@ -629,6 +629,16 @@ describe("AppContainer — Rate of climb and Runway limit checks (#269)", () => 
     expect(runwayCells[4].className).not.toMatch(/text-red/);
   });
 
+  it("marks both checks with the Unverified weather Caution when opened from a shared link", () => {
+    mockSearchParams.mockReturnValue(link());
+    render(<AppContainer />);
+    for (const name of ["Rate of climb", "Runway"]) {
+      const markers = callout(name).querySelectorAll('[data-marker="caution"]');
+      expect(markers.length).toBeGreaterThan(0);
+      expect(markers[0].getAttribute("title")).toMatch(/came from a shared link/);
+    }
+  });
+
   it("is Not checked above maximum gross, saying why", () => {
     mockSearchParams.mockReturnValue(link({ weight: "3255" }));
     render(<AppContainer />);

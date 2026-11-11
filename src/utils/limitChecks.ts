@@ -355,10 +355,14 @@ function notCheckedPoint(
   return { label, state: "not-checked", waitingFor, substitutions: [] };
 }
 
+/** Weather inputs a shared link can carry unverified. */
+const WEATHER_FIELDS = new Set(["temp", "altimeter"]);
+
 /**
  * The substitution markers of a computed value: Cautions on the inputs it
- * rests on, then Cautions on the value itself (extrapolated or averaged POH
- * values), in notification order.
+ * rests on, Cautions on the value itself (extrapolated or averaged POH
+ * values), and Unverified weather when it rests on temperature or altimeter,
+ * in notification order. Other weather-step Cautions aren't about the value.
  */
 function valueCautions(
   notifications: readonly Notification[],
@@ -367,8 +371,14 @@ function valueCautions(
 ): Notification[] {
   const onInputs = new Set(inputCautions(notifications, value));
   const ownKeys = new Set(own.map(subjectKey));
+  const restsOnWeather =
+    value.status === "computed" &&
+    value.dependsOn.some((s) => s.kind === "field" && WEATHER_FIELDS.has(s.field));
   return notifications.filter(
-    (n) => onInputs.has(n) || (n.level === "caution" && ownKeys.has(subjectKey(n.subject))),
+    (n) =>
+      onInputs.has(n) ||
+      (n.level === "caution" && ownKeys.has(subjectKey(n.subject))) ||
+      (restsOnWeather && isUnverifiedWeather(n)),
   );
 }
 

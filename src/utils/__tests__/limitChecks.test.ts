@@ -450,6 +450,14 @@ describe("Rate of climb limit check", () => {
     expect(check.points[0].substitutions).toEqual([]);
   });
 
+  it("carries the Unverified weather Caution for values from a shared link", () => {
+    const unverified = unverifiedWeatherNotifications(baseState(), null);
+    expect(unverified).toHaveLength(1);
+    const check = climbCheck(undefined, baseState(), unverified);
+    expect(check.state).not.toBe("not-checked");
+    for (const p of check.points) expect(p.substitutions).toEqual(unverified);
+  });
+
   it("is Not checked when the inputs are blank", () => {
     const check = climbCheck(undefined, { ...baseState(), acType: "" });
     expect(check.state).toBe("not-checked");
@@ -548,6 +556,25 @@ describe("Runway limit check", () => {
       remaining(ft(-10), { status: "withheld", reason: "needs arrival runway length" }),
     );
     expect(check.state).toBe("exceeded");
+  });
+
+  it("carries the Unverified weather Caution for values from a shared link", () => {
+    const unverified = unverifiedWeatherNotifications(baseState(), null);
+    const check = runwayCheck(undefined, baseState(), unverified);
+    expect(check.state).not.toBe("not-checked");
+    for (const p of check.points) expect(p.substitutions).toEqual(unverified);
+  });
+
+  it("doesn't carry other weather-step Cautions", () => {
+    const gairmetFailed: Notification = {
+      level: "caution",
+      subject: { kind: "step", step: "weather" },
+      message: "G-AIRMETs unavailable. Check AIRMETs manually.",
+    };
+    expect(runwayCheck(undefined, baseState(), [gairmetFailed]).points[0].substitutions).toEqual([]);
+    expect(
+      byId(checksWith(baseState(), {}, [gairmetFailed]), "climb").points[0].substitutions,
+    ).toEqual([]);
   });
 
   it("carries the runway's and the POH's Cautions, and still evaluates", () => {
