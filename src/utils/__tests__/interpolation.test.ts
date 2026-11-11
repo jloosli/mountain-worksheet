@@ -1,13 +1,10 @@
 import {
   bilinearInterpolate,
-  bilinearInterpolateFlexible,
   bilinearInterpolateDetailed,
-  createInterpolationTable,
+  findExtrapolations,
   findInverseXgivenYandZ,
   trilinearInterpolate,
-  trilinearInterpolateDetailed,
   type InterpolationTable,
-  type FlexibleInterpolationTable,
   type TrilinearInterpolationTable,
 } from "../interpolation";
 
@@ -88,20 +85,6 @@ describe("Interpolation Functions", () => {
         expect(() => bilinearInterpolate(invalidTable, 500, 5)).toThrow(
           "Data rows (1) must match xAxis length (2)"
         );
-      });
-
-      it("should throw error for invalid axis data in flexible interpolation", () => {
-        const invalidTable: FlexibleInterpolationTable = {
-          altitude: "not an array" as unknown as number[],
-          temperature: [0, 10],
-          data: [[100, 90]],
-        };
-        expect(() =>
-          bilinearInterpolateFlexible(invalidTable, 500, 5, {
-            xAxisName: "altitude",
-            yAxisName: "temperature",
-          })
-        ).toThrow("Invalid axis data");
       });
     });
 
@@ -302,42 +285,6 @@ describe("Interpolation Functions", () => {
     });
   });
 
-  describe("createInterpolationTable", () => {
-    const xValues = [0, 1000, 2000];
-    const yValues = [0, 10, 20];
-    const dataMatrix = [
-      [100, 90, 80],
-      [95, 85, 75],
-      [90, 80, 70],
-    ];
-
-    it("should create a standard interpolation table", () => {
-      const table = createInterpolationTable(xValues, yValues, dataMatrix);
-      expect(table).toEqual({
-        xAxis: xValues,
-        yAxis: yValues,
-        data: dataMatrix,
-      });
-    });
-
-    it("should create a flexible interpolation table with custom axis names", () => {
-      const table = createInterpolationTable(
-        xValues,
-        yValues,
-        dataMatrix,
-        "altitude",
-        "temperature"
-      );
-      expect(table).toEqual({
-        xAxis: xValues,
-        yAxis: yValues,
-        data: dataMatrix,
-        altitude: xValues,
-        temperature: yValues,
-      });
-    });
-  });
-
   describe("bilinearInterpolateDetailed", () => {
     it("should return correct interpolation with bounds info", () => {
       const result = bilinearInterpolateDetailed(simpleTable, 1000, 10);
@@ -401,45 +348,6 @@ describe("Interpolation Functions", () => {
           yMax: 10,
         },
       });
-    });
-  });
-
-  describe("bilinearInterpolateFlexible", () => {
-    const flexibleTable: FlexibleInterpolationTable = {
-      altitude: [0, 1000, 2000],
-      temperature: [0, 10, 20],
-      data: [
-        [100, 90, 80],
-        [95, 85, 75],
-        [90, 80, 70],
-      ],
-    };
-
-    it("should interpolate with custom axis names", () => {
-      const result = bilinearInterpolateFlexible(flexibleTable, 1000, 10, {
-        xAxisName: "altitude",
-        yAxisName: "temperature",
-      });
-      expect(result).toBe(85);
-    });
-
-    it("extrapolates without logging", () => {
-      const result = bilinearInterpolateFlexible(flexibleTable, -500, 0, {
-        xAxisName: "altitude",
-        yAxisName: "temperature",
-        allowExtrapolation: true,
-      });
-      expect(mockWarn).not.toHaveBeenCalled();
-      expect(typeof result).toBe("number");
-    });
-
-    it("should throw error for invalid axis names", () => {
-      expect(() =>
-        bilinearInterpolateFlexible(flexibleTable, 1000, 10, {
-          xAxisName: "invalidAxis",
-          yAxisName: "temperature",
-        })
-      ).toThrow("Invalid axis data");
     });
   });
 
@@ -667,24 +575,31 @@ describe("Trilinear Interpolation", () => {
     });
   });
 
-  describe("trilinearInterpolateDetailed", () => {
+  describe("findExtrapolations", () => {
+    const axes = (weight: number, pressureAltitude: number, temperature: number) => [
+      { axis: "weight", values: [2800, 3100], value: weight },
+      { axis: "pressureAltitude", values: [0, 2000, 4000, 6000, 8000], value: pressureAltitude },
+      { axis: "temperature", values: [0, 10, 20, 30], value: temperature },
+    ];
+
     it("reports no extrapolation inside the table", () => {
-      const r = trilinearInterpolateDetailed(simpleTrilinearTable, 2950, 2000, 10);
-      expect(r.value).toBeCloseTo(1250, 0);
-      expect(r.extrapolated).toEqual([]);
+      expect(findExtrapolations(axes(2950, 2000, 10))).toEqual([]);
     });
 
     it("reports each axis the lookup went beyond, with the table range", () => {
-      const r = trilinearInterpolateDetailed(simpleTrilinearTable, 2500, 9000, 20);
-      expect(r.extrapolated).toEqual([
+      expect(findExtrapolations(axes(2500, 9000, 20))).toEqual([
         { axis: "weight", value: 2500, min: 2800, max: 3100 },
         { axis: "pressureAltitude", value: 9000, min: 0, max: 8000 },
       ]);
     });
 
     it("ignores single-point axes (the table is constant along them)", () => {
-      const r = trilinearInterpolateDetailed(singlePointTrilinearTable, 3000, 2000, 10);
-      expect(r.extrapolated).toEqual([]);
+      expect(
+        findExtrapolations([
+          { axis: "weight", values: [2800], value: 3000 },
+          { axis: "temperature", values: [20], value: 10 },
+        ])
+      ).toEqual([]);
     });
   });
 
