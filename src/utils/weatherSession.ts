@@ -213,6 +213,12 @@ const airportRows = (
 
 const AREA_INPUTS: readonly FetchInput[] = ["areaPoint", "departureTime", "duration"];
 
+const areaRow = (subject: FieldSubject): FetchedFieldRow => ({
+  subject,
+  group: "area",
+  dependsOn: AREA_INPUTS,
+});
+
 /**
  * Every field a weather fetch fills, with the fetch inputs it depends on.
  * Departure weather is for the departure time; arrival weather for
@@ -220,21 +226,19 @@ const AREA_INPUTS: readonly FetchInput[] = ["areaPoint", "departureTime", "durat
  * winds aloft, the G-AIRMET flags) for the area-of-ops point at the midpoint
  * time. A field's value goes stale, and a fetch Warning on it retires, when
  * one of its inputs changes.
+ *
+ * The area-of-ops position isn't fetched, but a fetch can warn on it (no
+ * position and no airport coordinates for a midpoint); that Warning is about
+ * the area point alone.
  */
 const FETCHED_FIELDS: readonly FetchedFieldRow[] = [
   ...airportRows(0, "departure", "departureAirport", ["departureTime"]),
   ...airportRows(2, "arrival", "arrivalAirport", ["departureTime", "duration"]),
-  ...[field("temp", 1), field("altimeter", 1)].map((subject) => ({
-    subject,
-    group: "area" as const,
-    dependsOn: AREA_INPUTS,
-  })),
-  ...[0, 1, 2, 3, 4].map((i) => ({ subject: field("wind", i), group: "area" as const, dependsOn: AREA_INPUTS })),
-  ...(["turb", "cielVis", "mtnObsc"] as const).map((f) => ({
-    subject: field(f),
-    group: "area" as const,
-    dependsOn: AREA_INPUTS,
-  })),
+  areaRow(field("temp", 1)),
+  areaRow(field("altimeter", 1)),
+  ...[0, 1, 2, 3, 4].map((i) => areaRow(field("wind", i))),
+  ...(["turb", "cielVis", "mtnObsc"] as const).map((f) => areaRow(field(f))),
+  { subject: field("position"), group: "area", dependsOn: ["areaPoint"] },
 ];
 
 /**
@@ -286,6 +290,13 @@ function changedInputs(state: WorksheetData, fetchedFor: FetchedFor): Set<FetchI
     changed.add("areaPoint");
   }
   return changed;
+}
+
+function describePosition(position: WorksheetData["position"]): string {
+  const entered = enteredPosition(position);
+  return entered
+    ? `${entered[0].toFixed(4)}, ${entered[1].toFixed(4)}`
+    : "the airport midpoint";
 }
 
 function isBlank(value: unknown): boolean {
@@ -355,19 +366,10 @@ export function staleFetchNotifications(
         ? ` with a ${fetchedDuration} h duration`
         : " with no duration"
       : "");
-  const fetchedPosition = enteredPosition(fetchedFor.position);
-  const message: Record<FetchedGroup, string> = {
-    departure: `Fetched for ${normalizeAirportCode(fetchedFor.airport[0])} at ${when}; refetch weather.`,
-    arrival: `Fetched for ${normalizeAirportCode(fetchedFor.airport[1])} at ${when}; refetch weather.`,
-    area: `Fetched for ${
-      changed.has("areaPoint")
-        ? `${
-            fetchedPosition
-              ? `${fetchedPosition[0].toFixed(4)}, ${fetchedPosition[1].toFixed(4)}`
-              : "the airport midpoint"
-          } at `
-        : ""
-    }${when}; refetch weather.`,
+  const where: Record<FetchedGroup, string> = {
+    departure: `${normalizeAirportCode(fetchedFor.airport[0])} at `,
+    arrival: `${normalizeAirportCode(fetchedFor.airport[1])} at `,
+    area: changed.has("areaPoint") ? `${describePosition(fetchedFor.position)} at ` : "",
   };
 
   return FETCHED_FIELDS.filter(({ subject, dependsOn }) => {
@@ -382,6 +384,6 @@ export function staleFetchNotifications(
   }).map(({ subject, group }): Notification => ({
     level: "warning",
     subject,
-    message: message[group],
+    message: `Fetched for ${where[group]}${when}; refetch weather.`,
   }));
 }

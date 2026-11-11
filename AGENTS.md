@@ -31,7 +31,7 @@ A Next.js 16.x web application (App Router, TypeScript, Tailwind CSS v4, Vercel)
 
 ## URL State Management
 
-State is persisted to URL query strings via `src/utils/urlState.ts` + `src/utils/useUrlState.ts` using the `qs` library.
+State is persisted to URL query strings via `src/utils/urlState.ts` + `src/utils/useUrlReducer.ts` using the `qs` library.
 
 **Format rules (non-obvious):**
 - Arrays → comma-separated (`?numbers=1,2,3`)

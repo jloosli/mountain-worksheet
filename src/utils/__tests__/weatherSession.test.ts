@@ -167,6 +167,34 @@ describe("weather session — one fetch-input table for staleness and Warning re
     expect(sessionNotifications(s)).toContainEqual(noForecast);
   });
 
+  it("keeps a runway Warning through a date or time change, and drops it when its airport changes", () => {
+    const noRunway: Notification = {
+      level: "warning",
+      subject: fieldSubject("rwy", 1),
+      message: "KLGU: no runway data",
+    };
+    const s = replay([fetch(fetched, [noRunway])]);
+    expect(sessionNotifications(weatherSessionReducer(s, { type: "edit", updates: { time: "19:00" } }))).toContainEqual(noRunway);
+    expect(
+      sessionNotifications(weatherSessionReducer(s, { type: "edit", updates: { airport: ["KOGD", "KSLC"] } })),
+    ).not.toContainEqual(noRunway);
+  });
+
+  it("keeps the no-position Warning through a time or duration change, and drops it when the midpoint moves", () => {
+    const noPosition: Notification = {
+      level: "warning",
+      subject: fieldSubject("position"),
+      message: "Operating area weather skipped",
+    };
+    const s = replay([fetch(fetched, [noPosition])]);
+    for (const updates of [{ time: "19:00" }, { duration: 2 }]) {
+      expect(sessionNotifications(weatherSessionReducer(s, { type: "edit", updates }))).toContainEqual(noPosition);
+    }
+    expect(
+      sessionNotifications(weatherSessionReducer(s, { type: "edit", updates: { airport: ["KSLC", "KLGU"] } })),
+    ).not.toContainEqual(noPosition);
+  });
+
   it("drops a step notification when any fetch input changes", () => {
     const step: Notification = {
       level: "caution",
@@ -258,6 +286,26 @@ describe("weather session — shared link", () => {
     const s = initialWeatherSession(linked, null);
     expect(keys(sessionNotifications(s))).toEqual(["caution step:weather"]);
     expect(sessionNotifications(weatherSessionReducer(s, fetchFor(linked, fetched)))).toEqual([]);
+  });
+});
+
+describe("weather session — link notifications", () => {
+  it("retires a link notification on the operating temperature once an altitude change re-derives it", () => {
+    const linked: WorksheetData = { ...base, ...fetched, temp: [21, 0, 15] } as WorksheetData;
+    const linkWarning: Notification = {
+      level: "warning",
+      subject: fieldSubject("temp", 1),
+      message: "Operating temperature from the link was reset",
+    };
+    const s0 = initialWeatherSession(linked, {
+      state: linked,
+      notifications: [linkWarning],
+      cells: [{ field: "temp", index: 1 }],
+    });
+    expect(sessionNotifications(s0)).toContainEqual(linkWarning);
+    const s = weatherSessionReducer(s0, { type: "edit", updates: { altitude: [4473, 9000, 4457] } });
+    expect(s.worksheet.temp[1]).toBe(-2);
+    expect(s.linkLoad?.notifications).toEqual([]);
   });
 });
 

@@ -69,34 +69,3 @@ export function useUrlReducer<S, E, T, R extends { state: T } = { state: T }>(
 
   return [state, dispatch] as const;
 }
-
-type Update<T> = T | ((prev: T) => T);
-interface Opened<T, R> {
-  value: T;
-  check: R | null;
-}
-const openedReducer = <T, R>(s: Opened<T, R>, update: Update<T>): Opened<T, R> => ({
-  ...s,
-  value: typeof update === "function" ? (update as (prev: T) => T)(s.value) : update,
-});
-const openedInit = <T, R>(value: T, check: R | null): Opened<T, R> => ({ value, check });
-const openedValue = <T, R>(s: Opened<T, R>): T => s.value;
-
-/**
- * State persisted to the URL query string. `check`, if given, runs once over
- * the state opened from the link (with the raw query) and may correct it; its
- * result is returned as the third element so the caller can report problems.
- */
-export function useUrlState<T, R extends { state: T } = { state: T }>(
-  initialState: T,
-  check?: (state: T, query: string) => R
-): readonly [T, (newState: Update<T>) => void, R | null] {
-  const [opened, dispatch] = useUrlReducer<Opened<T, R>, Update<T>, T, R>(
-    openedReducer,
-    initialState,
-    openedInit,
-    openedValue,
-    check
-  );
-  return [opened.value, dispatch, opened.check] as const;
-}
