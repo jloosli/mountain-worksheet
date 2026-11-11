@@ -114,6 +114,23 @@ export function limitCheckSummary(checks: readonly LimitCheck[]): string {
   return parts.join(" · ");
 }
 
+/**
+ * A check's worst point or what it's waiting for, in one line: every point
+ * in the check's own state (the ones that fail, or the ones it's waiting
+ * on), or the first point when all are Within limit. A point's label is left
+ * off when it is just the check's name.
+ */
+export function limitCheckDetail(check: LimitCheck): string {
+  const worst = check.points.filter((p) => p.state === check.state);
+  const shown = check.state === "within" ? worst.slice(0, 1) : worst;
+  return shown
+    .map((p) => {
+      const text = p.value ?? p.waitingFor ?? "";
+      return p.label === check.name ? text : `${p.label} ${text}`;
+    })
+    .join(" · ");
+}
+
 /** The DOM id of a check's callout, for jumping to it. */
 export const limitCheckDomId = (id: LimitCheckId) => `limit-check-${id}`;
 

@@ -86,3 +86,16 @@ describe("briefingNotes", () => {
     expect(b.markersOn(departure)).toEqual([]);
   });
 });
+
+describe("briefingNotes refsFor", () => {
+  it("gives the Briefing's reference numbers of the given notifications, in order and once each", () => {
+    // weightWarning (sortie) is 1; arrivalTemp (environment) is 2; landingExtrapolated (told) is 3.
+    const b = briefingNotes([landingExtrapolated, arrivalTemp, weightWarning]);
+    expect(b.refsFor([landingExtrapolated, arrivalTemp, landingExtrapolated])).toEqual([2, 3]);
+  });
+
+  it("leaves out notifications the Briefing doesn't print", () => {
+    const b = briefingNotes([arrivalTemp, nearLimit]);
+    expect(b.refsFor([nearLimit, landingExtrapolated])).toEqual([]);
+  });
+});

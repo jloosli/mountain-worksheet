@@ -1,5 +1,5 @@
 // src/components/PrintBriefing.test.tsx
-import { render, screen } from "../test-utils/test-utils";
+import { render, screen, within } from "../test-utils/test-utils";
 import PrintBriefing from "./PrintBriefing";
 import type { WorksheetData } from "@/utils/types";
 import {
@@ -7,7 +7,14 @@ import {
   stepSubject,
   type Notification,
 } from "@/utils/notifications";
-import { climbSubject, computeTOLDViewModel, computePressureColumns, derivePerformanceNotifications } from "@/utils/derived";
+import {
+  climbSubject,
+  computeClimbViewModel,
+  computeTOLDViewModel,
+  computePressureColumns,
+  derivePerformanceNotifications,
+} from "@/utils/derived";
+import { deriveLimitChecks } from "@/utils/limitChecks";
 
 const emptyState: WorksheetData = {
   pilot: "",
@@ -440,5 +447,103 @@ describe("PrintBriefing — Vy above the climb table (#228)", () => {
       (td) => td.textContent,
     );
     expect(cells.slice(1)).toEqual(["73", "72", "73"]);
+  });
+});
+
+describe("PrintBriefing — Worksheet limits (#270)", () => {
+  // C182T: maximum gross weight 3,100 lbs.
+  const c182: WorksheetData = { ...stateWithPerf, acType: "C182T", weight: 2900 };
+  const withChecks = (state: WorksheetData, extra: Notification[] = []) => {
+    const notifications = [...derivePerformanceNotifications(state), ...extra];
+    const { PAs } = computePressureColumns(state.altitude, state.altimeter, state.temp);
+    const limitChecks = deriveLimitChecks({
+      state,
+      notifications,
+      climb: computeClimbViewModel(state, notifications),
+      told: computeTOLDViewModel(state, PAs, notifications),
+    });
+    return render(
+      <PrintBriefing state={state} notifications={notifications} limitChecks={limitChecks} />,
+    );
+  };
+  const box = () => screen.getByRole("region", { name: "Worksheet limits" });
+  const checkRow = (name: string) =>
+    within(box())
+      .getAllByRole("row")
+      .find((tr) => tr.querySelector("td")?.textContent === name)!;
+
+  it("prints the box at the top of the page, before the sortie details", () => {
+    withChecks(c182);
+    expect(
+      box().compareDocumentPosition(screen.getByText("Pilot:")) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it("prints one row per check: name, worksheet limit, state, and worst point", () => {
+    withChecks(c182);
+    const cells = Array.from(checkRow("Weight").querySelectorAll("td")).map((td) => td.textContent);
+    expect(cells).toEqual([
+      "Weight",
+      "under 90% of maximum gross weight",
+      "Exceeded",
+      "2,900 / 3,100 lbs (93.5%)",
+    ]);
+  });
+
+  it("prints what a Not checked check is waiting for", () => {
+    withChecks({ ...c182, weight: null });
+    const cells = Array.from(checkRow("Weight").querySelectorAll("td")).map((td) => td.textContent);
+    expect(cells.slice(2)).toEqual(["Not checked", "needs weight"]);
+  });
+
+  it("closes with the summary sentence and the Go/No-Go line", () => {
+    withChecks(c182);
+    // Other checks join the summary as they land; Weight is the one exceeded here.
+    expect(within(box()).getByText(/^1 of \d+ worksheet limits? exceeded/)).toBeInTheDocument();
+    expect(
+      within(box()).getByText(
+        "Limit checks inform the Go/No-Go decision, which belongs to the PIC and FRO.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("keys substitution refs to the Briefing's Caution numbers", () => {
+    const linked: Notification = {
+      level: "caution",
+      subject: fieldSubject("weight"),
+      message: "Weight came from a shared link.",
+    };
+    withChecks(c182, [linked]);
+    const ref = screen.getByText(linked.message).closest("li")!.getAttribute("data-ref");
+    const marks = Array.from(checkRow("Weight").querySelectorAll("[data-ref]")).map((el) =>
+      el.getAttribute("data-ref"),
+    );
+    expect(ref).not.toBeNull();
+    expect(marks).toEqual([ref]);
+  });
+
+  it("prints no box when there are no checks", () => {
+    render(<PrintBriefing state={c182} />);
+    expect(screen.queryByRole("region", { name: "Worksheet limits" })).not.toBeInTheDocument();
+  });
+});
+
+describe("PrintBriefing — Worksheet limits styling (#270)", () => {
+  it("gives Within limit no color, so the box reads as no all clear", () => {
+    const state: WorksheetData = { ...stateWithPerf, acType: "C182T", weight: 2700 };
+    const notifications = derivePerformanceNotifications(state);
+    const { PAs } = computePressureColumns(state.altitude, state.altimeter, state.temp);
+    const limitChecks = deriveLimitChecks({
+      state,
+      notifications,
+      climb: computeClimbViewModel(state, notifications),
+      told: computeTOLDViewModel(state, PAs, notifications),
+    });
+    render(<PrintBriefing state={state} notifications={notifications} limitChecks={limitChecks} />);
+    const cells = within(screen.getByRole("region", { name: "Worksheet limits" })).getAllByText(
+      "Within limit",
+    );
+    expect(cells.length).toBeGreaterThan(0);
+    for (const cell of cells) expect(cell.className).not.toMatch(/text-(emerald|green|red|amber)/);
   });
 });

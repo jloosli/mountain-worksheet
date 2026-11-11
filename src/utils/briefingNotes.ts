@@ -42,6 +42,8 @@ export interface BriefingNotes {
   refsOn(...subjects: Subject[]): number[];
   /** Reference numbers of the Cautions on the inputs `value` was computed from. */
   markersOn(value: MarkableValue): number[];
+  /** Reference numbers of `notifications`, ascending, for those the Briefing prints. */
+  refsFor(notifications: readonly Notification[]): number[];
 }
 
 const CONDITION_FIELDS = new Set(["wind", "turb", "cielVis", "mtnObsc"]);
@@ -84,6 +86,11 @@ export function briefingNotes(notifications: readonly Notification[]): BriefingN
   const refByKey = new Map<string, number>();
   for (const note of notes) refByKey.set(notificationKey(note), note.ref);
 
+  const refsFor = (ns: readonly Notification[]) =>
+    [...new Set(ns.map((n) => refByKey.get(notificationKey(n))))]
+      .filter((r): r is number => r !== undefined)
+      .sort((a, b) => a - b);
+
   return {
     notes,
     inSection: (section) => notes.filter((n) => n.section === section),
@@ -91,11 +98,7 @@ export function briefingNotes(notifications: readonly Notification[]): BriefingN
       const keys = new Set(subjects.map(subjectKey));
       return notes.filter((n) => keys.has(subjectKey(n.subject))).map((n) => n.ref);
     },
-    markersOn: (value) => {
-      const refs = inputCautions(notifications, value)
-        .map((n) => refByKey.get(notificationKey(n)))
-        .filter((r): r is number => r !== undefined);
-      return [...new Set(refs)];
-    },
+    markersOn: (value) => refsFor(inputCautions(notifications, value)),
+    refsFor,
   };
 }
