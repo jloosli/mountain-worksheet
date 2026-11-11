@@ -187,7 +187,7 @@ function sleep(ms: number): Promise<void> {
 /**
  * Generic API request function with error handling and retry logic
  */
-async function makeApiRequest<T>(
+async function makeApiRequest<T extends unknown[]>(
   endpoint: string,
   params: Record<string, string> = {},
   retries: number = 3
@@ -220,6 +220,10 @@ async function makeApiRequest<T>(
           "User-Agent": "Mountain-Worksheet/1.0",
         },
       });
+
+      // 204 No Content: the request was fine but matched nothing (e.g. an
+      // unknown station). Every endpoint here returns a list, so that's [].
+      if (response.status === 204) return [] as unknown as T;
 
       if (response.ok) {
         const data = await response.json();

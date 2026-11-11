@@ -52,8 +52,9 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // No data for the request (e.g. a G-AIRMET time beyond the forecast).
-    // Pass it through: wrapping it as 200 would read as an empty result.
+    // No data for the request (an unknown station, or a G-AIRMET time beyond
+    // the forecast). Pass it through: as a 200 it would read as data, and
+    // for G-AIRMETs "no forecast" must not read as "no hazards".
     if (response.status === 204) {
       return new NextResponse(null, { status: 204 });
     }
