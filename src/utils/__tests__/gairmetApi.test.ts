@@ -193,7 +193,9 @@ describe("classifyAirmets", () => {
       {
         level: "advisory",
         subject: stepSubject("weather"),
-        message: expect.stringMatching(/no low-level turbulence, IFR or mountain obscuration G-AIRMETs/i),
+        message: expect.stringMatching(
+          /no low-level turbulence, IFR or mountain obscuration G-AIRMETs/i,
+        ),
       },
     ]);
   });
