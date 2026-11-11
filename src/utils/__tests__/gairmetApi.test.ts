@@ -162,7 +162,7 @@ describe("classifyAirmets", () => {
       {
         level: "caution",
         subject: fieldSubject("turb"),
-        message: expect.stringMatching(/no turbulence G-AIRMET within 3 hr/i),
+        message: expect.stringMatching(/no low-level turbulence G-AIRMET within 3 hr/i),
       },
     ]);
   });
@@ -193,7 +193,9 @@ describe("classifyAirmets", () => {
       {
         level: "advisory",
         subject: stepSubject("weather"),
-        message: expect.stringMatching(/no turbulence, IFR or mountain obscuration G-AIRMETs/i),
+        message: expect.stringMatching(
+          /no low-level turbulence, IFR or mountain obscuration G-AIRMETs/i,
+        ),
       },
     ]);
   });
