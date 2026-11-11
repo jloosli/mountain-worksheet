@@ -66,10 +66,7 @@ const AREA_FIELDS = [
   fieldSubject("altimeter", 1),
 ];
 
-const cautionSubjects = (
-  notifications: Notification[],
-  message: RegExp
-) =>
+const cautionSubjects = (notifications: Notification[], message: RegExp) =>
   notifications
     .filter((n) => n.level === "caution" && message.test(n.message))
     .map((n) => n.subject);
@@ -87,7 +84,7 @@ describe("buildAreaOfOpsWeather", () => {
       raw: { hourly: hourly as OpenMeteoPointForecast["hourly"] },
     });
     expect(cautionSubjects(r.notifications, /position not entered/i)).toEqual(
-      [0, 1, 2, 3, 4].map((i) => fieldSubject("wind", i))
+      [0, 1, 2, 3, 4].map((i) => fieldSubject("wind", i)),
     );
   });
 
@@ -116,9 +113,7 @@ describe("buildAreaOfOpsWeather", () => {
     expect(r.positionSource).toBe("midpoint");
     // A midpoint position is a Substitution for every area-of-ops field it
     // filled, so values computed from them carry its marker.
-    expect(cautionSubjects(r.notifications, /position not entered/i)).toEqual(
-      AREA_FIELDS
-    );
+    expect(cautionSubjects(r.notifications, /position not entered/i)).toEqual(AREA_FIELDS);
   });
 
   it("populates 5-altitude wind table from interpolation", () => {
@@ -202,9 +197,7 @@ describe("buildAreaOfOpsWeather", () => {
       opAltitudeFt: 9000,
       raw: mockRaw,
     });
-    expect(cautionSubjects(r.notifications, /forecast time snapped/i)).toEqual(
-      AREA_FIELDS
-    );
+    expect(cautionSubjects(r.notifications, /forecast time snapped/i)).toEqual(AREA_FIELDS);
   });
 
   it("raises a Caution on the winds-aloft column whose altitude was snapped", () => {
@@ -292,48 +285,34 @@ describe("interpolateOpTempFromAloft", () => {
 
   it("returns null when aloft temps are missing or all null", () => {
     expect(interpolateOpTempFromAloft(9000, null)).toBeNull();
-    expect(
-      interpolateOpTempFromAloft(9000, [null, null, null, null, null])
-    ).toBeNull();
+    expect(interpolateOpTempFromAloft(9000, [null, null, null, null, null])).toBeNull();
   });
 
   it("skips null buckets and interpolates from the rest", () => {
     // Only 3k=20 and 12k=2 available → at 9k, f=(9k-3k)/(12k-3k)=2/3 → 20 + 2/3*(2-20) = 8
-    expect(
-      interpolateOpTempFromAloft(9000, [20, null, null, 2, null])
-    ).toBe(8);
+    expect(interpolateOpTempFromAloft(9000, [20, null, null, 2, null])).toBe(8);
   });
 
   it("returns the only available bucket when just one is present", () => {
-    expect(
-      interpolateOpTempFromAloft(10000, [null, null, 7, null, null])
-    ).toBe(7);
+    expect(interpolateOpTempFromAloft(10000, [null, null, 7, null, null])).toBe(7);
   });
 
   it("snaps to the lowest *available* bucket when the 3k bucket is missing", () => {
     // 3k missing → 6k=14 is the lowest available. Altitude 4000 (below 6k)
     // snaps to 14, not to a null 3k value.
-    expect(
-      interpolateOpTempFromAloft(4000, [null, 14, 8, 2, -10])
-    ).toBe(14);
+    expect(interpolateOpTempFromAloft(4000, [null, 14, 8, 2, -10])).toBe(14);
   });
 
   it("snaps to the highest *available* bucket when the 15k bucket is missing", () => {
     // 15k missing → 12k=2 is the highest available. Altitude 16000 (above 12k)
     // snaps to 2, not to a null 15k value.
-    expect(
-      interpolateOpTempFromAloft(16000, [20, 14, 8, 2, null])
-    ).toBe(2);
+    expect(interpolateOpTempFromAloft(16000, [20, 14, 8, 2, null])).toBe(2);
   });
 });
 
 describe("applyOpTempForAltitudeChange", () => {
   const aloftTemps = [20, 14, 8, 2, -10];
-  const wind: [
-    (number | null)[],
-    (number | null)[],
-    (number | null)[],
-  ] = [
+  const wind: [(number | null)[], (number | null)[], (number | null)[]] = [
     [0, 0, 0, 0, 0],
     [0, 0, 0, 0, 0],
     aloftTemps,
@@ -441,7 +420,7 @@ describe("operating temperature re-derivation notifications (#225)", () => {
     const change = describeOpTempChange(
       prev,
       { altitude: [4500, 9000, 4490] },
-      { fetchedOpTemp: 14 }
+      { fetchedOpTemp: 14 },
     );
     expect(change).toEqual({
       value: 8,
@@ -454,7 +433,7 @@ describe("operating temperature re-derivation notifications (#225)", () => {
         level: "caution",
         subject: fieldSubject("temp", 1),
         message: expect.stringMatching(
-          /re-derived from winds aloft at 9,000 ft \(8°C\).*your entry of 5°C/
+          /re-derived from winds aloft at 9,000 ft \(8°C\).*your entry of 5°C/,
         ),
       },
     ]);
@@ -464,7 +443,7 @@ describe("operating temperature re-derivation notifications (#225)", () => {
     const change = describeOpTempChange(
       prev,
       { altitude: [4500, 9000, 4490] },
-      { fetchedOpTemp: 5 }
+      { fetchedOpTemp: 5 },
     );
     expect(change?.replaced).toBeNull();
     expect(opTempChangeNotifications(at(9000, 8), change)).toEqual([]);
@@ -475,7 +454,7 @@ describe("operating temperature re-derivation notifications (#225)", () => {
     const change = describeOpTempChange(
       prev,
       { altitude: [4500, 9000, 4490] },
-      { fetchedOpTemp: null, previous: earlier }
+      { fetchedOpTemp: null, previous: earlier },
     );
     expect(change?.replaced).toBeNull();
   });
@@ -484,7 +463,7 @@ describe("operating temperature re-derivation notifications (#225)", () => {
     const change = describeOpTempChange(
       prev,
       { altitude: [4500, 17000, 4490] },
-      { fetchedOpTemp: 5 }
+      { fetchedOpTemp: 5 },
     );
     expect(change?.snappedToFt).toBe(15000);
     expect(opTempChangeNotifications(at(17000, -10), change)).toEqual([
@@ -492,7 +471,7 @@ describe("operating temperature re-derivation notifications (#225)", () => {
         level: "caution",
         subject: fieldSubject("temp", 1),
         message: expect.stringMatching(
-          /17,000 ft is above the winds-aloft temperatures; using the 15,000 ft temperature/
+          /17,000 ft is above the winds-aloft temperatures; using the 15,000 ft temperature/,
         ),
       },
     ]);
@@ -505,7 +484,7 @@ describe("operating temperature re-derivation notifications (#225)", () => {
     const change = describeOpTempChange(
       atTop,
       { altitude: [4500, 17000, 4490] },
-      { fetchedOpTemp: 5 }
+      { fetchedOpTemp: 5 },
     );
     expect(change).toEqual({
       value: -10,
@@ -526,7 +505,7 @@ describe("operating temperature re-derivation notifications (#225)", () => {
     const change = describeOpTempChange(
       prev,
       { altitude: [4500, 17000, 4490] },
-      { fetchedOpTemp: null }
+      { fetchedOpTemp: null },
     );
     expect(opTempChangeNotifications(at(17000, -10), change)).toHaveLength(2);
     expect(opTempChangeNotifications(at(17000, -4), change)).toEqual([]);
@@ -535,9 +514,7 @@ describe("operating temperature re-derivation notifications (#225)", () => {
   });
 
   it("returns null when no re-derivation applies", () => {
-    expect(
-      describeOpTempChange(prev, { altitude: [4500, 6000, 4490] }, {})
-    ).toBeNull();
+    expect(describeOpTempChange(prev, { altitude: [4500, 6000, 4490] }, {})).toBeNull();
   });
 });
 
@@ -550,14 +527,9 @@ describe("enteredPosition", () => {
     expect(enteredPosition([0, 0])).toEqual([0, 0]);
   });
 
-  it.each([
-    [[null, null]],
-    [[39.5, null]],
-    [[null, -105.25]],
-  ] as [[number | null, number | null]][])(
-    "returns null when the position %j is not fully entered",
-    (position) => {
-      expect(enteredPosition(position)).toBeNull();
-    }
-  );
+  it.each([[[null, null]], [[39.5, null]], [[null, -105.25]]] as [
+    [number | null, number | null],
+  ][])("returns null when the position %j is not fully entered", (position) => {
+    expect(enteredPosition(position)).toBeNull();
+  });
 });

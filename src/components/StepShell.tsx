@@ -14,24 +14,24 @@ interface StepShellProps {
 }
 
 const circleBg: Record<StepStatus, string> = {
-  pending:  "bg-slate-300",
-  active:   "bg-slate-900",
+  pending: "bg-slate-300",
+  active: "bg-slate-900",
   complete: "bg-emerald-500",
-  warning:  "bg-red-600",
+  warning: "bg-red-600",
 };
 
 const circleText: Record<StepStatus, string> = {
-  pending:  "text-slate-700",
-  active:   "text-white",
+  pending: "text-slate-700",
+  active: "text-white",
   complete: "text-white",
-  warning:  "text-white",
+  warning: "text-white",
 };
 
 const badgeStyle: Record<StepStatus, string> = {
-  pending:  "bg-slate-50 text-slate-600 border-slate-200",
-  active:   "bg-slate-50 text-slate-700 border-slate-200",
+  pending: "bg-slate-50 text-slate-600 border-slate-200",
+  active: "bg-slate-50 text-slate-700 border-slate-200",
   complete: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  warning:  "bg-red-50 text-red-700 border-red-200",
+  warning: "bg-red-50 text-red-700 border-red-200",
 };
 
 export default function StepShell({
@@ -45,14 +45,8 @@ export default function StepShell({
   children,
 }: StepShellProps) {
   return (
-    <section
-      id={id}
-      className="relative pl-14 md:pl-16 scroll-mt-[60px]"
-    >
-      <div
-        className="absolute left-0 top-0 bottom-0 flex flex-col items-center"
-        aria-hidden="true"
-      >
+    <section id={id} className="relative pl-14 md:pl-16 scroll-mt-[60px]">
+      <div className="absolute left-0 top-0 bottom-0 flex flex-col items-center" aria-hidden="true">
         <div
           className={`flex h-10 w-10 items-center justify-center rounded-full font-mono font-bold text-base shadow ring-4 ring-slate-100 dark:ring-slate-900 ${circleBg[status]} ${circleText[status]}`}
         >
@@ -72,9 +66,7 @@ export default function StepShell({
               {title}
             </h2>
             {subtitle && (
-              <p className="text-sm text-slate-500 mt-0.5 dark:text-slate-400">
-                {subtitle}
-              </p>
+              <p className="text-sm text-slate-500 mt-0.5 dark:text-slate-400">{subtitle}</p>
             )}
           </div>
           {badge && (

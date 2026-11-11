@@ -13,18 +13,9 @@ import {
   type WeatherMappingOptions,
 } from "./weatherDataMapper";
 
-import type {
-  METARResponse,
-  TAFResponse,
-  AirportResponse,
-} from "./aviationWeatherApi";
+import type { METARResponse, TAFResponse, AirportResponse } from "./aviationWeatherApi";
 import type { WorksheetData } from "@/utils/types";
-import {
-  fieldSubject,
-  stepSubject,
-  subjectKey,
-  type Notification,
-} from "@/utils/notifications";
+import { fieldSubject, stepSubject, subjectKey, type Notification } from "@/utils/notifications";
 import type { AreaOfOpsWeather } from "@/utils/areaOfOpsWeather";
 
 const warnedSubjects = (notifications: Notification[]) =>
@@ -440,9 +431,7 @@ describe("Weather Data Mapper", () => {
       expect(result.data.temp).toBeDefined();
       expect(result.data.altimeter).toBeDefined();
       expect(result.data.rwy).toBeDefined();
-      expect(warnedSubjects(result.notifications)).not.toContain(
-        "field:temp.0"
-      );
+      expect(warnedSubjects(result.notifications)).not.toContain("field:temp.0");
     });
 
     it("leaves every field it couldn't fill blank with a Warning", () => {
@@ -468,7 +457,7 @@ describe("Weather Data Mapper", () => {
           "field:temp.1",
           "field:temp.2",
           "field:wind",
-        ].sort()
+        ].sort(),
       );
       // Weather is blank, not "don't update": an earlier fetch's values must
       // not survive. Runway and elevation of unmatched airports are kept (#227).
@@ -490,9 +479,7 @@ describe("Weather Data Mapper", () => {
         flightDate: "2024-01-15",
         flightTime: "12:00",
       });
-      expect(warnedSubjects(result.notifications)).not.toContain(
-        "field:temp.1"
-      );
+      expect(warnedSubjects(result.notifications)).not.toContain("field:temp.1");
       expect(result.data.temp?.[1]).toBe(-1);
     });
 
@@ -523,7 +510,7 @@ describe("Weather Data Mapper", () => {
           "field:altimeter.2",
           "field:rwy.1",
           "field:altitude.2",
-        ])
+        ]),
       );
       expect(warned).not.toContain("field:temp.0");
       expect(warned).not.toContain("field:altimeter.0");
@@ -539,7 +526,7 @@ describe("Weather Data Mapper", () => {
         flightTime: "12:00",
       });
       const onArrivalTemp = result.notifications.filter(
-        (n) => subjectKey(n.subject) === "field:temp.2"
+        (n) => subjectKey(n.subject) === "field:temp.2",
       );
       expect(onArrivalTemp).toEqual([
         {
@@ -563,14 +550,16 @@ describe("Weather Data Mapper", () => {
           flightDate: "2024-01-15",
           flightTime: "12:00",
           validateData: true,
-        }
+        },
       );
       expect(result.data.temp?.[0]).toBeNull();
       expect(result.data.altimeter?.[0]).toBeNull();
       expect(result.notifications).toContainEqual({
         level: "warning",
         subject: fieldSubject("temp", 0),
-        message: expect.stringMatching(/Departure temperature 80°C from KORD is out of valid range/),
+        message: expect.stringMatching(
+          /Departure temperature 80°C from KORD is out of valid range/,
+        ),
       });
       expect(result.notifications).toContainEqual({
         level: "warning",
@@ -586,12 +575,10 @@ describe("Weather Data Mapper", () => {
         },
         null,
         null,
-        { departureAirport: "KORD", arrivalAirport: "KORD" }
+        { departureAirport: "KORD", arrivalAirport: "KORD" },
       );
       expect(result.data.altitude?.[0]).toBe(0);
-      expect(warnedSubjects(result.notifications)).not.toContain(
-        "field:altitude.0"
-      );
+      expect(warnedSubjects(result.notifications)).not.toContain("field:altitude.0");
     });
 
     it("passes through request-failure notifications from the batch", () => {
@@ -604,7 +591,7 @@ describe("Weather Data Mapper", () => {
         { ...mockApiData, notifications: [failure] },
         null,
         null,
-        { departureAirport: "KORD", arrivalAirport: "KORD" }
+        { departureAirport: "KORD", arrivalAirport: "KORD" },
       );
       expect(result.notifications).toContainEqual(failure);
     });
@@ -665,12 +652,7 @@ describe("Weather Data Mapper", () => {
         flightTime: "12:00",
       };
 
-      const result = mapWeatherDataToWorksheet(
-        apiDataWithMultipleAirports,
-        null,
-        null,
-        options
-      );
+      const result = mapWeatherDataToWorksheet(apiDataWithMultipleAirports, null, null, options);
 
       expect(result.success).toBe(true);
       expect(result.data.altimeter).toBeDefined();
@@ -714,7 +696,7 @@ describe("Weather Data Mapper", () => {
       expect(result.data.altimeter![1]).toBe(30.05);
       // Notifications from areaOfOps are propagated
       expect(result.notifications).toContainEqual(
-        expect.objectContaining({ message: "test caution from areaOfOps" })
+        expect.objectContaining({ message: "test caution from areaOfOps" }),
       );
     });
 
@@ -945,19 +927,11 @@ describe("Weather Data Mapper", () => {
     it("writes operating temp[1] and altimeter[1] when API provides them", () => {
       const existing = {
         temp: [10, 12, 14] as [number | null, number | null, number | null],
-        altimeter: [29.92, 29.92, 29.92] as [
-          number | null,
-          number | null,
-          number | null
-        ],
+        altimeter: [29.92, 29.92, 29.92] as [number | null, number | null, number | null],
       };
       const apiData = {
         temp: [20, 22, 24] as [number | null, number | null, number | null],
-        altimeter: [30.0, 30.05, 30.1] as [
-          number | null,
-          number | null,
-          number | null
-        ],
+        altimeter: [30.0, 30.05, 30.1] as [number | null, number | null, number | null],
       };
       const merged = mergeWeatherData(existing, apiData, true);
       expect(merged.temp).toEqual([20, 22, 24]);
@@ -1058,11 +1032,7 @@ describe("Weather Data Mapper", () => {
       const apiData = { turb: null, cielVis: null, mtnObsc: null } as Partial<
         Record<"turb" | "cielVis" | "mtnObsc", boolean | null>
       >;
-      const merged = mergeWeatherData(
-        existing,
-        apiData as Partial<typeof existing>,
-        true
-      );
+      const merged = mergeWeatherData(existing, apiData as Partial<typeof existing>, true);
       expect(merged.turb).toBe(true);
       expect(merged.cielVis).toBe(false);
       expect(merged.mtnObsc).toBe(true);
@@ -1151,7 +1121,7 @@ describe("Weather Data Mapper", () => {
           durationHours: 3, // arr at 18:00
           departureAirport: "KPVU",
           arrivalAirport: "KSGU",
-        }
+        },
       );
 
       // dep at 15:00 → TAF period 15-18 → temp 18
@@ -1170,11 +1140,9 @@ describe("Weather Data Mapper", () => {
       });
 
       expect(result.notifications.map((n) => n.message)).toContain(
-        "BOI: no METAR or TAF data available for requested time 2026-05-12T16:00:00.000Z"
+        "BOI: no METAR or TAF data available for requested time 2026-05-12T16:00:00.000Z",
       );
-      expect(
-        result.notifications.some((n) => n.message.startsWith("airport:"))
-      ).toBe(false);
+      expect(result.notifications.some((n) => n.message.startsWith("airport:"))).toBe(false);
     });
   });
 
@@ -1244,19 +1212,11 @@ describe("Weather Data Mapper", () => {
 
     it("does not mutate the existing altimeter array when merging", () => {
       const existing = {
-        altimeter: [30.12, 29.85, 30.11] as [
-          number | null,
-          number | null,
-          number | null,
-        ],
+        altimeter: [30.12, 29.85, 30.11] as [number | null, number | null, number | null],
       };
       const originalRef = existing.altimeter;
       const merged = mergeWeatherData(existing, {
-        altimeter: [30.0, 29.9, 30.0] as [
-          number | null,
-          number | null,
-          number | null,
-        ],
+        altimeter: [30.0, 29.9, 30.0] as [number | null, number | null, number | null],
       });
       expect(merged.altimeter).not.toBe(originalRef);
       expect(existing.altimeter).toEqual([30.12, 29.85, 30.11]);
@@ -1264,19 +1224,11 @@ describe("Weather Data Mapper", () => {
 
     it("does not mutate the existing altitude array; honors -1 sentinel for operating slot", () => {
       const existing = {
-        altitude: [4472, 10000, 4321] as [
-          number | null,
-          number | null,
-          number | null,
-        ],
+        altitude: [4472, 10000, 4321] as [number | null, number | null, number | null],
       };
       const originalRef = existing.altitude;
       const merged = mergeWeatherData(existing, {
-        altitude: [5000, -1, 5000] as [
-          number | null,
-          number | null,
-          number | null,
-        ],
+        altitude: [5000, -1, 5000] as [number | null, number | null, number | null],
       });
       expect(merged.altitude).not.toBe(originalRef);
       // departure + arrival updated, operating preserved because -1 means "don't update"

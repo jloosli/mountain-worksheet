@@ -11,12 +11,7 @@ export interface SlideOverProps {
   children: ReactNode;
 }
 
-export default function SlideOver({
-  isOpen,
-  onClose,
-  title,
-  children,
-}: SlideOverProps) {
+export default function SlideOver({ isOpen, onClose, title, children }: SlideOverProps) {
   return (
     <Transition show={isOpen} as={Fragment} unmount={false}>
       <Dialog
@@ -38,10 +33,7 @@ export default function SlideOver({
           leaveFrom="opacity-100"
           leaveTo="opacity-0"
         >
-          <div
-            aria-hidden="true"
-            className="fixed inset-0 z-40 bg-slate-900/40 print:hidden"
-          />
+          <div aria-hidden="true" className="fixed inset-0 z-40 bg-slate-900/40 print:hidden" />
         </Transition.Child>
 
         <Transition.Child

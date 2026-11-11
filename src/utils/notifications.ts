@@ -13,11 +13,7 @@ import type { WorksheetData } from "./types";
 /** FAA-style alert levels: Warning (red), Caution (amber), Advisory (neutral). */
 export type NotificationLevel = "warning" | "caution" | "advisory";
 
-export const NOTIFICATION_LEVELS: readonly NotificationLevel[] = [
-  "warning",
-  "caution",
-  "advisory",
-];
+export const NOTIFICATION_LEVELS: readonly NotificationLevel[] = ["warning", "caution", "advisory"];
 
 export type StepId = "sortie" | "weather" | "decision";
 
@@ -66,10 +62,10 @@ export const valueSubject = (id: string, step: StepId): Subject => ({
   step,
 });
 
-export const withSubject = (
-  draft: NotificationDraft,
-  subject: Subject
-): Notification => ({ ...draft, subject });
+export const withSubject = (draft: NotificationDraft, subject: Subject): Notification => ({
+  ...draft,
+  subject,
+});
 
 export function subjectKey(subject: Subject): string {
   switch (subject.kind) {
@@ -129,7 +125,7 @@ export function stepOf(subject: Subject): StepId {
 
 export function notificationsFor(
   notifications: readonly Notification[],
-  subject: Subject
+  subject: Subject,
 ): Notification[] {
   const key = subjectKey(subject);
   return notifications.filter((n) => subjectKey(n.subject) === key);
@@ -137,7 +133,7 @@ export function notificationsFor(
 
 export function notificationsOnStep(
   notifications: readonly Notification[],
-  step: StepId
+  step: StepId,
 ): Notification[] {
   return notifications.filter((n) => stepOf(n.subject) === step);
 }
@@ -176,7 +172,7 @@ export interface WeatherFetchResult {
  */
 export function readField(
   data: Partial<WorksheetData>,
-  subject: Extract<Subject, { kind: "field" }>
+  subject: Extract<Subject, { kind: "field" }>,
 ): unknown {
   const value = data[subject.field];
   if (subject.index === undefined) return value;

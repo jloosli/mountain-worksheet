@@ -3,16 +3,8 @@ import { render, screen, within } from "../test-utils/test-utils";
 import PrintBriefing from "./PrintBriefing";
 import { evaluationFor } from "../test-utils/evaluation";
 import type { WorksheetData } from "@/utils/types";
-import {
-  fieldSubject,
-  stepSubject,
-  type Notification,
-} from "@/utils/notifications";
-import {
-  climbSubject,
-  computeTOLDViewModel,
-  computePressureColumns,
-} from "@/utils/derived";
+import { fieldSubject, stepSubject, type Notification } from "@/utils/notifications";
+import { climbSubject, computeTOLDViewModel, computePressureColumns } from "@/utils/derived";
 
 const emptyState: WorksheetData = {
   pilot: "",
@@ -59,9 +51,7 @@ const fullState: WorksheetData = {
 describe("PrintBriefing — identity, route, quals", () => {
   it("renders the briefing title and timestamp scaffold", () => {
     render(<PrintBriefing state={fullState} evaluation={evaluationFor(fullState)} />);
-    expect(
-      screen.getByRole("heading", { name: /Briefing/i })
-    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Briefing/i })).toBeInTheDocument();
   });
 
   it("renders the identity line with pilot, AC/tail, UTC date+time, duration", () => {
@@ -209,21 +199,36 @@ describe("PrintBriefing — TOLD", () => {
   const runwayRow = (label: RegExp) => screen.getByText(label).closest("tr")!;
 
   it("marks ground-roll runway remaining red at 0 ft, matching the Runway check", () => {
-    render(<PrintBriefing state={withDepartureRemaining(0)} evaluation={evaluationFor(withDepartureRemaining(0))} />);
+    render(
+      <PrintBriefing
+        state={withDepartureRemaining(0)}
+        evaluation={evaluationFor(withDepartureRemaining(0))}
+      />,
+    );
     const departure = runwayRow(/Runway remaining \(ground roll\)/).querySelectorAll("td")[1];
     expect(departure).toHaveTextContent(/^0$/);
     expect(departure).toHaveClass("print-margin-bad");
   });
 
   it("leaves 1 ft of ground-roll runway remaining unmarked", () => {
-    render(<PrintBriefing state={withDepartureRemaining(1)} evaluation={evaluationFor(withDepartureRemaining(1))} />);
+    render(
+      <PrintBriefing
+        state={withDepartureRemaining(1)}
+        evaluation={evaluationFor(withDepartureRemaining(1))}
+      />,
+    );
     const departure = runwayRow(/Runway remaining \(ground roll\)/).querySelectorAll("td")[1];
     expect(departure).toHaveTextContent(/^1$/);
     expect(departure).not.toHaveClass("print-margin-bad");
   });
 
   it("never marks the over-50-ft-obstacle runway remaining, even when negative", () => {
-    render(<PrintBriefing state={{ ...stateWithPerf, rwy: [100, 100] }} evaluation={evaluationFor({ ...stateWithPerf, rwy: [100, 100] })} />);
+    render(
+      <PrintBriefing
+        state={{ ...stateWithPerf, rwy: [100, 100] }}
+        evaluation={evaluationFor({ ...stateWithPerf, rwy: [100, 100] })}
+      />,
+    );
     const cells = runwayRow(/Runway remaining \(50' obstacle\)/).querySelectorAll("td");
     expect(cells[1].textContent).toMatch(/^-/);
     expect(cells[1]).not.toHaveClass("print-margin-bad");
@@ -267,13 +272,20 @@ describe("PrintBriefing — maneuvering speeds", () => {
       subject: climbSubject("va"),
       message: "Va is extrapolated beyond the POH maneuvering-speed table.",
     };
-    render(<PrintBriefing state={stateWithPerf} evaluation={evaluationFor(stateWithPerf, [vaNote])} />);
+    render(
+      <PrintBriefing state={stateWithPerf} evaluation={evaluationFor(stateWithPerf, [vaNote])} />,
+    );
     const cell = screen.getByText("71–108").closest("td");
     expect(cell?.querySelector("[data-ref]")).toBeInTheDocument();
   });
 
   it("prints the lower bound and why Va is missing when weight is blank", () => {
-    render(<PrintBriefing state={{ ...stateWithPerf, weight: null }} evaluation={evaluationFor({ ...stateWithPerf, weight: null })} />);
+    render(
+      <PrintBriefing
+        state={{ ...stateWithPerf, weight: null }}
+        evaluation={evaluationFor({ ...stateWithPerf, weight: null })}
+      />,
+    );
     expect(screen.getByText("From 71 (Va: needs weight)")).toBeInTheDocument();
     expect(screen.getByText("From 57 (Va: needs weight)")).toBeInTheDocument();
   });
@@ -288,9 +300,7 @@ describe("PrintBriefing — footer + no-aircraft fallback", () => {
   it("falls back to a notice and hides performance sections when no aircraft is selected", () => {
     const noAC: WorksheetData = { ...fullState, acType: "" };
     render(<PrintBriefing state={noAC} evaluation={evaluationFor(noAC)} />);
-    expect(
-      screen.getByText(/Select an aircraft model to print performance/i),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/Select an aircraft model to print performance/i)).toBeInTheDocument();
     expect(screen.queryByText(/TO Ground Roll/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Maneuvering speeds/i)).not.toBeInTheDocument();
     // Identity should still render
@@ -331,7 +341,7 @@ describe("PrintBriefing — notifications", () => {
   };
   const row = (container: HTMLElement, label: RegExp) => {
     const tr = Array.from(container.querySelectorAll("tr")).find((r) =>
-      label.test(r.querySelector("td")?.textContent ?? "")
+      label.test(r.querySelector("td")?.textContent ?? ""),
     );
     if (!tr) throw new Error(`no row ${label}`);
     return Array.from(tr.querySelectorAll("td"));
@@ -346,7 +356,7 @@ describe("PrintBriefing — notifications", () => {
       message: "Fetched for KOGD at 2026-05-17 18:00; refetch weather.",
     };
     const { container } = render(
-      <PrintBriefing state={stateWithPerf} evaluation={evaluationFor(stateWithPerf, [stale])} />
+      <PrintBriefing state={stateWithPerf} evaluation={evaluationFor(stateWithPerf, [stale])} />,
     );
     expect(row(container, /^TO Ground Roll/)[1].textContent).toMatch(/departure altimeter/);
     expect(row(container, /^Pressure Alt/)[1].textContent).toMatch(/departure altimeter/);
@@ -356,7 +366,10 @@ describe("PrintBriefing — notifications", () => {
 
   it("prints the arrival temperature Caution next to the arrival temperature", () => {
     const { container } = render(
-      <PrintBriefing state={stateWithPerf} evaluation={evaluationFor(stateWithPerf, [arrivalTempSubstitution])} />
+      <PrintBriefing
+        state={stateWithPerf}
+        evaluation={evaluationFor(stateWithPerf, [arrivalTempSubstitution])}
+      />,
     );
     const note = screen.getByText(/forecast period has no temperature/);
     expect(note.closest("li")).toHaveAttribute("data-ref", "1");
@@ -368,7 +381,10 @@ describe("PrintBriefing — notifications", () => {
 
   it("marks the arrival landing distance, and only values that use the arrival temperature", () => {
     const { container } = render(
-      <PrintBriefing state={stateWithPerf} evaluation={evaluationFor(stateWithPerf, [arrivalTempSubstitution])} />
+      <PrintBriefing
+        state={stateWithPerf}
+        evaluation={evaluationFor(stateWithPerf, [arrivalTempSubstitution])}
+      />,
     );
     const landing = row(container, /^Landing Ground Roll/);
     expect(refs(landing[2])).toEqual(["1"]);
@@ -391,7 +407,7 @@ describe("PrintBriefing — notifications", () => {
             message: "Operating temperature re-derived from winds aloft",
           },
         ])}
-      />
+      />,
     );
     expect(screen.queryByText(/re-derived from winds aloft/)).not.toBeInTheDocument();
   });
@@ -404,7 +420,7 @@ describe("PrintBriefing — notifications", () => {
       message: "TAF request for KLGU failed.",
     };
     const { container } = render(
-      <PrintBriefing state={overweight} evaluation={evaluationFor(overweight, [tafFailed])} />
+      <PrintBriefing state={overweight} evaluation={evaluationFor(overweight, [tafFailed])} />,
     );
     const weightNote = screen.getByText(/exceeds the T182T maximum gross weight/i).closest("li")!;
     expect(weightNote.textContent).toMatch(/Warning/);
@@ -413,7 +429,7 @@ describe("PrintBriefing — notifications", () => {
     expect(refs(weight)).toEqual([weightNote.getAttribute("data-ref")]);
     expect(screen.getByText(/TAF request for KLGU failed/).closest("li")).toHaveAttribute(
       "data-level",
-      "warning"
+      "warning",
     );
     // Values that depend on weight print what they are waiting for.
     expect(row(container, /^TO Ground Roll/)[1].textContent).toBe("needs valid weight");
@@ -429,16 +445,14 @@ describe("PrintBriefing — notifications", () => {
     const { PAs } = computePressureColumns(
       extrapolated.altitude,
       extrapolated.altimeter,
-      extrapolated.temp
+      extrapolated.temp,
     );
     const evaluation = evaluationFor(extrapolated);
     const expected = evaluation.notifications.filter((n) => n.level !== "advisory");
     expect(expected.length).toBeGreaterThan(0);
-    const { container } = render(
-      <PrintBriefing state={extrapolated} evaluation={evaluation} />
-    );
+    const { container } = render(<PrintBriefing state={extrapolated} evaluation={evaluation} />);
     const printed = Array.from(container.querySelectorAll("li[data-ref]")).map(
-      (li) => li.querySelector("[data-message]")?.textContent
+      (li) => li.querySelector("[data-message]")?.textContent,
     );
     expect(printed.sort()).toEqual(expected.map((n) => n.message).sort());
     // The takeoff Caution is referenced from the departure takeoff cells.
@@ -446,9 +460,9 @@ describe("PrintBriefing — notifications", () => {
       .getByText(/Departure \(KOGD\) takeoff distances are extrapolated/)
       .closest("li")!
       .getAttribute("data-ref");
-    expect(computeTOLDViewModel(extrapolated, PAs, []).departure.values.takeoffGroundRoll.status).toBe(
-      "computed"
-    );
+    expect(
+      computeTOLDViewModel(extrapolated, PAs, []).departure.values.takeoffGroundRoll.status,
+    ).toBe("computed");
     expect(refs(row(container, /^TO Ground Roll/)[1])).toContain(ref);
   });
 });
@@ -462,7 +476,9 @@ describe("PrintBriefing — Vy above the climb table (#228)", () => {
       weight: 2400,
       altitude: [4000, 13000, 4500] as [number, number, number],
     };
-    const { container } = render(<PrintBriefing state={highOp} evaluation={evaluationFor(highOp)} />);
+    const { container } = render(
+      <PrintBriefing state={highOp} evaluation={evaluationFor(highOp)} />,
+    );
     const vyRow = Array.from(container.querySelectorAll("tr")).find(
       (tr) => tr.querySelector("td")?.textContent?.trim() === "Vy",
     );

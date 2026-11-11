@@ -109,9 +109,7 @@ export default function LimitCheckCallout({ check }: { check: LimitCheck }) {
           </li>
         ))}
       </ul>
-      {check.note && (
-        <p className={`mt-1 text-xs ${style.text}`}>{check.note}</p>
-      )}
+      {check.note && <p className={`mt-1 text-xs ${style.text}`}>{check.note}</p>}
       {check.caveat && (
         <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{check.caveat}</p>
       )}

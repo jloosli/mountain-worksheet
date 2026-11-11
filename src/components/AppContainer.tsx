@@ -36,11 +36,7 @@ const getDefaultSortieDateTime = () => {
   const now = new Date();
   const nextHour = new Date(now);
 
-  if (
-    now.getUTCMinutes() > 0 ||
-    now.getUTCSeconds() > 0 ||
-    now.getUTCMilliseconds() > 0
-  ) {
+  if (now.getUTCMinutes() > 0 || now.getUTCSeconds() > 0 || now.getUTCMilliseconds() > 0) {
     nextHour.setUTCHours(nextHour.getUTCHours() + 1);
   }
 
@@ -78,16 +74,8 @@ export default function AppContainer() {
 
     // Aircraft Performance
     temp: [null, null, null] as [number | null, number | null, number | null],
-    altimeter: [null, null, null] as [
-      number | null,
-      number | null,
-      number | null
-    ],
-    altitude: [null, null, null] as [
-      number | null,
-      number | null,
-      number | null
-    ],
+    altimeter: [null, null, null] as [number | null, number | null, number | null],
+    altitude: [null, null, null] as [number | null, number | null, number | null],
     rwy: [null, null] as [number | null, number | null],
 
     // Aircraft Weight
@@ -106,20 +94,16 @@ export default function AppContainer() {
     initialWorksheet,
     initialWeatherSession,
     worksheetOf,
-    (loaded, query) => sanitizeWorksheetUrlState(loaded, query, initialWorksheet)
+    (loaded, query) => sanitizeWorksheetUrlState(loaded, query, initialWorksheet),
   );
   const state = session.worksheet;
 
   const runwayLookup = useAirportRunwayLookup(state.airport, state.rwy);
 
-  const handleRejectedEntryChange = (
-    key: RejectedEntryKey,
-    entry: RejectedEntry | null
-  ) => dispatch({ type: "entryRejected", key, entry });
+  const handleRejectedEntryChange = (key: RejectedEntryKey, entry: RejectedEntry | null) =>
+    dispatch({ type: "entryRejected", key, entry });
 
-  const [overlay, setOverlay] = useState<"instructions" | "checklist" | null>(
-    null
-  );
+  const [overlay, setOverlay] = useState<"instructions" | "checklist" | null>(null);
   const handleOpenInstructions = () => setOverlay("instructions");
   const handleOpenChecklist = () => setOverlay("checklist");
   const handleCloseOverlay = () => setOverlay(null);
@@ -132,7 +116,7 @@ export default function AppContainer() {
         ...session,
         runwayNotifications: runwayLookup.notifications,
       }),
-    [state, session, runwayLookup.notifications]
+    [state, session, runwayLookup.notifications],
   );
   const { notifications, limitChecks, stepStatuses } = evaluation;
 
@@ -160,11 +144,10 @@ export default function AppContainer() {
         badge: formatStepBadge(stepStatuses.counts.decision),
       },
     ],
-    [stepStatuses]
+    [stepStatuses],
   );
 
-  const handleUpdate = (updates: Partial<WorksheetData>) =>
-    dispatch({ type: "edit", updates });
+  const handleUpdate = (updates: Partial<WorksheetData>) => dispatch({ type: "edit", updates });
 
   const handleReset = () => {
     window.history.replaceState({}, "", window.location.pathname);

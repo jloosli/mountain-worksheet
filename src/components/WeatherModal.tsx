@@ -53,11 +53,7 @@ export default function WeatherModal({
               strokeWidth={1.5}
               stroke="currentColor"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M4.5 12.75l6 6 9-13.5"
-              />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
             </svg>
           </div>
         );
@@ -97,11 +93,7 @@ export default function WeatherModal({
 
   return (
     <Transition.Root show={isOpen} as={Fragment}>
-      <Dialog
-        as="div"
-        className="relative z-50"
-        onClose={closeOnOverlayClick ? onClose : () => {}}
-      >
+      <Dialog as="div" className="relative z-50" onClose={closeOnOverlayClick ? onClose : () => {}}>
         <Transition.Child
           as={Fragment}
           enter="ease-out duration-300"
@@ -198,9 +190,7 @@ export function WeatherLoadingModal({
         <div className="flex items-center justify-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 dark:border-blue-400"></div>
         </div>
-        <p className="text-sm text-gray-600 dark:text-gray-400 text-center">
-          {message}
-        </p>
+        <p className="text-sm text-gray-600 dark:text-gray-400 text-center">{message}</p>
         {progress !== undefined && (
           <div className="w-full bg-gray-200 rounded-full h-2 dark:bg-gray-700">
             <div

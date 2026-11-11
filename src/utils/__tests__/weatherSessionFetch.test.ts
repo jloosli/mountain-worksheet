@@ -43,7 +43,7 @@ const base: WorksheetData = {
 
 const fetchFor = (
   notifications: Notification[],
-  applied: Partial<WorksheetData> = {}
+  applied: Partial<WorksheetData> = {},
 ): WeatherFetchResult => ({
   fetchedFor: {
     airport: ["KOGD", "KLGU"],
@@ -92,12 +92,8 @@ describe("fetchNotifications", () => {
     filled[0][2] = 270;
     filled[2][2] = -4;
     expect(fetchNotifications(base, fetchFor([warning]))).toEqual([warning]);
-    expect(
-      fetchNotifications({ ...base, wind: partly }, fetchFor([warning]))
-    ).toEqual([warning]);
-    expect(
-      fetchNotifications({ ...base, wind: filled }, fetchFor([warning]))
-    ).toEqual([]);
+    expect(fetchNotifications({ ...base, wind: partly }, fetchFor([warning]))).toEqual([warning]);
+    expect(fetchNotifications({ ...base, wind: filled }, fetchFor([warning]))).toEqual([]);
   });
 
   it("drops a whole-table winds-aloft Warning once any cell holds a value", () => {
@@ -108,9 +104,7 @@ describe("fetchNotifications", () => {
     };
     const partly = base.wind.map((row) => [...row]) as WorksheetData["wind"];
     partly[1][2] = 15;
-    expect(
-      fetchNotifications({ ...base, wind: partly }, fetchFor([warning]))
-    ).toEqual([]);
+    expect(fetchNotifications({ ...base, wind: partly }, fetchFor([warning]))).toEqual([]);
   });
 
   it("keeps a field Caution while the field still holds the fetched value", () => {
@@ -121,9 +115,7 @@ describe("fetchNotifications", () => {
     };
     const applied = { temp: [null, null, 8] as WorksheetData["temp"] };
     const state = { ...base, temp: [null, null, 8] as WorksheetData["temp"] };
-    expect(fetchNotifications(state, fetchFor([caution], applied))).toEqual([
-      caution,
-    ]);
+    expect(fetchNotifications(state, fetchFor([caution], applied))).toEqual([caution]);
   });
 
   it("drops a field Caution once the pilot overrides the fetched value", () => {
@@ -134,9 +126,7 @@ describe("fetchNotifications", () => {
     };
     const applied = { temp: [null, null, 8] as WorksheetData["temp"] };
     const state = { ...base, temp: [null, null, 10] as WorksheetData["temp"] };
-    expect(fetchNotifications(state, fetchFor([caution], applied))).toEqual(
-      []
-    );
+    expect(fetchNotifications(state, fetchFor([caution], applied))).toEqual([]);
   });
 
   it("keeps a step notification while the fetch inputs are unchanged", () => {
@@ -160,15 +150,8 @@ describe("fetchNotifications", () => {
       message: "KOGD: no METAR",
     };
     const result = fetchFor([step, field]);
-    expect(
-      fetchNotifications(
-        { ...base, airport: ["KSLC", "KLGU"] },
-        result
-      )
-    ).toEqual([]);
-    expect(fetchNotifications({ ...base, date: "2026-05-13" }, result)).toEqual(
-      []
-    );
+    expect(fetchNotifications({ ...base, airport: ["KSLC", "KLGU"] }, result)).toEqual([]);
+    expect(fetchNotifications({ ...base, date: "2026-05-13" }, result)).toEqual([]);
     expect(fetchNotifications({ ...base, time: "19:00" }, result)).toEqual([]);
   });
 
@@ -296,12 +279,9 @@ describe("fetchNotifications", () => {
       subject: stepSubject("weather"),
       message: "fetch failed",
     };
-    expect(
-      fetchNotifications(
-        { ...base, airport: ["kogd ", "KLGU"] },
-        fetchFor([step])
-      )
-    ).toEqual([step]);
+    expect(fetchNotifications({ ...base, airport: ["kogd ", "KLGU"] }, fetchFor([step]))).toEqual([
+      step,
+    ]);
   });
 });
 
@@ -371,9 +351,9 @@ describe("staleFetchNotifications", () => {
       "field:wind.0",
       "field:turb",
     ]);
-    expect(list.find((n) => n.subject.kind === "field" && n.subject.field === "wind")?.message).toBe(
-      "Fetched for 2026-05-12 18:00; refetch weather."
-    );
+    expect(
+      list.find((n) => n.subject.kind === "field" && n.subject.field === "wind")?.message,
+    ).toBe("Fetched for 2026-05-12 18:00; refetch weather.");
   });
 
   // The arrival temperature is fetched for departure time + duration and the
@@ -398,9 +378,9 @@ describe("staleFetchNotifications", () => {
       ...fetch,
       fetchedFor: { ...fetch.fetchedFor, duration: 2 },
     };
-    expect(
-      staleFetchNotifications({ ...fetched, duration: 3 }, fetchedWith2h)[0].message
-    ).toBe("Fetched for KLGU at 2026-05-12 18:00 with a 2 h duration; refetch weather.");
+    expect(staleFetchNotifications({ ...fetched, duration: 3 }, fetchedWith2h)[0].message).toBe(
+      "Fetched for KLGU at 2026-05-12 18:00 with a 2 h duration; refetch weather.",
+    );
     expect(staleFetchNotifications({ ...fetched, duration: 2 }, fetchedWith2h)).toEqual([]);
   });
 
@@ -416,7 +396,7 @@ describe("staleFetchNotifications", () => {
       "field:turb",
     ]);
     expect(list[0].message).toBe(
-      "Fetched for the airport midpoint at 2026-05-12 18:00; refetch weather."
+      "Fetched for the airport midpoint at 2026-05-12 18:00; refetch weather.",
     );
 
     const fetchedAtPosition = {
@@ -427,12 +407,10 @@ describe("staleFetchNotifications", () => {
     expect(staleFetchNotifications(atPosition, fetchedAtPosition)).toEqual([]);
     expect(
       staleFetchNotifications({ ...fetched, position: [40.6, -111.2] }, fetchedAtPosition)[0]
-        .message
+        .message,
     ).toBe("Fetched for 40.5000, -111.2000 at 2026-05-12 18:00; refetch weather.");
     // Clearing the position moves the area to the airport midpoint.
-    expect(subjects(staleFetchNotifications(fetched, fetchedAtPosition))).toContain(
-      "field:temp.1"
-    );
+    expect(subjects(staleFetchNotifications(fetched, fetchedAtPosition))).toContain("field:temp.1");
   });
 
   // A half-entered position still means the airport midpoint (#251).
@@ -449,11 +427,11 @@ describe("staleFetchNotifications", () => {
     expect(staleFetchNotifications(fetched, fetchedHalfEntered)).toEqual([]);
     const completed = staleFetchNotifications(
       { ...fetched, position: [40.5, -111.2] },
-      fetchedHalfEntered
+      fetchedHalfEntered,
     );
     expect(subjects(completed)).toContain("field:temp.1");
     expect(completed[0].message).toBe(
-      "Fetched for the airport midpoint at 2026-05-12 18:00; refetch weather."
+      "Fetched for the airport midpoint at 2026-05-12 18:00; refetch weather.",
     );
   });
 
@@ -472,7 +450,7 @@ describe("staleFetchNotifications", () => {
       "field:turb",
     ]);
     expect(list.find((n) => subjectKey(n.subject) === "field:temp.1")?.message).toBe(
-      "Fetched for the airport midpoint at 2026-05-12 18:00; refetch weather."
+      "Fetched for the airport midpoint at 2026-05-12 18:00; refetch weather.",
     );
   });
 
@@ -483,7 +461,7 @@ describe("staleFetchNotifications", () => {
     expect(subjects(staleFetchNotifications(moved, withRunways))).toContain("field:rwy.1");
     expect(subjects(staleFetchNotifications(moved, withRunways))).not.toContain("field:rwy.0");
     expect(
-      subjects(staleFetchNotifications({ ...state, time: "20:00" }, withRunways))
+      subjects(staleFetchNotifications({ ...state, time: "20:00" }, withRunways)),
     ).not.toContain("field:rwy.0");
   });
 

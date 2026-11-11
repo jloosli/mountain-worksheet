@@ -4,8 +4,7 @@
 import { NextRequest } from "next/server";
 import { GET } from "./route";
 
-const upstream = (response: Response) =>
-  jest.spyOn(global, "fetch").mockResolvedValue(response);
+const upstream = (response: Response) => jest.spyOn(global, "fetch").mockResolvedValue(response);
 
 const get = (query: string) =>
   GET(new NextRequest(`http://localhost/api/aviation-weather?${query}`));
@@ -17,7 +16,7 @@ describe("GET /api/aviation-weather", () => {
     const spy = upstream(Response.json([]));
     await get("endpoint=gairmet&format=json&date=2026-11-11T15:45:00Z");
     expect(spy.mock.calls[0][0]).toBe(
-      "https://aviationweather.gov/api/data/gairmet?format=json&date=2026-11-11T15%3A45%3A00Z"
+      "https://aviationweather.gov/api/data/gairmet?format=json&date=2026-11-11T15%3A45%3A00Z",
     );
   });
 

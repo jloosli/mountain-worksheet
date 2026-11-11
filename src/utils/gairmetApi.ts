@@ -60,9 +60,7 @@ const HAZARD_FLAG: Record<
  * Resolves to `null` (204 No Content) when no snapshot of the current
  * issuance covers `at`, e.g. beyond the 12-hour forecast.
  */
-export async function fetchGAirmets(
-  at: Date
-): Promise<GAirmetFeature[] | null> {
+export async function fetchGAirmets(at: Date): Promise<GAirmetFeature[] | null> {
   const date = at.toISOString().replace(/\.\d{3}Z$/, "Z");
   const url = `${BASE_URL}?endpoint=gairmet&format=json&date=${encodeURIComponent(date)}`;
   const res = await fetch(url, {
@@ -77,18 +75,14 @@ export async function fetchGAirmets(
   return Array.isArray(json) ? (json as GAirmetFeature[]) : [];
 }
 
-export function pointInPolygon(
-  point: [number, number],
-  polygon: [number, number][]
-): boolean {
+export function pointInPolygon(point: [number, number], polygon: [number, number][]): boolean {
   const [pLat, pLon] = point;
   let inside = false;
   for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
     const [iLat, iLon] = polygon[i];
     const [jLat, jLon] = polygon[j];
     const intersect =
-      iLon > pLon !== jLon > pLon &&
-      pLat <= ((jLat - iLat) * (pLon - iLon)) / (jLon - iLon) + iLat;
+      iLon > pLon !== jLon > pLon && pLat <= ((jLat - iLat) * (pLon - iLon)) / (jLon - iLon) + iLat;
     if (intersect) inside = !inside;
   }
   return inside;
@@ -101,7 +95,7 @@ function airmetCoords(a: GAirmetFeature): [number, number][] {
 export function classifyAirmets(
   features: GAirmetFeature[],
   position: [number, number],
-  midTime: Date
+  midTime: Date,
 ): AirmetClassification {
   const notifications: Notification[] = [];
   const targetMs = midTime.getTime();
@@ -142,8 +136,7 @@ export function classifyAirmets(
     // Sort by abs delta from midTime; pick closest validTime
     const sorted = [...list].sort(
       (a, b) =>
-        Math.abs(Date.parse(a.validTime) - targetMs) -
-        Math.abs(Date.parse(b.validTime) - targetMs)
+        Math.abs(Date.parse(a.validTime) - targetMs) - Math.abs(Date.parse(b.validTime) - targetMs),
     );
     const bestDelta = Math.abs(Date.parse(sorted[0].validTime) - targetMs);
     if (bestDelta > VALID_TIME_THRESHOLD_MS) {
@@ -155,9 +148,7 @@ export function classifyAirmets(
 
     const bestTime = sorted[0].validTime;
     const atBestTime = list.filter((f) => f.validTime === bestTime);
-    const hit = atBestTime.some((f) =>
-      pointInPolygon(position, airmetCoords(f))
-    );
+    const hit = atBestTime.some((f) => pointInPolygon(position, airmetCoords(f)));
     const flag = HAZARD_FLAG[hazard];
     if (flag) result[flag.field] = hit;
   }
@@ -191,9 +182,7 @@ export function classifyAirmets(
       cielVis: null,
       mtnObsc: null,
       notifications: [
-        airmetFlagsUnavailable(
-          `G-AIRMET data unavailable within 3 hr of ${midTime.toISOString()}`
-        ),
+        airmetFlagsUnavailable(`G-AIRMET data unavailable within 3 hr of ${midTime.toISOString()}`),
       ],
     };
   }

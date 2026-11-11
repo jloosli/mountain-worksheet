@@ -110,7 +110,8 @@ export default function ActionBar({
                 Sortie details ready
               </div>
               <div className="hidden sm:block text-xs text-slate-600 dark:text-slate-400">
-                {worksheetData.airport[0] || "—"} → {worksheetData.airport[1] || "—"} · departing {formatHhMmZ(worksheetData.time)} · ready to fetch weather
+                {worksheetData.airport[0] || "—"} → {worksheetData.airport[1] || "—"} · departing{" "}
+                {formatHhMmZ(worksheetData.time)} · ready to fetch weather
               </div>
             </div>
           </div>
@@ -125,7 +126,10 @@ export default function ActionBar({
                 {weatherLastUpdated && (
                   <>
                     {" "}
-                    · <span className="font-mono text-slate-700 dark:text-slate-300">{formatClockUtc(weatherLastUpdated)}</span>
+                    ·{" "}
+                    <span className="font-mono text-slate-700 dark:text-slate-300">
+                      {formatClockUtc(weatherLastUpdated)}
+                    </span>
                   </>
                 )}
               </div>

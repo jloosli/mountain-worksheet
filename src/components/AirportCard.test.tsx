@@ -17,27 +17,13 @@ const baseProps = {
 
 describe("AirportCard — departure variant", () => {
   it("renders the airport code in the header", () => {
-    render(
-      <AirportCard
-        {...baseProps}
-        variant="departure"
-        airportCode="KOGD"
-        fieldElev={4473}
-      />
-    );
+    render(<AirportCard {...baseProps} variant="departure" airportCode="KOGD" fieldElev={4473} />);
     expect(screen.getByText("Departure")).toBeInTheDocument();
     expect(screen.getByText("KOGD")).toBeInTheDocument();
   });
 
   it("renders the field elevation when provided", () => {
-    render(
-      <AirportCard
-        {...baseProps}
-        variant="departure"
-        airportCode="KOGD"
-        fieldElev={4473}
-      />
-    );
+    render(<AirportCard {...baseProps} variant="departure" airportCode="KOGD" fieldElev={4473} />);
     expect(screen.getByText(/4,473 ft/)).toBeInTheDocument();
   });
 
@@ -56,12 +42,10 @@ describe("AirportCard — departure variant", () => {
         runways={runways}
         selectedRunwayLength={5500}
         onRunwaySelect={noOp}
-      />
+      />,
     );
     const select = screen.getByRole("combobox", { name: /Runway/i });
-    const options = Array.from(
-      select.querySelectorAll("option")
-    ) as HTMLOptionElement[];
+    const options = Array.from(select.querySelectorAll("option")) as HTMLOptionElement[];
     expect(options).toHaveLength(2);
     expect(options[0].textContent).toMatch(/16\/34/);
     expect(options[0].textContent).toMatch(/5,500/);
@@ -75,27 +59,22 @@ describe("AirportCard — departure variant", () => {
     ["pending", /Loading runways/i],
     ["failed", /Runway lookup failed/i],
     ["no-runways", /No runway data for KOGD/i],
-  ] as const)(
-    "says why there is no runway list when the lookup is %s",
-    (runwayStatus, text) => {
-      render(
-        <AirportCard
-          {...baseProps}
-          variant="departure"
-          airportCode="KOGD"
-          fieldElev={4473}
-          runways={null}
-          runwayStatus={runwayStatus}
-          selectedRunwayLength={null}
-          onRunwaySelect={noOp}
-        />
-      );
-      expect(
-        screen.queryByRole("combobox", { name: /Runway/i })
-      ).not.toBeInTheDocument();
-      expect(screen.getByText(text)).toBeInTheDocument();
-    }
-  );
+  ] as const)("says why there is no runway list when the lookup is %s", (runwayStatus, text) => {
+    render(
+      <AirportCard
+        {...baseProps}
+        variant="departure"
+        airportCode="KOGD"
+        fieldElev={4473}
+        runways={null}
+        runwayStatus={runwayStatus}
+        selectedRunwayLength={null}
+        onRunwaySelect={noOp}
+      />,
+    );
+    expect(screen.queryByRole("combobox", { name: /Runway/i })).not.toBeInTheDocument();
+    expect(screen.getByText(text)).toBeInTheDocument();
+  });
 
   it("calls onRunwaySelect with the chosen runway length", () => {
     const onRunwaySelect = jest.fn();
@@ -112,7 +91,7 @@ describe("AirportCard — departure variant", () => {
         runways={runways}
         selectedRunwayLength={5500}
         onRunwaySelect={onRunwaySelect}
-      />
+      />,
     );
     fireEvent.change(screen.getByRole("combobox", { name: /Runway/i }), {
       target: { value: "8103" },
@@ -121,9 +100,7 @@ describe("AirportCard — departure variant", () => {
   });
 
   it("applies API-populated styling to the runway dropdown when apiPopulated.runway is true", () => {
-    const runways: RunwayOption[] = [
-      { id: "16/34", length: 5500, alignment: 160 },
-    ];
+    const runways: RunwayOption[] = [{ id: "16/34", length: 5500, alignment: 160 }];
     render(
       <AirportCard
         {...baseProps}
@@ -132,7 +109,7 @@ describe("AirportCard — departure variant", () => {
         runways={runways}
         selectedRunwayLength={5500}
         apiPopulated={{ temperature: false, pressure: false, runway: true }}
-      />
+      />,
     );
     expect(screen.getByRole("combobox", { name: /Runway/i })).toHaveClass("bg-blue-50");
   });
@@ -147,7 +124,7 @@ describe("AirportCard — departure variant", () => {
         runways={runways}
         runwayStatus="found"
         selectedRunwayLength={null}
-      />
+      />,
     );
     expect(screen.queryByRole("combobox", { name: /Runway/i })).not.toBeInTheDocument();
     expect(screen.getByText(/No runway data for KOGD/i)).toBeInTheDocument();
@@ -166,7 +143,7 @@ describe("AirportCard — departure variant", () => {
         altimeter={29.92}
         onTemperatureChange={onTemperatureChange}
         onAltimeterChange={onAltimeterChange}
-      />
+      />,
     );
     fireEvent.change(screen.getByLabelText(/Temperature/i), {
       target: { value: "22" },
@@ -200,26 +177,14 @@ describe("AirportCard — rejected altimeter entry", () => {
 
 describe("AirportCard — operating variant", () => {
   it("renders the operating header and altitude link to step-sortie", () => {
-    render(
-      <AirportCard
-        {...baseProps}
-        variant="operating"
-        operatingAltitude={11500}
-      />
-    );
+    render(<AirportCard {...baseProps} variant="operating" operatingAltitude={11500} />);
     expect(screen.getByText("Operating")).toBeInTheDocument();
     const altitudeLink = screen.getByRole("link", { name: /11,500 ft/i });
     expect(altitudeLink).toHaveAttribute("href", "#step-sortie");
   });
 
   it("does not render runway dropdown or field elev for operating variant", () => {
-    render(
-      <AirportCard
-        {...baseProps}
-        variant="operating"
-        operatingAltitude={11500}
-      />
-    );
+    render(<AirportCard {...baseProps} variant="operating" operatingAltitude={11500} />);
     expect(screen.queryByRole("combobox", { name: /Runway/i })).not.toBeInTheDocument();
     expect(screen.queryByText(/Field elev/i)).not.toBeInTheDocument();
   });
@@ -235,7 +200,7 @@ describe("AirportCard — operating variant", () => {
         temperature={5}
         altimeter={29.92}
         apiPopulated={{ temperature: true, pressure: true, runway: false }}
-      />
+      />,
     );
     expect(screen.getByLabelText(/Temperature/i)).toHaveClass("bg-blue-50");
     expect(screen.getByLabelText(/Altimeter/i)).toHaveClass("bg-blue-50");
@@ -244,14 +209,7 @@ describe("AirportCard — operating variant", () => {
 
 describe("AirportCard — arrival variant", () => {
   it("renders the arrival header with the airport code", () => {
-    render(
-      <AirportCard
-        {...baseProps}
-        variant="arrival"
-        airportCode="KLGU"
-        fieldElev={4457}
-      />
-    );
+    render(<AirportCard {...baseProps} variant="arrival" airportCode="KLGU" fieldElev={4457} />);
     expect(screen.getByText("Arrival")).toBeInTheDocument();
     expect(screen.getByText("KLGU")).toBeInTheDocument();
     expect(screen.getByText(/4,457 ft/)).toBeInTheDocument();
@@ -271,7 +229,7 @@ describe("AirportCard — arrival variant", () => {
         runways={runways}
         selectedRunwayLength={5861}
         onRunwaySelect={noOp}
-      />
+      />,
     );
     const select = screen.getByRole("combobox", { name: /Runway/i });
     const options = Array.from(select.querySelectorAll("option"));
@@ -289,7 +247,7 @@ describe("AirportCard — useFahrenheit", () => {
         airportCode="KOGD"
         temperature={20} // 20 °C = 68 °F
         useFahrenheit={true}
-      />
+      />,
     );
     const tempInput = screen.getByLabelText(/Temperature/i) as HTMLInputElement;
     expect(tempInput.value).toBe("68");
@@ -308,7 +266,7 @@ describe("AirportCard — local string buffer", () => {
         airportCode="KOGD"
         altimeter={29.92}
         onAltimeterChange={onAltimeterChange}
-      />
+      />,
     );
     const altInput = screen.getByLabelText(/Altimeter/i) as HTMLInputElement;
     expect(altInput.value).toBe("29.92");
@@ -322,21 +280,11 @@ describe("AirportCard — local string buffer", () => {
 
   it("syncs the temperature display when the prop changes externally", () => {
     const { rerender } = render(
-      <AirportCard
-        {...baseProps}
-        variant="departure"
-        airportCode="KOGD"
-        temperature={null}
-      />
+      <AirportCard {...baseProps} variant="departure" airportCode="KOGD" temperature={null} />,
     );
     expect((screen.getByLabelText(/Temperature/i) as HTMLInputElement).value).toBe("");
     rerender(
-      <AirportCard
-        {...baseProps}
-        variant="departure"
-        airportCode="KOGD"
-        temperature={20}
-      />
+      <AirportCard {...baseProps} variant="departure" airportCode="KOGD" temperature={20} />,
     );
     expect((screen.getByLabelText(/Temperature/i) as HTMLInputElement).value).toBe("20");
   });
@@ -358,7 +306,7 @@ describe("AirportCard — runway auto-default", () => {
         runways={runways}
         selectedRunwayLength={null}
         onRunwaySelect={onRunwaySelect}
-      />
+      />,
     );
     expect(onRunwaySelect).toHaveBeenCalledWith(5500);
   });
@@ -377,7 +325,7 @@ describe("AirportCard — runway auto-default", () => {
         runways={runways}
         selectedRunwayLength={8103}
         onRunwaySelect={onRunwaySelect}
-      />
+      />,
     );
     expect(onRunwaySelect).not.toHaveBeenCalled();
   });
@@ -417,7 +365,7 @@ describe("AirportCard — notifications", () => {
         runways={[{ id: "10/28", length: 9000, alignment: 100 }]}
         selectedRunwayLength={9000}
         onRunwaySelect={noOp}
-      />
+      />,
     );
     const temp = screen.getByLabelText("Temperature");
     expect(temp).toHaveAttribute("aria-invalid", "true");
@@ -438,11 +386,9 @@ describe("AirportCard — notifications", () => {
         variant="departure"
         airportCode="KOGD"
         notifications={arrivalWarnings}
-      />
+      />,
     );
-    expect(screen.getByLabelText("Temperature")).not.toHaveAttribute(
-      "aria-invalid"
-    );
+    expect(screen.getByLabelText("Temperature")).not.toHaveAttribute("aria-invalid");
     expect(screen.queryByText(/BOI/)).not.toBeInTheDocument();
   });
 
@@ -458,10 +404,8 @@ describe("AirportCard — notifications", () => {
             message: "Target altitude 20000 ft above available range",
           },
         ]}
-      />
+      />,
     );
-    expect(screen.getByLabelText("Temperature")).toHaveAccessibleDescription(
-      /20000 ft above/
-    );
+    expect(screen.getByLabelText("Temperature")).toHaveAccessibleDescription(/20000 ft above/);
   });
 });

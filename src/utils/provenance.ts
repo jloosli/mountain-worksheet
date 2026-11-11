@@ -10,9 +10,7 @@ import { subjectKey, type Notification, type Subject } from "./notifications";
 
 /** A value that may record the input Subjects it was computed from. */
 export type MarkableValue =
-  | ComputedValue
-  | ServiceCeiling
-  | { status: "computed"; dependsOn: Subject[] };
+  ComputedValue | ServiceCeiling | { status: "computed"; dependsOn: Subject[] };
 
 /**
  * Whether `cover` takes in `subject`: the same Subject, or a whole field

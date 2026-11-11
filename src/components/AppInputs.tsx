@@ -9,16 +9,10 @@ import { windSpeedStates } from "@/utils/limitChecks";
 import WeatherSection from "@/components/WeatherSection";
 import { stepSubject } from "@/utils/notifications";
 import type { WorksheetEvaluation } from "@/utils/worksheetEvaluation";
-import {
-  formatStepBadge,
-} from "@/utils/stepStatuses";
+import { formatStepBadge } from "@/utils/stepStatuses";
 import type { RunwayOption, WorksheetData } from "@/utils/types";
 import type { RunwayLookupStatus } from "@/utils/useAirportRunways";
-import type {
-  RejectedEntries,
-  RejectedEntry,
-  RejectedEntryKey,
-} from "@/utils/rejectedEntries";
+import type { RejectedEntries, RejectedEntry, RejectedEntryKey } from "@/utils/rejectedEntries";
 
 interface WorksheetFormProps {
   state: WorksheetData;
@@ -63,15 +57,8 @@ export default function AppInputs({
         subtitle="Who's flying, when, and where"
       >
         <LimitCheckCallouts checks={limitChecks} step="sortie" />
-        <InlineNotifications
-          notifications={notifications}
-          subject={stepSubject("sortie")}
-        />
-        <SortieInfo
-          onUpdate={handleUpdate}
-          initialData={state}
-          notifications={notifications}
-        />
+        <InlineNotifications notifications={notifications} subject={stepSubject("sortie")} />
+        <SortieInfo onUpdate={handleUpdate} initialData={state} notifications={notifications} />
       </StepShell>
       <StepShell
         id="step-weather"
@@ -82,10 +69,7 @@ export default function AppInputs({
         subtitle="Winds aloft, terminal conditions, and advisories"
       >
         <LimitCheckCallouts checks={limitChecks} step="weather" />
-        <InlineNotifications
-          notifications={notifications}
-          subject={stepSubject("weather")}
-        />
+        <InlineNotifications notifications={notifications} subject={stepSubject("weather")} />
         <WeatherSection
           state={state}
           onUpdate={handleUpdate}

@@ -24,19 +24,12 @@ export interface RejectedEntry {
 
 export type RejectedEntries = Partial<Record<RejectedEntryKey, RejectedEntry>>;
 
-export const windEntryKey = (row: number, col: number): RejectedEntryKey =>
-  `wind:${row}:${col}`;
-export const altimeterEntryKey = (slot: number): RejectedEntryKey =>
-  `altimeter:${slot}`;
+export const windEntryKey = (row: number, col: number): RejectedEntryKey => `wind:${row}:${col}`;
+export const altimeterEntryKey = (slot: number): RejectedEntryKey => `altimeter:${slot}`;
 
-function cellValue(
-  data: Partial<WorksheetData>,
-  key: RejectedEntryKey
-): number | null | undefined {
+function cellValue(data: Partial<WorksheetData>, key: RejectedEntryKey): number | null | undefined {
   const [field, a, b] = key.split(":");
-  return field === "wind"
-    ? data.wind?.[Number(a)]?.[Number(b)]
-    : data.altimeter?.[Number(a)];
+  return field === "wind" ? data.wind?.[Number(a)]?.[Number(b)] : data.altimeter?.[Number(a)];
 }
 
 function storedValue(state: WorksheetData, key: RejectedEntryKey): number | null {
@@ -45,7 +38,7 @@ function storedValue(state: WorksheetData, key: RejectedEntryKey): number | null
 
 function activeEntries(
   state: WorksheetData,
-  entries: RejectedEntries
+  entries: RejectedEntries,
 ): [RejectedEntryKey, RejectedEntry][] {
   return (Object.entries(entries) as [RejectedEntryKey, RejectedEntry | undefined][])
     .filter((pair): pair is [RejectedEntryKey, RejectedEntry] => pair[1] !== undefined)
@@ -55,7 +48,7 @@ function activeEntries(
 /** The Warnings of the rejected entries still in force. */
 export function rejectedEntryNotifications(
   state: WorksheetData,
-  entries: RejectedEntries
+  entries: RejectedEntries,
 ): Notification[] {
   return activeEntries(state, entries).map(([, entry]) => entry.notification);
 }
@@ -64,7 +57,7 @@ export function rejectedEntryNotifications(
 export function rejectedEntryText(
   state: WorksheetData,
   entries: RejectedEntries,
-  key: RejectedEntryKey
+  key: RejectedEntryKey,
 ): string | undefined {
   const entry = entries[key];
   return entry && storedValue(state, key) === entry.storedValue ? entry.raw : undefined;
@@ -79,10 +72,10 @@ export function updateRejectedEntries(
   state: WorksheetData,
   entries: RejectedEntries,
   key: RejectedEntryKey,
-  entry: RejectedEntry | null
+  entry: RejectedEntry | null,
 ): RejectedEntries {
   const next: RejectedEntries = Object.fromEntries(
-    activeEntries(state, entries).filter(([k]) => k !== key)
+    activeEntries(state, entries).filter(([k]) => k !== key),
   );
   if (entry) next[key] = entry;
   return next;
@@ -98,12 +91,10 @@ export function updateRejectedEntries(
 export function retireRejectedEntries(
   next: WorksheetData,
   entries: RejectedEntries,
-  replaced?: Partial<WorksheetData>
+  replaced?: Partial<WorksheetData>,
 ): RejectedEntries {
   const kept = activeEntries(next, entries).filter(
-    ([key]) => !replaced || cellValue(replaced, key) === undefined
+    ([key]) => !replaced || cellValue(replaced, key) === undefined,
   );
-  return kept.length === Object.keys(entries).length
-    ? entries
-    : Object.fromEntries(kept);
+  return kept.length === Object.keys(entries).length ? entries : Object.fromEntries(kept);
 }

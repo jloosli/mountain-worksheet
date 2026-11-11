@@ -34,7 +34,7 @@ const raw = {
         [`wind_speed_${l}hPa`, speeds[i]],
         [`wind_direction_${l}hPa`, dirs[i]],
         [`geopotential_height_${l}hPa`, heights[i]],
-      ])
+      ]),
     ),
   },
 } as unknown as OpenMeteoPointForecast;
@@ -78,7 +78,13 @@ function fetchOverMidpoint() {
   const applied = mergeWeatherData(worksheet, mapping.data, true);
   const state = { ...worksheet, ...applied } as WorksheetData;
   const fetch: WeatherFetchResult = {
-    fetchedFor: { airport: worksheet.airport, date: worksheet.date, time: worksheet.time, duration: worksheet.duration, position: worksheet.position },
+    fetchedFor: {
+      airport: worksheet.airport,
+      date: worksheet.date,
+      time: worksheet.time,
+      duration: worksheet.duration,
+      position: worksheet.position,
+    },
     applied,
     notifications: mapping.notifications,
   };
@@ -93,7 +99,10 @@ describe("midpoint Substitution markers on computed values", () => {
     const { state, fetch } = fetchOverMidpoint();
     const notifications = fetchNotifications(state, fetch);
     const climb = computeClimbViewModel(state, notifications);
-    const opDA = { status: "computed" as const, dependsOn: pressureColumnDependsOn(1).densityAltitude };
+    const opDA = {
+      status: "computed" as const,
+      dependsOn: pressureColumnDependsOn(1).densityAltitude,
+    };
 
     expect(midpoint(substitutionsFor(opDA, notifications))).not.toHaveLength(0);
     expect(midpoint(substitutionsFor(climb.rateOfClimb[1], notifications))).not.toHaveLength(0);

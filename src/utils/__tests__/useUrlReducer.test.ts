@@ -16,14 +16,14 @@ const valueOf = <T, R>(s: Opened<T, R>): T => s.value;
 /** A plain value persisted to the URL: [value, set, check result]. */
 function useUrlValue<T, R extends { state: T } = { state: T }>(
   initialState: T,
-  check?: (state: T, query: string) => R
+  check?: (state: T, query: string) => R,
 ) {
   const [s, dispatch] = useUrlReducer<Opened<T, R>, Update<T>, T, R>(
     setValue,
     initialState,
     opened,
     valueOf,
-    check
+    check,
   );
   return [s.value, dispatch, s.check] as const;
 }
@@ -50,9 +50,7 @@ describe("useUrlReducer", () => {
     // Setup default mock implementations
     (nextNavigation.useRouter as jest.Mock).mockReturnValue(mockRouter);
     (nextNavigation.usePathname as jest.Mock).mockReturnValue(mockPathname);
-    (nextNavigation.useSearchParams as jest.Mock).mockReturnValue(
-      mockSearchParams
-    );
+    (nextNavigation.useSearchParams as jest.Mock).mockReturnValue(mockSearchParams);
   });
 
   it("should initialize with default state when no URL params exist", () => {
@@ -66,9 +64,7 @@ describe("useUrlReducer", () => {
   it("should initialize with URL params when they exist", () => {
     const initialState = { count: 0, name: "" };
     mockSearchParams = new URLSearchParams("count=42&name=John");
-    (nextNavigation.useSearchParams as jest.Mock).mockReturnValue(
-      mockSearchParams
-    );
+    (nextNavigation.useSearchParams as jest.Mock).mockReturnValue(mockSearchParams);
 
     const { result } = renderHook(() => useUrlValue(initialState));
 
@@ -92,10 +88,7 @@ describe("useUrlReducer", () => {
       count: 42,
       name: "updated",
     });
-    expect(mockRouter.push).toHaveBeenCalledWith(
-      "/test?count=42&name=updated",
-      { scroll: false }
-    );
+    expect(mockRouter.push).toHaveBeenCalledWith("/test?count=42&name=updated", { scroll: false });
   });
 
   it("should support functional updates", () => {
@@ -169,14 +162,8 @@ describe("useUrlReducer", () => {
 
     unmount();
 
-    expect(removeEventListenerSpy).toHaveBeenCalledWith(
-      "focusin",
-      expect.any(Function)
-    );
-    expect(removeEventListenerSpy).toHaveBeenCalledWith(
-      "focusout",
-      expect.any(Function)
-    );
+    expect(removeEventListenerSpy).toHaveBeenCalledWith("focusin", expect.any(Function));
+    expect(removeEventListenerSpy).toHaveBeenCalledWith("focusout", expect.any(Function));
   });
 
   it("should handle complex state with arrays", () => {
@@ -200,17 +187,14 @@ describe("useUrlReducer", () => {
       document.dispatchEvent(new Event("focusin"));
     });
 
-    expect(mockRouter.push).toHaveBeenCalledWith(
-      "/test?numbers=4,5,6&nested=1,2||3,4",
-      { scroll: false }
-    );
+    expect(mockRouter.push).toHaveBeenCalledWith("/test?numbers=4,5,6&nested=1,2||3,4", {
+      scroll: false,
+    });
   });
 
   it("runs a load check over the state opened from the link and returns its result", () => {
     const initialState = { count: 0 };
-    (nextNavigation.useSearchParams as jest.Mock).mockReturnValue(
-      new URLSearchParams("count=abc")
-    );
+    (nextNavigation.useSearchParams as jest.Mock).mockReturnValue(new URLSearchParams("count=abc"));
     const check = jest.fn((state: { count: unknown }, query: string) => ({
       state: { count: 0 },
       problem: `${query} -> ${String(state.count)}`,
@@ -238,12 +222,8 @@ describe("useUrlReducer", () => {
     const toUrl = (s: Counter) => s.value;
 
     it("applies events dispatched before a render to the latest state, and writes only the URL value", () => {
-      (nextNavigation.useSearchParams as jest.Mock).mockReturnValue(
-        new URLSearchParams("count=2")
-      );
-      const { result } = renderHook(() =>
-        useUrlReducer(reducer, { count: 0 }, init, toUrl)
-      );
+      (nextNavigation.useSearchParams as jest.Mock).mockReturnValue(new URLSearchParams("count=2"));
+      const { result } = renderHook(() => useUrlReducer(reducer, { count: 0 }, init, toUrl));
       expect(result.current[0]).toEqual({ value: { count: 2 }, events: 0 });
 
       act(() => {

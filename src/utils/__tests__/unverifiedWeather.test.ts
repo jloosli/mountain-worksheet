@@ -40,9 +40,12 @@ describe("unverifiedWeatherNotifications", () => {
     ]);
   });
 
-  it.each(["fetched", "stale"] as const)("raises nothing once weather is %s this session", (status) => {
-    expect(unverifiedWeatherNotifications(withSharedTemp, status)).toEqual([]);
-  });
+  it.each(["fetched", "stale"] as const)(
+    "raises nothing once weather is %s this session",
+    (status) => {
+      expect(unverifiedWeatherNotifications(withSharedTemp, status)).toEqual([]);
+    },
+  );
 
   it("raises nothing for a worksheet with no weather values", () => {
     expect(unverifiedWeatherNotifications(blank, "none")).toEqual([]);

@@ -13,10 +13,7 @@ export async function GET(request: NextRequest) {
     const endpoint = searchParams.get("endpoint");
 
     if (!endpoint) {
-      return NextResponse.json(
-        { error: "Missing endpoint parameter" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Missing endpoint parameter" }, { status: 400 });
     }
 
     // Build the full URL
@@ -48,7 +45,7 @@ export async function GET(request: NextRequest) {
           status: response.status,
           statusText: response.statusText,
         },
-        { status: response.status }
+        { status: response.status },
       );
     }
 
@@ -86,9 +83,7 @@ export async function GET(request: NextRequest) {
                   surface: string;
                   alignment: number | null;
                 }) => {
-                  const [length, width] = runway.dimension
-                    ?.split("x")
-                    .map(Number) || [0, 0];
+                  const [length, width] = runway.dimension?.split("x").map(Number) || [0, 0];
                   return {
                     id: runway.id,
                     length,
@@ -98,9 +93,9 @@ export async function GET(request: NextRequest) {
                     lighted: true, // Default to true
                     closed: false, // Default to false
                   };
-                }
+                },
               ) || [],
-          })
+          }),
         );
       }
     } else {
@@ -116,9 +111,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(data);
   } catch (error) {
     console.error("API proxy error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

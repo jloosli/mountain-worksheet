@@ -137,9 +137,7 @@ export function withholdOnInputWarnings<T extends ComputedValue | ServiceCeiling
   const warned = new Set(
     inputNotifications.filter((n) => n.level === "warning").map((n) => subjectKey(n.subject)),
   );
-  const labels = value.dependsOn
-    .filter((s) => warned.has(subjectKey(s)))
-    .map(inputLabel);
+  const labels = value.dependsOn.filter((s) => warned.has(subjectKey(s))).map(inputLabel);
   if (labels.length === 0) return value;
   const list =
     labels.length === 1
@@ -343,8 +341,7 @@ function computeAirportTOLD(
     return { slot, values, notifications };
   };
 
-  const tempInvalid =
-    isReal(temp) && (temp < TEMP_LIMITS_C.min || temp > TEMP_LIMITS_C.max);
+  const tempInvalid = isReal(temp) && (temp < TEMP_LIMITS_C.min || temp > TEMP_LIMITS_C.max);
   if (tempInvalid) {
     notifications.push({
       level: "warning",
@@ -467,16 +464,16 @@ export function computeTOLDViewModel(
   const withhold = (airport: AirportTOLD): AirportTOLD => ({
     ...airport,
     values: Object.fromEntries(
-      TOLD_VALUE_KEYS.map((k) => [k, withholdOnInputWarnings(airport.values[k], inputNotifications)]),
+      TOLD_VALUE_KEYS.map((k) => [
+        k,
+        withholdOnInputWarnings(airport.values[k], inputNotifications),
+      ]),
     ) as Record<TOLDValueKey, ComputedValue>,
   });
   return { ...vm, departure: withhold(vm.departure), arrival: withhold(vm.arrival) };
 }
 
-function toldViewModel(
-  state: WorksheetData,
-  PAs: Triple,
-): TOLDViewModel {
+function toldViewModel(state: WorksheetData, PAs: Triple): TOLDViewModel {
   const aircraft = findAircraft(state.acType);
   const aircraftNotifications: Notification[] = [];
   let aircraftWithheld: string | null = null;
@@ -492,10 +489,18 @@ function toldViewModel(
   }
   const weight = assessWeight(state.weight, aircraft);
   const departure = computeAirportTOLD(
-    state, "departure", PAs[0], weight.withheldReason, aircraftWithheld,
+    state,
+    "departure",
+    PAs[0],
+    weight.withheldReason,
+    aircraftWithheld,
   );
   const arrival = computeAirportTOLD(
-    state, "arrival", PAs[2], weight.withheldReason, aircraftWithheld,
+    state,
+    "arrival",
+    PAs[2],
+    weight.withheldReason,
+    aircraftWithheld,
   );
   return {
     departure,
@@ -522,8 +527,7 @@ type Columns<T> = [T, T, T];
 
 /** A service ceiling: computed, withheld, unavailable, or above the top of the climb table. */
 export type ServiceCeiling =
-  | ComputedValue
-  | { status: "aboveTable"; tableMax: number; dependsOn: Subject[] };
+  ComputedValue | { status: "aboveTable"; tableMax: number; dependsOn: Subject[] };
 
 export interface ClimbViewModel {
   rateOfClimb: Columns<ComputedValue>;
@@ -672,7 +676,11 @@ function climbViewModel(state: WorksheetData): ClimbViewModel {
     const label = columnLabel(state, col);
     try {
       const r = bilinearInterpolateDetailed(
-        { xAxis: climb.pressureAltitudes, yAxis: climb.temperatures, data: climb.data as number[][] },
+        {
+          xAxis: climb.pressureAltitudes,
+          yAxis: climb.temperatures,
+          data: climb.data as number[][],
+        },
         pa,
         temp,
         { xAxisName: "pressureAltitude", yAxisName: "temperature" },
@@ -688,11 +696,14 @@ function climbViewModel(state: WorksheetData): ClimbViewModel {
         message: `${label} rate of climb is extrapolated beyond the POH climb table: ${describeExtrapolations(r.extrapolated)}.`,
       });
     } catch {
-      return lookup<ComputedValue>({ status: "unavailable" }, {
-        level: "warning",
-        subject: climbSubject("rateOfClimb", col),
-        message: `${label} rate of climb could not be computed: the ${aircraft.id} POH climb table has no data for these conditions.`,
-      });
+      return lookup<ComputedValue>(
+        { status: "unavailable" },
+        {
+          level: "warning",
+          subject: climbSubject("rateOfClimb", col),
+          message: `${label} rate of climb could not be computed: the ${aircraft.id} POH climb table has no data for these conditions.`,
+        },
+      );
     }
   };
   const rateOfClimb = collect(COLUMNS.map(rateOfClimbAt));
@@ -744,7 +755,10 @@ function climbViewModel(state: WorksheetData): ClimbViewModel {
   const vyAt = (col: Column): Lookup<ComputedValue> => {
     const pa = paFor(col);
     if (typeof pa === "string") return lookup(withheld(pa));
-    const value = computed(vyForPressureAltitude(climb, pa), inputs({ altitude: col, altimeter: col }));
+    const value = computed(
+      vyForPressureAltitude(climb, pa),
+      inputs({ altitude: col, altimeter: col }),
+    );
     const outside = findExtrapolations([
       { axis: "pressureAltitude", values: climb.pressureAltitudes, value: pa },
     ]);
@@ -775,11 +789,14 @@ function climbViewModel(state: WorksheetData): ClimbViewModel {
         message: `Va is extrapolated beyond the POH maneuvering-speed table: ${describeExtrapolations(r.extrapolated)}.`,
       });
     } catch {
-      return lookup<ComputedValue>({ status: "unavailable" }, {
-        level: "warning",
-        subject: climbSubject("va"),
-        message: `Va could not be computed: the ${aircraft.id} POH maneuvering-speed table has no data for ${fmt(w)} lbs.`,
-      });
+      return lookup<ComputedValue>(
+        { status: "unavailable" },
+        {
+          level: "warning",
+          subject: climbSubject("va"),
+          message: `Va could not be computed: the ${aircraft.id} POH maneuvering-speed table has no data for ${fmt(w)} lbs.`,
+        },
+      );
     }
   };
   const va = vaLookup();
@@ -806,7 +823,8 @@ function climbViewModel(state: WorksheetData): ClimbViewModel {
       const tableMax = alts[alts.length - 1];
       // The MSL display also converts with the column's altimeter.
       const dependsOn = inputs({ altimeter: col, temp: col });
-      if (pa > tableMax) return lookup<ServiceCeiling>({ status: "aboveTable", tableMax, dependsOn });
+      if (pa > tableMax)
+        return lookup<ServiceCeiling>({ status: "aboveTable", tableMax, dependsOn });
       const value = computed(pa, dependsOn);
       const outside = inverseLookupExtrapolation(climb.data, alts, climb.temperatures, temp, pa);
       if (!outside) return lookup<ServiceCeiling>(value);
@@ -817,11 +835,14 @@ function climbViewModel(state: WorksheetData): ClimbViewModel {
         message: `${columnLabel(state, col)} service ceiling is extrapolated ${outside} the ${edge} altitude in the POH climb table at ${fmt(temp)}°C.`,
       });
     } catch {
-      return lookup<ServiceCeiling>({ status: "unavailable" }, {
-        level: "warning",
-        subject: climbSubject("serviceCeiling", col),
-        message: `${columnLabel(state, col)} service ceiling could not be computed: the ${aircraft.id} POH climb table has no data at ${fmt(temp)}°C.`,
-      });
+      return lookup<ServiceCeiling>(
+        { status: "unavailable" },
+        {
+          level: "warning",
+          subject: climbSubject("serviceCeiling", col),
+          message: `${columnLabel(state, col)} service ceiling could not be computed: the ${aircraft.id} POH climb table has no data at ${fmt(temp)}°C.`,
+        },
+      );
     }
   };
   const serviceCeiling = collect(COLUMNS.map(serviceCeilingAt));

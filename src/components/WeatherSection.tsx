@@ -8,14 +8,8 @@ import { isApiPopulatedData } from "@/utils/weatherDataMapper";
 import { celciusToFarenheit, farenheitToCelcius } from "@/utils/formulas";
 import type { RunwayOption, WorksheetData } from "@/utils/types";
 import type { RunwayLookupStatus } from "@/utils/useAirportRunways";
-import InlineNotifications, {
-  notificationA11yProps,
-} from "@/components/InlineNotifications";
-import {
-  fieldSubject,
-  type Notification,
-  type Subject,
-} from "@/utils/notifications";
+import InlineNotifications, { notificationA11yProps } from "@/components/InlineNotifications";
+import { fieldSubject, type Notification, type Subject } from "@/utils/notifications";
 import {
   altimeterEntryKey,
   rejectedEntryText,
@@ -74,11 +68,7 @@ export default function WeatherSection({
   const rejectedWindText = (row: number, col: number): string | undefined =>
     rejectedEntryText(state, rejectedEntries, windEntryKey(row, col));
 
-  const handleWindChange = (
-    row: 0 | 1 | 2,
-    col: number,
-    rawValue: string
-  ) => {
+  const handleWindChange = (row: 0 | 1 | 2, col: number, rawValue: string) => {
     const key = windEntryKey(row, col);
     const numValue: number | null = rawValue === "" ? null : Number(rawValue);
     let isValid = true;
@@ -105,9 +95,8 @@ export default function WeatherSection({
       return;
     }
     accept(key);
-    const stored = row === 2 && numValue !== null && useFahrenheit
-      ? farenheitToCelcius(numValue)
-      : numValue;
+    const stored =
+      row === 2 && numValue !== null && useFahrenheit ? farenheitToCelcius(numValue) : numValue;
     const newWind = state.wind.map((arr) => [...arr]) as [
       (number | null)[],
       (number | null)[],
@@ -117,10 +106,7 @@ export default function WeatherSection({
     onUpdate({ wind: newWind });
   };
 
-  const handleAirportTempChange = (
-    index: 0 | 1 | 2,
-    rawValue: string
-  ) => {
+  const handleAirportTempChange = (index: 0 | 1 | 2, rawValue: string) => {
     const num = rawValue === "" ? null : Number(rawValue);
     if (num !== null && !Number.isFinite(num)) return;
     const stored = num !== null && useFahrenheit ? farenheitToCelcius(num) : num;
@@ -129,10 +115,7 @@ export default function WeatherSection({
     onUpdate({ temp: next });
   };
 
-  const handleAirportAltimeterChange = (
-    index: 0 | 1 | 2,
-    rawValue: string
-  ) => {
+  const handleAirportAltimeterChange = (index: 0 | 1 | 2, rawValue: string) => {
     const key = altimeterEntryKey(index);
     const num = rawValue === "" ? null : Number(rawValue);
     const isValid = num === null || isValidAltimeterEntry(num);
@@ -149,11 +132,7 @@ export default function WeatherSection({
       return;
     }
     accept(key);
-    const next = [...state.altimeter] as [
-      number | null,
-      number | null,
-      number | null,
-    ];
+    const next = [...state.altimeter] as [number | null, number | null, number | null];
     next[index] = num;
     onUpdate({ altimeter: next });
   };
@@ -164,9 +143,7 @@ export default function WeatherSection({
     onUpdate({ rwy: next });
   };
 
-  const handleAdvisoryToggle = (
-    field: "turb" | "cielVis" | "mtnObsc"
-  ) => {
+  const handleAdvisoryToggle = (field: "turb" | "cielVis" | "mtnObsc") => {
     onUpdate({ [field]: !state[field] } as Partial<WorksheetData>);
   };
 
@@ -213,11 +190,7 @@ export default function WeatherSection({
             notifications={notifications}
             onTemperatureChange={(v) => handleAirportTempChange(0, v)}
             onAltimeterChange={(v) => handleAirportAltimeterChange(0, v)}
-            rejectedAltimeterText={rejectedEntryText(
-              state,
-              rejectedEntries,
-              altimeterEntryKey(0)
-            )}
+            rejectedAltimeterText={rejectedEntryText(state, rejectedEntries, altimeterEntryKey(0))}
             runways={airportRunways[0]}
             runwayStatus={runwayStatus[0]}
             selectedRunwayLength={state.rwy[0]}
@@ -233,11 +206,7 @@ export default function WeatherSection({
             notifications={notifications}
             onTemperatureChange={(v) => handleAirportTempChange(1, v)}
             onAltimeterChange={(v) => handleAirportAltimeterChange(1, v)}
-            rejectedAltimeterText={rejectedEntryText(
-              state,
-              rejectedEntries,
-              altimeterEntryKey(1)
-            )}
+            rejectedAltimeterText={rejectedEntryText(state, rejectedEntries, altimeterEntryKey(1))}
           />
           <AirportCard
             variant="arrival"
@@ -250,11 +219,7 @@ export default function WeatherSection({
             notifications={notifications}
             onTemperatureChange={(v) => handleAirportTempChange(2, v)}
             onAltimeterChange={(v) => handleAirportAltimeterChange(2, v)}
-            rejectedAltimeterText={rejectedEntryText(
-              state,
-              rejectedEntries,
-              altimeterEntryKey(2)
-            )}
+            rejectedAltimeterText={rejectedEntryText(state, rejectedEntries, altimeterEntryKey(2))}
             runways={airportRunways[1]}
             runwayStatus={runwayStatus[1]}
             selectedRunwayLength={state.rwy[1]}
@@ -345,7 +310,7 @@ export default function WeatherSection({
 /** ARIA props for an input covered by several Subjects (e.g. table + column). */
 function combinedA11yProps(
   notifications: readonly Notification[],
-  subjects: Subject[]
+  subjects: Subject[],
 ): ReturnType<typeof notificationA11yProps> {
   const parts = subjects.map((s) => notificationA11yProps(notifications, s));
   const describedBy = parts
@@ -370,7 +335,6 @@ interface WindsAloftBlockProps {
   /** The Winds aloft check's state for each column's speed, if it checked it. */
   speedStates?: readonly (LimitState | undefined)[];
 }
-
 
 function WindsAloftBlock({
   wind,
@@ -402,14 +366,8 @@ function WindsAloftBlock({
 
   return (
     <div>
-      <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3">
-        Aloft
-      </h3>
-      <InlineNotifications
-        notifications={notifications}
-        subject={tableSubject}
-        className="mb-2"
-      />
+      <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3">Aloft</h3>
+      <InlineNotifications notifications={notifications} subject={tableSubject} className="mb-2" />
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-sm">
           <thead>
@@ -431,10 +389,7 @@ function WindsAloftBlock({
                 Wind Dir (°)
               </td>
               {ALOFT_ALTITUDES.map((alt, idx) => (
-                <td
-                  key={alt}
-                  className="border border-slate-200 p-1 dark:border-slate-700"
-                >
+                <td key={alt} className="border border-slate-200 p-1 dark:border-slate-700">
                   <input
                     type="number"
                     min={0}
@@ -453,10 +408,7 @@ function WindsAloftBlock({
                 Wind Vel (kt)
               </td>
               {ALOFT_ALTITUDES.map((alt, idx) => (
-                <td
-                  key={alt}
-                  className="border border-slate-200 p-1 dark:border-slate-700"
-                >
+                <td key={alt} className="border border-slate-200 p-1 dark:border-slate-700">
                   <input
                     type="number"
                     min={0}
@@ -475,10 +427,7 @@ function WindsAloftBlock({
                 Temp (°{useFahrenheit ? "F" : "C"})
               </td>
               {ALOFT_ALTITUDES.map((alt, idx) => (
-                <td
-                  key={alt}
-                  className="border border-slate-200 p-1 dark:border-slate-700"
-                >
+                <td key={alt} className="border border-slate-200 p-1 dark:border-slate-700">
                   <input
                     type="number"
                     min={useFahrenheit ? -58 : -50}

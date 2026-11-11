@@ -15,15 +15,14 @@ interface PositionInputProps {
   inputA11yProps?: { "aria-invalid"?: true; "aria-describedby"?: string };
 }
 
-const formatLatLon = (lat: number, lon: number): string =>
-  `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+const formatLatLon = (lat: number, lon: number): string => `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
 const round4 = (n: number): number => Math.round(n * 10000) / 10000;
 
 // Module-scoped session cache: id -> {lat, lon}.
 const stationCache = new Map<string, { lat: number; lon: number }>();
 
 async function resolveStation(
-  parsed: Extract<ParsedPosition, { kind: "airport-rd" | "vor-rd" }>
+  parsed: Extract<ParsedPosition, { kind: "airport-rd" | "vor-rd" }>,
 ): Promise<{ lat: number; lon: number }> {
   const cached = stationCache.get(parsed.stationId);
   if (cached) return cached;
@@ -45,16 +44,11 @@ async function resolveStation(
 
 function resolveRadialDistance(
   parsed: Extract<ParsedPosition, { kind: "airport-rd" | "vor-rd" }>,
-  station: { lat: number; lon: number }
+  station: { lat: number; lon: number },
 ): { lat: number; lon: number } {
   const variation = magneticVariation(station.lat, station.lon);
   const trueBearing = parsed.radial + variation;
-  const dest = geodesicDestination(
-    station.lat,
-    station.lon,
-    trueBearing,
-    parsed.distanceNm
-  );
+  const dest = geodesicDestination(station.lat, station.lon, trueBearing, parsed.distanceNm);
   return { lat: round4(dest.lat), lon: round4(dest.lon) };
 }
 
@@ -67,14 +61,10 @@ export default function PositionInput({
   const [localRaw, setLocalRaw] = useState(rawValue);
   const lastPushed = useRef(rawValue);
   const requestId = useRef(0);
-  const [hint, setHint] = useState<{ type: "ok" | "warn"; text: string } | null>(
-    () => {
-      const cached = enteredPosition(cachedPosition);
-      return cached
-        ? { type: "ok", text: `→ ${formatLatLon(cached[0], cached[1])}` }
-        : null;
-    }
-  );
+  const [hint, setHint] = useState<{ type: "ok" | "warn"; text: string } | null>(() => {
+    const cached = enteredPosition(cachedPosition);
+    return cached ? { type: "ok", text: `→ ${formatLatLon(cached[0], cached[1])}` } : null;
+  });
 
   useEffect(() => {
     if (rawValue !== lastPushed.current) {

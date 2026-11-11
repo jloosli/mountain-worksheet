@@ -6,10 +6,7 @@
  * Never throws and never blocks: a Partial fetch applies what succeeded, and
  * a total failure is a Warning on the weather step with nothing applied.
  */
-import {
-  getWeatherDataBatch,
-  type WeatherDataBatch,
-} from "./aviationWeatherApi";
+import { getWeatherDataBatch, type WeatherDataBatch } from "./aviationWeatherApi";
 import {
   airportIdentityNotification,
   classifyAirport,
@@ -34,11 +31,7 @@ import {
   type GAirmetFeature,
 } from "./gairmetApi";
 import { normalizeAirportCode } from "./airportCode";
-import {
-  stepSubject,
-  type Notification,
-  type WeatherFetchResult,
-} from "./notifications";
+import { stepSubject, type Notification, type WeatherFetchResult } from "./notifications";
 import { fetchPointForecast } from "./openMeteoApi";
 import type { WorksheetData } from "./types";
 import {
@@ -57,9 +50,7 @@ function reasonOf(error: unknown): string {
   return error instanceof Error ? error.message : "unknown error";
 }
 
-function emptyAreaOfOps(
-  notifications: AreaOfOpsWeather["notifications"]
-): AreaOfOpsWeather {
+function emptyAreaOfOps(notifications: AreaOfOpsWeather["notifications"]): AreaOfOpsWeather {
   const empty = () => Array(5).fill(null) as (number | null)[];
   return {
     position: null,
@@ -93,12 +84,10 @@ interface ResolvedAirports {
  * Fetches the entered airports and, for any 3-character ID the airport lookup
  * doesn't know, its `K`-prefixed form; then classifies each ID (#216).
  */
-async function fetchAndResolveAirports(
-  entered: [string, string]
-): Promise<ResolvedAirports> {
+async function fetchAndResolveAirports(entered: [string, string]): Promise<ResolvedAirports> {
   const unique = Array.from(new Set(entered.filter(Boolean)));
   let apiData = await getWeatherDataBatch(unique, BATCH_OPTIONS);
-  const lookup = failedIn(apiData, "airport") ? null : apiData.airport ?? [];
+  const lookup = failedIn(apiData, "airport") ? null : (apiData.airport ?? []);
 
   const candidates = lookup
     ? Array.from(
@@ -106,31 +95,25 @@ async function fetchAndResolveAirports(
           unique
             .filter((id) => matchCount(id, lookup) === 0)
             .map(correctionCandidate)
-            .filter((c): c is string => c !== null)
-        )
+            .filter((c): c is string => c !== null),
+        ),
       )
     : [];
   let candidateLookup: WeatherDataBatch["airport"] | null | undefined;
   if (candidates.length > 0) {
     const extra = await getWeatherDataBatch(candidates, BATCH_OPTIONS);
-    candidateLookup = failedIn(extra, "airport") ? null : extra.airport ?? [];
+    candidateLookup = failedIn(extra, "airport") ? null : (extra.airport ?? []);
     apiData = {
       metar: [...(apiData.metar ?? []), ...(extra.metar ?? [])],
       taf: [...(apiData.taf ?? []), ...(extra.taf ?? [])],
       airport: [...(apiData.airport ?? []), ...(extra.airport ?? [])],
       notifications: [...apiData.notifications, ...extra.notifications],
-      failed: Array.from(
-        new Set([...(apiData.failed ?? []), ...(extra.failed ?? [])])
-      ),
+      failed: Array.from(new Set([...(apiData.failed ?? []), ...(extra.failed ?? [])])),
     };
   }
 
   const classify = (id: string): AirportIdentity =>
-    classifyAirport(
-      id,
-      lookup,
-      correctionCandidate(id) ? candidateLookup : undefined
-    );
+    classifyAirport(id, lookup, correctionCandidate(id) ? candidateLookup : undefined);
   return { apiData, identities: [classify(entered[0]), classify(entered[1])] };
 }
 
@@ -140,12 +123,11 @@ async function fetchAndResolveAirports(
  */
 function airportCondition(
   identity: AirportIdentity,
-  apiData: WeatherDataBatch
+  apiData: WeatherDataBatch,
 ): AirportCondition | undefined {
   if (identity.kind === "unknown") return "unknown";
   if (identity.kind === "unchecked") return undefined;
-  const weatherLookupFailed =
-    failedIn(apiData, "metar") || failedIn(apiData, "taf");
+  const weatherLookupFailed = failedIn(apiData, "metar") || failedIn(apiData, "taf");
   if (
     !weatherLookupFailed &&
     !hasDataFor(identity.id, apiData.metar) &&
@@ -163,7 +145,7 @@ function airportCondition(
 function classifyGAirmetResult(
   gairmet: PromiseSettledResult<GAirmetFeature[] | null>,
   position: [number, number],
-  midTime: Date
+  midTime: Date,
 ): AirmetClassification {
   if (gairmet.status === "fulfilled" && gairmet.value !== null) {
     return classifyAirmets(gairmet.value, position, midTime);
@@ -181,7 +163,7 @@ function classifyGAirmetResult(
 }
 
 export async function fetchWorksheetWeather(
-  worksheet: WorksheetData
+  worksheet: WorksheetData,
 ): Promise<WorksheetWeatherFetch> {
   const enteredDeparture = normalizeAirportCode(worksheet.airport[0]);
   const enteredArrival = normalizeAirportCode(worksheet.airport[1]);
@@ -221,16 +203,10 @@ export async function fetchWorksheetWeather(
     });
 
     const depTime = new Date(`${worksheet.date}T${worksheet.time}:00Z`);
-    const midTime = new Date(
-      depTime.getTime() + ((worksheet.duration ?? 0) / 2) * 3600 * 1000
-    );
+    const midTime = new Date(depTime.getTime() + ((worksheet.duration ?? 0) / 2) * 3600 * 1000);
     const latLonOf = (code: string): [number, number] | null => {
-      const a = (apiData.airport ?? []).find(
-        (x) => x.icaoId?.toUpperCase() === code
-      );
-      return a && typeof a.lat === "number" && typeof a.lon === "number"
-        ? [a.lat, a.lon]
-        : null;
+      const a = (apiData.airport ?? []).find((x) => x.icaoId?.toUpperCase() === code);
+      return a && typeof a.lat === "number" && typeof a.lon === "number" ? [a.lat, a.lon] : null;
     };
     const depLatLon = latLonOf(departure);
     const arrLatLon = latLonOf(arrival);
@@ -239,9 +215,7 @@ export async function fetchWorksheetWeather(
     // point we fetch is the point we display.
     const opPos: [number, number] | null =
       enteredPosition(worksheet.position) ??
-      (depLatLon && arrLatLon
-        ? greatCircleMidpoint(depLatLon, arrLatLon)
-        : null);
+      (depLatLon && arrLatLon ? greatCircleMidpoint(depLatLon, arrLatLon) : null);
 
     let areaOfOps: AreaOfOpsWeather;
     let airmets: AirmetClassification | null = null;
@@ -267,9 +241,7 @@ export async function fetchWorksheetWeather(
               raw: point.value,
             })
           : emptyAreaOfOps(
-              areaOfOpsUnavailable(
-                `Open-Meteo request failed (${reasonOf(point.reason)})`
-              )
+              areaOfOpsUnavailable(`Open-Meteo request failed (${reasonOf(point.reason)})`),
             );
       airmets = classifyGAirmetResult(gairmet, opPos, midTime);
     }
@@ -295,7 +267,7 @@ export async function fetchWorksheetWeather(
     const data = mergeWeatherData(
       worksheet,
       { ...mapping.data, airport: fetchedFor.airport },
-      true
+      true,
     );
     return {
       data,

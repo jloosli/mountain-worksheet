@@ -1,10 +1,5 @@
 import { briefingNotes } from "../briefingNotes";
-import {
-  fieldSubject,
-  stepSubject,
-  valueSubject,
-  type Notification,
-} from "../notifications";
+import { fieldSubject, stepSubject, valueSubject, type Notification } from "../notifications";
 import { toldSubject, type ComputedValue } from "../derived";
 
 const arrivalTemp: Notification = {

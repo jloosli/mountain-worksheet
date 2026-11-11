@@ -4,14 +4,54 @@ const positionFormats: Array<{
   entry: string;
   decimal: string;
 }> = [
-  { format: "DD.dd (with letters)", example: "36°00'36\"N / 75°30'00\"W", entry: "36.01N/75.50W", decimal: "36.01/-75.50" },
-  { format: "DD.dd (with a minus)", example: "36°00'36\"N / 75°30'00\"W", entry: "36.01/-75.50", decimal: "36.01/-75.50" },
-  { format: "DD°MM'SS\" (with letters)", example: "36°00'51\"N / 75°30'04\"W", entry: "360051N/0753004W", decimal: "36.01/-75.50" },
-  { format: "DD°MM'SS\" (with a minus)", example: "36°00'51\"N / 75°30'04\"W", entry: "360051/-0753004", decimal: "36.01/-75.50" },
-  { format: "DD°MM.mm (with letters)", example: "36°00.86'N / 75°30.07'W", entry: "3600.86N/07530.07W", decimal: "36.01/-75.50" },
-  { format: "DD°MM.mm (with a minus)", example: "36°00.86'N / 75°30.07'W", entry: "3600.86/-07530.07", decimal: "36.01/-75.50" },
-  { format: "Airport ID / Radial / Distance", example: "41°25'48\"N / 112°42'00\"W", entry: "KOGD/285/34", decimal: "41.43/-112.70" },
-  { format: "VOR ID / Radial / Distance", example: "41°30'00\"N / 112°45'36\"W", entry: "OGD/285/34", decimal: "41.50/-112.76" },
+  {
+    format: "DD.dd (with letters)",
+    example: "36°00'36\"N / 75°30'00\"W",
+    entry: "36.01N/75.50W",
+    decimal: "36.01/-75.50",
+  },
+  {
+    format: "DD.dd (with a minus)",
+    example: "36°00'36\"N / 75°30'00\"W",
+    entry: "36.01/-75.50",
+    decimal: "36.01/-75.50",
+  },
+  {
+    format: "DD°MM'SS\" (with letters)",
+    example: "36°00'51\"N / 75°30'04\"W",
+    entry: "360051N/0753004W",
+    decimal: "36.01/-75.50",
+  },
+  {
+    format: "DD°MM'SS\" (with a minus)",
+    example: "36°00'51\"N / 75°30'04\"W",
+    entry: "360051/-0753004",
+    decimal: "36.01/-75.50",
+  },
+  {
+    format: "DD°MM.mm (with letters)",
+    example: "36°00.86'N / 75°30.07'W",
+    entry: "3600.86N/07530.07W",
+    decimal: "36.01/-75.50",
+  },
+  {
+    format: "DD°MM.mm (with a minus)",
+    example: "36°00.86'N / 75°30.07'W",
+    entry: "3600.86/-07530.07",
+    decimal: "36.01/-75.50",
+  },
+  {
+    format: "Airport ID / Radial / Distance",
+    example: "41°25'48\"N / 112°42'00\"W",
+    entry: "KOGD/285/34",
+    decimal: "41.43/-112.70",
+  },
+  {
+    format: "VOR ID / Radial / Distance",
+    example: "41°30'00\"N / 112°45'36\"W",
+    entry: "OGD/285/34",
+    decimal: "41.50/-112.76",
+  },
 ];
 
 const usingTheToolNotes: string[] = [
@@ -48,8 +88,8 @@ export default function InstructionsPanel() {
     <div className="space-y-6 text-sm leading-relaxed text-slate-700 dark:text-slate-300">
       <p>
         Add sortie information in Step 1. Once that area is filled in, click the{" "}
-        <span className="font-semibold">Fetch weather</span> button and the
-        worksheet will fetch weather information from{" "}
+        <span className="font-semibold">Fetch weather</span> button and the worksheet will fetch
+        weather information from{" "}
         <a
           href="https://aviationweather.gov/"
           target="_blank"
@@ -66,35 +106,49 @@ export default function InstructionsPanel() {
           Special Inputs
         </h3>
         <p>
-          <span className="font-semibold">Departure / Arrival airports:</span>{" "}
-          Enter the 4-letter ICAO code (e.g. KDEN) and the worksheet will
-          populate the weather and runway information when clicking{" "}
-          <span className="font-semibold">Fetch weather</span>.
+          <span className="font-semibold">Departure / Arrival airports:</span> Enter the 4-letter
+          ICAO code (e.g. KDEN) and the worksheet will populate the weather and runway information
+          when clicking <span className="font-semibold">Fetch weather</span>.
         </p>
         <p>
-          <span className="font-semibold">Area of Operations:</span> Enter
-          latitude/longitude coordinates in decimal degrees DD.dddd format. You
-          can also use other ways to indicate the area of operations — see the
-          table below.
+          <span className="font-semibold">Area of Operations:</span> Enter latitude/longitude
+          coordinates in decimal degrees DD.dddd format. You can also use other ways to indicate the
+          area of operations — see the table below.
         </p>
 
         <div className="overflow-x-auto">
           <table className="min-w-full text-xs border-collapse mt-2">
             <thead>
               <tr className="bg-slate-100 dark:bg-slate-800 text-left">
-                <th className="border border-slate-300 dark:border-slate-600 px-2 py-1 font-semibold">Format</th>
-                <th className="border border-slate-300 dark:border-slate-600 px-2 py-1 font-semibold">How It Is Entered</th>
-                <th className="border border-slate-300 dark:border-slate-600 px-2 py-1 font-semibold">Equivalent Lat/Long</th>
-                <th className="border border-slate-300 dark:border-slate-600 px-2 py-1 font-semibold">Converted Decimal Format</th>
+                <th className="border border-slate-300 dark:border-slate-600 px-2 py-1 font-semibold">
+                  Format
+                </th>
+                <th className="border border-slate-300 dark:border-slate-600 px-2 py-1 font-semibold">
+                  How It Is Entered
+                </th>
+                <th className="border border-slate-300 dark:border-slate-600 px-2 py-1 font-semibold">
+                  Equivalent Lat/Long
+                </th>
+                <th className="border border-slate-300 dark:border-slate-600 px-2 py-1 font-semibold">
+                  Converted Decimal Format
+                </th>
               </tr>
             </thead>
             <tbody>
               {positionFormats.map((row) => (
                 <tr key={row.entry}>
-                  <td className="border border-slate-300 dark:border-slate-600 px-2 py-1">{row.format}</td>
-                  <td className="border border-slate-300 dark:border-slate-600 px-2 py-1 font-mono whitespace-nowrap">{row.entry}</td>
-                  <td className="border border-slate-300 dark:border-slate-600 px-2 py-1 whitespace-nowrap">{row.example}</td>
-                  <td className="border border-slate-300 dark:border-slate-600 px-2 py-1 font-mono whitespace-nowrap">{row.decimal}</td>
+                  <td className="border border-slate-300 dark:border-slate-600 px-2 py-1">
+                    {row.format}
+                  </td>
+                  <td className="border border-slate-300 dark:border-slate-600 px-2 py-1 font-mono whitespace-nowrap">
+                    {row.entry}
+                  </td>
+                  <td className="border border-slate-300 dark:border-slate-600 px-2 py-1 whitespace-nowrap">
+                    {row.example}
+                  </td>
+                  <td className="border border-slate-300 dark:border-slate-600 px-2 py-1 font-mono whitespace-nowrap">
+                    {row.decimal}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -114,9 +168,7 @@ export default function InstructionsPanel() {
       </section>
 
       <section className="space-y-2">
-        <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-          Notes
-        </h3>
+        <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">Notes</h3>
         <ul className="list-disc list-outside ml-5 space-y-1">
           {operationalNotes.map((note) => {
             if (typeof note === "string") {

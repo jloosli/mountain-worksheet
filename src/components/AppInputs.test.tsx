@@ -2,11 +2,7 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import AppInputs from "./AppInputs";
 import { evaluationFor } from "../test-utils/evaluation";
 import type { WorksheetData } from "@/utils/types";
-import {
-  fieldSubject,
-  stepSubject,
-  type Notification,
-} from "@/utils/notifications";
+import { fieldSubject, stepSubject, type Notification } from "@/utils/notifications";
 
 // Mock other components
 jest.mock("./SortieInfo", () => {
@@ -17,16 +13,10 @@ jest.mock("./SortieInfo", () => {
   }) {
     return (
       <div data-testid="sortie-info">
-        <button
-          data-testid="update-sortie-btn"
-          onClick={() => onUpdate({ pilot: "Test Pilot" })}
-        >
+        <button data-testid="update-sortie-btn" onClick={() => onUpdate({ pilot: "Test Pilot" })}>
           Update Sortie
         </button>
-        <button
-          data-testid="update-weight-btn"
-          onClick={() => onUpdate({ weight: 2500 })}
-        >
+        <button data-testid="update-weight-btn" onClick={() => onUpdate({ weight: 2500 })}>
           Update Weight
         </button>
       </div>
@@ -105,7 +95,7 @@ describe("AppInputs", () => {
         evaluation={evaluationFor(defaultState)}
         rejectedEntries={{}}
         onRejectedEntryChange={() => {}}
-      />
+      />,
     );
 
     expect(screen.getByTestId("sortie-info")).toBeInTheDocument();
@@ -130,7 +120,7 @@ describe("AppInputs", () => {
         evaluation={evaluationFor(testState)}
         rejectedEntries={{}}
         onRejectedEntryChange={() => {}}
-      />
+      />,
     );
 
     expect(screen.getByTestId("weather-section")).toBeInTheDocument();
@@ -145,7 +135,7 @@ describe("AppInputs", () => {
         evaluation={evaluationFor(defaultState)}
         rejectedEntries={{}}
         onRejectedEntryChange={() => {}}
-      />
+      />,
     );
 
     // Test SortieInfo update
@@ -165,9 +155,7 @@ describe("AppInputs", () => {
     });
 
     // Test WeatherSection performance update
-    const updatePerformanceButton = screen.getByTestId(
-      "update-performance-btn"
-    );
+    const updatePerformanceButton = screen.getByTestId("update-performance-btn");
     fireEvent.click(updatePerformanceButton);
     expect(mockOnStateUpdate).toHaveBeenCalledWith({ temp: [20, 20, 20] });
 
@@ -186,7 +174,7 @@ describe("AppInputs", () => {
         evaluation={evaluationFor(defaultState)}
         rejectedEntries={{}}
         onRejectedEntryChange={() => {}}
-      />
+      />,
     );
 
     const updateSortieButton = screen.getByTestId("update-sortie-btn");
@@ -209,7 +197,7 @@ describe("AppInputs", () => {
         evaluation={evaluationFor(defaultState)}
         rejectedEntries={{}}
         onRejectedEntryChange={() => {}}
-      />
+      />,
     );
     expect(container.querySelector("#step-sortie")).not.toBeNull();
     expect(container.querySelector("#step-weather")).not.toBeNull();
@@ -247,7 +235,7 @@ describe("AppInputs", () => {
         evaluation={evaluationFor(populatedState)}
         rejectedEntries={{}}
         onRejectedEntryChange={() => {}}
-      />
+      />,
     );
 
     // Verify all child components are rendered
@@ -283,7 +271,7 @@ describe("AppInputs", () => {
           evaluation={evaluationFor(defaultState, notifications)}
           rejectedEntries={{}}
           onRejectedEntryChange={() => {}}
-        />
+        />,
       );
       const weather = container.querySelector("#step-weather")!;
       const sortie = container.querySelector("#step-sortie")!;
@@ -301,16 +289,14 @@ describe("AppInputs", () => {
           evaluation={evaluationFor(defaultState, notifications)}
           rejectedEntries={{}}
           onRejectedEntryChange={() => {}}
-        />
+        />,
       );
       const weatherHeader = container.querySelector("#step-weather header")!;
       expect(weatherHeader).toHaveTextContent("1 warning · 1 caution");
-      expect(
-        container.querySelector("#step-weather [aria-hidden] div")!.className
-      ).toMatch(/bg-red-/);
-      expect(container.querySelector("#step-sortie header")).toHaveTextContent(
-        "1 caution"
+      expect(container.querySelector("#step-weather [aria-hidden] div")!.className).toMatch(
+        /bg-red-/,
       );
+      expect(container.querySelector("#step-sortie header")).toHaveTextContent("1 caution");
     });
 
     it("keeps the rest of the worksheet usable while a step has a Warning", () => {
@@ -322,7 +308,7 @@ describe("AppInputs", () => {
           evaluation={evaluationFor(defaultState, notifications)}
           rejectedEntries={{}}
           onRejectedEntryChange={() => {}}
-        />
+        />,
       );
       fireEvent.click(screen.getByTestId("update-sortie-btn"));
       fireEvent.click(screen.getByTestId("update-weather-btn"));

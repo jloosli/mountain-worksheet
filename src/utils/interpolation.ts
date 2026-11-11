@@ -27,7 +27,7 @@ export interface Extrapolation {
  * skipped: the table is constant along them by design.
  */
 export function findExtrapolations(
-  axes: { axis: string; values: number[]; value: number }[]
+  axes: { axis: string; values: number[]; value: number }[],
 ): Extrapolation[] {
   const out: Extrapolation[] = [];
   for (const { axis, values, value } of axes) {
@@ -85,7 +85,7 @@ function performInterpolation(
   data: (number | null)[][],
   xValue: number,
   yValue: number,
-  options: Required<Pick<InterpolationOptions, "allowExtrapolation">>
+  options: Required<Pick<InterpolationOptions, "allowExtrapolation">>,
 ): number {
   // Validate input dimensions
   if (xAxis.length === 0 || yAxis.length === 0) {
@@ -95,16 +95,12 @@ function performInterpolation(
   // Validate row lengths first
   for (const row of data) {
     if (row.length !== yAxis.length) {
-      throw new Error(
-        `All data rows must have ${yAxis.length} columns to match yAxis`
-      );
+      throw new Error(`All data rows must have ${yAxis.length} columns to match yAxis`);
     }
   }
 
   if (data.length !== xAxis.length) {
-    throw new Error(
-      `Data rows (${data.length}) must match xAxis length (${xAxis.length})`
-    );
+    throw new Error(`Data rows (${data.length}) must match xAxis length (${xAxis.length})`);
   }
 
   // Handle single axis tables
@@ -143,10 +139,8 @@ function performInterpolation(
   }
 
   // Check for extrapolation
-  const isExtrapolatingX =
-    xValue < xAxis[0] || xValue > xAxis[xAxis.length - 1];
-  const isExtrapolatingY =
-    yValue < yAxis[0] || yValue > yAxis[yAxis.length - 1];
+  const isExtrapolatingX = xValue < xAxis[0] || xValue > xAxis[xAxis.length - 1];
+  const isExtrapolatingY = yValue < yAxis[0] || yValue > yAxis[yAxis.length - 1];
 
   if ((isExtrapolatingX || isExtrapolatingY) && !options.allowExtrapolation) {
     throw new Error("Values outside table range and extrapolation is disabled");
@@ -169,9 +163,7 @@ function performInterpolation(
 
   // Handle null values
   if (q11 === null || q12 === null || q21 === null || q22 === null) {
-    throw new Error(
-      "Cannot interpolate: one or more corner data points are null"
-    );
+    throw new Error("Cannot interpolate: one or more corner data points are null");
   }
 
   // Interpolate
@@ -189,7 +181,7 @@ export function bilinearInterpolate(
   table: InterpolationTable,
   xValue: number,
   yValue: number,
-  options: InterpolationOptions = {}
+  options: InterpolationOptions = {},
 ): number {
   const { allowExtrapolation = true } = options;
   const { xAxis, yAxis, data } = table;
@@ -204,13 +196,11 @@ export function bilinearInterpolateDetailed(
   table: InterpolationTable,
   xValue: number,
   yValue: number,
-  options: InterpolationOptions = {}
+  options: InterpolationOptions = {},
 ): InterpolationResult {
   const { xAxis, yAxis } = table;
-  const isExtrapolatingX =
-    xValue < xAxis[0] || xValue > xAxis[xAxis.length - 1];
-  const isExtrapolatingY =
-    yValue < yAxis[0] || yValue > yAxis[yAxis.length - 1];
+  const isExtrapolatingX = xValue < xAxis[0] || xValue > xAxis[xAxis.length - 1];
+  const isExtrapolatingY = yValue < yAxis[0] || yValue > yAxis[yAxis.length - 1];
 
   const { xAxisName = "x", yAxisName = "y" } = options;
 
@@ -241,7 +231,7 @@ export function trilinearTableGaps(
   table: TrilinearInterpolationTable,
   weight: number,
   pressureAltitude: number,
-  temperature: number
+  temperature: number,
 ): number {
   const { weights, pressureAltitudes, temperatures, data } = table;
   // Each bracketing index with its interpolation weight; a blank corner whose
@@ -278,14 +268,14 @@ export function inverseLookupExtrapolation(
   xAxis: number[],
   yAxis: number[],
   yVal: number,
-  x: number
+  x: number,
 ): "below" | "above" | null {
   const exact = yAxis.indexOf(yVal);
   const yIdx = findSurroundingIndex(yAxis, yVal);
   const validX = xAxis.filter((_, i) =>
     exact !== -1
       ? data[i]?.[exact] != null
-      : data[i]?.[yIdx] != null && data[i]?.[yIdx + 1] != null
+      : data[i]?.[yIdx] != null && data[i]?.[yIdx + 1] != null,
   );
   if (validX.length === 0) return null;
   if (x < Math.min(...validX)) return "below";
@@ -308,18 +298,18 @@ export function findInverseXgivenYandZ(
   xAxis: number[],
   yAxis: number[],
   targetZ: number,
-  yVal: number
+  yVal: number,
 ): number {
   // Upfront validation
   if (data.length !== xAxis.length) {
     throw new Error(
-      `Data row count (${data.length}) does not match xAxis length (${xAxis.length}).`
+      `Data row count (${data.length}) does not match xAxis length (${xAxis.length}).`,
     );
   }
   for (let i = 0; i < data.length; i++) {
     if (data[i].length !== yAxis.length) {
       throw new Error(
-        `Data row ${i} length (${data[i].length}) does not match yAxis length (${yAxis.length}).`
+        `Data row ${i} length (${data[i].length}) does not match yAxis length (${yAxis.length}).`,
       );
     }
   }
@@ -329,7 +319,7 @@ export function findInverseXgivenYandZ(
       throw new Error(
         `xAxis must be strictly increasing. Found xAxis[${i - 1}] = ${
           xAxis[i - 1]
-        }, xAxis[${i}] = ${xAxis[i]}.`
+        }, xAxis[${i}] = ${xAxis[i]}.`,
       );
     }
   }
@@ -339,7 +329,7 @@ export function findInverseXgivenYandZ(
       throw new Error(
         `yAxis must be strictly increasing. Found yAxis[${i - 1}] = ${
           yAxis[i - 1]
-        }, yAxis[${i}] = ${yAxis[i]}.`
+        }, yAxis[${i}] = ${yAxis[i]}.`,
       );
     }
   }
@@ -386,7 +376,7 @@ export function findInverseXgivenYandZ(
   // Check if we have enough valid data points
   if (validXAxis.length === 0) {
     throw new Error(
-      "Cannot calculate inverse: all data points are null at the requested temperature"
+      "Cannot calculate inverse: all data points are null at the requested temperature",
     );
   }
 
@@ -420,9 +410,7 @@ export function findInverseXgivenYandZ(
     const useLastTwoPoints = Math.abs(lastZ - targetZ) < Math.abs(firstZ - targetZ);
     if (useLastTwoPoints) {
       const last = validXAxis.length - 1;
-      const t =
-        (targetZ - zValuesAtY[last - 1]) /
-        (zValuesAtY[last] - zValuesAtY[last - 1]);
+      const t = (targetZ - zValuesAtY[last - 1]) / (zValuesAtY[last] - zValuesAtY[last - 1]);
       return validXAxis[last - 1] + t * (validXAxis[last] - validXAxis[last - 1]);
     } else {
       const t = (targetZ - zValuesAtY[0]) / (zValuesAtY[1] - zValuesAtY[0]);
@@ -449,56 +437,46 @@ export function trilinearInterpolate(
   weight: number,
   pressureAltitude: number,
   temperature: number,
-  options: TrilinearInterpolationOptions = {}
+  options: TrilinearInterpolationOptions = {},
 ): number | null {
   const { allowExtrapolation = true } = options;
   const { weights, pressureAltitudes, temperatures, data } = table;
 
   // Validate input dimensions
-  if (
-    weights.length === 0 ||
-    pressureAltitudes.length === 0 ||
-    temperatures.length === 0
-  ) {
+  if (weights.length === 0 || pressureAltitudes.length === 0 || temperatures.length === 0) {
     throw new Error("Axis arrays cannot be empty");
   }
 
   // Validate data dimensions
   if (data.length !== weights.length) {
-    throw new Error(
-      `Data length (${data.length}) must match weights length (${weights.length})`
-    );
+    throw new Error(`Data length (${data.length}) must match weights length (${weights.length})`);
   }
 
   for (let w = 0; w < data.length; w++) {
     if (data[w].length !== pressureAltitudes.length) {
       throw new Error(
-        `Data[${w}] length (${data[w].length}) must match pressureAltitudes length (${pressureAltitudes.length})`
+        `Data[${w}] length (${data[w].length}) must match pressureAltitudes length (${pressureAltitudes.length})`,
       );
     }
     for (let p = 0; p < data[w].length; p++) {
       if (data[w][p].length !== temperatures.length) {
         throw new Error(
-          `Data[${w}][${p}] length (${data[w][p].length}) must match temperatures length (${temperatures.length})`
+          `Data[${w}][${p}] length (${data[w][p].length}) must match temperatures length (${temperatures.length})`,
         );
       }
     }
   }
 
   // Check for extrapolation
-  const isExtrapolatingWeight =
-    weight < weights[0] || weight > weights[weights.length - 1];
+  const isExtrapolatingWeight = weight < weights[0] || weight > weights[weights.length - 1];
   const isExtrapolatingAltitude =
     pressureAltitude < pressureAltitudes[0] ||
     pressureAltitude > pressureAltitudes[pressureAltitudes.length - 1];
   const isExtrapolatingTemperature =
-    temperature < temperatures[0] ||
-    temperature > temperatures[temperatures.length - 1];
+    temperature < temperatures[0] || temperature > temperatures[temperatures.length - 1];
 
   if (
-    (isExtrapolatingWeight ||
-      isExtrapolatingAltitude ||
-      isExtrapolatingTemperature) &&
+    (isExtrapolatingWeight || isExtrapolatingAltitude || isExtrapolatingTemperature) &&
     !allowExtrapolation
   ) {
     throw new Error("Values outside table range and extrapolation is disabled");
@@ -506,10 +484,7 @@ export function trilinearInterpolate(
 
   // Find surrounding indices
   const weightIndex = findSurroundingIndex(weights, weight);
-  const altitudeIndex = findSurroundingIndex(
-    pressureAltitudes,
-    pressureAltitude
-  );
+  const altitudeIndex = findSurroundingIndex(pressureAltitudes, pressureAltitude);
   const temperatureIndex = findSurroundingIndex(temperatures, temperature);
 
   // Handle single-point tables
@@ -531,19 +506,13 @@ export function trilinearInterpolate(
 
   // Get the 8 corner values
   const c000 = data[weightIndex][altitudeIndex][temperatureIndex];
-  const c001 = isSingleTemperature
-    ? c000
-    : data[weightIndex][altitudeIndex][temperatureIndex + 1];
-  const c010 = isSingleAltitude
-    ? c000
-    : data[weightIndex][altitudeIndex + 1][temperatureIndex];
+  const c001 = isSingleTemperature ? c000 : data[weightIndex][altitudeIndex][temperatureIndex + 1];
+  const c010 = isSingleAltitude ? c000 : data[weightIndex][altitudeIndex + 1][temperatureIndex];
   const c011 =
     isSingleAltitude || isSingleTemperature
       ? c000
       : data[weightIndex][altitudeIndex + 1][temperatureIndex + 1];
-  const c100 = isSingleWeight
-    ? c000
-    : data[weightIndex + 1][altitudeIndex][temperatureIndex];
+  const c100 = isSingleWeight ? c000 : data[weightIndex + 1][altitudeIndex][temperatureIndex];
   const c101 =
     isSingleWeight || isSingleTemperature
       ? c000
@@ -567,8 +536,7 @@ export function trilinearInterpolate(
   }
 
   // Use the average of non-null values as fallback for any null values
-  const fallbackValue =
-    nonNullValues.reduce((sum, v) => sum + v, 0) / nonNullValues.length;
+  const fallbackValue = nonNullValues.reduce((sum, v) => sum + v, 0) / nonNullValues.length;
   const safeC000 = c000 ?? fallbackValue;
   const safeC001 = c001 ?? fallbackValue;
   const safeC010 = c010 ?? fallbackValue;

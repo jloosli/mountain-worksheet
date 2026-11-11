@@ -23,7 +23,7 @@ function buildHourlyParams(): string[] {
       `temperature_${level}hPa`,
       `wind_speed_${level}hPa`,
       `wind_direction_${level}hPa`,
-      `geopotential_height_${level}hPa`
+      `geopotential_height_${level}hPa`,
     );
   }
   return params;
@@ -41,7 +41,7 @@ function getOrigin(): string {
 export async function fetchPointForecast(
   latitude: number,
   longitude: number,
-  win: { start: Date; end: Date }
+  win: { start: Date; end: Date },
 ): Promise<OpenMeteoPointForecast> {
   const url = new URL("/api/open-meteo", getOrigin());
   url.searchParams.set("latitude", String(latitude));
@@ -57,9 +57,7 @@ export async function fetchPointForecast(
     headers: { Accept: "application/json" },
   });
   if (!res.ok) {
-    throw new Error(
-      `Open-Meteo request failed: ${res.status} ${res.statusText}`
-    );
+    throw new Error(`Open-Meteo request failed: ${res.status} ${res.statusText}`);
   }
   return (await res.json()) as OpenMeteoPointForecast;
 }
@@ -92,10 +90,7 @@ function roundFinite(v: number): number | null {
   return Number.isFinite(v) ? Math.round(v) : null;
 }
 
-export function interpolateAtAltitude(
-  targetFt: number,
-  s: InterpolationSample
-): InterpolatedAloft {
+export function interpolateAtAltitude(targetFt: number, s: InterpolationSample): InterpolatedAloft {
   const notes: NotificationDraft[] = [];
   // Only consider levels with a finite geopotential height; missing heights
   // would otherwise collapse to 0 ft and pollute bracket selection.
@@ -119,7 +114,7 @@ export function interpolateAtAltitude(
       notes.push({
         level: "caution",
         message: `Target altitude ${targetFt} ft below available pressure-level range (${Math.round(
-          s.heightsFtByLevel[lowest]
+          s.heightsFtByLevel[lowest],
         )} ft); snapping to lowest level`,
       });
     }
@@ -134,7 +129,7 @@ export function interpolateAtAltitude(
       notes.push({
         level: "caution",
         message: `Target altitude ${targetFt} ft above available pressure-level range (${Math.round(
-          s.heightsFtByLevel[highest]
+          s.heightsFtByLevel[highest],
         )} ft); snapping to highest level`,
       });
     }
@@ -173,13 +168,9 @@ export function interpolateAtAltitude(
   const wdirHigh = s.wdirByLevel[upperLevel];
 
   const temp =
-    Number.isFinite(tempLow) && Number.isFinite(tempHigh)
-      ? tempLow * (1 - f) + tempHigh * f
-      : NaN;
+    Number.isFinite(tempLow) && Number.isFinite(tempHigh) ? tempLow * (1 - f) + tempHigh * f : NaN;
   const wspd =
-    Number.isFinite(wspdLow) && Number.isFinite(wspdHigh)
-      ? wspdLow * (1 - f) + wspdHigh * f
-      : NaN;
+    Number.isFinite(wspdLow) && Number.isFinite(wspdHigh) ? wspdLow * (1 - f) + wspdHigh * f : NaN;
   const wdir =
     Number.isFinite(wdirLow) && Number.isFinite(wdirHigh)
       ? circularInterp(wdirLow, wdirHigh, f)
@@ -198,7 +189,7 @@ export function interpolateAtAltitude(
 function withMissingComponents(
   targetFt: number,
   notes: NotificationDraft[],
-  result: Omit<InterpolatedAloft, "notes">
+  result: Omit<InterpolatedAloft, "notes">,
 ): InterpolatedAloft {
   const missing = [
     result.wdir === null && "wind direction",
@@ -209,7 +200,7 @@ function withMissingComponents(
     notes.push({
       level: "warning",
       message: `Forecast had no ${joinList(missing)} at ${targetFt.toLocaleString(
-        "en-US"
+        "en-US",
       )} ft; enter ${missing.length > 1 ? "them" : "it"} manually`,
     });
   }
@@ -223,21 +214,17 @@ function joinList(items: string[]): string {
 
 export function buildSampleAtTime(
   raw: OpenMeteoPointForecast,
-  timeIdx: number
+  timeIdx: number,
 ): InterpolationSample {
   const heightsFtByLevel = {} as Record<PressureLevel, number>;
   const tempByLevel = {} as Record<PressureLevel, number>;
   const wspdByLevel = {} as Record<PressureLevel, number>;
   const wdirByLevel = {} as Record<PressureLevel, number>;
   for (const level of PRESSURE_LEVELS) {
-    const heights = raw.hourly[`geopotential_height_${level}hPa`] as
-      | number[]
-      | undefined;
+    const heights = raw.hourly[`geopotential_height_${level}hPa`] as number[] | undefined;
     const temps = raw.hourly[`temperature_${level}hPa`] as number[] | undefined;
     const wspds = raw.hourly[`wind_speed_${level}hPa`] as number[] | undefined;
-    const wdirs = raw.hourly[`wind_direction_${level}hPa`] as
-      | number[]
-      | undefined;
+    const wdirs = raw.hourly[`wind_direction_${level}hPa`] as number[] | undefined;
     heightsFtByLevel[level] = (heights?.[timeIdx] ?? 0) * M_TO_FT;
     tempByLevel[level] = temps?.[timeIdx] ?? NaN;
     wspdByLevel[level] = wspds?.[timeIdx] ?? NaN;
@@ -257,7 +244,7 @@ function parseOpenMeteoTime(t: string): number {
 
 export function pickClosestTimeIdx(
   raw: OpenMeteoPointForecast,
-  target: Date
+  target: Date,
 ): { idx: number; deltaMs: number } {
   const targetMs = target.getTime();
   const times = raw.hourly.time;

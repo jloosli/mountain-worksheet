@@ -55,13 +55,13 @@ export function calculateManeuveringSpeeds(aircraftModel: string): ManeuveringSp
 export function getManeuveringSpeed(
   maneuveringSpeeds: ManeuveringSpeeds | null,
   flapSetting: number,
-  bankAngle: number
+  bankAngle: number,
 ): number | null {
   if (!maneuveringSpeeds) return null;
-  
+
   const speedData = maneuveringSpeeds.speeds.find(
-    (s) => s.flapSetting === flapSetting && s.bankAngle === bankAngle
+    (s) => s.flapSetting === flapSetting && s.bankAngle === bankAngle,
   );
-  
+
   return speedData ? speedData.speed : null;
 }

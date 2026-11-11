@@ -6,11 +6,7 @@ import geomagnetism from "geomagnetism";
  *
  * Uses the World Magnetic Model via the `geomagnetism` package.
  */
-export function magneticVariation(
-  lat: number,
-  lon: number,
-  date: Date = new Date()
-): number {
+export function magneticVariation(lat: number, lon: number, date: Date = new Date()): number {
   const model = geomagnetism.model(date);
   const point = model.point([lat, lon]);
   return point.decl;

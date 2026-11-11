@@ -8,9 +8,7 @@ jest.mock("@/utils/magvar");
 
 describe("PositionInput - synchronous paths", () => {
   it("renders empty input with no hint when value is empty", () => {
-    render(
-      <PositionInput rawValue="" cachedPosition={[null, null]} onChange={() => {}} />
-    );
+    render(<PositionInput rawValue="" cachedPosition={[null, null]} onChange={() => {}} />);
     expect(screen.getByRole("textbox")).toHaveValue("");
     expect(screen.queryByText(/→/)).not.toBeInTheDocument();
     expect(screen.queryByText(/⚠/)).not.toBeInTheDocument();
@@ -19,9 +17,7 @@ describe("PositionInput - synchronous paths", () => {
   it("shows parsed coords beneath input on decimal input", async () => {
     jest.useFakeTimers();
     const onChange = jest.fn();
-    render(
-      <PositionInput rawValue="" cachedPosition={[null, null]} onChange={onChange} />
-    );
+    render(<PositionInput rawValue="" cachedPosition={[null, null]} onChange={onChange} />);
     fireEvent.change(screen.getByRole("textbox"), {
       target: { value: "36.01N/75.50W" },
     });
@@ -36,9 +32,7 @@ describe("PositionInput - synchronous paths", () => {
   it("shows warning for unrecognized input and calls onChange with null position", async () => {
     jest.useFakeTimers();
     const onChange = jest.fn();
-    render(
-      <PositionInput rawValue="" cachedPosition={[null, null]} onChange={onChange} />
-    );
+    render(<PositionInput rawValue="" cachedPosition={[null, null]} onChange={onChange} />);
     fireEvent.change(screen.getByRole("textbox"), {
       target: { value: "Cache Valley" },
     });
@@ -56,7 +50,7 @@ describe("PositionInput - synchronous paths", () => {
         rawValue="KOGD/285/34"
         cachedPosition={[41.4321, -112.7042]}
         onChange={() => {}}
-      />
+      />,
     );
     expect(screen.getByRole("textbox")).toHaveValue("KOGD/285/34");
     expect(screen.getByText(/41\.4321, -112\.7042/)).toBeInTheDocument();
@@ -75,9 +69,7 @@ describe("PositionInput - async lookup paths", () => {
     ]);
     const onChange = jest.fn();
     jest.useFakeTimers();
-    render(
-      <PositionInput rawValue="" cachedPosition={[null, null]} onChange={onChange} />
-    );
+    render(<PositionInput rawValue="" cachedPosition={[null, null]} onChange={onChange} />);
     fireEvent.change(screen.getByRole("textbox"), {
       target: { value: "KOGD/285/34" },
     });
@@ -95,20 +87,16 @@ describe("PositionInput - async lookup paths", () => {
     expect(getAirportInfo).toHaveBeenCalledWith(["KOGD"]);
     expect(onChange).toHaveBeenLastCalledWith(
       "KOGD/285/34",
-      expect.arrayContaining([expect.any(Number), expect.any(Number)])
+      expect.arrayContaining([expect.any(Number), expect.any(Number)]),
     );
     expect(screen.getByText(/\(KOGD\/285\/34\)/)).toBeInTheDocument();
   });
 
   it("calls getNavaidInfo for 3-letter station ids", async () => {
-    (getNavaidInfo as jest.Mock).mockResolvedValueOnce([
-      { id: "OGD", lat: 41.5, lon: -112.76 },
-    ]);
+    (getNavaidInfo as jest.Mock).mockResolvedValueOnce([{ id: "OGD", lat: 41.5, lon: -112.76 }]);
     const onChange = jest.fn();
     jest.useFakeTimers();
-    render(
-      <PositionInput rawValue="" cachedPosition={[null, null]} onChange={onChange} />
-    );
+    render(<PositionInput rawValue="" cachedPosition={[null, null]} onChange={onChange} />);
     fireEvent.change(screen.getByRole("textbox"), {
       target: { value: "OGD/285/34" },
     });
@@ -129,9 +117,7 @@ describe("PositionInput - async lookup paths", () => {
     (getAirportInfo as jest.Mock).mockRejectedValueOnce(new Error("not found"));
     const onChange = jest.fn();
     jest.useFakeTimers();
-    render(
-      <PositionInput rawValue="" cachedPosition={[null, null]} onChange={onChange} />
-    );
+    render(<PositionInput rawValue="" cachedPosition={[null, null]} onChange={onChange} />);
     fireEvent.change(screen.getByRole("textbox"), {
       target: { value: "KZZZ/285/34" },
     });
@@ -154,15 +140,16 @@ describe("PositionInput - async lookup paths", () => {
     let resolveFirst: (v: unknown) => void = () => {};
     (getAirportInfo as jest.Mock)
       .mockImplementationOnce(
-        () => new Promise((resolve) => { resolveFirst = resolve; })
+        () =>
+          new Promise((resolve) => {
+            resolveFirst = resolve;
+          }),
       )
       .mockResolvedValueOnce([{ icaoId: "KSLC", lat: 40.79, lon: -111.97 }]);
 
     const onChange = jest.fn();
     jest.useFakeTimers();
-    render(
-      <PositionInput rawValue="" cachedPosition={[null, null]} onChange={onChange} />
-    );
+    render(<PositionInput rawValue="" cachedPosition={[null, null]} onChange={onChange} />);
 
     fireEvent.change(screen.getByRole("textbox"), {
       target: { value: "PAMC/285/34" },

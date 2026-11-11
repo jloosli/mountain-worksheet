@@ -140,7 +140,12 @@ export function weatherSessionReducer(
     case "entryRejected":
       return {
         ...session,
-        rejected: updateRejectedEntries(session.worksheet, session.rejected, event.key, event.entry),
+        rejected: updateRejectedEntries(
+          session.worksheet,
+          session.rejected,
+          event.key,
+          event.entry,
+        ),
       };
   }
 }
@@ -182,8 +187,7 @@ export function weatherStatus(session: WeatherSession): WeatherStatus {
 }
 
 /** Whether the worksheet holds what a weather fetch needs. */
-export const canFetch = (session: WeatherSession): boolean =>
-  canFetchWeather(session.worksheet);
+export const canFetch = (session: WeatherSession): boolean => canFetchWeather(session.worksheet);
 
 // ---------------------------------------------------------------------------
 // Fetched fields and the fetch inputs they depend on
@@ -284,7 +288,9 @@ function inputsOf(subject: Subject): readonly FetchInput[] {
   const rows = FETCHED_FIELDS.filter(
     (row) =>
       row.subject.field === subject.field &&
-      (subject.index === undefined || row.subject.index === undefined || row.subject.index === subject.index),
+      (subject.index === undefined ||
+        row.subject.index === undefined ||
+        row.subject.index === subject.index),
   );
   if (rows.length === 0) return ALL_INPUTS;
   return [...new Set(rows.flatMap((row) => row.dependsOn))];
@@ -295,9 +301,7 @@ function inputsOf(subject: Subject): readonly FetchInput[] {
  * zero or invalid duration all mean arrival at the departure time.
  */
 function effectiveDuration(duration: number | null | undefined): number {
-  return typeof duration === "number" && Number.isFinite(duration) && duration > 0
-    ? duration
-    : 0;
+  return typeof duration === "number" && Number.isFinite(duration) && duration > 0 ? duration : 0;
 }
 
 /**
@@ -312,7 +316,8 @@ function changedInputs(state: WorksheetData, fetchedFor: FetchedFor): Set<FetchI
     normalizeAirportCode(state.airport[i]) !== normalizeAirportCode(fetchedFor.airport[i]);
   if (airportChanged(0)) changed.add("departureAirport");
   if (airportChanged(1)) changed.add("arrivalAirport");
-  if (state.date !== fetchedFor.date || state.time !== fetchedFor.time) changed.add("departureTime");
+  if (state.date !== fetchedFor.date || state.time !== fetchedFor.time)
+    changed.add("departureTime");
   if (effectiveDuration(state.duration) !== effectiveDuration(fetchedFor.duration)) {
     changed.add("duration");
   }
@@ -327,9 +332,7 @@ function changedInputs(state: WorksheetData, fetchedFor: FetchedFor): Set<FetchI
 
 function describePosition(position: WorksheetData["position"]): string {
   const entered = enteredPosition(position);
-  return entered
-    ? `${entered[0].toFixed(4)}, ${entered[1].toFixed(4)}`
-    : "the airport midpoint";
+  return entered ? `${entered[0].toFixed(4)}, ${entered[1].toFixed(4)}` : "the airport midpoint";
 }
 
 function isBlank(value: unknown): boolean {

@@ -24,34 +24,27 @@ describe("ManeuveringPerformance", () => {
 
   it("renders without crashing when aircraft model is provided", () => {
     render(
-      <ManeuveringPerformance
-        aircraftModel="C182T"
-        maneuveringSpeeds={mockManeuveringSpeeds}
-      />
+      <ManeuveringPerformance aircraftModel="C182T" maneuveringSpeeds={mockManeuveringSpeeds} />,
     );
-    
-    expect(screen.getByText("Minimum Maneuver/Canyon Turn Speed (kts) (C182T)")).toBeInTheDocument();
+
+    expect(
+      screen.getByText("Minimum Maneuver/Canyon Turn Speed (kts) (C182T)"),
+    ).toBeInTheDocument();
   });
 
   it("does not render when aircraft model is not provided", () => {
     const { container } = render(
-      <ManeuveringPerformance
-        aircraftModel=""
-        maneuveringSpeeds={mockManeuveringSpeeds}
-      />
+      <ManeuveringPerformance aircraftModel="" maneuveringSpeeds={mockManeuveringSpeeds} />,
     );
-    
+
     expect(container.firstChild).toBeNull();
   });
 
   it("renders table with correct headers", () => {
     render(
-      <ManeuveringPerformance
-        aircraftModel="C182T"
-        maneuveringSpeeds={mockManeuveringSpeeds}
-      />
+      <ManeuveringPerformance aircraftModel="C182T" maneuveringSpeeds={mockManeuveringSpeeds} />,
     );
-    
+
     expect(screen.getByText("Bank Angles")).toBeInTheDocument();
     expect(screen.getAllByText("0°")).toHaveLength(2); // One in header, one in body
     expect(screen.getByText("45°")).toBeInTheDocument();
@@ -61,12 +54,9 @@ describe("ManeuveringPerformance", () => {
 
   it("displays calculated speeds when maneuvering speeds are provided", () => {
     render(
-      <ManeuveringPerformance
-        aircraftModel="C182T"
-        maneuveringSpeeds={mockManeuveringSpeeds}
-      />
+      <ManeuveringPerformance aircraftModel="C182T" maneuveringSpeeds={mockManeuveringSpeeds} />,
     );
-    
+
     // Check for calculated speeds
     expect(screen.getByText("51")).toBeInTheDocument(); // 0° flaps, 0° bank
     expect(screen.getByText("61")).toBeInTheDocument(); // 0° flaps, 45° bank
@@ -77,26 +67,16 @@ describe("ManeuveringPerformance", () => {
   });
 
   it("displays TBD when maneuvering speeds are not provided", () => {
-    render(
-      <ManeuveringPerformance
-        aircraftModel="C182T"
-        maneuveringSpeeds={undefined}
-      />
-    );
-    
+    render(<ManeuveringPerformance aircraftModel="C182T" maneuveringSpeeds={undefined} />);
+
     // Should show TBD for all cells
     const tbdElements = screen.getAllByText("TBD");
     expect(tbdElements).toHaveLength(6); // 2 flap settings × 3 bank angles
   });
 
   it("displays TBD when maneuvering speeds are null", () => {
-    render(
-      <ManeuveringPerformance
-        aircraftModel="C182T"
-        maneuveringSpeeds={null}
-      />
-    );
-    
+    render(<ManeuveringPerformance aircraftModel="C182T" maneuveringSpeeds={null} />);
+
     // Should show TBD for all cells
     const tbdElements = screen.getAllByText("TBD");
     expect(tbdElements).toHaveLength(6); // 2 flap settings × 3 bank angles
@@ -104,12 +84,9 @@ describe("ManeuveringPerformance", () => {
 
   it("renders correct flap settings from maneuvering speeds data", () => {
     render(
-      <ManeuveringPerformance
-        aircraftModel="C182T"
-        maneuveringSpeeds={mockManeuveringSpeeds}
-      />
+      <ManeuveringPerformance aircraftModel="C182T" maneuveringSpeeds={mockManeuveringSpeeds} />,
     );
-    
+
     expect(screen.getAllByText("0°")).toHaveLength(2); // One in header, one in body
     expect(screen.getByText("30°")).toBeInTheDocument();
   });
@@ -131,17 +108,14 @@ describe("ManeuveringPerformance", () => {
     };
 
     render(
-      <ManeuveringPerformance
-        aircraftModel="C182T"
-        maneuveringSpeeds={customManeuveringSpeeds}
-      />
+      <ManeuveringPerformance aircraftModel="C182T" maneuveringSpeeds={customManeuveringSpeeds} />,
     );
-    
+
     // Should show all three flap settings
     expect(screen.getAllByText("0°")).toHaveLength(2); // One in header, one in body
     expect(screen.getByText("15°")).toBeInTheDocument();
     expect(screen.getByText("30°")).toBeInTheDocument();
-    
+
     // Should show calculated speeds for all combinations
     expect(screen.getByText("51")).toBeInTheDocument();
     expect(screen.getByText("46")).toBeInTheDocument();
@@ -162,13 +136,13 @@ describe("ManeuveringPerformance", () => {
       <ManeuveringPerformance
         aircraftModel="C182T"
         maneuveringSpeeds={incompleteManeuveringSpeeds}
-      />
+      />,
     );
-    
+
     // Should show available speeds and TBD for missing ones
     expect(screen.getByText("51")).toBeInTheDocument();
     expect(screen.getByText("61")).toBeInTheDocument();
-    
+
     const tbdElements = screen.getAllByText("TBD");
     expect(tbdElements.length).toBeGreaterThan(0);
   });
@@ -185,7 +159,7 @@ describe("ManeuveringPerformance", () => {
             message: "Maneuvering speeds are not available: no stall speeds.",
           },
         ]}
-      />
+      />,
     );
     const warning = screen.getByText(/Maneuvering speeds are not available/);
     expect(warning.closest("li")).toHaveAttribute("data-level", "warning");
@@ -210,7 +184,7 @@ describe("ManeuveringPerformance", () => {
           aircraftModel="C182T"
           maneuveringSpeeds={mockManeuveringSpeeds}
           entryRanges={computeCanyonTurnEntryRanges(mockManeuveringSpeeds, va(101))}
-        />
+        />,
       );
       expect(screen.getByRole("columnheader", { name: /Canyon-turn entry/ })).toBeInTheDocument();
       expect(entryCell("0°")).toHaveTextContent("71–101");
@@ -223,7 +197,7 @@ describe("ManeuveringPerformance", () => {
           aircraftModel="C182T"
           maneuveringSpeeds={mockManeuveringSpeeds}
           entryRanges={computeCanyonTurnEntryRanges(mockManeuveringSpeeds, va(65))}
-        />
+        />,
       );
       expect(entryCell("0°")).toHaveTextContent("No range: Va (65) ≤ 1.4 × Vso (71)");
       expect(entryCell("0°")).not.toHaveTextContent("71–65");
@@ -239,7 +213,7 @@ describe("ManeuveringPerformance", () => {
             status: "withheld",
             reason: "needs weight",
           })}
-        />
+        />,
       );
       expect(entryCell("0°")).toHaveTextContent("From 71 (Va: needs weight)");
     });
@@ -252,7 +226,7 @@ describe("ManeuveringPerformance", () => {
           entryRanges={computeCanyonTurnEntryRanges(mockManeuveringSpeeds, {
             status: "unavailable",
           })}
-        />
+        />,
       );
       expect(entryCell("0°")).toHaveTextContent("From 71 (Va not available)");
     });
@@ -270,7 +244,7 @@ describe("ManeuveringPerformance", () => {
               message: "Va is extrapolated beyond the POH maneuvering-speed table.",
             },
           ]}
-        />
+        />,
       );
       expect(entryCell("0°")?.querySelector('[data-marker="caution"]')).toBeInTheDocument();
     });

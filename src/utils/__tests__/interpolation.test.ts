@@ -18,9 +18,7 @@ describe("error handling", () => {
       yAxis: [0],
       data: [],
     };
-    expect(() => bilinearInterpolate(emptyTable, 0, 0)).toThrow(
-      "Axis arrays cannot be empty"
-    );
+    expect(() => bilinearInterpolate(emptyTable, 0, 0)).toThrow("Axis arrays cannot be empty");
   });
 
   it("should throw error for mismatched data dimensions", () => {
@@ -30,7 +28,7 @@ describe("error handling", () => {
       data: [[100], [90, 80]], // Second row has more columns than yAxis length
     };
     expect(() => bilinearInterpolate(mismatchedTable, 0, 0)).toThrow(
-      "All data rows must have 1 columns to match yAxis"
+      "All data rows must have 1 columns to match yAxis",
     );
   });
 });
@@ -72,7 +70,7 @@ describe("Interpolation Functions", () => {
           data: [], // Empty data
         };
         expect(() => bilinearInterpolate(invalidTable, 500, 5)).toThrow(
-          "Data rows (0) must match xAxis length (2)"
+          "Data rows (0) must match xAxis length (2)",
         );
       });
 
@@ -83,7 +81,7 @@ describe("Interpolation Functions", () => {
           data: [[100]], // Not enough rows to match xAxis length
         };
         expect(() => bilinearInterpolate(invalidTable, 500, 5)).toThrow(
-          "Data rows (1) must match xAxis length (2)"
+          "Data rows (1) must match xAxis length (2)",
         );
       });
     });
@@ -121,7 +119,7 @@ describe("Interpolation Functions", () => {
           data: [[]],
         };
         expect(() => bilinearInterpolate(insufficientTable, 1000, 10)).toThrow(
-          "Axis arrays cannot be empty"
+          "Axis arrays cannot be empty",
         );
       });
     });
@@ -198,13 +196,7 @@ describe("Interpolation Functions", () => {
 
       // At 30°C (between 20° and 40°), find altitude where climb rate is 550 fpm
       // The function should skip the 8000ft altitude since it has null values
-      const result = findInverseXgivenYandZ(
-        dataWithNulls,
-        xAxisWithNulls,
-        yAxisWithNulls,
-        550,
-        30
-      );
+      const result = findInverseXgivenYandZ(dataWithNulls, xAxisWithNulls, yAxisWithNulls, 550, 30);
       // At 30°C, for each altitude we interpolate between temps 20° and 40°:
       // 0ft: between 800 and 700 = 750 fpm
       // 2000ft: between 700 and 600 = 650 fpm
@@ -227,13 +219,7 @@ describe("Interpolation Functions", () => {
 
       // At exactly 20°C, find altitude where climb rate is 700 fpm
       // Should skip the 6000ft altitude due to null value
-      const result = findInverseXgivenYandZ(
-        dataWithNulls,
-        xAxisWithNulls,
-        yAxisWithNulls,
-        700,
-        20
-      );
+      const result = findInverseXgivenYandZ(dataWithNulls, xAxisWithNulls, yAxisWithNulls, 700, 20);
       // Valid data points at 20°C:
       // 0ft: 800 fpm
       // 2000ft: 700 fpm (exact match)
@@ -330,9 +316,7 @@ describe("Interpolation Functions", () => {
         data: [[80, 90, 100]],
       };
       const result = bilinearInterpolateDetailed(vaTable, 1, 2000, { yAxisName: "weight" });
-      expect(result.extrapolated).toEqual([
-        { axis: "weight", value: 2000, min: 2100, max: 3100 },
-      ]);
+      expect(result.extrapolated).toEqual([{ axis: "weight", value: 2000, min: 2100, max: 3100 }]);
     });
 
     it("should handle single point tables", () => {
@@ -379,12 +363,12 @@ describe("Interpolation Functions", () => {
 
     it("should throw error when extrapolation is disabled", () => {
       expect(() =>
-        bilinearInterpolate(simpleTable, -500, 0, { allowExtrapolation: false })
+        bilinearInterpolate(simpleTable, -500, 0, { allowExtrapolation: false }),
       ).toThrow("Values outside table range");
 
-      expect(() =>
-        bilinearInterpolate(simpleTable, 0, 25, { allowExtrapolation: false })
-      ).toThrow("Values outside table range");
+      expect(() => bilinearInterpolate(simpleTable, 0, 25, { allowExtrapolation: false })).toThrow(
+        "Values outside table range",
+      );
     });
 
     describe("error handling", () => {
@@ -394,9 +378,7 @@ describe("Interpolation Functions", () => {
           yAxis: [0],
           data: [],
         };
-        expect(() => bilinearInterpolate(emptyTable, 0, 0)).toThrow(
-          "Axis arrays cannot be empty"
-        );
+        expect(() => bilinearInterpolate(emptyTable, 0, 0)).toThrow("Axis arrays cannot be empty");
       });
 
       it("should throw error for mismatched data dimensions", () => {
@@ -406,7 +388,7 @@ describe("Interpolation Functions", () => {
           data: [[100, 90]], // More columns than yAxis length
         };
         expect(() => bilinearInterpolate(mismatchedTable, 0, 0)).toThrow(
-          "All data rows must have 1 columns to match yAxis"
+          "All data rows must have 1 columns to match yAxis",
         );
       });
     });
@@ -480,7 +462,7 @@ describe("Trilinear Interpolation", () => {
         data: [],
       };
       expect(() => trilinearInterpolate(emptyTable, 2800, 0, 0)).toThrow(
-        "Axis arrays cannot be empty"
+        "Axis arrays cannot be empty",
       );
     });
 
@@ -498,7 +480,7 @@ describe("Trilinear Interpolation", () => {
         ],
       };
       expect(() => trilinearInterpolate(mismatchedTable, 2800, 0, 0)).toThrow(
-        "Data[1] length (1) must match pressureAltitudes length (2)"
+        "Data[1] length (1) must match pressureAltitudes length (2)",
       );
     });
 
@@ -510,7 +492,7 @@ describe("Trilinear Interpolation", () => {
         data: [[[1000]]], // Missing second temperature
       };
       expect(() => trilinearInterpolate(mismatchedTable, 2800, 0, 0)).toThrow(
-        "Data[0][0] length (1) must match temperatures length (2)"
+        "Data[0][0] length (1) must match temperatures length (2)",
       );
     });
   });
@@ -518,9 +500,7 @@ describe("Trilinear Interpolation", () => {
   describe("Basic Interpolation", () => {
     it("should interpolate exact points correctly", () => {
       expect(trilinearInterpolate(simpleTrilinearTable, 2800, 0, 0)).toBe(1000);
-      expect(trilinearInterpolate(simpleTrilinearTable, 3100, 8000, 40)).toBe(
-        1800
-      );
+      expect(trilinearInterpolate(simpleTrilinearTable, 3100, 8000, 40)).toBe(1800);
     });
 
     it("should interpolate between points correctly", () => {
@@ -530,13 +510,9 @@ describe("Trilinear Interpolation", () => {
     });
 
     it("should handle single-point tables", () => {
-      expect(
-        trilinearInterpolate(singlePointTrilinearTable, 2800, 4000, 20)
-      ).toBe(1300);
+      expect(trilinearInterpolate(singlePointTrilinearTable, 2800, 4000, 20)).toBe(1300);
       // Even when requesting different points, should return the only value
-      expect(
-        trilinearInterpolate(singlePointTrilinearTable, 3000, 2000, 10)
-      ).toBe(1300);
+      expect(trilinearInterpolate(singlePointTrilinearTable, 3000, 2000, 10)).toBe(1300);
     });
   });
 
@@ -547,12 +523,7 @@ describe("Trilinear Interpolation", () => {
       expect(result1).toBeDefined();
       expect(typeof result1).toBe("number");
 
-      const result2 = trilinearInterpolate(
-        simpleTrilinearTable,
-        2800,
-        -1000,
-        0
-      ); // Below altitude range (0-8000)
+      const result2 = trilinearInterpolate(simpleTrilinearTable, 2800, -1000, 0); // Below altitude range (0-8000)
       expect(result2).toBeDefined();
       expect(typeof result2).toBe("number");
 
@@ -565,7 +536,7 @@ describe("Trilinear Interpolation", () => {
       expect(() =>
         trilinearInterpolate(simpleTrilinearTable, 2500, 0, 0, {
           allowExtrapolation: false,
-        })
+        }),
       ).toThrow("Values outside table range and extrapolation is disabled");
     });
 
@@ -598,7 +569,7 @@ describe("Trilinear Interpolation", () => {
         findExtrapolations([
           { axis: "weight", values: [2800], value: 3000 },
           { axis: "temperature", values: [20], value: 10 },
-        ])
+        ]),
       ).toEqual([]);
     });
   });
@@ -641,18 +612,11 @@ describe("Trilinear Interpolation", () => {
     it("should handle boundary values correctly", () => {
       // Test exact boundary values
       expect(trilinearInterpolate(simpleTrilinearTable, 2800, 0, 0)).toBe(1000);
-      expect(trilinearInterpolate(simpleTrilinearTable, 3100, 8000, 40)).toBe(
-        1800
-      );
+      expect(trilinearInterpolate(simpleTrilinearTable, 3100, 8000, 40)).toBe(1800);
     });
 
     it("should handle extreme extrapolation", () => {
-      const result = trilinearInterpolate(
-        simpleTrilinearTable,
-        5000,
-        20000,
-        100
-      );
+      const result = trilinearInterpolate(simpleTrilinearTable, 5000, 20000, 100);
       expect(typeof result).toBe("number");
       expect(result).toBeGreaterThan(0);
     });
@@ -680,48 +644,22 @@ describe("Trilinear Interpolation", () => {
 
   describe("Performance and Accuracy", () => {
     it("should produce consistent results for repeated calls", () => {
-      const result1 = trilinearInterpolate(
-        simpleTrilinearTable,
-        2950,
-        2000,
-        10
-      );
-      const result2 = trilinearInterpolate(
-        simpleTrilinearTable,
-        2950,
-        2000,
-        10
-      );
+      const result1 = trilinearInterpolate(simpleTrilinearTable, 2950, 2000, 10);
+      const result2 = trilinearInterpolate(simpleTrilinearTable, 2950, 2000, 10);
       expect(result1).toBe(result2);
     });
 
     it("should handle interpolation at exact table points", () => {
       // Test all exact table points
       expect(trilinearInterpolate(simpleTrilinearTable, 2800, 0, 0)).toBe(1000);
-      expect(trilinearInterpolate(simpleTrilinearTable, 2800, 0, 20)).toBe(
-        1100
-      );
-      expect(trilinearInterpolate(simpleTrilinearTable, 2800, 0, 40)).toBe(
-        1200
-      );
-      expect(trilinearInterpolate(simpleTrilinearTable, 2800, 4000, 0)).toBe(
-        1200
-      );
-      expect(trilinearInterpolate(simpleTrilinearTable, 2800, 4000, 20)).toBe(
-        1300
-      );
-      expect(trilinearInterpolate(simpleTrilinearTable, 2800, 4000, 40)).toBe(
-        1400
-      );
-      expect(trilinearInterpolate(simpleTrilinearTable, 2800, 8000, 0)).toBe(
-        1400
-      );
-      expect(trilinearInterpolate(simpleTrilinearTable, 2800, 8000, 20)).toBe(
-        1500
-      );
-      expect(trilinearInterpolate(simpleTrilinearTable, 2800, 8000, 40)).toBe(
-        1600
-      );
+      expect(trilinearInterpolate(simpleTrilinearTable, 2800, 0, 20)).toBe(1100);
+      expect(trilinearInterpolate(simpleTrilinearTable, 2800, 0, 40)).toBe(1200);
+      expect(trilinearInterpolate(simpleTrilinearTable, 2800, 4000, 0)).toBe(1200);
+      expect(trilinearInterpolate(simpleTrilinearTable, 2800, 4000, 20)).toBe(1300);
+      expect(trilinearInterpolate(simpleTrilinearTable, 2800, 4000, 40)).toBe(1400);
+      expect(trilinearInterpolate(simpleTrilinearTable, 2800, 8000, 0)).toBe(1400);
+      expect(trilinearInterpolate(simpleTrilinearTable, 2800, 8000, 20)).toBe(1500);
+      expect(trilinearInterpolate(simpleTrilinearTable, 2800, 8000, 40)).toBe(1600);
     });
 
     it("should handle interpolation between weight brackets", () => {

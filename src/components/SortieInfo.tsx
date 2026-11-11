@@ -4,9 +4,7 @@ import { ChangeEvent, useCallback, useEffect, useMemo, useState } from "react";
 import aircraftData from "@/data/aircraft.json";
 import type { WorksheetData } from "@/utils/types";
 import PositionInput from "@/components/PositionInput";
-import InlineNotifications, {
-  notificationA11yProps,
-} from "@/components/InlineNotifications";
+import InlineNotifications, { notificationA11yProps } from "@/components/InlineNotifications";
 import { fieldSubject, type Notification } from "@/utils/notifications";
 import { buildSkyvectorUrl } from "@/utils/skyvector";
 import { normalizeAirportCode } from "@/utils/airportCode";
@@ -40,11 +38,7 @@ type SortieInfoData = Pick<
   | "mtnCert"
 >;
 
-export default function SortieInfo({
-  initialData,
-  onUpdate,
-  notifications = [],
-}: SortieInfoProps) {
+export default function SortieInfo({ initialData, onUpdate, notifications = [] }: SortieInfoProps) {
   const [formData, setFormData] = useState<SortieInfoData>({
     pilot: "",
     date: "",
@@ -75,23 +69,22 @@ export default function SortieInfo({
     if (initialData) {
       const newData = {} as Partial<SortieInfoData>;
       for (const key in formData) {
-        if (initialData[key as keyof WorksheetData] !== undefined && initialData[key as keyof WorksheetData] !== null) {
+        if (
+          initialData[key as keyof WorksheetData] !== undefined &&
+          initialData[key as keyof WorksheetData] !== null
+        ) {
           // @ts-expect-error - Dynamic key assignment is safe here
-          newData[key as keyof SortieInfoData] =
-            initialData[key as keyof WorksheetData];
+          newData[key as keyof SortieInfoData] = initialData[key as keyof WorksheetData];
         }
       }
       setFormData({ ...formData, ...newData });
     }
   }, [initialData]);
 
-  const handleInputChange = (
-    e: ChangeEvent<HTMLInputElement | HTMLSelectElement>
-  ) => {
+  const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     // Convert to uppercase for tailN and route fields
-    const processedValue =
-      name === "tailN" || name === "route" ? value.toUpperCase() : value;
+    const processedValue = name === "tailN" || name === "route" ? value.toUpperCase() : value;
     const updatedData = { ...formData, [name]: processedValue };
     setFormData(updatedData);
     onUpdate(updatedData);
@@ -113,9 +106,7 @@ export default function SortieInfo({
   };
 
   const handleAirportChange = (index: number, value: string) => {
-    const airportArray = (
-      formData.airport ? [...formData.airport] : ["", ""]
-    ) as [string, string];
+    const airportArray = (formData.airport ? [...formData.airport] : ["", ""]) as [string, string];
     // Convert airport codes to uppercase
     airportArray[index] = value.toUpperCase();
     const updatedData = { ...formData, airport: airportArray };
@@ -125,8 +116,16 @@ export default function SortieInfo({
 
   const handleOperatingAltitudeChange = (e: ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value === "" ? null : Number(e.target.value);
-    const currentAltitude = (initialData?.altitude ?? formData.altitude ?? [null, null, null]) as [number | null, number | null, number | null];
-    const newAltitude: [number | null, number | null, number | null] = [currentAltitude[0], value, currentAltitude[2]];
+    const currentAltitude = (initialData?.altitude ?? formData.altitude ?? [null, null, null]) as [
+      number | null,
+      number | null,
+      number | null,
+    ];
+    const newAltitude: [number | null, number | null, number | null] = [
+      currentAltitude[0],
+      value,
+      currentAltitude[2],
+    ];
     const updatedData = { ...formData, altitude: newAltitude };
     setFormData(updatedData);
     onUpdate({ altitude: newAltitude });
@@ -141,7 +140,7 @@ export default function SortieInfo({
           label: `${paddedHour}00`,
         };
       }),
-    []
+    [],
   );
 
   const durationOptions = useMemo(
@@ -150,7 +149,7 @@ export default function SortieInfo({
         const value = i * 0.5;
         return { value, label: value.toFixed(1) };
       }),
-    []
+    [],
   );
 
   const handleDurationChange = (e: ChangeEvent<HTMLSelectElement>) => {
@@ -160,8 +159,8 @@ export default function SortieInfo({
     onUpdate({ duration: value });
   };
 
-  const handleQualChange = (field: "mtnEndorse" | "mtnCert") =>
-    (e: ChangeEvent<HTMLInputElement>) => {
+  const handleQualChange =
+    (field: "mtnEndorse" | "mtnCert") => (e: ChangeEvent<HTMLInputElement>) => {
       const updatedData = { ...formData, [field]: e.target.checked };
       setFormData(updatedData);
       onUpdate({ [field]: e.target.checked });
@@ -174,7 +173,7 @@ export default function SortieInfo({
       setFormData((prev) => ({ ...prev, route, position }));
       onUpdate({ route, position });
     },
-    [onUpdate]
+    [onUpdate],
   );
 
   const sortieLocalTiming = useMemo(() => {
@@ -211,15 +210,14 @@ export default function SortieInfo({
     const offsetSign = offsetTotalMinutes >= 0 ? "+" : "-";
     const offsetHours = Math.floor(Math.abs(offsetTotalMinutes) / 60);
     const offsetMins = Math.abs(offsetTotalMinutes) % 60;
-    const utcOffset = offsetMins === 0
-      ? `UTC${offsetSign}${offsetHours}`
-      : `UTC${offsetSign}${offsetHours}:${String(offsetMins).padStart(2, "0")}`;
+    const utcOffset =
+      offsetMins === 0
+        ? `UTC${offsetSign}${offsetHours}`
+        : `UTC${offsetSign}${offsetHours}:${String(offsetMins).padStart(2, "0")}`;
 
     const localDisplay = `${localMonth}/${localDay}/${localYear} ${localHours}${localMinutes} local (${utcOffset})`;
 
-    const diffMinutes = Math.round(
-      (sortieUtc.getTime() - currentTime.getTime()) / 60000
-    );
+    const diffMinutes = Math.round((sortieUtc.getTime() - currentTime.getTime()) / 60000);
     const absMinutes = Math.abs(diffMinutes);
 
     if (absMinutes === 0) {
@@ -312,9 +310,7 @@ export default function SortieInfo({
       </div>
 
       <div>
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3">
-          When
-        </h3>
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3">When</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="space-y-2">
             <label htmlFor="date" className="block text-sm font-medium">
@@ -377,9 +373,7 @@ export default function SortieInfo({
           </div>
         </div>
         {sortieLocalTiming && (
-          <div className="mt-3 text-xs text-gray-600 dark:text-gray-400">
-            {sortieLocalTiming}
-          </div>
+          <div className="mt-3 text-xs text-gray-600 dark:text-gray-400">{sortieLocalTiming}</div>
         )}
       </div>
 
@@ -389,10 +383,7 @@ export default function SortieInfo({
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <label
-              htmlFor="departureAirport"
-              className="block text-sm font-medium"
-            >
+            <label htmlFor="departureAirport" className="block text-sm font-medium">
               Departure Airport
             </label>
             <input
@@ -404,10 +395,7 @@ export default function SortieInfo({
               className="w-full px-3 py-2 border rounded-md dark:bg-black/[.15] dark:border-white/[.145]"
               {...notificationA11yProps(notifications, AIRPORT_SUBJECTS[0])}
             />
-            <InlineNotifications
-              notifications={notifications}
-              subject={AIRPORT_SUBJECTS[0]}
-            />
+            <InlineNotifications notifications={notifications} subject={AIRPORT_SUBJECTS[0]} />
           </div>
 
           <div className="space-y-2">
@@ -423,10 +411,7 @@ export default function SortieInfo({
               className="w-full px-3 py-2 border rounded-md dark:bg-black/[.15] dark:border-white/[.145]"
               {...notificationA11yProps(notifications, AIRPORT_SUBJECTS[1])}
             />
-            <InlineNotifications
-              notifications={notifications}
-              subject={AIRPORT_SUBJECTS[1]}
-            />
+            <InlineNotifications notifications={notifications} subject={AIRPORT_SUBJECTS[1]} />
           </div>
 
           <PositionInput
@@ -435,10 +420,7 @@ export default function SortieInfo({
             onChange={handlePositionChange}
             inputA11yProps={notificationA11yProps(notifications, POSITION_SUBJECT)}
           />
-          <InlineNotifications
-            notifications={notifications}
-            subject={POSITION_SUBJECT}
-          />
+          <InlineNotifications notifications={notifications} subject={POSITION_SUBJECT} />
 
           <div className="space-y-2">
             <label htmlFor="operatingAltitude" className="block text-sm font-medium">
@@ -452,7 +434,10 @@ export default function SortieInfo({
               onChange={handleOperatingAltitudeChange}
               className="w-full px-3 py-2 border rounded-md dark:bg-black/[.15] dark:border-white/[.145]"
             />
-            <InlineNotifications notifications={notifications} subject={fieldSubject("altitude", 1)} />
+            <InlineNotifications
+              notifications={notifications}
+              subject={fieldSubject("altitude", 1)}
+            />
           </div>
 
           <div className="space-y-2">

@@ -32,7 +32,7 @@ describe("convertSingleValue", () => {
       expect(convertSingleValue("0", false)).toBe(false);
     });
 
-    it('should convert other values to false when typeHint is boolean', () => {
+    it("should convert other values to false when typeHint is boolean", () => {
       expect(convertSingleValue("false", false)).toBe(false);
       expect(convertSingleValue("no", false)).toBe(false);
       expect(convertSingleValue("", false)).toBeNull(); // empty string is null
@@ -125,7 +125,6 @@ describe("convertSingleValue", () => {
     });
   });
 });
-
 
 describe("serializeState", () => {
   it("should serialize primitive values correctly", () => {
@@ -304,9 +303,7 @@ describe("deserializeState", () => {
     };
 
     expect(deserializeState(null, initialState)).toEqual(initialState);
-    expect(deserializeState(new URLSearchParams(), initialState)).toEqual(
-      initialState
-    );
+    expect(deserializeState(new URLSearchParams(), initialState)).toEqual(initialState);
   });
 
   it("should ignore params not in initial state", () => {
@@ -420,11 +417,7 @@ describe("deserializeState", () => {
     };
     const serialized = serializeState(originalState as Record<string, unknown>);
     const initialState = {
-      wind: [
-        Array(5).fill(null),
-        Array(5).fill(null),
-        Array(5).fill(null),
-      ] as (number | null)[][],
+      wind: [Array(5).fill(null), Array(5).fill(null), Array(5).fill(null)] as (number | null)[][],
     };
     const restored = deserializeState(serialized, initialState);
     expect(restored.wind).toEqual(originalState.wind);

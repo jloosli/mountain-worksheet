@@ -1,19 +1,10 @@
-import type {
-  METARResponse,
-  TAFForecast,
-  TAFResponse,
-} from "./aviationWeatherApi";
+import type { METARResponse, TAFForecast, TAFResponse } from "./aviationWeatherApi";
 import { fieldSubject, type Notification } from "./notifications";
 
 const HPA_TO_INHG = 0.0295299;
 const METAR_FRESHNESS_MS = 90 * 60 * 1000;
 
-export type AirportWeatherSource =
-  | "metar"
-  | "taf-fcst"
-  | "taf-nearest"
-  | "metar-stale"
-  | "none";
+export type AirportWeatherSource = "metar" | "taf-fcst" | "taf-nearest" | "metar-stale" | "none";
 
 export interface AirportWeatherAtTime {
   temp: number | null;
@@ -61,22 +52,18 @@ function fcstTempValue(fcst: TAFForecast, requested: Date): number | undefined {
 
 function findCoveringFcst(
   fcsts: TAFForecast[] | undefined,
-  requested: Date
+  requested: Date,
 ): TAFForecast | undefined {
   if (!fcsts || fcsts.length === 0) return undefined;
   const reqEpoch = Math.floor(requested.getTime() / 1000);
   return fcsts.find(
-    (f) =>
-      f.timeFrom != null &&
-      f.timeTo != null &&
-      reqEpoch >= f.timeFrom &&
-      reqEpoch < f.timeTo
+    (f) => f.timeFrom != null && f.timeTo != null && reqEpoch >= f.timeFrom && reqEpoch < f.timeTo,
   );
 }
 
 function findClosestFcst(
   fcsts: TAFForecast[] | undefined,
-  requested: Date
+  requested: Date,
 ): { fcst: TAFForecast; deltaMs: number } | undefined {
   if (!fcsts || fcsts.length === 0) return undefined;
   const reqMs = requested.getTime();
@@ -85,8 +72,7 @@ function findClosestFcst(
     if (f.timeFrom == null || f.timeTo == null) continue;
     const fromMs = f.timeFrom * 1000;
     const toMs = f.timeTo * 1000;
-    const delta =
-      reqMs < fromMs ? fromMs - reqMs : reqMs >= toMs ? reqMs - toMs : 0;
+    const delta = reqMs < fromMs ? fromMs - reqMs : reqMs >= toMs ? reqMs - toMs : 0;
     if (!best || delta < best.deltaMs) best = { fcst: f, deltaMs: delta };
   }
   return best;
@@ -104,7 +90,7 @@ export function selectAirportWeather(
   taf: TAFResponse | undefined,
   requestedTime: Date,
   airportId: string,
-  slot: AirportSlot = 0
+  slot: AirportSlot = 0,
 ): AirportWeatherAtTime {
   const notifications: Notification[] = [];
   const tempSubject = fieldSubject("temp", slot);
@@ -114,12 +100,10 @@ export function selectAirportWeather(
   const cautionOnFilledTempAndAltimeter = (
     message: string,
     temp: number | null,
-    altimeter: number | null
+    altimeter: number | null,
   ) => {
-    if (temp !== null)
-      notifications.push({ level: "caution", subject: tempSubject, message });
-    if (altimeter !== null)
-      notifications.push({ level: "caution", subject: altSubject, message });
+    if (temp !== null) notifications.push({ level: "caution", subject: tempSubject, message });
+    if (altimeter !== null) notifications.push({ level: "caution", subject: altSubject, message });
   };
 
   // 1) METAR if fresh
@@ -191,7 +175,7 @@ export function selectAirportWeather(
     // Each field is attributed to where it actually came from: the nearest
     // TAF period, or the observation when that period lacks it.
     const nearest = `${airportId}: forecast unavailable for ${requestedIso}; using nearest TAF period (Δt = ${fmtDelta(
-      closest.deltaMs
+      closest.deltaMs,
     )})`;
     const fromObservation = (what: string) =>
       `${airportId}: forecast unavailable for ${requestedIso} and the nearest TAF period has no ${what}; using the current observation (Δt = ${obsDelta})`;
@@ -230,16 +214,13 @@ export function selectAirportWeather(
   //    without TAF service — small / uncontrolled fields).
   if (metar != null && (metar.temp != null || metar.altim != null)) {
     const delta = obsDelta;
-    const reason =
-      taf == null
-        ? "no TAF available"
-        : "no usable TAF forecast period";
+    const reason = taf == null ? "no TAF available" : "no usable TAF forecast period";
     const temp = metar.temp != null ? Math.round(metar.temp) : null;
     const altimeter = metarAltimeterInHg(metar.altim);
     cautionOnFilledTempAndAltimeter(
       `${airportId}: ${reason}; substituting the current METAR observation (Δt = ${delta})`,
       temp,
-      altimeter
+      altimeter,
     );
     return { temp, altimeter, source: "metar-stale", notifications };
   }
@@ -248,7 +229,7 @@ export function selectAirportWeather(
   const message = `${airportId}: no METAR or TAF data available for requested time ${requestedIso}`;
   notifications.push(
     { level: "warning", subject: tempSubject, message },
-    { level: "warning", subject: altSubject, message }
+    { level: "warning", subject: altSubject, message },
   );
   return { temp: null, altimeter: null, source: "none", notifications };
 }

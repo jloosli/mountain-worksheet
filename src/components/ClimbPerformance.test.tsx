@@ -114,10 +114,7 @@ const baseState: WorksheetData = {
   mtnCert: false,
 };
 
-function renderClimb(
-  overrides: Partial<WorksheetData> = {},
-  percentMGWState?: LimitState,
-) {
+function renderClimb(overrides: Partial<WorksheetData> = {}, percentMGWState?: LimitState) {
   const state = { ...baseState, ...overrides };
   const ui = (s: WorksheetData) => (
     <ClimbPerformance
@@ -131,17 +128,14 @@ function renderClimb(
   const result = render(ui(state));
   return {
     ...result,
-    rerenderWith: (more: Partial<WorksheetData>) =>
-      result.rerender(ui({ ...state, ...more })),
+    rerenderWith: (more: Partial<WorksheetData>) => result.rerender(ui({ ...state, ...more })),
   };
 }
 
 describe("ClimbPerformance Component", () => {
   test("renders without crashing", () => {
     renderClimb();
-    expect(
-      screen.getByText("Rates of Climb, V Speeds, Ceilings (C182T)")
-    ).toBeInTheDocument();
+    expect(screen.getByText("Rates of Climb, V Speeds, Ceilings (C182T)")).toBeInTheDocument();
   });
 
   test("displays Vra value correctly for valid aircraft", () => {
@@ -156,16 +150,14 @@ describe("ClimbPerformance Component", () => {
     expect(vraRow?.querySelectorAll("td")[1]).toHaveTextContent("—");
     expect(screen.queryByText("N/A")).not.toBeInTheDocument();
     const warning = screen.getByText(
-      "Vra is not available: the INVALID POH data has no clean stall speed."
+      "Vra is not available: the INVALID POH data has no clean stall speed.",
     );
     expect(warning.closest("li")).toHaveAttribute("data-level", "warning");
   });
 
   test("renders nothing when no aircraft model is provided", () => {
     renderClimb({ acType: "" });
-    expect(
-      screen.queryByText(/Rates of Climb, V Speeds, Ceilings/)
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/Rates of Climb, V Speeds, Ceilings/)).not.toBeInTheDocument();
   });
 
   test("updates Vra value when aircraft model changes", () => {
@@ -179,9 +171,7 @@ describe("ClimbPerformance Component", () => {
   test("shows what a column is waiting for instead of '-'", () => {
     renderClimb({ temp: [15, null, 5] });
     const rocRow = screen.getByText("Rate of Climb (MGW)").closest("tr");
-    expect(rocRow?.querySelectorAll("td")[2]).toHaveTextContent(
-      "needs operating temperature"
-    );
+    expect(rocRow?.querySelectorAll("td")[2]).toHaveTextContent("needs operating temperature");
   });
 
   test("Vra row appears after Va row in the table", () => {
@@ -268,12 +258,16 @@ describe("ClimbPerformance Component", () => {
         altimeter: [29.92, null, null],
       });
       const baseMSL = parseInt(
-        getServiceCeilingRow()?.querySelectorAll("td")?.[1].textContent?.replace(/[^0-9]/g, "") ?? "0"
+        getServiceCeilingRow()
+          ?.querySelectorAll("td")?.[1]
+          .textContent?.replace(/[^0-9]/g, "") ?? "0",
       );
 
       rerenderWith({ altimeter: [30.92, null, null] as Triple });
       const highMSL = parseInt(
-        getServiceCeilingRow()?.querySelectorAll("td")?.[1].textContent?.replace(/[^0-9]/g, "") ?? "0"
+        getServiceCeilingRow()
+          ?.querySelectorAll("td")?.[1]
+          .textContent?.replace(/[^0-9]/g, "") ?? "0",
       );
 
       expect(highMSL - baseMSL).toBe(1000);

@@ -39,7 +39,7 @@ const WEATHER_FIELDS = [
  */
 export function unverifiedWeatherNotifications(
   state: WorksheetData,
-  status: WeatherStatus
+  status: WeatherStatus,
 ): Notification[] {
   const tickedBox = state.turb || state.cielVis || state.mtnObsc;
   if (!(status === "unverified" || (status === "none" && tickedBox))) return [];

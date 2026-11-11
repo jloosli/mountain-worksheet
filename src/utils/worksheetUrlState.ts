@@ -3,11 +3,7 @@
  * coerced or passed through (`urlState.ts` is type-hinted, not validated),
  * and raises a Warning for each one on its field.
  */
-import {
-  fieldSubject,
-  type Notification,
-  type Subject,
-} from "./notifications";
+import { fieldSubject, type Notification, type Subject } from "./notifications";
 import type { WorksheetData } from "./types";
 import {
   ALTIMETER_RANGE_TEXT,
@@ -52,13 +48,7 @@ function readCell(data: Partial<WorksheetData>, cell: UrlCell): unknown {
 const sameValue = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 
 const NUMERIC_SCALARS = ["weight", "duration"] as const;
-const NUMERIC_ARRAYS = [
-  "temp",
-  "altimeter",
-  "altitude",
-  "rwy",
-  "position",
-] as const;
+const NUMERIC_ARRAYS = ["temp", "altimeter", "altitude", "rwy", "position"] as const;
 const FLAGS = ["turb", "cielVis", "mtnObsc", "mtnEndorse", "mtnCert"] as const;
 
 const LABEL: Partial<Record<keyof WorksheetData, string>> = {
@@ -99,7 +89,7 @@ const notANumber = (subject: Subject, raw: unknown): Notification => {
     level: "warning",
     subject,
     message: `The link's ${LABEL[field!] ?? field} value "${String(
-      raw
+      raw,
     )}" isn't a number; it was cleared. Enter it again.`,
   };
 };
@@ -108,7 +98,7 @@ const outOfLimits = (
   subject: Subject,
   label: string,
   value: number,
-  range: string
+  range: string,
 ): Notification => ({
   level: "warning",
   subject,
@@ -118,10 +108,10 @@ const outOfLimits = (
 export function sanitizeWorksheetUrlState(
   state: WorksheetData,
   query: string | URLSearchParams | null,
-  initialState: WorksheetData
+  initialState: WorksheetData,
 ): UrlLoadResult {
   const params = new URLSearchParams(
-    query instanceof URLSearchParams ? query.toString() : query ?? ""
+    query instanceof URLSearchParams ? query.toString() : (query ?? ""),
   );
   const next: WorksheetData = { ...state };
   const notifications: Notification[] = [];
@@ -149,37 +139,45 @@ export function sanitizeWorksheetUrlState(
     if (!Array.isArray(raw)) {
       arr = Array(size).fill(null);
       if (raw !== null && raw !== undefined) {
-        warn({ field: key }, {
-          level: "warning",
-          subject: shapeSubject,
-          message: `The link's ${LABEL[key]} value isn't a list; it was cleared. Enter it again.`,
-        });
+        warn(
+          { field: key },
+          {
+            level: "warning",
+            subject: shapeSubject,
+            message: `The link's ${LABEL[key]} value isn't a list; it was cleared. Enter it again.`,
+          },
+        );
       }
     } else {
       arr = Array.from({ length: size }, (_, i) => raw[i] ?? null);
       const hasValue = raw.some((v) => v !== null && v !== undefined && v !== "");
       if (raw.length !== size && hasValue) {
-        warn({ field: key }, {
-          level: "warning",
-          subject: shapeSubject,
-          message: `The link's ${LABEL[key]} list has ${raw.length} value${
-            raw.length === 1 ? "" : "s"
-          } instead of ${size}; ${
-            raw.length < size ? "missing entries were left blank" : "extra entries were dropped"
-          }. Check it.`,
-        });
+        warn(
+          { field: key },
+          {
+            level: "warning",
+            subject: shapeSubject,
+            message: `The link's ${LABEL[key]} list has ${raw.length} value${
+              raw.length === 1 ? "" : "s"
+            } instead of ${size}; ${
+              raw.length < size ? "missing entries were left blank" : "extra entries were dropped"
+            }. Check it.`,
+          },
+        );
       }
     }
     const cleaned = arr.map((v, i) => {
       if (key === "altimeter" && typeof v === "number" && !isValidAltimeterEntry(v)) {
-        warn({ field: key, index: i }, outOfLimits(fieldSubject(key, i), LABEL[key]!, v, ALTIMETER_RANGE_TEXT));
+        warn(
+          { field: key, index: i },
+          outOfLimits(fieldSubject(key, i), LABEL[key]!, v, ALTIMETER_RANGE_TEXT),
+        );
         return null;
       }
       if (!isMalformedNumber(v)) return v ?? null;
       // The position is shown and edited as one Area of Operations entry,
       // so its notifications are on the whole field, not one coordinate.
-      const subject =
-        key === "position" ? fieldSubject(key) : fieldSubject(key, i);
+      const subject = key === "position" ? fieldSubject(key) : fieldSubject(key, i);
       warn({ field: key, index: i }, notANumber(subject, v));
       return null;
     });
@@ -191,8 +189,9 @@ export function sanitizeWorksheetUrlState(
       Array.isArray(row)
         ? row.map((v, col) => {
             if (typeof v === "number" && r <= 2 && !isValidWindEntry(r as WindRow, v)) {
-              warn({ field: "wind", row: r, index: col }, 
-                outOfLimits(fieldSubject("wind", col), WIND_ROW_LABEL[r], v, WIND_RANGE_TEXT[r])
+              warn(
+                { field: "wind", row: r, index: col },
+                outOfLimits(fieldSubject("wind", col), WIND_ROW_LABEL[r], v, WIND_RANGE_TEXT[r]),
               );
               return null;
             }
@@ -200,7 +199,7 @@ export function sanitizeWorksheetUrlState(
             warn({ field: "wind", row: r, index: col }, notANumber(fieldSubject("wind", col), v));
             return null;
           })
-        : row
+        : row,
     ) as WorksheetData["wind"];
   }
 
@@ -218,27 +217,33 @@ export function sanitizeWorksheetUrlState(
     next.wind = Array.from({ length: rows }, (_, r) => {
       const row = Array.isArray(source[r]) ? (source[r] as unknown[]) : [];
       return Array.from({ length: cols }, (_, c) =>
-        typeof row[c] === "number" ? (row[c] as number) : null
+        typeof row[c] === "number" ? (row[c] as number) : null,
       );
     }) as WorksheetData["wind"];
-    warn({ field: "wind" }, {
-      level: "warning",
-      subject: fieldSubject("wind"),
-      message:
-        "The link's winds aloft table doesn't have a direction, speed and temperature row for every altitude; missing entries were left blank. Check it.",
-    });
+    warn(
+      { field: "wind" },
+      {
+        level: "warning",
+        subject: fieldSubject("wind"),
+        message:
+          "The link's winds aloft table doesn't have a direction, speed and temperature row for every altitude; missing entries were left blank. Check it.",
+      },
+    );
   }
 
   for (const key of FLAGS) {
     const raw = params.get(key);
     if (raw === null || ["0", "1", "true", "false"].includes(raw)) continue;
-    warn({ field: key }, {
-      level: "warning",
-      subject: fieldSubject(key),
-      message: `The link's ${LABEL[key]} value "${raw}" isn't on or off; it was read as ${
-        next[key] ? "on" : "off"
-      }. Check it.`,
-    });
+    warn(
+      { field: key },
+      {
+        level: "warning",
+        subject: fieldSubject(key),
+        message: `The link's ${LABEL[key]} value "${raw}" isn't on or off; it was read as ${
+          next[key] ? "on" : "off"
+        }. Check it.`,
+      },
+    );
   }
 
   (
@@ -250,11 +255,14 @@ export function sanitizeWorksheetUrlState(
     const raw = params.get(key);
     if (raw === null || isValid(raw)) return;
     next[key] = initialState[key];
-    warn({ field: key }, {
-      level: "warning",
-      subject: fieldSubject(key),
-      message: `The link's ${key} "${raw}" isn't a valid ${format} ${key}; using ${initialState[key]} instead. Check it.`,
-    });
+    warn(
+      { field: key },
+      {
+        level: "warning",
+        subject: fieldSubject(key),
+        message: `The link's ${key} "${raw}" isn't a valid ${format} ${key}; using ${initialState[key]} instead. Check it.`,
+      },
+    );
   });
 
   return { state: next, notifications, cells };
@@ -267,11 +275,11 @@ export function sanitizeWorksheetUrlState(
  */
 export function deriveUrlNotifications(
   state: WorksheetData,
-  load: UrlLoadResult | null
+  load: UrlLoadResult | null,
 ): Notification[] {
   if (!load) return [];
   return load.notifications.filter((_, i) =>
-    sameValue(readCell(state, load.cells[i]), readCell(load.state, load.cells[i]))
+    sameValue(readCell(state, load.cells[i]), readCell(load.state, load.cells[i])),
   );
 }
 
@@ -284,12 +292,12 @@ export function deriveUrlNotifications(
 export function retireUrlNotifications(
   load: UrlLoadResult,
   next: WorksheetData,
-  replaced?: Partial<WorksheetData>
+  replaced?: Partial<WorksheetData>,
 ): UrlLoadResult {
   const keep = load.cells.map(
     (cell) =>
       sameValue(readCell(next, cell), readCell(load.state, cell)) &&
-      (!replaced || readCell(replaced, cell) === undefined)
+      (!replaced || readCell(replaced, cell) === undefined),
   );
   if (keep.every(Boolean)) return load;
   return {

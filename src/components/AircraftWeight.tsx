@@ -7,10 +7,7 @@ interface Props {
   onUpdate: (data: Partial<WorksheetData>) => void;
 }
 
-export default function AircraftWeight({
-  initialData = { weight: null },
-  onUpdate,
-}: Props) {
+export default function AircraftWeight({ initialData = { weight: null }, onUpdate }: Props) {
   const handleWeightChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const value = event.target.value === "" ? null : Number(event.target.value);
     onUpdate({ weight: value });

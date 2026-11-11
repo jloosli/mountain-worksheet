@@ -28,18 +28,20 @@ describe("ChecklistPanel", () => {
 
   it("renders specific items under their sections", () => {
     render(<ChecklistPanel checks={[]} />);
-    expect(
-      screen.getByText(/Define runway abort point/i)
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText(/Verify 300 feet\/minute Rate of Climb possible/i)
-    ).toBeInTheDocument();
+    expect(screen.getByText(/Define runway abort point/i)).toBeInTheDocument();
+    expect(screen.getByText(/Verify 300 feet\/minute Rate of Climb possible/i)).toBeInTheDocument();
   });
 
   describe("Worksheet limits", () => {
     const checks = [
       check({ id: "weight", name: "Weight", state: "exceeded" }),
-      check({ id: "winds", name: "Winds aloft", limit: "under 30 kt", step: "weather", state: "not-checked" }),
+      check({
+        id: "winds",
+        name: "Winds aloft",
+        limit: "under 30 kt",
+        step: "weather",
+        state: "not-checked",
+      }),
     ];
 
     it("lists every check with its state, ahead of the pilot-judgement items", () => {

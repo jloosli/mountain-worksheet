@@ -1,9 +1,5 @@
 // src/utils/actionBarState.test.ts
-import {
-  canFetchWeather,
-  deriveActionBarState,
-  type ActionBarState,
-} from "./actionBarState";
+import { canFetchWeather, deriveActionBarState, type ActionBarState } from "./actionBarState";
 import type { WorksheetData } from "@/utils/types";
 
 const empty: WorksheetData = {
@@ -41,7 +37,7 @@ describe("canFetchWeather", () => {
         airport: ["KOGD", "   "],
         date: "2026-10-27",
         time: "16:00",
-      })
+      }),
     ).toBe(false);
   });
 
@@ -56,7 +52,7 @@ describe("canFetchWeather", () => {
         airport: ["KOGD", ""],
         date: "2026-05-12",
         time: "18:00",
-      })
+      }),
     ).toBe(false);
   });
 
@@ -67,7 +63,7 @@ describe("canFetchWeather", () => {
         airport: ["KOGD", "KLGU"],
         date: "",
         time: "18:00",
-      })
+      }),
     ).toBe(false);
     expect(
       canFetchWeather({
@@ -75,7 +71,7 @@ describe("canFetchWeather", () => {
         airport: ["KOGD", "KLGU"],
         date: "2026-05-12",
         time: "",
-      })
+      }),
     ).toBe(false);
   });
 
@@ -86,7 +82,7 @@ describe("canFetchWeather", () => {
         airport: ["KOGD", "KLGU"],
         date: "2026-05-12",
         time: "18:00",
-      })
+      }),
     ).toBe(true);
   });
 });
@@ -106,6 +102,6 @@ describe("deriveActionBarState", () => {
     (status) => {
       expect(deriveActionBarState(status, false)).toBe("fetched");
       expect(deriveActionBarState(status, true)).toBe("fetched");
-    }
+    },
   );
 });

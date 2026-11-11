@@ -135,7 +135,9 @@ export default function ClimbPerformance({
           <tbody>
             <tr className="border-b dark:border-gray-700">
               <td className="py-2 px-4">Rate of Climb (MGW)</td>
-              {COLUMNS.map((i) => <Value key={i} notes={inputNotifications} value={climb.rateOfClimb[i]} />)}
+              {COLUMNS.map((i) => (
+                <Value key={i} notes={inputNotifications} value={climb.rateOfClimb[i]} />
+              ))}
             </tr>
             <tr className="border-b dark:border-gray-700">
               <td className="py-2 px-4">Rate of Climb (Actual Wt, note 11)</td>
@@ -150,11 +152,15 @@ export default function ClimbPerformance({
             </tr>
             <tr className="border-b dark:border-gray-700">
               <td className="py-2 px-4">Vx (Best Angle)</td>
-              {COLUMNS.map((i) => <Value key={i} notes={inputNotifications} value={climb.vx[i]} />)}
+              {COLUMNS.map((i) => (
+                <Value key={i} notes={inputNotifications} value={climb.vx[i]} />
+              ))}
             </tr>
             <tr className="border-b dark:border-gray-700">
               <td className="py-2 px-4">Vy (Best Rate)</td>
-              {COLUMNS.map((i) => <Value key={i} notes={inputNotifications} value={climb.vy[i]} />)}
+              {COLUMNS.map((i) => (
+                <Value key={i} notes={inputNotifications} value={climb.vy[i]} />
+              ))}
             </tr>
             <tr className="border-b dark:border-gray-700">
               <td className="py-2 px-4">Va at Actual Weight</td>

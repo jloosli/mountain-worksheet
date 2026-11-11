@@ -6,21 +6,12 @@
  */
 
 import type { WorksheetData } from "./types";
-import type {
-  METARResponse,
-  TAFResponse,
-  AirportResponse,
-} from "./aviationWeatherApi";
+import type { METARResponse, TAFResponse, AirportResponse } from "./aviationWeatherApi";
 import { selectAirportWeather } from "./airportTimeWeather";
 import type { AreaOfOpsWeather } from "./areaOfOpsWeather";
 import { TARGET_ALTITUDES_FT } from "./areaOfOpsWeather";
 import type { AirmetClassification } from "./gairmetApi";
-import {
-  fieldSubject,
-  subjectKey,
-  type Notification,
-  type Subject,
-} from "./notifications";
+import { fieldSubject, subjectKey, type Notification, type Subject } from "./notifications";
 
 // Validation ranges
 export const VALIDATION_RANGES = {
@@ -72,13 +63,8 @@ export interface WeatherMappingOptions {
 }
 
 /** The identity condition of the airport filling triple slot 0 or 2. */
-function conditionOf(
-  options: WeatherMappingOptions,
-  slot: 0 | 2
-): AirportCondition | undefined {
-  return slot === 0
-    ? options.airportConditions?.departure
-    : options.airportConditions?.arrival;
+function conditionOf(options: WeatherMappingOptions, slot: 0 | 2): AirportCondition | undefined {
+  return slot === 0 ? options.airportConditions?.departure : options.airportConditions?.arrival;
 }
 
 /**
@@ -88,7 +74,7 @@ function conditionOf(
 export function mapAirportSpecificWeatherData(
   metarData: METARResponse[],
   tafData: TAFResponse[],
-  options: WeatherMappingOptions = {}
+  options: WeatherMappingOptions = {},
 ): { data: Partial<WorksheetData>; notifications: Notification[] } {
   const result: Partial<WorksheetData> = {};
   const notifications: Notification[] = [];
@@ -112,11 +98,7 @@ export function mapAirportSpecificWeatherData(
       : 0;
   const arrTime = new Date(depTime.getTime() + durationHours * 3600 * 1000);
 
-  const setSlot = (
-    key: "temp" | "altimeter",
-    index: 0 | 2,
-    value: number | null
-  ) => {
+  const setSlot = (key: "temp" | "altimeter", index: 0 | 2, value: number | null) => {
     const next = (result[key] ? [...result[key]!] : [-1, -1, -1]) as [
       number | null,
       number | null,
@@ -129,7 +111,7 @@ export function mapAirportSpecificWeatherData(
   const applyAirportWeather = (
     airportCode: string | undefined,
     requestedTime: Date,
-    index: 0 | 2
+    index: 0 | 2,
   ): void => {
     if (!airportCode) return;
     if (conditionOf(options, index)) {
@@ -156,11 +138,7 @@ export function mapAirportSpecificWeatherData(
     setSlot("temp", index, temp);
 
     let altimeter = sel.altimeter;
-    if (
-      altimeter !== null &&
-      options.validateData &&
-      !isValidAltimeter(altimeter)
-    ) {
+    if (altimeter !== null && options.validateData && !isValidAltimeter(altimeter)) {
       notifications.push({
         level: "warning",
         subject: fieldSubject("altimeter", index),
@@ -182,7 +160,7 @@ export function mapAirportSpecificWeatherData(
  */
 export function mapRunwayData(
   airportData: AirportResponse[],
-  options: WeatherMappingOptions = {}
+  options: WeatherMappingOptions = {},
 ): Partial<WorksheetData> {
   // -1 = no airport matched for this slot ("don't update"); null = the airport
   // matched but has no usable runway.
@@ -190,10 +168,7 @@ export function mapRunwayData(
     const airport = findAirport(airportData, code);
     if (!airport) return -1;
     const shortestRunway = findShortestRunway(airport.runway);
-    if (
-      shortestRunway &&
-      (!options.validateData || isValidRunwayLength(shortestRunway.length))
-    ) {
+    if (shortestRunway && (!options.validateData || isValidRunwayLength(shortestRunway.length))) {
       return shortestRunway.length;
     }
     return null;
@@ -206,7 +181,7 @@ export function mapRunwayData(
 
 function findAirport(
   airportData: AirportResponse[],
-  code: string | undefined
+  code: string | undefined,
 ): AirportResponse | undefined {
   if (!code) return undefined;
   const wanted = code.toUpperCase();
@@ -218,7 +193,7 @@ function findAirport(
  */
 export function mapAirportElevationData(
   airportData: AirportResponse[],
-  options: WeatherMappingOptions = {}
+  options: WeatherMappingOptions = {},
 ): Partial<WorksheetData> {
   // -1 = "don't update": used for the operating slot (manual entry only) and
   // for any airport slot whose airport wasn't matched or has no elevation.
@@ -242,9 +217,7 @@ export function mapAirportElevationData(
 type Triple = [number | null, number | null, number | null];
 type WindTable = [(number | null)[], (number | null)[], (number | null)[]];
 
-const ALOFT_LABELS = TARGET_ALTITUDES_FT.map(
-  (ft) => `${ft.toLocaleString("en-US")} ft`
-);
+const ALOFT_LABELS = TARGET_ALTITUDES_FT.map((ft) => `${ft.toLocaleString("en-US")} ft`);
 
 /**
  * Map all weather data from API responses to WorksheetData format, and
@@ -264,7 +237,7 @@ export function mapWeatherDataToWorksheet(
   },
   areaOfOps: AreaOfOpsWeather | null,
   airmets: AirmetClassification | null,
-  options: WeatherMappingOptions = {}
+  options: WeatherMappingOptions = {},
 ): WeatherMappingResult {
   const notifications: Notification[] = [...(apiData.notifications ?? [])];
   const data: Partial<WorksheetData> = {};
@@ -275,11 +248,7 @@ export function mapWeatherDataToWorksheet(
     const airportData = Array.isArray(apiData.airport) ? apiData.airport : [];
 
     // Airport temperature / altimeter (departure = 0, arrival = 2)
-    const airportWeather = mapAirportSpecificWeatherData(
-      metarData,
-      tafData,
-      options
-    );
+    const airportWeather = mapAirportSpecificWeatherData(metarData, tafData, options);
     Object.assign(data, airportWeather.data);
     notifications.push(...airportWeather.notifications);
 
@@ -291,14 +260,8 @@ export function mapWeatherDataToWorksheet(
 
     // Area-of-ops weather (Open-Meteo): winds aloft and operating conditions
     const temp = (data.temp ? [...data.temp] : [-1, -1, -1]) as Triple;
-    const altimeter = (
-      data.altimeter ? [...data.altimeter] : [-1, -1, -1]
-    ) as Triple;
-    let wind: WindTable = [
-      Array(5).fill(null),
-      Array(5).fill(null),
-      Array(5).fill(null),
-    ];
+    const altimeter = (data.altimeter ? [...data.altimeter] : [-1, -1, -1]) as Triple;
+    let wind: WindTable = [Array(5).fill(null), Array(5).fill(null), Array(5).fill(null)];
     if (areaOfOps) {
       notifications.push(...areaOfOps.notifications);
       wind = [
@@ -412,10 +375,10 @@ function notFetched(value: number | null | undefined): boolean {
 function blankFieldWarnings(
   data: Partial<WorksheetData>,
   existing: Notification[],
-  options: WeatherMappingOptions
+  options: WeatherMappingOptions,
 ): Notification[] {
   const warned = new Set(
-    existing.filter((n) => n.level === "warning").map((n) => subjectKey(n.subject))
+    existing.filter((n) => n.level === "warning").map((n) => subjectKey(n.subject)),
   );
   const dep = options.departureAirport?.toUpperCase();
   const arr = options.arrivalAirport?.toUpperCase();
@@ -430,8 +393,7 @@ function blankFieldWarnings(
     });
   };
 
-  const slot = (code: string | undefined, label: string) =>
-    code ? `${label} (${code})` : label;
+  const slot = (code: string | undefined, label: string) => (code ? `${label} (${code})` : label);
   ([0, 1, 2] as const).forEach((i) => {
     const where = ["Departure", "Operating", "Arrival"][i];
     const code = i === 0 ? dep : i === 2 ? arr : undefined;
@@ -461,8 +423,7 @@ function blankFieldWarnings(
       blank(fieldSubject("wind"), "Winds aloft");
     } else {
       TARGET_ALTITUDES_FT.forEach((_, col) => {
-        if (colBlank(col))
-          blank(fieldSubject("wind", col), `Winds aloft at ${ALOFT_LABELS[col]}`);
+        if (colBlank(col)) blank(fieldSubject("wind", col), `Winds aloft at ${ALOFT_LABELS[col]}`);
       });
     }
   }
@@ -474,7 +435,7 @@ function blankFieldWarnings(
  * Helipads have a null alignment value and should be excluded
  */
 function findShortestRunway(
-  runways: { length: number; alignment: number | null }[] | undefined
+  runways: { length: number; alignment: number | null }[] | undefined,
 ): { length: number } | null {
   if (!runways || runways.length === 0) return null;
 
@@ -520,8 +481,7 @@ function isValidTemperature(temp: number): boolean {
 
 function isValidAltimeter(altimeter: number): boolean {
   return (
-    altimeter >= VALIDATION_RANGES.altimeter.min &&
-    altimeter <= VALIDATION_RANGES.altimeter.max
+    altimeter >= VALIDATION_RANGES.altimeter.min && altimeter <= VALIDATION_RANGES.altimeter.max
   );
 }
 
@@ -582,7 +542,7 @@ export function isApiPopulatedData(data: Partial<WorksheetData>): {
 export function mergeWeatherData(
   existingData: Partial<WorksheetData>,
   apiData: Partial<WorksheetData>,
-  preserveUserData: boolean = true
+  preserveUserData: boolean = true,
 ): Partial<WorksheetData> {
   const result = { ...existingData };
 
@@ -594,11 +554,7 @@ export function mergeWeatherData(
       overwritten.rwy = mergeSlots(result.rwy, apiData.rwy, [null, null]);
     }
     if (apiData.altitude) {
-      overwritten.altitude = mergeSlots(result.altitude, apiData.altitude, [
-        null,
-        null,
-        null,
-      ]);
+      overwritten.altitude = mergeSlots(result.altitude, apiData.altitude, [null, null, null]);
     }
     return overwritten;
   }
@@ -609,9 +565,11 @@ export function mergeWeatherData(
   }
 
   if (apiData.temp) {
-    const next = (
-      result.temp ? [...result.temp] : [null, null, null]
-    ) as [number | null, number | null, number | null];
+    const next = (result.temp ? [...result.temp] : [null, null, null]) as [
+      number | null,
+      number | null,
+      number | null,
+    ];
     apiData.temp.forEach((val, i) => {
       if (val !== undefined && val !== -1) {
         next[i] = val;
@@ -621,9 +579,11 @@ export function mergeWeatherData(
   }
 
   if (apiData.altimeter) {
-    const next = (
-      result.altimeter ? [...result.altimeter] : [null, null, null]
-    ) as [number | null, number | null, number | null];
+    const next = (result.altimeter ? [...result.altimeter] : [null, null, null]) as [
+      number | null,
+      number | null,
+      number | null,
+    ];
     apiData.altimeter.forEach((val, i) => {
       if (val !== undefined && val !== -1) {
         next[i] = val;
@@ -644,11 +604,7 @@ export function mergeWeatherData(
   }
 
   if (apiData.altitude) {
-    result.altitude = mergeSlots(result.altitude, apiData.altitude, [
-      null,
-      null,
-      null,
-    ]);
+    result.altitude = mergeSlots(result.altitude, apiData.altitude, [null, null, null]);
   }
 
   // AIRMET boolean flags: only overwrite when the API supplied an explicit
@@ -668,7 +624,7 @@ export function mergeWeatherData(
 function mergeSlots<T extends (number | null)[]>(
   existing: T | undefined,
   incoming: T,
-  empty: T
+  empty: T,
 ): T {
   const next = [...(existing ?? empty)] as T;
   incoming.forEach((val, i) => {

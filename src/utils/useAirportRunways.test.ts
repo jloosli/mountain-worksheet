@@ -8,11 +8,12 @@ jest.mock("./aviationWeatherApi", () => ({
   getAirportInfo: jest.fn(),
 }));
 
-const mockedGetAirportInfo = getAirportInfo as jest.MockedFunction<
-  typeof getAirportInfo
->;
+const mockedGetAirportInfo = getAirportInfo as jest.MockedFunction<typeof getAirportInfo>;
 
-const fakeAirport = (icaoId: string, runways: Array<{ id: string; length: number; alignment: number | null }>) => ({
+const fakeAirport = (
+  icaoId: string,
+  runways: Array<{ id: string; length: number; alignment: number | null }>,
+) => ({
   icaoId,
   name: icaoId,
   country: "US",
@@ -72,12 +73,8 @@ describe("useAirportRunways", () => {
     await waitFor(() => {
       expect(result.current[0]).not.toBeNull();
     });
-    expect(result.current[0]).toEqual([
-      { id: "16L/34R", length: 12000, alignment: 160 },
-    ]);
-    expect(result.current[1]).toEqual([
-      { id: "16L/34R", length: 12000, alignment: 160 },
-    ]);
+    expect(result.current[0]).toEqual([{ id: "16L/34R", length: 12000, alignment: 160 }]);
+    expect(result.current[1]).toEqual([{ id: "16L/34R", length: 12000, alignment: 160 }]);
   });
 
   it("debounces rapid changes into a single fetch with the final value", async () => {
@@ -88,7 +85,7 @@ describe("useAirportRunways", () => {
 
     const { rerender } = renderHook(
       ({ airports }: { airports: [string, string] }) => useAirportRunways(airports),
-      { initialProps: { airports: ["K", ""] as [string, string] } }
+      { initialProps: { airports: ["K", ""] as [string, string] } },
     );
     rerender({ airports: ["KA", ""] });
     rerender({ airports: ["KAS", ""] });
@@ -168,7 +165,7 @@ describe("useAirportRunways", () => {
       () =>
         new Promise((resolve) => {
           resolveFirst = resolve;
-        }) as ReturnType<typeof getAirportInfo>
+        }) as ReturnType<typeof getAirportInfo>,
     );
     mockedGetAirportInfo.mockResolvedValueOnce([
       fakeAirport("KASE", [{ id: "15/33", length: 8000, alignment: 150 }]),
@@ -177,7 +174,7 @@ describe("useAirportRunways", () => {
 
     const { result, rerender } = renderHook(
       ({ airports }: { airports: [string, string] }) => useAirportRunways(airports),
-      { initialProps: { airports: ["KDEN", "KSLC"] as [string, string] } }
+      { initialProps: { airports: ["KDEN", "KSLC"] as [string, string] } },
     );
 
     act(() => {
@@ -207,9 +204,7 @@ describe("useAirportRunways", () => {
       expect(result.current[0]).not.toBeNull();
     });
     // The fresh response, not the stale one, wins.
-    expect(result.current[0]).toEqual([
-      { id: "15/33", length: 8000, alignment: 150 },
-    ]);
+    expect(result.current[0]).toEqual([{ id: "15/33", length: 8000, alignment: 150 }]);
   });
 
   it("does not setRunways after unmount when fetch resolves late", async () => {
@@ -218,7 +213,7 @@ describe("useAirportRunways", () => {
       () =>
         new Promise((resolve) => {
           resolveLate = resolve;
-        }) as ReturnType<typeof getAirportInfo>
+        }) as ReturnType<typeof getAirportInfo>,
     );
 
     const errSpy = jest.spyOn(console, "error").mockImplementation(() => {});
@@ -260,7 +255,7 @@ describe("useAirportRunways", () => {
 
     const { result, rerender } = renderHook(
       ({ airports }: { airports: [string, string] }) => useAirportRunways(airports),
-      { initialProps: { airports: ["KDEN", "KSLC"] as [string, string] } }
+      { initialProps: { airports: ["KDEN", "KSLC"] as [string, string] } },
     );
 
     act(() => {
@@ -277,7 +272,7 @@ describe("useAirportRunways", () => {
       () =>
         new Promise((resolve) => {
           resolveSecond = resolve;
-        }) as ReturnType<typeof getAirportInfo>
+        }) as ReturnType<typeof getAirportInfo>,
     );
 
     rerender({ airports: ["KASE", "KSLC"] });
@@ -297,10 +292,7 @@ describe("useAirportRunways", () => {
     expect(result.current[1]).toEqual(kslcRunways);
 
     await act(async () => {
-      resolveSecond([
-        fakeAirport("KASE", kaseRunways),
-        fakeAirport("KSLC", kslcRunways),
-      ]);
+      resolveSecond([fakeAirport("KASE", kaseRunways), fakeAirport("KSLC", kslcRunways)]);
     });
 
     await waitFor(() => {
@@ -320,7 +312,7 @@ describe("useAirportRunways", () => {
 
     const { result, rerender } = renderHook(
       ({ airports }: { airports: [string, string] }) => useAirportRunways(airports),
-      { initialProps: { airports: ["KDEN", "KSLC"] as [string, string] } }
+      { initialProps: { airports: ["KDEN", "KSLC"] as [string, string] } },
     );
 
     act(() => {
@@ -333,7 +325,7 @@ describe("useAirportRunways", () => {
     // Hold the second fetch so we can observe the synchronous render result
     // before the effect's fetch can possibly resolve.
     mockedGetAirportInfo.mockImplementationOnce(
-      () => new Promise(() => {}) as ReturnType<typeof getAirportInfo>
+      () => new Promise(() => {}) as ReturnType<typeof getAirportInfo>,
     );
 
     // Synchronous: rerender with a different dep code. Without render-time
@@ -382,9 +374,7 @@ describe("useAirportRunways", () => {
     it("raises a Warning on each runway field when the lookup fails", async () => {
       jest.spyOn(console, "warn").mockImplementation(() => {});
       mockedGetAirportInfo.mockRejectedValue(new Error("network down"));
-      const { result } = renderHook(() =>
-        useAirportRunwayLookup(["KDEN", "KSLC"])
-      );
+      const { result } = renderHook(() => useAirportRunwayLookup(["KDEN", "KSLC"]));
       act(() => {
         jest.advanceTimersByTime(400);
       });
@@ -410,9 +400,7 @@ describe("useAirportRunways", () => {
     it("downgrades a failed lookup to an Advisory once that runway length is filled", async () => {
       jest.spyOn(console, "warn").mockImplementation(() => {});
       mockedGetAirportInfo.mockRejectedValue(new Error("network down"));
-      const { result } = renderHook(() =>
-        useAirportRunwayLookup(["KDEN", "KSLC"], [5500, null])
-      );
+      const { result } = renderHook(() => useAirportRunwayLookup(["KDEN", "KSLC"], [5500, null]));
       act(() => {
         jest.advanceTimersByTime(400);
       });

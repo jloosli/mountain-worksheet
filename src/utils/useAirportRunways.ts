@@ -14,12 +14,7 @@ type RunwaysTuple = [RunwayOption[] | null, RunwayOption[] | null];
  * never ran), `pending`, `found`, `no-runways` (the lookup worked but has no
  * runways for that ID), or `failed` (the request itself failed).
  */
-export type RunwayLookupStatus =
-  | "idle"
-  | "pending"
-  | "found"
-  | "no-runways"
-  | "failed";
+export type RunwayLookupStatus = "idle" | "pending" | "found" | "no-runways" | "failed";
 
 export interface RunwayLookup {
   runways: RunwaysTuple;
@@ -43,9 +38,7 @@ function isValid(code: string): boolean {
   return ICAO_RE.test(code);
 }
 
-function extractRunways(
-  airport: AirportResponse | undefined
-): RunwayOption[] | null {
+function extractRunways(airport: AirportResponse | undefined): RunwayOption[] | null {
   if (!airport?.runway || airport.runway.length === 0) return null;
   return airport.runway.map((r) => ({
     id: r.id,
@@ -67,7 +60,7 @@ export function useAirportRunways(airports: [string, string]): RunwaysTuple {
  */
 export function useAirportRunwayLookup(
   airports: [string, string],
-  runwayLengths: [number | null, number | null] = [null, null]
+  runwayLengths: [number | null, number | null] = [null, null],
 ): RunwayLookup {
   const [state, setState] = useState<RunwaysState>({
     resolvedFor: ["", ""],
@@ -83,10 +76,7 @@ export function useAirportRunwayLookup(
   const arrValid = isValid(arr);
 
   useEffect(() => {
-    if (
-      lastResolvedRef.current[0] === dep &&
-      lastResolvedRef.current[1] === arr
-    ) {
+    if (lastResolvedRef.current[0] === dep && lastResolvedRef.current[1] === arr) {
       return;
     }
 
@@ -97,10 +87,8 @@ export function useAirportRunwayLookup(
 
     const codes = Array.from(
       new Set(
-        [depValid ? dep : null, arrValid ? arr : null].filter(
-          (c): c is string => c !== null
-        )
-      )
+        [depValid ? dep : null, arrValid ? arr : null].filter((c): c is string => c !== null),
+      ),
     );
     const seq = ++seqRef.current;
     let cancelled = false;
@@ -109,9 +97,7 @@ export function useAirportRunwayLookup(
       try {
         const response = await getAirportInfo(codes);
         if (cancelled || seq !== seqRef.current) return;
-        const byCode = new Map(
-          response.map((a) => [a.icaoId?.toUpperCase(), a])
-        );
+        const byCode = new Map(response.map((a) => [a.icaoId?.toUpperCase(), a]));
         const depRunways = depValid ? extractRunways(byCode.get(dep)) : null;
         const arrRunways = arrValid ? extractRunways(byCode.get(arr)) : null;
         lastResolvedRef.current = [dep, arr];
@@ -147,10 +133,7 @@ export function useAirportRunwayLookup(
     if (state.error !== null) return "failed";
     return state.runways[i] ? "found" : "no-runways";
   };
-  const status: [RunwayLookupStatus, RunwayLookupStatus] = [
-    slotStatus(0),
-    slotStatus(1),
-  ];
+  const status: [RunwayLookupStatus, RunwayLookupStatus] = [slotStatus(0), slotStatus(1)];
   const runways: RunwaysTuple = [
     status[0] === "found" ? state.runways[0] : null,
     status[1] === "found" ? state.runways[1] : null,
