@@ -175,6 +175,10 @@
         [255, 195, 135, null]
       ]
     },
+    "Vx": {
+      "speeds": [62, 67],
+      "altitudes": [0, 10000]
+    },
     "shortFieldTakeoff": {
       "weights": [2200, 2400, 2550],
       "pressureAltitudes": [0, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000],
