@@ -24,6 +24,7 @@ A Next.js 16.x web application (App Router, TypeScript, Tailwind CSS v4, Vercel)
 - `src/utils/toldCalculations.ts`, `maneuveringCalculations.ts`, `formulas.ts` — Calculations
 - `src/utils/worksheetEvaluation.ts` — `evaluateWorksheet(state, session)`: the one pure function that assembles every notification, computed value, Limit check and step status. It owns the two-pass ordering (performance notifications first, then values withheld against every notification in force). Test cross-cutting behaviour here, not by rendering `AppContainer`
 - `src/utils/derived.ts` — Per-calculation helpers (`computePressureColumns`, `computeTOLDViewModel`, `computeClimbViewModel`) that `evaluateWorksheet` composes; TOLD results are per airport, each value `computed`/`withheld`/`unavailable`, with notifications
+- `src/utils/provenance.ts` — `substitutionsFor(value, notifications)`: the one rule for which Cautions a value rests on (its inputs' Cautions, plus any Notification whose `covers` takes in an input). Screen markers, Briefing refs and Limit check points all use it
 - `src/utils/limitChecks.ts` — Limit checks (the worksheet's own limits, ADR 0002): derived by `evaluateWorksheet`, shown as callouts at the top of their owning step, summarized in the action bar, and listed in the Briefing's Worksheet limits table and the checklist slide-over; never notifications, never affect step status
 - `src/app/api/aviation-weather/route.ts` — Proxy to `aviationweather.gov` (avoids CORS)
 

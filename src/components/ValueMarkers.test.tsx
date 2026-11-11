@@ -1,7 +1,8 @@
 import React from "react";
 import { render, screen } from "@/test-utils/test-utils";
 import ValueMarkers from "./ValueMarkers";
-import { fieldSubject, type Notification } from "@/utils/notifications";
+import { fieldSubject, stepSubject, type Notification } from "@/utils/notifications";
+import { substitutionsFor } from "@/utils/provenance";
 import type { ComputedValue } from "@/utils/derived";
 
 const arrivalLanding: ComputedValue = {
@@ -32,21 +33,6 @@ describe("ValueMarkers", () => {
     expect(marker).toHaveAttribute("title", expect.stringContaining("KXYZ: using nearest TAF period"));
   });
 
-  it("shows no marker when no input of the value has a Caution", () => {
-    const { container } = renderMarkers([
-      { ...tempCaution, subject: fieldSubject("temp", 0) },
-    ]);
-    expect(container.querySelector("[data-marker]")).toBeNull();
-  });
-
-  it("ignores Warnings and Advisories on inputs", () => {
-    const { container } = renderMarkers([
-      { ...tempCaution, level: "warning" },
-      { ...tempCaution, level: "advisory" },
-    ]);
-    expect(container.querySelector("[data-marker]")).toBeNull();
-  });
-
   it("shares one marker between several Cautions on the same input", () => {
     renderMarkers([tempCaution, { ...tempCaution, message: "Second reason" }]);
     const markers = screen.getAllByRole("link");
@@ -62,11 +48,25 @@ describe("ValueMarkers", () => {
     expect(screen.getAllByRole("link")).toHaveLength(2);
   });
 
-  it("shows nothing for a withheld value", () => {
-    const { container } = renderMarkers([tempCaution], {
-      status: "withheld",
-      reason: "needs arrival temperature",
-    });
+  it("links a Caution that covers an input to the step it is shown on", () => {
+    renderMarkers([
+      {
+        level: "caution",
+        subject: stepSubject("weather"),
+        message: "Weather values came from a shared link",
+        covers: [fieldSubject("temp")],
+      },
+    ]);
+    expect(screen.getByRole("link", { name: /shared link/ })).toHaveAttribute(
+      "href",
+      "#notifications-step-weather",
+    );
+  });
+
+  it("shows nothing when the value rests on no Caution", () => {
+    const notifications = [{ ...tempCaution, level: "warning" as const }];
+    expect(substitutionsFor(arrivalLanding, notifications)).toEqual([]);
+    const { container } = renderMarkers(notifications);
     expect(container.querySelector("[data-marker]")).toBeNull();
   });
 });

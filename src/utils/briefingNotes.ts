@@ -4,7 +4,6 @@
  * concerns it; Advisories are left off. Built from the same derived
  * notifications the screen shows.
  */
-import { inputCautions, type MarkableValue } from "./markers";
 import {
   notificationKey,
   subjectKey,
@@ -12,6 +11,7 @@ import {
   type Notification,
   type Subject,
 } from "./notifications";
+import { substitutionsFor, type MarkableValue } from "./provenance";
 
 /** The Briefing sections a note can be printed under, in print order. */
 export const BRIEFING_SECTIONS = [
@@ -40,7 +40,7 @@ export interface BriefingNotes {
   inSection(section: BriefingSection): BriefingNote[];
   /** Reference numbers of the notes about any of `subjects`. */
   refsOn(...subjects: Subject[]): number[];
-  /** Reference numbers of the Cautions on the inputs `value` was computed from. */
+  /** Reference numbers of the Cautions `value` rests on (`substitutionsFor`). */
   markersOn(value: MarkableValue): number[];
   /** Reference numbers of `notifications`, ascending, for those the Briefing prints. */
   refsFor(notifications: readonly Notification[]): number[];
@@ -98,7 +98,7 @@ export function briefingNotes(notifications: readonly Notification[]): BriefingN
       const keys = new Set(subjects.map(subjectKey));
       return notes.filter((n) => keys.has(subjectKey(n.subject))).map((n) => n.ref);
     },
-    markersOn: (value) => refsFor(inputCautions(notifications, value)),
+    markersOn: (value) => refsFor(substitutionsFor(value, notifications)),
     refsFor,
   };
 }

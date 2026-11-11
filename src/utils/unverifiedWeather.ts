@@ -5,11 +5,24 @@
  * were fetched, nor the notifications they came with.
  */
 import { hasWeatherData } from "./actionBarState";
-import { stepSubject, subjectKey, type Notification } from "./notifications";
+import { fieldSubject, stepSubject, type Notification } from "./notifications";
 import type { WorksheetData } from "./types";
 
-export const UNVERIFIED_WEATHER_MESSAGE =
+const UNVERIFIED_WEATHER_MESSAGE =
   "Weather values came from a shared link and haven't been fetched this session. Fetch weather to verify them.";
+
+/**
+ * The weather fields a shared link carries. Field elevations and runway
+ * lengths come from the airport database, not a weather fetch.
+ */
+const WEATHER_FIELDS = [
+  fieldSubject("temp"),
+  fieldSubject("altimeter"),
+  fieldSubject("wind"),
+  fieldSubject("turb"),
+  fieldSubject("cielVis"),
+  fieldSubject("mtnObsc"),
+];
 
 /**
  * A Caution on the weather step while the worksheet holds weather values, or
@@ -20,6 +33,9 @@ export const UNVERIFIED_WEATHER_MESSAGE =
  * make the action bar or the weather step "fetched"; it is still a value the
  * session didn't fetch. An unticked box is the default and can't be told
  * apart, so it raises nothing.
+ *
+ * It covers every weather field, so values and Limit checks computed from
+ * them carry its marker (`substitutionsFor`).
  */
 export function unverifiedWeatherNotifications(
   state: WorksheetData,
@@ -32,12 +48,7 @@ export function unverifiedWeatherNotifications(
       level: "caution",
       subject: stepSubject("weather"),
       message: UNVERIFIED_WEATHER_MESSAGE,
+      covers: WEATHER_FIELDS,
     },
   ];
 }
-
-/** Whether `n` is the Unverified weather Caution. */
-export const isUnverifiedWeather = (n: Notification): boolean =>
-  n.level === "caution" &&
-  subjectKey(n.subject) === subjectKey(stepSubject("weather")) &&
-  n.message === UNVERIFIED_WEATHER_MESSAGE;

@@ -44,6 +44,13 @@ export interface Notification {
   subject: Subject;
   /** Pilot-facing text. Never parsed. */
   message: string;
+  /**
+   * The inputs this notification is about when its Subject is wider, such as
+   * a Caution on the weather step about every weather field. A value computed
+   * from one of them rests on it (`substitutionsFor`). A field Subject
+   * without an index covers every slot of that field.
+   */
+  covers?: Subject[];
 }
 
 /** A notification before its producer's caller has attached a Subject. */

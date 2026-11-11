@@ -12,7 +12,7 @@ import {
 import { mapWeatherDataToWorksheet, mergeWeatherData } from "../weatherDataMapper";
 import { deriveNotifications, fieldSubject, type WeatherFetchResult } from "../notifications";
 import { computeClimbViewModel, pressureColumnDependsOn } from "../derived";
-import { inputCautions } from "../markers";
+import { substitutionsFor } from "../provenance";
 import type { OpenMeteoPointForecast } from "../openMeteoApi";
 import type { WorksheetData } from "../types";
 
@@ -94,10 +94,10 @@ describe("midpoint Substitution markers on computed values", () => {
     const climb = computeClimbViewModel(state, notifications);
     const opDA = { status: "computed" as const, dependsOn: pressureColumnDependsOn(1).densityAltitude };
 
-    expect(midpoint(inputCautions(notifications, opDA))).not.toHaveLength(0);
-    expect(midpoint(inputCautions(notifications, climb.rateOfClimb[1]))).not.toHaveLength(0);
-    expect(midpoint(inputCautions(notifications, climb.serviceCeiling[1]))).not.toHaveLength(0);
-    expect(midpoint(inputCautions(notifications, climb.rateOfClimb[0]))).toHaveLength(0);
+    expect(midpoint(substitutionsFor(opDA, notifications))).not.toHaveLength(0);
+    expect(midpoint(substitutionsFor(climb.rateOfClimb[1], notifications))).not.toHaveLength(0);
+    expect(midpoint(substitutionsFor(climb.serviceCeiling[1], notifications))).not.toHaveLength(0);
+    expect(midpoint(substitutionsFor(climb.rateOfClimb[0], notifications))).toHaveLength(0);
   });
 });
 
@@ -120,7 +120,7 @@ describe("after the operating altitude changes", () => {
     const climb = computeClimbViewModel(next, notifications);
     // The operating altimeter still holds the midpoint value, so the
     // operating values stay marked even though temp[1] was re-derived.
-    const marked = midpoint(inputCautions(notifications, climb.rateOfClimb[1]));
+    const marked = midpoint(substitutionsFor(climb.rateOfClimb[1], notifications));
     expect(marked.map((n) => n.subject)).toEqual([fieldSubject("altimeter", 1)]);
   });
 });
