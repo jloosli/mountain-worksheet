@@ -454,7 +454,7 @@ describe("AppContainer — Weight limit check (#266)", () => {
     });
     expect(within(callout()).getByText("Exceeded")).toBeInTheDocument();
     expect(callout()).toHaveTextContent("2,790 / 3,100 lbs (90%)");
-    const summary = screen.getByRole("link", { name: /1 of 1 worksheet limit exceeded/ });
+    const summary = screen.getByRole("link", { name: /1 of 2 worksheet limits exceeded/ });
     expect(summary).toHaveAttribute("href", "#limit-check-weight");
     expect(percentCell()).toHaveTextContent(/^90%$/);
     expect(percentCell().className).toMatch(/text-red/);
@@ -484,6 +484,50 @@ describe("AppContainer — Weight limit check (#266)", () => {
     expect(within(callout()).getByText("Exceeded")).toBeInTheDocument();
     expect(nav.innerHTML).toBe(before.nav);
     expect(steps()).toEqual(before.steps);
+  });
+});
+
+describe("AppContainer — Winds aloft limit check (#267)", () => {
+  const callout = () => screen.getByRole("region", { name: "Limit check: Winds aloft" });
+  const speed = (alt: string) => screen.getByLabelText(`Wind velocity at ${alt} ft`);
+
+  it("shows the Winds aloft callout first in the Weather step, Not checked until a speed is entered", () => {
+    const { container } = render(<AppContainer />);
+    const weatherBody = container.querySelector("#step-weather article > header + *");
+    expect(weatherBody?.querySelector("section")).toBe(callout());
+    expect(within(callout()).getByText("Not checked")).toBeInTheDocument();
+    expect(callout()).toHaveTextContent("needs winds-aloft speeds");
+    expect(callout()).toHaveTextContent("Surface wind and gusts are not checked.");
+  });
+
+  it("shows each checked altitude with its value and state, styles the speeds, and counts in the summary", () => {
+    render(<AppContainer />);
+    fireEvent.change(speed("3,000"), { target: { value: "0" } });
+    fireEvent.change(speed("9,000"), { target: { value: "22" } });
+    expect(within(callout()).getByText("Near limit")).toBeInTheDocument();
+    expect(callout()).toHaveTextContent("3,000'0 kt");
+    expect(callout()).toHaveTextContent("9,000'22 kt");
+    expect(callout()).not.toHaveTextContent("6,000'");
+    expect(callout()).toHaveTextContent(/ridge height/);
+    expect(speed("9,000").className).toMatch(/text-amber/);
+    expect(screen.getByRole("link", { name: /1 near limit/ })).toBeInTheDocument();
+
+    fireEvent.change(speed("12,000"), { target: { value: "30" } });
+    expect(within(callout()).getByText("Exceeded")).toBeInTheDocument();
+    expect(speed("12,000").className).toMatch(/text-red/);
+    expect(
+      screen.getByRole("link", { name: /1 of 2 worksheet limits exceeded/ })
+    ).toHaveAttribute("href", "#limit-check-winds");
+  });
+
+  it("is Not checked when a typed speed is rejected, even though the other column passes", () => {
+    render(<AppContainer />);
+    fireEvent.change(speed("3,000"), { target: { value: "10" } });
+    fireEvent.change(speed("6,000"), { target: { value: "500" } });
+    expect(within(callout()).getByText("Not checked")).toBeInTheDocument();
+    expect(callout()).toHaveTextContent("3,000'10 kt");
+    expect(callout()).toHaveTextContent("6,000'needs speed (Warning)");
+    expect(speed("6,000").className).not.toMatch(/text-red|text-amber/);
   });
 });
 

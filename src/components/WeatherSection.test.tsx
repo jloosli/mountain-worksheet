@@ -2,6 +2,7 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import WeatherSection from "./WeatherSection";
 import type { RunwayOption, WorksheetData } from "@/utils/types";
 import { fieldSubject, type Notification } from "@/utils/notifications";
+import type { LimitCheck } from "@/utils/limitChecks";
 import { deserializeState } from "@/utils/urlState";
 import { sanitizeWorksheetUrlState } from "@/utils/worksheetUrlState";
 
@@ -310,5 +311,49 @@ describe("WeatherSection — worksheet opened from a link", () => {
     expect(
       screen.getByText(/winds aloft.*direction, speed and temperature/)
     ).toBeInTheDocument();
+  });
+});
+
+describe("WeatherSection — winds aloft point styles (#267)", () => {
+  const winds: LimitCheck = {
+    id: "winds",
+    name: "Winds aloft",
+    limit: "mountain winds under 30 kt at every altitude",
+    caveat: "Surface wind and gusts are not checked.",
+    step: "weather",
+    state: "exceeded",
+    points: [
+      { label: "3,000'", state: "within", value: "10 kt", substitutions: [], index: 0 },
+      { label: "6,000'", state: "near", value: "20 kt", substitutions: [], index: 1 },
+      { label: "9,000'", state: "exceeded", value: "30 kt", substitutions: [], index: 2 },
+      { label: "12,000'", state: "not-checked", waitingFor: "needs speed checked (Warning)", substitutions: [], index: 3 },
+    ],
+  };
+  const state: WorksheetData = {
+    ...populated,
+    wind: [
+      [270, 270, 270, 270, null],
+      [10, 20, 30, 40, null],
+      [5, 0, -5, -10, null],
+    ],
+  };
+
+  it("styles each speed by its point state: Exceeded and Near limit only", () => {
+    render(
+      <WeatherSection
+        state={state}
+        onUpdate={() => {}}
+        airportRunways={[null, null]}
+        limitChecks={[winds]}
+      />
+    );
+    const speed = (alt: string) => screen.getByLabelText(`Wind velocity at ${alt} ft`);
+    expect(speed("9,000").className).toMatch(/text-red/);
+    expect(speed("6,000").className).toMatch(/text-amber/);
+    for (const alt of ["3,000", "12,000", "15,000"]) {
+      expect(speed(alt).className).not.toMatch(/text-red|text-amber/);
+    }
+    // Only speeds are styled, not direction or temperature.
+    expect(screen.getByLabelText("Wind direction at 9,000 ft").className).not.toMatch(/text-red/);
   });
 });

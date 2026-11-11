@@ -5,7 +5,7 @@
  * were fetched, nor the notifications they came with.
  */
 import { hasWeatherData } from "./actionBarState";
-import { stepSubject, type Notification } from "./notifications";
+import { stepSubject, subjectKey, type Notification } from "./notifications";
 import type { WorksheetData } from "./types";
 
 export const UNVERIFIED_WEATHER_MESSAGE =
@@ -29,3 +29,9 @@ export function unverifiedWeatherNotifications(
     },
   ];
 }
+
+/** Whether `n` is the Unverified weather Caution. */
+export const isUnverifiedWeather = (n: Notification): boolean =>
+  n.level === "caution" &&
+  subjectKey(n.subject) === subjectKey(stepSubject("weather")) &&
+  n.message === UNVERIFIED_WEATHER_MESSAGE;

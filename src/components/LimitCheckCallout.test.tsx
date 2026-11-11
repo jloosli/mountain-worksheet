@@ -22,6 +22,17 @@ const weight = (overrides: Partial<LimitCheck> = {}): LimitCheck => ({
 });
 
 describe("LimitCheckCallout", () => {
+  it("shows a check's guidance note when it has one", () => {
+    render(
+      <LimitCheckCallout
+        check={weight({ state: "near", note: "Near limit from 20 kt: proceed with caution." })}
+      />,
+    );
+    expect(screen.getByRole("region", { name: "Limit check: Weight" })).toHaveTextContent(
+      "Near limit from 20 kt: proceed with caution.",
+    );
+  });
+
   it("shows the name, state chip, worksheet limit and point", () => {
     render(<LimitCheckCallout check={weight()} />);
     const callout = screen.getByRole("region", { name: "Limit check: Weight" });

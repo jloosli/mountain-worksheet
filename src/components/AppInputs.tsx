@@ -84,6 +84,7 @@ export default function AppInputs({
         title="Weather"
         subtitle="Winds aloft, terminal conditions, and advisories"
       >
+        <LimitCheckCallouts checks={limitChecks} step="weather" />
         <InlineNotifications
           notifications={notifications}
           subject={stepSubject("weather")}
@@ -95,6 +96,7 @@ export default function AppInputs({
           runwayStatus={runwayStatus}
           useFahrenheit={useFahrenheit}
           notifications={notifications}
+          limitChecks={limitChecks}
           rejectedEntries={rejectedEntries}
           onRejectedEntryChange={onRejectedEntryChange}
         />
