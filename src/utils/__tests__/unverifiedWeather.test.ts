@@ -1,4 +1,5 @@
 import { unverifiedWeatherNotifications } from "../unverifiedWeather";
+import { deriveActionBarState, hasWeatherData } from "../actionBarState";
 import type { WorksheetData } from "../types";
 
 const blank = {
@@ -9,6 +10,9 @@ const blank = {
     [null, null, null],
     [null, null, null],
   ],
+  turb: false,
+  cielVis: false,
+  mtnObsc: false,
 } as unknown as WorksheetData;
 
 const withSharedTemp = { ...blank, temp: [21, null, null] } as WorksheetData;
@@ -45,5 +49,25 @@ describe("unverifiedWeatherNotifications", () => {
 
   it("raises nothing for a worksheet with no weather values", () => {
     expect(unverifiedWeatherNotifications(blank, null)).toEqual([]);
+  });
+
+  describe.each(["cielVis", "turb", "mtnObsc"] as const)("a ticked %s box alone (#277)", (box) => {
+    const ticked = { ...blank, [box]: true } as WorksheetData;
+
+    it("raises the Caution before any fetch this session", () => {
+      const notes = unverifiedWeatherNotifications(ticked, null);
+      expect(notes).toHaveLength(1);
+      expect(notes[0].message).toMatch(/shared link/i);
+    });
+
+    it("raises nothing once weather has been fetched this session", () => {
+      expect(unverifiedWeatherNotifications(ticked, new Date())).toEqual([]);
+    });
+
+    it("doesn't count as weather data, so the action bar isn't 'fetched'", () => {
+      expect(hasWeatherData(ticked)).toBe(false);
+      const fetchable = { ...ticked, airport: ["KORD", "KBOI"], date: "2026-01-01", time: "10:00" };
+      expect(deriveActionBarState(fetchable as WorksheetData, null)).toBe("ready");
+    });
   });
 });

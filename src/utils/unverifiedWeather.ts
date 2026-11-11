@@ -12,15 +12,21 @@ export const UNVERIFIED_WEATHER_MESSAGE =
   "Weather values came from a shared link and haven't been fetched this session. Fetch weather to verify them.";
 
 /**
- * A Caution on the weather step while the worksheet holds weather values and
- * no weather fetch has succeeded this session. Derived from the same two
- * facts `deriveStepStatuses` uses; it never blocks anything.
+ * A Caution on the weather step while the worksheet holds weather values, or
+ * a ticked advisory box, and no weather fetch has succeeded this session. It
+ * never blocks anything.
+ *
+ * A ticked box alone isn't weather data (`hasWeatherData`), so it doesn't
+ * make the action bar or the weather step "fetched"; it is still a value the
+ * session didn't fetch. An unticked box is the default and can't be told
+ * apart, so it raises nothing.
  */
 export function unverifiedWeatherNotifications(
   state: WorksheetData,
   weatherLastUpdated: Date | null
 ): Notification[] {
-  if (weatherLastUpdated !== null || !hasWeatherData(state)) return [];
+  const tickedBox = state.turb || state.cielVis || state.mtnObsc;
+  if (weatherLastUpdated !== null || !(hasWeatherData(state) || tickedBox)) return [];
   return [
     {
       level: "caution",
