@@ -50,7 +50,10 @@ export interface LimitPoint {
   value?: string;
   /** What a Not checked point is waiting for, e.g. "needs weight". */
   waitingFor?: string;
-  /** Cautions on the inputs this value rests on (substitution markers). */
+  /**
+   * Cautions on the inputs this value rests on (substitution markers),
+   * including the Unverified weather Caution for values from a shared link.
+   */
   substitutions: Notification[];
   /** The column or airport slot this point is about, for styling its table cell. */
   index?: number;
@@ -265,7 +268,8 @@ const WINDS_NEAR_NOTE =
 
 /**
  * Ceiling/visibility: the Ceil/Vis (IFR G-AIRMET) box. Exceeded when ticked,
- * by a fetch or by the pilot; Within limit when unticked for any reason.
+ * by a fetch or by the pilot; Within limit when unticked for any reason,
+ * unless a Warning on the box (e.g. a stale fetch) makes it Not checked.
  * Where the flag came from isn't tracked.
  */
 function ceilVisCheck({ state, notifications }: LimitCheckInputs): LimitCheck {
