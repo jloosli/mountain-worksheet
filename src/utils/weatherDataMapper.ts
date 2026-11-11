@@ -11,6 +11,7 @@ import { selectAirportWeather } from "./airportTimeWeather";
 import type { AreaOfOpsWeather } from "./areaOfOpsWeather";
 import { TARGET_ALTITUDES_FT } from "./areaOfOpsWeather";
 import type { AirmetClassification } from "./gairmetApi";
+import { fieldTemperatureAt, type OpenMeteoPointForecast } from "./openMeteoApi";
 import { fieldSubject, subjectKey, type Notification, type Subject } from "./notifications";
 
 // Validation ranges
@@ -58,6 +59,8 @@ export interface WeatherMappingOptions {
     arrival?: AirportCondition;
   };
   position?: [number | null, number | null];
+  /** Model point forecasts at each airport, keyed by upper-case airport ID (#301). */
+  fieldForecasts?: Record<string, OpenMeteoPointForecast>;
   opAltitudeFt?: number | null;
   validateData?: boolean;
 }
@@ -122,7 +125,9 @@ export function mapAirportSpecificWeatherData(
     const code = airportCode.toUpperCase();
     const metar = safeMetar.find((m) => m.icaoId?.toUpperCase() === code);
     const taf = safeTaf.find((t) => t.icaoId?.toUpperCase() === code);
-    const sel = selectAirportWeather(metar, taf, requestedTime, code, index);
+    const sel = selectAirportWeather(metar, taf, requestedTime, code, index, {
+      fieldForecastTemp: fieldTemperatureAt(options.fieldForecasts?.[code], requestedTime),
+    });
     notifications.push(...sel.notifications);
     const label = index === 0 ? "Departure" : "Arrival";
 

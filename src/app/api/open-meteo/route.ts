@@ -7,6 +7,7 @@ const OPEN_METEO_BASE = "https://api.open-meteo.com/v1/gfs";
 const ALLOWED_PARAMS = new Set([
   "latitude",
   "longitude",
+  "elevation",
   "start_date",
   "end_date",
   "hourly",

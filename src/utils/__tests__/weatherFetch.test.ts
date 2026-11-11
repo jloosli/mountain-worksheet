@@ -1,6 +1,6 @@
 import { fetchWorksheetWeather } from "@/utils/weatherFetch";
 import { getWeatherDataBatch } from "@/utils/aviationWeatherApi";
-import { fetchPointForecast } from "@/utils/openMeteoApi";
+import { fetchFieldForecast, fetchPointForecast } from "@/utils/openMeteoApi";
 import { fetchGAirmets } from "@/utils/gairmetApi";
 import { fieldSubject, subjectKey, type Notification } from "@/utils/notifications";
 import { fetchNotifications } from "@/utils/weatherSession";
@@ -13,6 +13,7 @@ jest.mock("@/utils/aviationWeatherApi", () => ({
 jest.mock("@/utils/openMeteoApi", () => ({
   ...jest.requireActual("@/utils/openMeteoApi"),
   fetchPointForecast: jest.fn(),
+  fetchFieldForecast: jest.fn(),
 }));
 jest.mock("@/utils/gairmetApi", () => ({
   ...jest.requireActual("@/utils/gairmetApi"),
@@ -21,6 +22,7 @@ jest.mock("@/utils/gairmetApi", () => ({
 
 const mockBatch = getWeatherDataBatch as jest.Mock;
 const mockPoint = fetchPointForecast as jest.Mock;
+const mockField = fetchFieldForecast as jest.Mock;
 const mockGairmets = fetchGAirmets as jest.Mock;
 
 const worksheet: WorksheetData = {
@@ -119,6 +121,7 @@ beforeEach(() => {
     notifications: [],
   });
   mockPoint.mockResolvedValue(pointForecast);
+  mockField.mockRejectedValue(new Error("not stubbed"));
   mockGairmets.mockResolvedValue([]);
 });
 
@@ -516,6 +519,82 @@ describe("fetchWorksheetWeather", () => {
       expect(subjectsAt(result.notifications, "advisory")).toEqual(
         expect.arrayContaining(["field:airport.0", "field:airport.1"]),
       );
+    });
+  });
+
+  describe("airport temperature from the field's model forecast (#301)", () => {
+    // A typical US TAF: no temperature and no altimeter in any period.
+    const kordTaf = {
+      icaoId: "KORD",
+      fcsts: [
+        {
+          timeFrom: Math.floor(Date.parse("2026-05-12T12:00:00Z") / 1000),
+          timeTo: Math.floor(Date.parse("2026-05-13T12:00:00Z") / 1000),
+          altim: null,
+        },
+      ],
+    };
+    // 9 hr after the 16:00Z observation, so the METAR isn't current.
+    const later: WorksheetData = {
+      ...worksheet,
+      time: "01:00",
+      date: "2026-05-13",
+      airport: ["KORD", "KORD"],
+      duration: 2,
+    };
+    const fieldForecast = {
+      hourly: {
+        time: ["2026-05-13T00:00", "2026-05-13T01:00", "2026-05-13T02:00", "2026-05-13T03:00"],
+        temperature_2m: [28.1, 27.4, 25.0, 23.6],
+      },
+    };
+
+    beforeEach(() => {
+      mockBatch.mockResolvedValue({
+        metar: [kordMetar],
+        taf: [kordTaf],
+        airport: [kordAirport],
+        notifications: [],
+      });
+    });
+
+    it("fills each airport slot from one forecast at the field's position and elevation, for that slot's time", async () => {
+      mockField.mockResolvedValue(fieldForecast);
+      const { data, result } = await fetchWorksheetWeather(later);
+
+      expect(mockField).toHaveBeenCalledTimes(1);
+      expect(mockField).toHaveBeenCalledWith(41.97, -87.9, 200, expect.anything());
+      expect(data?.temp?.[0]).toBe(27); // 01:00Z departure
+      expect(data?.temp?.[2]).toBe(24); // 03:00Z arrival
+      const tempNotes = result.notifications.filter(
+        (n) => n.subject.kind === "field" && n.subject.field === "temp" && n.subject.index !== 1,
+      );
+      expect(tempNotes.map((n) => n.level)).toEqual(["advisory", "advisory"]);
+      expect(tempNotes[0].message).toMatch(/Open-Meteo model forecast/);
+    });
+
+    it("doesn't use a field forecast hour that misses the slot's time", async () => {
+      mockField.mockResolvedValue({
+        hourly: { time: ["2026-05-12T20:00"], temperature_2m: [30] },
+      });
+      const { data } = await fetchWorksheetWeather(later);
+      expect(data?.temp?.[0]).toBe(21); // the observation, not 30
+    });
+
+    it("falls back to the observation with a Caution when the field forecast fails", async () => {
+      mockField.mockRejectedValue(new Error("network down"));
+      const { data, result } = await fetchWorksheetWeather(later);
+
+      expect(data?.temp?.[0]).toBe(21);
+      expect(result.notifications).toContainEqual(
+        expect.objectContaining({
+          level: "caution",
+          subject: fieldSubject("temp", 0),
+          message: expect.stringMatching(/no temperature; using current observation/),
+        }),
+      );
+      // The operating-area forecast is unaffected.
+      expect(data?.wind?.[0][0]).not.toBeNull();
     });
   });
 });

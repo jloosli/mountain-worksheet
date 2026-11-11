@@ -158,8 +158,9 @@ describe("selectAirportWeather", () => {
         subject: fieldSubject("temp", 0),
         message: expect.stringMatching(/no TAF available/i),
       }),
+      // A 5 hr-old altimeter is routine persistence: an Advisory (#301).
       expect.objectContaining({
-        level: "caution",
+        level: "advisory",
         subject: fieldSubject("altimeter", 0),
         message: expect.stringMatching(/no TAF available/i),
       }),
@@ -176,7 +177,9 @@ describe("selectAirportWeather", () => {
     };
     const requested = new Date("2026-05-10T20:30:00Z");
     const result = selectAirportWeather(ktvyMetar, undefined, requested, "KTVY");
-    for (const n of result.notifications) {
+    const cautions = result.notifications.filter((n) => n.level === "caution");
+    expect(cautions).toHaveLength(1);
+    for (const n of cautions) {
       expect(n.message).not.toMatch(/fallback/i);
       expect(n.message).toMatch(/substitut/i);
     }
@@ -286,10 +289,11 @@ describe("selectAirportWeather", () => {
     const result = selectAirportWeather(baseMetar, tafWithNullAltim, requested, "KSLC");
     expect(result.source).toBe("taf-fcst");
     expect(result.altimeter).toBeCloseTo(29.97, 2);
-    // Substituting the observation for the forecast is announced, never silent.
+    // Persisting a recent observation is announced, never silent: an Advisory
+    // within 12 hr, since no US TAF ever forecasts an altimeter (#301).
     expect(result.notifications).toEqual([
       expect.objectContaining({
-        level: "caution",
+        level: "advisory",
         subject: fieldSubject("altimeter", 0),
         message: expect.stringMatching(/no altimeter/i),
       }),
@@ -320,5 +324,117 @@ describe("selectAirportWeather", () => {
     const result = selectAirportWeather(baseMetar, tafArray, requested, "KSLC");
     expect(result.source).toBe("taf-fcst");
     expect(result.temp).toBe(26);
+  });
+});
+
+describe("selectAirportWeather: routine TAF gaps (#301)", () => {
+  // US civil TAFs carry no altimeter and almost never a temperature.
+  const usTaf: TAFResponse = {
+    ...baseTaf,
+    fcsts: [
+      {
+        timeFrom: Math.floor(Date.parse("2026-05-12T15:00:00Z") / 1000),
+        timeTo: Math.floor(Date.parse("2026-05-13T15:00:00Z") / 1000),
+        temp: undefined,
+        altim: null,
+      },
+    ],
+  };
+  const on = (result: ReturnType<typeof selectAirportWeather>, field: "temp" | "altimeter") =>
+    result.notifications.filter((n) => n.subject.kind === "field" && n.subject.field === field);
+
+  it("fills temperature from the field's model forecast with an Advisory when the TAF has none", () => {
+    const requested = new Date("2026-05-13T00:06:00Z"); // 9.1 hr after the observation
+    const result = selectAirportWeather(baseMetar, usTaf, requested, "KSLC", 0, {
+      fieldForecastTemp: 27.4,
+    });
+    expect(result.temp).toBe(27);
+    expect(on(result, "temp")).toEqual([
+      {
+        level: "advisory",
+        subject: fieldSubject("temp", 0),
+        message:
+          "KSLC: forecast period has no temperature; using the Open-Meteo model forecast for the field",
+      },
+    ]);
+  });
+
+  it.each([
+    ["9.1 hr", "2026-05-13T00:06:00Z", "advisory"],
+    ["exactly 12 hr", "2026-05-13T03:00:00Z", "advisory"],
+    ["13 hr", "2026-05-13T04:00:00Z", "caution"],
+  ])(
+    "persists the observed altimeter when the TAF has none, as a %s-old reading gives an %s",
+    (_age, at, level) => {
+      const result = selectAirportWeather(baseMetar, usTaf, new Date(at), "KSLC", 0, {
+        fieldForecastTemp: 20,
+      });
+      expect(result.altimeter).toBeCloseTo(29.97, 2);
+      expect(on(result, "altimeter")).toEqual([
+        expect.objectContaining({
+          level,
+          subject: fieldSubject("altimeter", 0),
+          message: expect.stringMatching(
+            /^KSLC: forecast period has no altimeter; using current observation \(Δt = /,
+          ),
+        }),
+      ]);
+    },
+  );
+
+  it("uses the model temperature and a recent observed altimeter at an airport with no TAF", () => {
+    const requested = new Date("2026-05-12T20:00:00Z"); // 5 hr after the observation
+    const result = selectAirportWeather(baseMetar, undefined, requested, "KSLC", 2, {
+      fieldForecastTemp: 25.6,
+    });
+    expect(result.temp).toBe(26);
+    expect(result.altimeter).toBeCloseTo(29.97, 2);
+    expect(result.notifications).toEqual([
+      {
+        level: "advisory",
+        subject: fieldSubject("temp", 2),
+        message: "KSLC: no TAF available; using the Open-Meteo model forecast for the field",
+      },
+      {
+        level: "advisory",
+        subject: fieldSubject("altimeter", 2),
+        message: "KSLC: no TAF available; using current observation (Δt = 5.0 hr)",
+      },
+    ]);
+  });
+
+  it("prefers the model forecast for the requested hour over the nearest TAF period's temperature", () => {
+    const requested = new Date("2026-05-13T12:00:00Z"); // past the end of the TAF
+    const result = selectAirportWeather(baseMetar, baseTaf, requested, "KSLC", 0, {
+      fieldForecastTemp: 11.2,
+    });
+    expect(result.temp).toBe(11);
+    expect(on(result, "temp")).toEqual([
+      {
+        level: "advisory",
+        subject: fieldSubject("temp", 0),
+        message:
+          "KSLC: forecast unavailable for 2026-05-13T12:00:00.000Z; using the Open-Meteo model forecast for the field",
+      },
+    ]);
+  });
+
+  it("gives a recent observed altimeter an Advisory past the end of a TAF without one", () => {
+    const shortTaf: TAFResponse = {
+      ...baseTaf,
+      fcsts: [
+        { ...usTaf.fcsts![0], timeTo: Math.floor(Date.parse("2026-05-12T18:00:00Z") / 1000) },
+      ],
+    };
+    const requested = new Date("2026-05-12T23:00:00Z"); // 8 hr after the observation
+    const result = selectAirportWeather(baseMetar, shortTaf, requested, "KSLC");
+    expect(on(result, "altimeter")).toEqual([
+      expect.objectContaining({
+        level: "advisory",
+        message: expect.stringMatching(
+          /no altimeter; using the current observation \(Δt = 8\.0 hr\)/,
+        ),
+      }),
+    ]);
   });
 });

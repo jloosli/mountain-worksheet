@@ -62,6 +62,54 @@ export async function fetchPointForecast(
   return (await res.json()) as OpenMeteoPointForecast;
 }
 
+/**
+ * Hourly 2 m temperature at an airport. Passing the field elevation (meters)
+ * makes the model downscale to the field rather than its smoothed grid cell
+ * (ADR 0003, #301).
+ */
+export async function fetchFieldForecast(
+  latitude: number,
+  longitude: number,
+  elevationM: number,
+  win: { start: Date; end: Date },
+): Promise<OpenMeteoPointForecast> {
+  const url = new URL("/api/open-meteo", getOrigin());
+  url.searchParams.set("latitude", String(latitude));
+  url.searchParams.set("longitude", String(longitude));
+  url.searchParams.set("elevation", String(elevationM));
+  url.searchParams.set("start_date", dateOnly(win.start));
+  url.searchParams.set("end_date", dateOnly(win.end));
+  url.searchParams.set("temperature_unit", "celsius");
+  url.searchParams.set("hourly", "temperature_2m");
+
+  const res = await fetch(url.toString(), {
+    method: "GET",
+    headers: { Accept: "application/json" },
+  });
+  if (!res.ok) {
+    throw new Error(`Open-Meteo request failed: ${res.status} ${res.statusText}`);
+  }
+  return (await res.json()) as OpenMeteoPointForecast;
+}
+
+/** Hourly output is on the hour, so a matching hour is within 30 min. */
+const FIELD_FORECAST_MAX_OFFSET_MS = 60 * 60 * 1000;
+
+/**
+ * The field forecast's 2 m temperature for the hour nearest `at`, or null
+ * when the forecast doesn't reach that time or has no value there.
+ */
+export function fieldTemperatureAt(
+  raw: OpenMeteoPointForecast | undefined,
+  at: Date,
+): number | null {
+  if (!raw) return null;
+  const { idx, deltaMs } = pickClosestTimeIdx(raw, at);
+  if (idx < 0 || deltaMs > FIELD_FORECAST_MAX_OFFSET_MS) return null;
+  const value = (raw.hourly.temperature_2m as number[] | undefined)?.[idx];
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
 export interface InterpolationSample {
   timeIdx: number;
   heightsFtByLevel: Record<PressureLevel, number>;

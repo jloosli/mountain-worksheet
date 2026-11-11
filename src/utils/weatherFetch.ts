@@ -6,7 +6,11 @@
  * Never throws and never blocks: a Partial fetch applies what succeeded, and
  * a total failure is a Warning on the weather step with nothing applied.
  */
-import { getWeatherDataBatch, type WeatherDataBatch } from "./aviationWeatherApi";
+import {
+  getWeatherDataBatch,
+  type AirportResponse,
+  type WeatherDataBatch,
+} from "./aviationWeatherApi";
 import {
   airportIdentityNotification,
   classifyAirport,
@@ -32,7 +36,11 @@ import {
 } from "./gairmetApi";
 import { normalizeAirportCode } from "./airportCode";
 import { stepSubject, type Notification, type WeatherFetchResult } from "./notifications";
-import { fetchPointForecast } from "./openMeteoApi";
+import {
+  fetchFieldForecast,
+  fetchPointForecast,
+  type OpenMeteoPointForecast,
+} from "./openMeteoApi";
 import type { WorksheetData } from "./types";
 import {
   mapWeatherDataToWorksheet,
@@ -162,6 +170,40 @@ function classifyGAirmetResult(
   };
 }
 
+/**
+ * The model point forecast at each reporting airport's own position and
+ * elevation, keyed by airport ID (#301). An airport whose request fails is
+ * left out: its temperature falls back to the observation, whose Caution
+ * already tells the pilot.
+ */
+async function fetchFieldForecasts(
+  airports: AirportResponse[],
+  codes: string[],
+  win: { start: Date; end: Date },
+): Promise<Record<string, OpenMeteoPointForecast>> {
+  const unique = [...new Set(codes.map((c) => c.toUpperCase()))];
+  const entries = await Promise.all(
+    unique.map(async (code) => {
+      const a = airports.find((x) => x.icaoId?.toUpperCase() === code);
+      if (
+        !a ||
+        typeof a.lat !== "number" ||
+        typeof a.lon !== "number" ||
+        typeof a.elev !== "number" ||
+        !Number.isFinite(a.elev)
+      ) {
+        return null;
+      }
+      try {
+        return [code, await fetchFieldForecast(a.lat, a.lon, a.elev, win)] as const;
+      } catch {
+        return null;
+      }
+    }),
+  );
+  return Object.fromEntries(entries.filter((e) => e !== null));
+}
+
 export async function fetchWorksheetWeather(
   worksheet: WorksheetData,
 ): Promise<WorksheetWeatherFetch> {
@@ -208,6 +250,16 @@ export async function fetchWorksheetWeather(
       const a = (apiData.airport ?? []).find((x) => x.icaoId?.toUpperCase() === code);
       return a && typeof a.lat === "number" && typeof a.lon === "number" ? [a.lat, a.lon] : null;
     };
+    const fieldForecastsPromise = fetchFieldForecasts(
+      apiData.airport ?? [],
+      ([0, 1] as const).flatMap((slot) =>
+        fetchedFor.airport[slot] && !conditions[slot] ? [fetchedFor.airport[slot]] : [],
+      ),
+      {
+        start: depTime,
+        end: new Date(depTime.getTime() + (worksheet.duration ?? 0) * 3600 * 1000),
+      },
+    );
     const depLatLon = latLonOf(departure);
     const arrLatLon = latLonOf(arrival);
 
@@ -246,7 +298,9 @@ export async function fetchWorksheetWeather(
       airmets = classifyGAirmetResult(gairmet, opPos, midTime);
     }
 
+    const fieldForecasts = await fieldForecastsPromise;
     const mapping = mapWeatherDataToWorksheet(apiData, areaOfOps, airmets, {
+      fieldForecasts,
       flightDate: worksheet.date,
       flightTime: worksheet.time,
       durationHours: worksheet.duration,
