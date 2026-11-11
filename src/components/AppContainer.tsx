@@ -16,29 +16,15 @@ import { deriveActionBarState } from "@/utils/actionBarState";
 import {
   applyOpTempForAltitudeChange,
   describeOpTempChange,
-  opTempChangeNotifications,
   type OpTempChange,
 } from "@/utils/areaOfOpsWeather";
-import { deriveStepStatuses, formatStepBadge } from "@/utils/stepStatuses";
+import { formatStepBadge } from "@/utils/stepStatuses";
 import InlineNotifications from "@/components/InlineNotifications";
 import { LimitCheckCallouts } from "@/components/LimitCheckCallout";
-import {
-  deriveNotifications,
-  staleFetchNotifications,
-  stepSubject,
-  type WeatherFetchResult,
-} from "@/utils/notifications";
-import {
-  computeClimbViewModel,
-  computePressureColumns,
-  computeTOLDViewModel,
-  derivePerformanceNotifications,
-} from "@/utils/derived";
-import { deriveLimitChecks } from "@/utils/limitChecks";
+import { stepSubject, type WeatherFetchResult } from "@/utils/notifications";
 import type { WorksheetData } from "@/utils/types";
-import { unverifiedWeatherNotifications } from "@/utils/unverifiedWeather";
+import { evaluateWorksheet } from "@/utils/worksheetEvaluation";
 import {
-  rejectedEntryNotifications,
   retireRejectedEntries,
   updateRejectedEntries,
   type RejectedEntries,
@@ -49,7 +35,6 @@ import { useTempUnit } from "@/utils/useTempUnit";
 import { useUrlState } from "@/utils/useUrlState";
 import { useAirportRunwayLookup } from "@/utils/useAirportRunways";
 import {
-  deriveUrlNotifications,
   retireUrlNotifications,
   sanitizeWorksheetUrlState,
 } from "@/utils/worksheetUrlState";
@@ -165,42 +150,29 @@ export default function AppContainer() {
   const handleOpenChecklist = () => setOverlay("checklist");
   const handleCloseOverlay = () => setOverlay(null);
 
-  const notifications = useMemo(
-    () => [
-      ...deriveNotifications(state, weatherFetch),
-      ...staleFetchNotifications(state, weatherFetch),
-      ...runwayLookup.notifications,
-      ...opTempChangeNotifications(state, opTempChange),
-      ...deriveUrlNotifications(state, linkLoad),
-      ...unverifiedWeatherNotifications(state, weatherLastUpdated),
-      ...derivePerformanceNotifications(state),
-      ...rejectedEntryNotifications(state, rejectedEntries),
-    ],
+  // Every notification, computed value, Limit check and step status, derived
+  // during render from the worksheet and this session.
+  const evaluation = useMemo(
+    () =>
+      evaluateWorksheet(state, {
+        weatherFetch,
+        weatherLastUpdated,
+        opTempChange,
+        linkLoad,
+        rejectedEntries,
+        runwayNotifications: runwayLookup.notifications,
+      }),
     [
       state,
       weatherFetch,
-      runwayLookup.notifications,
+      weatherLastUpdated,
       opTempChange,
       linkLoad,
-      weatherLastUpdated,
       rejectedEntries,
+      runwayLookup.notifications,
     ]
   );
-
-  // Limit checks are derived during render and read by the action bar and
-  // every step. They don't feed step status or badges (ADR 0002).
-  const { PAs } = computePressureColumns(state.altitude, state.altimeter, state.temp);
-  const limitChecks = deriveLimitChecks({
-    state,
-    notifications,
-    climb: computeClimbViewModel(state, notifications),
-    told: computeTOLDViewModel(state, PAs, notifications),
-  });
-
-  const stepStatuses = useMemo(
-    () => deriveStepStatuses(state, weatherLastUpdated, notifications),
-    [state, weatherLastUpdated, notifications]
-  );
+  const { notifications, limitChecks, stepStatuses } = evaluation;
 
   const actionBarState = useMemo(
     () => deriveActionBarState(state, weatherLastUpdated),
@@ -342,9 +314,7 @@ export default function AppContainer() {
             useFahrenheit={useFahrenheit}
             airportRunways={runwayLookup.runways}
             runwayStatus={runwayLookup.status}
-            notifications={notifications}
-            limitChecks={limitChecks}
-            stepStatuses={stepStatuses}
+            evaluation={evaluation}
             rejectedEntries={rejectedEntries}
             onRejectedEntryChange={handleRejectedEntryChange}
           />
@@ -363,11 +333,7 @@ export default function AppContainer() {
               subject={stepSubject("decision")}
               className="mb-4"
             />
-            <Calculations
-              state={state}
-              notifications={notifications}
-              limitChecks={limitChecks}
-            />
+            <Calculations state={state} evaluation={evaluation} />
           </StepShell>
         </div>
       </main>
@@ -385,7 +351,7 @@ export default function AppContainer() {
       >
         <ChecklistPanel checks={limitChecks} />
       </SlideOver>
-      <PrintBriefing state={state} notifications={notifications} limitChecks={limitChecks} />
+      <PrintBriefing state={state} evaluation={evaluation} />
       <footer className="w-full py-4 px-2 md:px-8 text-center text-sm text-gray-600 dark:text-gray-400 border-t border-gray-200 dark:border-gray-800 print:hidden">
         Found an issue or bug?{" "}
         <a

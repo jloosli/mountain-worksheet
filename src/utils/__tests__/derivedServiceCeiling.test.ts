@@ -59,7 +59,7 @@ const state: WorksheetData = {
 
 describe("service ceiling extrapolation", () => {
   it("puts a Caution on a service ceiling below the climb table", () => {
-    const vm = computeClimbViewModel(state);
+    const vm = computeClimbViewModel(state, []);
     expect(vm.serviceCeiling[0]).toEqual(
       expect.objectContaining({ status: "computed", value: expect.any(Number) }),
     );
@@ -72,7 +72,7 @@ describe("service ceiling extrapolation", () => {
   });
 
   it("raises nothing for a ceiling inside the table", () => {
-    const vm = computeClimbViewModel(state);
+    const vm = computeClimbViewModel(state, []);
     expect(
       vm.notifications.filter((n) => n.subject.kind === "value" && n.subject.id.startsWith("climb.serviceCeiling.operating")),
     ).toEqual([]);

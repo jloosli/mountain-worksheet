@@ -1,5 +1,6 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import AppInputs from "./AppInputs";
+import { evaluationFor } from "../test-utils/evaluation";
 import type { WorksheetData } from "@/utils/types";
 import {
   fieldSubject,
@@ -101,6 +102,7 @@ describe("AppInputs", () => {
         state={defaultState}
         onStateUpdate={mockOnStateUpdate}
         airportRunways={[null, null]}
+        evaluation={evaluationFor(defaultState)}
       />
     );
 
@@ -123,6 +125,7 @@ describe("AppInputs", () => {
         state={testState}
         onStateUpdate={mockOnStateUpdate}
         airportRunways={[null, null]}
+        evaluation={evaluationFor(testState)}
       />
     );
 
@@ -135,6 +138,7 @@ describe("AppInputs", () => {
         state={defaultState}
         onStateUpdate={mockOnStateUpdate}
         airportRunways={[null, null]}
+        evaluation={evaluationFor(defaultState)}
       />
     );
 
@@ -173,6 +177,7 @@ describe("AppInputs", () => {
         state={defaultState}
         onStateUpdate={mockOnStateUpdate}
         airportRunways={[null, null]}
+        evaluation={evaluationFor(defaultState)}
       />
     );
 
@@ -193,6 +198,7 @@ describe("AppInputs", () => {
         state={defaultState}
         onStateUpdate={() => {}}
         airportRunways={[null, null]}
+        evaluation={evaluationFor(defaultState)}
       />
     );
     expect(container.querySelector("#step-sortie")).not.toBeNull();
@@ -228,6 +234,7 @@ describe("AppInputs", () => {
         state={populatedState}
         onStateUpdate={mockOnStateUpdate}
         airportRunways={[null, null]}
+        evaluation={evaluationFor(populatedState)}
       />
     );
 
@@ -261,7 +268,7 @@ describe("AppInputs", () => {
           state={defaultState}
           onStateUpdate={() => {}}
           airportRunways={[null, null]}
-          notifications={notifications}
+          evaluation={evaluationFor(defaultState, notifications)}
         />
       );
       const weather = container.querySelector("#step-weather")!;
@@ -277,7 +284,7 @@ describe("AppInputs", () => {
           state={defaultState}
           onStateUpdate={() => {}}
           airportRunways={[null, null]}
-          notifications={notifications}
+          evaluation={evaluationFor(defaultState, notifications)}
         />
       );
       const weatherHeader = container.querySelector("#step-weather header")!;
@@ -296,7 +303,7 @@ describe("AppInputs", () => {
           state={defaultState}
           onStateUpdate={mockOnStateUpdate}
           airportRunways={[null, null]}
-          notifications={notifications}
+          evaluation={evaluationFor(defaultState, notifications)}
         />
       );
       fireEvent.click(screen.getByTestId("update-sortie-btn"));

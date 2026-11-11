@@ -1,5 +1,8 @@
 import { render, screen, waitFor, within } from "../test-utils/test-utils";
 import Calculations from "./Calculations";
+import { evaluationFor } from "../test-utils/evaluation";
+
+const withEvaluation = (state: WorksheetData) => ({ state, evaluation: evaluationFor(state) });
 import type { WorksheetData } from "../utils/types";
 import { fieldSubject, type Notification } from "../utils/notifications";
 
@@ -179,7 +182,7 @@ describe("Calculations", () => {
       subject: fieldSubject("altimeter", 0),
       message: "Altimeter 35.00 is not valid; enter 28.00–31.00 inHg. Not applied.",
     };
-    render(<Calculations state={mockWorksheetData} notifications={[rejected]} />);
+    render(<Calculations state={mockWorksheetData} evaluation={evaluationFor(mockWorksheetData, [rejected])} />);
     expect(
       screen.getAllByText(/needs departure altimeter checked/).length
     ).toBeGreaterThan(0);
@@ -188,12 +191,12 @@ describe("Calculations", () => {
   });
 
   it("renders without crashing", () => {
-    render(<Calculations state={mockWorksheetData} />);
+    render(<Calculations state={mockWorksheetData} evaluation={evaluationFor(mockWorksheetData)} />);
     expect(screen.getByText("Calculations")).toBeInTheDocument();
   });
 
   it("renders ManeuveringPerformance component when aircraft model is provided", async () => {
-    render(<Calculations state={mockWorksheetData} />);
+    render(<Calculations state={mockWorksheetData} evaluation={evaluationFor(mockWorksheetData)} />);
     
     await waitFor(() => {
       expect(screen.getByText("Minimum Maneuver/Canyon Turn Speed (kts) (C182T)")).toBeInTheDocument();
@@ -201,7 +204,7 @@ describe("Calculations", () => {
   });
 
   it("calculates maneuvering speeds correctly for C182T", async () => {
-    render(<Calculations state={mockWorksheetData} />);
+    render(<Calculations state={mockWorksheetData} evaluation={evaluationFor(mockWorksheetData)} />);
     
     await waitFor(() => {
       // Check for calculated speeds based on C182T data: flaps [0,30], Vso [51,41]
@@ -218,7 +221,7 @@ describe("Calculations", () => {
   // Worksheet p.3: canyon-turn entry between 1.4 × Vso and Va at actual
   // weight. Va at 2,800 lbs interpolates to 105 kts.
   it("shows the canyon-turn entry airspeed range for each flap setting", () => {
-    render(<Calculations state={mockWorksheetData} />);
+    render(<Calculations state={mockWorksheetData} evaluation={evaluationFor(mockWorksheetData)} />);
     expect(screen.getByText("71–105")).toBeInTheDocument();
     expect(screen.getByText("57–105")).toBeInTheDocument();
   });
@@ -229,7 +232,7 @@ describe("Calculations", () => {
       acType: "",
     };
     
-    render(<Calculations state={stateWithoutAircraft} />);
+    render(<Calculations state={stateWithoutAircraft} evaluation={evaluationFor(stateWithoutAircraft)} />);
     
     // Should not render ManeuveringPerformance component
     expect(screen.queryByText("Maneuver/Canyon Turn Speed")).not.toBeInTheDocument();
@@ -241,7 +244,7 @@ describe("Calculations", () => {
       acType: "UNKNOWN",
     };
     
-    render(<Calculations state={stateWithUnknownAircraft} />);
+    render(<Calculations state={stateWithUnknownAircraft} evaluation={evaluationFor(stateWithUnknownAircraft)} />);
     
     // Should render ManeuveringPerformance but with TBD values
     expect(screen.getByText("Minimum Maneuver/Canyon Turn Speed (kts) (UNKNOWN)")).toBeInTheDocument();
@@ -252,7 +255,7 @@ describe("Calculations", () => {
   });
 
   it("recalculates maneuvering speeds when aircraft model changes", async () => {
-    const { rerender } = render(<Calculations state={mockWorksheetData} />);
+    const { rerender } = render(<Calculations state={mockWorksheetData} evaluation={evaluationFor(mockWorksheetData)} />);
 
     // Initially should show C182T speeds
     await waitFor(() => {
@@ -265,7 +268,7 @@ describe("Calculations", () => {
       acType: "UNKNOWN",
     };
 
-    rerender(<Calculations state={updatedState} />);
+    rerender(<Calculations state={updatedState} evaluation={evaluationFor(updatedState)} />);
 
     // Should now show TBD values
     await waitFor(() => {
@@ -283,7 +286,7 @@ describe("Calculations", () => {
       altimeter: [29.92, 29.92, 29.92],
       rwy: [3000, 3000],
     };
-    render(<Calculations state={stateWithZeroTemp} />);
+    render(<Calculations state={stateWithZeroTemp} evaluation={evaluationFor(stateWithZeroTemp)} />);
     await waitFor(() => {
       // TOLD table should contain numeric distances, not only TBD
       const numericCells = screen.queryAllByText(/^\d{3,}(,\d{3})*$/);
@@ -300,7 +303,7 @@ describe("Calculations", () => {
       temp: [20, 20, 20],
       rwy: [3000, 3000],
     };
-    render(<Calculations state={stateAtSeaLevel} />);
+    render(<Calculations state={stateAtSeaLevel} evaluation={evaluationFor(stateAtSeaLevel)} />);
     await waitFor(() => {
       const numericCells = screen.queryAllByText(/^\d{3,}(,\d{3})*$/);
       expect(numericCells.length).toBeGreaterThan(0);
@@ -314,7 +317,7 @@ describe("Calculations", () => {
       altimeter: [29.92, 29.92, 29.92],
       temp: [20, 20, 20],
     };
-    const { rerender } = render(<Calculations state={initial} />);
+    const { rerender } = render(<Calculations state={initial} evaluation={evaluationFor(initial)} />);
 
     const firstDA = screen
       .getByText("Density Altitude (feet)")
@@ -325,7 +328,7 @@ describe("Calculations", () => {
       ...initial,
       temp: [20, 35, 20], // operating column hotter
     };
-    rerender(<Calculations state={updated} />);
+    rerender(<Calculations state={updated} evaluation={evaluationFor(updated)} />);
 
     const secondDA = screen
       .getByText("Density Altitude (feet)")
@@ -337,7 +340,7 @@ describe("Calculations", () => {
   });
 
   it("renders the 'For reference only' disclaimer above the calculations", () => {
-    render(<Calculations state={mockWorksheetData} />);
+    render(<Calculations state={mockWorksheetData} evaluation={evaluationFor(mockWorksheetData)} />);
     expect(
       screen.getByText(/For reference only/i)
     ).toBeInTheDocument();
@@ -354,7 +357,7 @@ describe("Calculations", () => {
       temp: [20, 20, 20],
       weight: 2700,
     };
-    const { rerender } = render(<Calculations state={initial} />);
+    const { rerender } = render(<Calculations state={initial} evaluation={evaluationFor(initial)} />);
 
     const firstROC = screen
       .getByText("Rate of Climb (MGW)")
@@ -363,10 +366,10 @@ describe("Calculations", () => {
 
     rerender(
       <Calculations
-        state={{
+        {...withEvaluation({
           ...initial,
           altitude: [4472, 12000, 4321], // raise operating altitude
-        }}
+        })}
       />
     );
 
@@ -385,12 +388,12 @@ describe("Calculations", () => {
     it("computes departure TOLD and shows what arrival is waiting for", () => {
       render(
         <Calculations
-          state={{
+          {...withEvaluation({
             ...mockWorksheetData,
             altitude: [1000, 8000, 1000],
             temp: [20, 10, null],
             rwy: [3000, 3000],
-          }}
+          })}
         />
       );
       const table = within(toldTable());
@@ -402,12 +405,12 @@ describe("Calculations", () => {
     it("shows a Caution naming the airport when landing distances are extrapolated", () => {
       render(
         <Calculations
-          state={{
+          {...withEvaluation({
             ...mockWorksheetData,
             altitude: [1000, 10000, 9000],
             temp: [20, 10, 20],
             rwy: [3000, 3000],
-          }}
+          })}
         />
       );
       const caution = screen.getByText(
@@ -419,12 +422,12 @@ describe("Calculations", () => {
     it("shows a value that can't be trusted only once, with no generic reminders", () => {
       render(
         <Calculations
-          state={{
+          {...withEvaluation({
             ...mockWorksheetData,
             altitude: [9000, 10000, 9000],
             temp: [-25, 10, 38],
             rwy: [1500, 2500],
-          }}
+          })}
         />
       );
       expect(
@@ -455,7 +458,7 @@ describe("Calculations", () => {
     };
 
     it("marks the arrival landing distance with a link to the arrival temperature Caution", () => {
-      render(<Calculations state={state} notifications={[arrivalTempSubstitution]} />);
+      render(<Calculations state={state} evaluation={evaluationFor(state, [arrivalTempSubstitution])} />);
       const marker = within(toldCell(/^Landing Ground Roll$/, 2)).getByRole("link", {
         name: /caution.*forecast period has no temperature/i,
       });
@@ -464,13 +467,13 @@ describe("Calculations", () => {
     });
 
     it("leaves departure values, which don't use the arrival temperature, unmarked", () => {
-      render(<Calculations state={state} notifications={[arrivalTempSubstitution]} />);
+      render(<Calculations state={state} evaluation={evaluationFor(state, [arrivalTempSubstitution])} />);
       expect(within(toldCell(/^Landing Ground Roll$/, 1)).queryByRole("link")).toBeNull();
       expect(within(toldCell(/^Take Off Ground Roll$/, 1)).queryByRole("link")).toBeNull();
     });
 
     it("marks the arrival climb rate and density altitude, not the operating ones", () => {
-      render(<Calculations state={state} notifications={[arrivalTempSubstitution]} />);
+      render(<Calculations state={state} evaluation={evaluationFor(state, [arrivalTempSubstitution])} />);
       const rowCells = (label: RegExp) =>
         screen.getByText(label).closest("tr")!.querySelectorAll("td");
       const roc = rowCells(/^Rate of Climb \(MGW\)$/);

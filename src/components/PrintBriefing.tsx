@@ -2,12 +2,8 @@ import type { WorksheetData } from "@/utils/types";
 import {
   COLUMNS,
   climbSubject,
-  computeCanyonTurnEntryRanges,
-  computeClimbViewModel,
-  computePressureColumns,
   describeCanyonTurnEntryRange,
   pressureColumnValue,
-  computeTOLDViewModel,
   pressureColumnDependsOn,
   toldValueSubjects,
   type AirportSlot,
@@ -16,14 +12,13 @@ import {
   type TOLDValueKey,
   type Triple,
 } from "@/utils/derived";
-import { calculateManeuveringSpeeds } from "@/utils/maneuveringCalculations";
 import { enteredPosition } from "@/utils/areaOfOpsWeather";
 import { isRunwayExceeded } from "@/utils/limitChecks";
+import type { WorksheetEvaluation } from "@/utils/worksheetEvaluation";
 import {
   fieldSubject,
   valueSubject,
   type FieldName,
-  type Notification,
 } from "@/utils/notifications";
 import {
   briefingNotes,
@@ -42,13 +37,11 @@ import {
 interface PrintBriefingProps {
   state: WorksheetData;
   /**
-   * All notifications in force (the same derived list the screen shows).
-   * Warnings and Cautions are printed next to the values they concern;
-   * Advisories are left off.
+   * The worksheet evaluation the screen shows. Its Warnings and Cautions are
+   * printed next to the values they concern (Advisories are left off), and
+   * every Limit check is printed in the Worksheet limits box at the top.
    */
-  notifications?: readonly Notification[];
-  /** Every Limit check, printed in the Worksheet limits box at the top. */
-  limitChecks?: readonly LimitCheck[];
+  evaluation: WorksheetEvaluation;
 }
 
 const WIND_LABELS = ["3,000", "6,000", "9,000", "12,000", "15,000"] as const;
@@ -272,22 +265,16 @@ const TOLD_ROWS: ReadonlyArray<{
 
 export default function PrintBriefing({
   state,
-  notifications = [],
-  limitChecks = [],
+  evaluation,
 }: PrintBriefingProps) {
+  const { notifications, limitChecks, told, climb, maneuvering } = evaluation;
+  const { PAs, DAs } = evaluation.pressure;
   const [dep, arr] = state.airport;
   const entered = enteredPosition(state.position);
   const position = entered
     ? `${entered[0].toFixed(2)}, ${entered[1].toFixed(2)}`
     : "—";
 
-  const { PAs, DAs } = computePressureColumns(
-    state.altitude,
-    state.altimeter,
-    state.temp,
-  );
-  const told = computeTOLDViewModel(state, PAs, notifications);
-  const climb = computeClimbViewModel(state, notifications);
   const b = briefingNotes(notifications);
   const notesIn = (section: BriefingSection) => <Notes notes={b.inSection(section)} />;
   const on = (field: FieldName, index?: number) => <Refs refs={b.refsOn(fieldSubject(field, index))} />;
@@ -588,11 +575,10 @@ export default function PrintBriefing({
 
       {/* ---- Maneuvering / canyon-turn speeds ---- */}
       {(() => {
-        if (!state.acType) return null;
-        const ms = calculateManeuveringSpeeds(state.acType);
+        const ms = maneuvering.speeds;
         if (!ms) return null;
         const banks = [0, 45, 60];
-        const entryRanges = computeCanyonTurnEntryRanges(ms, climb.va);
+        const { entryRanges } = maneuvering;
         return (
           <table className="w-full border-collapse text-[8pt] mb-2 break-inside-avoid">
             <thead>

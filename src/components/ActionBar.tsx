@@ -26,7 +26,7 @@ interface ActionBarProps {
   state: ActionBarState;
   worksheetData: WorksheetData;
   /** The Limit checks, summarized in one sentence that jumps to the worst. */
-  limitChecks?: readonly LimitCheck[];
+  limitChecks: readonly LimitCheck[];
   weatherLastUpdated?: Date;
   onFetch: () => void;
   fetchDisabled: boolean;
@@ -76,7 +76,7 @@ const formatClockUtc = (d: Date): string => {
 export default function ActionBar({
   state,
   worksheetData,
-  limitChecks = [],
+  limitChecks,
   weatherLastUpdated,
   onFetch,
   fetchDisabled,

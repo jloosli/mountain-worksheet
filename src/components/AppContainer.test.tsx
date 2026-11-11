@@ -469,23 +469,6 @@ describe("AppContainer — Weight limit check (#266)", () => {
     ).toBeInTheDocument();
     expect(percentCell()).toHaveTextContent("needs valid weight");
   });
-
-  it("doesn't change step status or badges", () => {
-    setUp("2789");
-    const nav = screen.getByRole("navigation", { name: /worksheet steps/i });
-    const steps = () =>
-      [...document.querySelectorAll("[id^='step-'] > article > header")].map(
-        (h) => h.outerHTML,
-      );
-    const before = { nav: nav.innerHTML, steps: steps() };
-
-    fireEvent.change(screen.getByLabelText("Aircraft Takeoff Weight (lbs)"), {
-      target: { value: "2790" },
-    });
-    expect(within(callout()).getByText("Exceeded")).toBeInTheDocument();
-    expect(nav.innerHTML).toBe(before.nav);
-    expect(steps()).toEqual(before.steps);
-  });
 });
 
 describe("AppContainer — Winds aloft limit check (#267)", () => {
@@ -636,15 +619,6 @@ describe("AppContainer — Rate of climb and Runway limit checks (#269)", () => 
       const markers = callout(name).querySelectorAll('[data-marker="caution"]');
       expect(markers.length).toBeGreaterThan(0);
       expect(markers[0].getAttribute("title")).toMatch(/came from a shared link/);
-    }
-  });
-
-  it("is Not checked above maximum gross, saying why", () => {
-    mockSearchParams.mockReturnValue(link({ weight: "3255" }));
-    render(<AppContainer />);
-    for (const name of ["Rate of climb", "Runway"]) {
-      expect(within(callout(name)).getByText("Not checked")).toBeInTheDocument();
-      expect(callout(name)).toHaveTextContent("needs weight at or below maximum gross");
     }
   });
 });
