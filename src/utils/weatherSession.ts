@@ -8,7 +8,7 @@
  * plus the current worksheet (`sessionNotifications`). They clear when their
  * cause does (ADR 0001).
  */
-import { canFetchWeather, deriveActionBarState, type ActionBarState } from "./actionBarState";
+import { canFetchWeather } from "./actionBarState";
 import { normalizeAirportCode } from "./airportCode";
 import {
   applyOpTempForAltitudeChange,
@@ -33,6 +33,7 @@ import {
 } from "./rejectedEntries";
 import type { WorksheetData } from "./types";
 import { unverifiedWeatherNotifications } from "./unverifiedWeather";
+import { hasWeatherData, type WeatherStatus } from "./weatherStatus";
 import {
   deriveUrlNotifications,
   retireUrlNotifications,
@@ -145,14 +146,27 @@ export function sessionNotifications(session: WeatherSession): Notification[] {
     ...staleFetchNotifications(worksheet, lastFetch),
     ...opTempChangeNotifications(worksheet, session.opTempChange),
     ...deriveUrlNotifications(worksheet, session.linkLoad),
-    ...unverifiedWeatherNotifications(worksheet, session.lastUpdated),
+    ...unverifiedWeatherNotifications(worksheet, weatherStatus(session)),
     ...rejectedEntryNotifications(worksheet, session.rejected),
   ];
 }
 
-/** The action bar's weather state. */
-export const weatherStatus = (session: WeatherSession): ActionBarState =>
-  deriveActionBarState(session.worksheet, session.lastUpdated);
+/**
+ * Whether the worksheet has weather, and where it came from: the one answer
+ * step statuses, the action bar and Unverified weather read.
+ *
+ * Once a fetch applies weather this session, it is `fetched` while every
+ * fetched value still matches the fetch's inputs, and `stale` while any
+ * doesn't (`staleFetchNotifications`). Before that, weather values on the
+ * worksheet are `unverified`; without any, `none`.
+ */
+export function weatherStatus(session: WeatherSession): WeatherStatus {
+  const { worksheet, lastFetch, lastUpdated } = session;
+  if (lastUpdated !== null) {
+    return staleFetchNotifications(worksheet, lastFetch).length > 0 ? "stale" : "fetched";
+  }
+  return hasWeatherData(worksheet) ? "unverified" : "none";
+}
 
 /** Whether the worksheet holds what a weather fetch needs. */
 export const canFetch = (session: WeatherSession): boolean =>

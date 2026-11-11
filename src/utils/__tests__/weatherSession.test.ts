@@ -340,8 +340,53 @@ describe("weather session — selectors", () => {
     expect(canFetch(initialWeatherSession({ ...base, airport: ["KOGD", " "] }, null))).toBe(false);
   });
 
-  it("is ready before a fetch and incomplete without the fetch inputs", () => {
-    expect(weatherStatus(initialWeatherSession(base, null))).toBe("ready");
-    expect(weatherStatus(initialWeatherSession({ ...base, time: "" }, null))).toBe("incomplete");
+});
+
+describe("weather session — weather status (#285)", () => {
+  const withWind = {
+    ...base,
+    wind: [[270, null, null, null, null], Array(5).fill(null), Array(5).fill(null)],
+  } as WorksheetData;
+
+  it("is none with no weather values and no fetch this session", () => {
+    expect(weatherStatus(initialWeatherSession(base, null))).toBe("none");
+  });
+
+  it("is unverified with weather values that weren't fetched this session, as from a shared link", () => {
+    expect(weatherStatus(initialWeatherSession(withWind, null))).toBe("unverified");
+    expect(weatherStatus(replay([edit({ temp: [20, null, null] })]))).toBe("unverified");
+  });
+
+  it("is none for a ticked advisory box alone, which isn't weather data (#277)", () => {
+    expect(weatherStatus(initialWeatherSession({ ...base, cielVis: true }, null))).toBe("none");
+  });
+
+  it("is fetched once a fetch applies weather, even over unverified values", () => {
+    expect(weatherStatus(replay([fetch()]))).toBe("fetched");
+    expect(weatherStatus(replay([fetch()], withWind))).toBe("fetched");
+  });
+
+  it("stays none or unverified after a fetch that applied nothing", () => {
+    expect(weatherStatus(replay([fetch(null)]))).toBe("none");
+    expect(weatherStatus(replay([fetch(null)], withWind))).toBe("unverified");
+  });
+
+  it("is stale once a fetch input changes under fetched values, and fetched again after a refetch", () => {
+    const stale = replay([fetch(), edit({ time: "20:00" })]);
+    expect(weatherStatus(stale)).toBe("stale");
+    expect(weatherStatus(weatherSessionReducer(stale, fetchFor(stale.worksheet, fetched)))).toBe(
+      "fetched",
+    );
+  });
+
+  it("is fetched again once the pilot replaces every stale value with their own", () => {
+    const atPosition = { ...base, position: [40.5, -111.2] as WorksheetData["position"] };
+    const stale = replay([fetch(), edit({ airport: ["KOGD", "KSLC"] })], atPosition);
+    expect(weatherStatus(stale)).toBe("stale");
+    const replaced = weatherSessionReducer(stale, {
+      type: "edit",
+      updates: { temp: [21, 5, 12], altimeter: [30.01, 30.0, 30.1], altitude: [4473, -1, 4227] },
+    });
+    expect(weatherStatus(replaced)).toBe("fetched");
   });
 });

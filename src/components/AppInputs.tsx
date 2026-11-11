@@ -33,8 +33,8 @@ interface WorksheetFormProps {
    */
   evaluation: WorksheetEvaluation;
   /** Weather entries that were not applied; see WeatherSection. */
-  rejectedEntries?: RejectedEntries;
-  onRejectedEntryChange?: (key: RejectedEntryKey, entry: RejectedEntry | null) => void;
+  rejectedEntries: RejectedEntries;
+  onRejectedEntryChange: (key: RejectedEntryKey, entry: RejectedEntry | null) => void;
 }
 
 export default function AppInputs({

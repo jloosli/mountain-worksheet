@@ -296,3 +296,38 @@ describe("evaluateWorksheet — session", () => {
     expect(e.stepStatuses).toMatchObject({ sortie: "active", weather: "pending", decision: "pending" });
   });
 });
+
+describe("evaluateWorksheet — weather status (#285)", () => {
+  const fetchFor = (state: WorksheetData): WeatherFetchResult => ({
+    fetchedFor: {
+      airport: [state.airport[0], state.airport[1]],
+      date: state.date,
+      time: state.time,
+      duration: state.duration,
+      position: state.position,
+    },
+    applied: { temp: state.temp, altimeter: state.altimeter },
+    notifications: [],
+  });
+
+  it("is none for an empty worksheet, leaving the weather step pending", () => {
+    expect(evaluateWorksheet(emptyState(), EMPTY_SESSION).weatherStatus).toBe("none");
+  });
+
+  it("is unverified for weather values not fetched this session, with the Caution and a complete weather step", () => {
+    const e = evaluateWorksheet(sortie(), EMPTY_SESSION);
+    expect(e.weatherStatus).toBe("unverified");
+    expect(e.stepStatuses.weather).toBe("complete");
+    expect(e.notifications.filter((n) => /came from a shared link/.test(n.message))).toHaveLength(1);
+  });
+
+  it("is stale once a fetch input changes, without an Unverified weather Caution", () => {
+    const fetchedState = sortie();
+    const session = fetchedSession({ lastFetch: fetchFor(fetchedState) });
+    expect(evaluateWorksheet(fetchedState, session).weatherStatus).toBe("fetched");
+    const e = evaluateWorksheet({ ...fetchedState, time: "12:00" }, session);
+    expect(e.weatherStatus).toBe("stale");
+    expect(e.notifications.some((n) => /came from a shared link/.test(n.message))).toBe(false);
+    expect(e.stepStatuses.weather).toBe("warning");
+  });
+});

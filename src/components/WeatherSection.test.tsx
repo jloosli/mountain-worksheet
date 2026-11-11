@@ -1,5 +1,12 @@
+import { useState, type ComponentProps } from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
 import WeatherSection from "./WeatherSection";
+import {
+  rejectedEntryNotifications,
+  updateRejectedEntries,
+  windEntryKey,
+  type RejectedEntries,
+} from "@/utils/rejectedEntries";
 import type { RunwayOption, WorksheetData } from "@/utils/types";
 import { fieldSubject, type Notification } from "@/utils/notifications";
 import { deserializeState } from "@/utils/urlState";
@@ -41,10 +48,33 @@ const populated: WorksheetData = {
   rwy: [5500, 5861],
 };
 
+type SectionProps = Omit<
+  ComponentProps<typeof WeatherSection>,
+  "rejectedEntries" | "onRejectedEntryChange"
+>;
+
+/**
+ * WeatherSection with its rejected entries held the way its parent holds
+ * them: in state, with their Warnings added to the notifications passed in.
+ */
+function Section(props: SectionProps) {
+  const [rejected, setRejected] = useState<RejectedEntries>({});
+  return (
+    <WeatherSection
+      {...props}
+      notifications={[...(props.notifications ?? []), ...rejectedEntryNotifications(props.state, rejected)]}
+      rejectedEntries={rejected}
+      onRejectedEntryChange={(key, entry) =>
+        setRejected((prev) => updateRejectedEntries(props.state, prev, key, entry))
+      }
+    />
+  );
+}
+
 describe("WeatherSection — sub-headings", () => {
   it("renders the three sub-headings", () => {
     render(
-      <WeatherSection
+      <Section
         state={empty}
         onUpdate={() => {}}
         airportRunways={[null, null]}
@@ -57,7 +87,7 @@ describe("WeatherSection — sub-headings", () => {
 
   it("renders three airport cards under 'At airports'", () => {
     render(
-      <WeatherSection
+      <Section
         state={populated}
         onUpdate={() => {}}
         airportRunways={[null, null]}
@@ -79,7 +109,7 @@ describe("WeatherSection — runway dropdown wiring", () => {
       { id: "03/21", length: 8103, alignment: 30 },
     ];
     render(
-      <WeatherSection
+      <Section
         state={populated}
         onUpdate={onUpdate}
         airportRunways={[depRunways, null]}
@@ -95,7 +125,7 @@ describe("WeatherSection — advisories", () => {
   it("renders three advisory checkboxes and toggles on click", () => {
     const onUpdate = jest.fn();
     render(
-      <WeatherSection
+      <Section
         state={populated}
         onUpdate={onUpdate}
         airportRunways={[null, null]}
@@ -119,7 +149,7 @@ describe("WeatherSection — advisories", () => {
 describe("WeatherSection — winds aloft", () => {
   it("renders the 5-column aloft table with the right altitude headers", () => {
     render(
-      <WeatherSection
+      <Section
         state={empty}
         onUpdate={() => {}}
         airportRunways={[null, null]}
@@ -135,7 +165,7 @@ describe("WeatherSection — winds aloft", () => {
   it("calls onUpdate with the new wind array when a cell changes", () => {
     const onUpdate = jest.fn();
     render(
-      <WeatherSection
+      <Section
         state={empty}
         onUpdate={onUpdate}
         airportRunways={[null, null]}
@@ -153,7 +183,7 @@ describe("WeatherSection — winds aloft", () => {
 describe("WeatherSection — notifications", () => {
   const renderWith = (notifications: Notification[]) =>
     render(
-      <WeatherSection
+      <Section
         state={populated}
         onUpdate={() => {}}
         airportRunways={[null, null]}
@@ -220,7 +250,7 @@ describe("WeatherSection — invalid entries (#225)", () => {
   it("shows a Warning on the winds-aloft column instead of silently dropping an out-of-range direction", () => {
     const onUpdate = jest.fn();
     render(
-      <WeatherSection
+      <Section
         state={empty}
         onUpdate={onUpdate}
         airportRunways={[null, null]}
@@ -239,7 +269,7 @@ describe("WeatherSection — invalid entries (#225)", () => {
   it("clears the Warning once the pilot enters a valid value", () => {
     const onUpdate = jest.fn();
     render(
-      <WeatherSection
+      <Section
         state={empty}
         onUpdate={onUpdate}
         airportRunways={[null, null]}
@@ -257,7 +287,7 @@ describe("WeatherSection — invalid entries (#225)", () => {
 
   it("shows a Warning for an out-of-range winds-aloft temperature", () => {
     render(
-      <WeatherSection
+      <Section
         state={empty}
         onUpdate={() => {}}
         airportRunways={[null, null]}
@@ -274,7 +304,7 @@ describe("WeatherSection — invalid entries (#225)", () => {
   it("shows a Warning on the airport altimeter instead of silently dropping it", () => {
     const onUpdate = jest.fn();
     render(
-      <WeatherSection
+      <Section
         state={empty}
         onUpdate={onUpdate}
         airportRunways={[null, null]}
@@ -299,7 +329,7 @@ describe("WeatherSection — worksheet opened from a link", () => {
       empty
     );
     render(
-      <WeatherSection
+      <Section
         state={loaded.state}
         onUpdate={() => {}}
         airportRunways={[null, null]}
@@ -325,7 +355,7 @@ describe("WeatherSection — winds aloft point styles (#267)", () => {
 
   it("styles each speed by its point state: Exceeded and Near limit only", () => {
     render(
-      <WeatherSection
+      <Section
         state={state}
         onUpdate={() => {}}
         airportRunways={[null, null]}
@@ -340,5 +370,26 @@ describe("WeatherSection — winds aloft point styles (#267)", () => {
     }
     // Only speeds are styled, not direction or temperature.
     expect(screen.getByLabelText("Wind direction at 9,000 ft").className).not.toMatch(/text-red/);
+  });
+});
+
+describe("WeatherSection — rejected entries are held by the caller (#285)", () => {
+  it("reports an out-of-range entry to the caller instead of keeping it", () => {
+    const onRejectedEntryChange = jest.fn();
+    render(
+      <WeatherSection
+        state={empty}
+        onUpdate={() => {}}
+        airportRunways={[null, null]}
+        rejectedEntries={{}}
+        onRejectedEntryChange={onRejectedEntryChange}
+      />
+    );
+    fireEvent.change(screen.getByLabelText("Wind direction at 9,000 ft"), {
+      target: { value: "400" },
+    });
+    expect(onRejectedEntryChange).toHaveBeenCalledWith(windEntryKey(0, 2), expect.anything());
+    // Its Warning comes from the caller's notifications, not from here.
+    expect(screen.queryByText(/Wind direction 400 at 9,000 ft is not valid/i)).not.toBeInTheDocument();
   });
 });

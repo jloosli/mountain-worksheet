@@ -17,6 +17,7 @@ import InlineNotifications from "@/components/InlineNotifications";
 import { LimitCheckCallouts } from "@/components/LimitCheckCallout";
 import { stepSubject } from "@/utils/notifications";
 import type { WorksheetData } from "@/utils/types";
+import { deriveActionBarState } from "@/utils/actionBarState";
 import { evaluateWorksheet } from "@/utils/worksheetEvaluation";
 import type { RejectedEntry, RejectedEntryKey } from "@/utils/rejectedEntries";
 import { useTempUnit } from "@/utils/useTempUnit";
@@ -26,7 +27,6 @@ import {
   canFetch,
   initialWeatherSession,
   weatherSessionReducer,
-  weatherStatus,
   type WeatherSession,
 } from "@/utils/weatherSession";
 import { sanitizeWorksheetUrlState } from "@/utils/worksheetUrlState";
@@ -137,7 +137,7 @@ export default function AppContainer() {
   );
   const { notifications, limitChecks, stepStatuses } = evaluation;
 
-  const actionBarState = weatherStatus(session);
+  const actionBarState = deriveActionBarState(evaluation.weatherStatus, canFetch(session));
 
   const steps = useMemo<StepperStep[]>(
     () => [

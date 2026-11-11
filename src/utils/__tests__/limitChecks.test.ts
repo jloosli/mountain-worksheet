@@ -241,7 +241,7 @@ describe("Ceiling/visibility limit check", () => {
 
   it("carries the Unverified weather Caution from a shared link as a marker", () => {
     const state = { ...baseState(), cielVis: true };
-    const unverified = unverifiedWeatherNotifications(state, null);
+    const unverified = unverifiedWeatherNotifications(state, "unverified");
     expect(unverified).toHaveLength(1);
     const check = ceilVisCheck(state, unverified);
     expect(check.state).toBe("exceeded");
@@ -453,7 +453,7 @@ describe("Rate of climb limit check", () => {
   });
 
   it("carries the Unverified weather Caution for values from a shared link", () => {
-    const unverified = unverifiedWeatherNotifications(baseState(), null);
+    const unverified = unverifiedWeatherNotifications(baseState(), "unverified");
     expect(unverified).toHaveLength(1);
     const check = climbCheck(undefined, baseState(), unverified);
     expect(check.state).not.toBe("not-checked");
@@ -561,7 +561,7 @@ describe("Runway limit check", () => {
   });
 
   it("carries the Unverified weather Caution for values from a shared link", () => {
-    const unverified = unverifiedWeatherNotifications(baseState(), null);
+    const unverified = unverifiedWeatherNotifications(baseState(), "unverified");
     const check = runwayCheck(undefined, baseState(), unverified);
     expect(check.state).not.toBe("not-checked");
     for (const p of check.points) expect(p.substitutions).toEqual(unverified);
@@ -738,7 +738,7 @@ describe("Winds aloft limit check", () => {
 
   it("marks every checked column with Unverified weather, but not with other weather-step Cautions", () => {
     const state = withSpeeds([10, 25, null, null, null]);
-    const unverified = unverifiedWeatherNotifications(state, null);
+    const unverified = unverifiedWeatherNotifications(state, "unverified");
     expect(unverified).toHaveLength(1);
     const gairmet: Notification = {
       level: "caution",
