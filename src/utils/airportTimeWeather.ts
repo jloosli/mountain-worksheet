@@ -159,6 +159,16 @@ export function selectAirportWeather(
   if (metarFresh && metar) {
     let temp = metar.temp != null ? Math.round(metar.temp) : null;
     let tempSource: AirportTempSource = temp !== null ? "observation" : null;
+    if (temp === null) {
+      // A TAF forecast for this time comes before the model, as it does
+      // when the METAR isn't current.
+      const covering = findCoveringFcst(taf?.fcsts, requestedTime);
+      const tafTemp = covering && fcstTempValue(covering, requestedTime);
+      if (tafTemp && tafTemp.offsetMs <= TAF_TEMP_SAMPLE_MAX_OFFSET_MS) {
+        temp = Math.round(tafTemp.value);
+        tempSource = "taf";
+      }
+    }
     if (temp === null && modelTemp !== null) {
       temp = Math.round(modelTemp);
       tempSource = "model";

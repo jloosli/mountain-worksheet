@@ -441,7 +441,7 @@ describe("selectAirportWeather: routine TAF gaps (#301)", () => {
   it("fills a fresh METAR's missing temperature from the model forecast", () => {
     const noTemp = { ...baseMetar, temp: null as unknown as number };
     const requested = new Date("2026-05-12T15:30:00Z");
-    const result = selectAirportWeather(noTemp, baseTaf, requested, "KSLC", 0, {
+    const result = selectAirportWeather(noTemp, usTaf, requested, "KSLC", 0, {
       fieldForecastTemp: 17.6,
     });
     expect(result.temp).toBe(18);
@@ -522,5 +522,16 @@ describe("selectAirportWeather: routine TAF gaps (#301)", () => {
     );
     expect(tempSource(baseMetar, baseTaf, new Date("2026-05-12T19:30:00Z"), "KSLC")).toBe("taf");
     expect(tempSource(undefined, undefined, later, "KSLC")).toBeNull();
+  });
+
+  it("fills a fresh METAR's missing temperature from a covering TAF before the model", () => {
+    const noTemp = { ...baseMetar, temp: null as unknown as number };
+    const requested = new Date("2026-05-12T15:30:00Z"); // in baseTaf's 15–18Z period, temp 22
+    const result = selectAirportWeather(noTemp, baseTaf, requested, "KSLC", 0, {
+      fieldForecastTemp: 17.6,
+    });
+    expect(result.temp).toBe(22);
+    expect(result.tempSource).toBe("taf");
+    expect(on(result, "temp")).toEqual([]);
   });
 });
