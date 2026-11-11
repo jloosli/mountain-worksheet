@@ -358,15 +358,14 @@ describe("staleFetchNotifications", () => {
     expect(staleFetchNotifications(state, fetch)).toEqual([]);
   });
 
-  it("warns on every fetched field when the date or time changes", () => {
+  // Field elevations and runway lengths belong to the airport, not the time.
+  it("warns on every fetched weather field, not elevations, when the date or time changes", () => {
     const list = staleFetchNotifications({ ...fetched, time: "20:00" }, fetch);
     expect(subjects(list)).toEqual([
       "field:temp.0",
       "field:altimeter.0",
-      "field:altitude.0",
       "field:temp.2",
       "field:altimeter.2",
-      "field:altitude.2",
       "field:temp.1",
       "field:altimeter.1",
       "field:wind.0",
@@ -385,7 +384,6 @@ describe("staleFetchNotifications", () => {
     expect(subjects(list)).toEqual([
       "field:temp.2",
       "field:altimeter.2",
-      "field:altitude.2",
       "field:temp.1",
       "field:altimeter.1",
       "field:wind.0",

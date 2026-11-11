@@ -191,6 +191,11 @@ interface FetchedFieldRow {
   /** Whose weather it is, which names it in a stale Warning. */
   group: FetchedGroup;
   dependsOn: readonly FetchInput[];
+  /**
+   * False for a field the fetch can warn on but never fills, so its value
+   * is never stale.
+   */
+  filled?: false;
 }
 
 const field = (f: FieldSubject["field"], index?: number): FieldSubject =>
@@ -202,12 +207,13 @@ const airportRows = (
   airport: FetchInput,
   time: readonly FetchInput[],
 ): FetchedFieldRow[] => [
-  ...(["temp", "altimeter", "altitude"] as const).map((f) => ({
+  ...(["temp", "altimeter"] as const).map((f) => ({
     subject: field(f, slot),
     group,
     dependsOn: [airport, ...time],
   })),
-  // A runway length belongs to the airport, not the time.
+  // The field elevation and runway length belong to the airport, not the time.
+  { subject: field("altitude", slot), group, dependsOn: [airport] },
   { subject: field("rwy", slot === 0 ? 0 : 1), group, dependsOn: [airport] },
 ];
 
@@ -238,7 +244,7 @@ const FETCHED_FIELDS: readonly FetchedFieldRow[] = [
   areaRow(field("altimeter", 1)),
   ...[0, 1, 2, 3, 4].map((i) => areaRow(field("wind", i))),
   ...(["turb", "cielVis", "mtnObsc"] as const).map((f) => areaRow(field(f))),
-  { subject: field("position"), group: "area", dependsOn: ["areaPoint"] },
+  { subject: field("position"), group: "area", dependsOn: ["areaPoint"], filled: false },
 ];
 
 /**
@@ -372,8 +378,8 @@ export function staleFetchNotifications(
     area: changed.has("areaPoint") ? `${describePosition(fetchedFor.position)} at ` : "",
   };
 
-  return FETCHED_FIELDS.filter(({ subject, dependsOn }) => {
-    if (!dependsOn.some((i) => changed.has(i))) return false;
+  return FETCHED_FIELDS.filter(({ subject, dependsOn, filled }) => {
+    if (filled === false || !dependsOn.some((i) => changed.has(i))) return false;
     const fetchedValue = readField(applied, subject);
     return (
       fetchedValue !== undefined &&

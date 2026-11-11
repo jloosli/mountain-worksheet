@@ -195,6 +195,31 @@ describe("weather session — one fetch-input table for staleness and Warning re
     ).not.toContainEqual(noPosition);
   });
 
+  it("keeps an unresolved elevation Warning through a time or duration change, and drops it when its airport changes", () => {
+    const noElevation: Notification = {
+      level: "warning",
+      subject: fieldSubject("altitude", 2),
+      message: "KLGU: no field elevation",
+    };
+    const s = replay([fetch({ ...fetched, altitude: [4473, -1, null] as WorksheetData["altitude"] }, [noElevation])]);
+    for (const updates of [{ time: "19:00" }, { duration: 2 }]) {
+      expect(sessionNotifications(weatherSessionReducer(s, { type: "edit", updates }))).toContainEqual(noElevation);
+    }
+    expect(
+      sessionNotifications(weatherSessionReducer(s, { type: "edit", updates: { airport: ["KOGD", "KSLC"] } })),
+    ).not.toContainEqual(noElevation);
+  });
+
+  it("never calls the pilot's own position stale: a fetch doesn't fill it", () => {
+    const halfEntered = { ...base, position: [40.5, null] as WorksheetData["position"] };
+    // The applied snapshot is the merged worksheet, so it carries the position.
+    const s = replay(
+      [fetch({ ...fetched, position: halfEntered.position }), edit({ airport: ["KSLC", "KLGU"] })],
+      halfEntered,
+    );
+    expect(warnings(s)).not.toContain("warning field:position");
+  });
+
   it("drops a step notification when any fetch input changes", () => {
     const step: Notification = {
       level: "caution",
