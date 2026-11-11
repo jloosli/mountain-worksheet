@@ -29,7 +29,9 @@ export interface StepStatusesResult {
  *   otherwise `active` if sortie is complete (the user's next focus), else
  *   `pending`.
  * - Decision: `active` once weather is complete (next focus); otherwise
- *   `pending`. (`complete` is reserved for when the Go / No-Go panel ships.)
+ *   `pending`. It is never `complete`: the worksheet informs the Go/No-Go
+ *   decision but never states it (GLOSSARY.md), and Limit checks don't
+ *   change step status (ADR 0002).
  *
  * Any step with a Warning on one of its Subjects is `warning` instead. That
  * only marks the step; it never holds back the other steps.
