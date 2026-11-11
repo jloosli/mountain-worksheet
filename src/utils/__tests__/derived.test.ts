@@ -494,15 +494,29 @@ describe("computeClimbViewModel", () => {
   });
 
   it("explains, once, that Vx is unavailable for an aircraft without Vx data", () => {
+    // Every aircraft now has Vx data, so take the C172S's away for this test.
+    const c172 = findAircraft("C172S")!;
+    const vx = c172.Vx;
+    delete c172.Vx;
+    try {
+      const vm = computeClimbViewModel({ ...baseState(), acType: "C172S", weight: 2400 }, []);
+      expect(vm.vx.map((v) => v.status)).toEqual(["unavailable", "unavailable", "unavailable"]);
+      expect(vm.notifications).toEqual([
+        {
+          level: "warning",
+          subject: valueSubject("climb.vx", "decision"),
+          message: "Vx is not available: the C172S POH data has no Vx table.",
+        },
+      ]);
+    } finally {
+      c172.Vx = vx;
+    }
+  });
+
+  it("computes the C172S Vx from its POH speeds", () => {
     const vm = computeClimbViewModel({ ...baseState(), acType: "C172S", weight: 2400 }, []);
-    expect(vm.vx.map((v) => v.status)).toEqual(["unavailable", "unavailable", "unavailable"]);
-    expect(vm.notifications).toEqual([
-      {
-        level: "warning",
-        subject: valueSubject("climb.vx", "decision"),
-        message: "Vx is not available: the C172S POH data has no Vx table.",
-      },
-    ]);
+    expect(vm.vx.map((v) => v.status)).toEqual(["computed", "computed", "computed"]);
+    expect(vm.notifications.some((n) => /Vx is not available/.test(n.message))).toBe(false);
   });
 
   it("puts a Warning on an operating temperature beyond the hard limit", () => {
