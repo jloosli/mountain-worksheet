@@ -141,8 +141,17 @@ export function selectAirportWeather(
     });
   }
   if (metarFresh && metar) {
+    let temp = metar.temp != null ? Math.round(metar.temp) : null;
+    if (temp === null && modelTemp !== null) {
+      temp = Math.round(modelTemp);
+      notifications.push({
+        level: "advisory",
+        subject: tempSubject,
+        message: `${airportId}: current observation has no temperature; ${MODEL_SOURCE}`,
+      });
+    }
     return {
-      temp: metar.temp != null ? Math.round(metar.temp) : null,
+      temp,
       altimeter: metarAltimeterInHg(metar.altim),
       source: "metar",
       notifications,
@@ -280,6 +289,17 @@ export function selectAirportWeather(
 
   // 5) Nothing
   const message = `${airportId}: no METAR or TAF data available for requested time ${requestedIso}`;
+  if (modelTemp !== null) {
+    notifications.push(
+      {
+        level: "advisory",
+        subject: tempSubject,
+        message: `${airportId}: no METAR or TAF data available; ${MODEL_SOURCE}`,
+      },
+      { level: "warning", subject: altSubject, message },
+    );
+    return { temp: Math.round(modelTemp), altimeter: null, source: "none", notifications };
+  }
   notifications.push(
     { level: "warning", subject: tempSubject, message },
     { level: "warning", subject: altSubject, message },

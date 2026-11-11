@@ -177,14 +177,12 @@ function classifyGAirmetResult(
  * already tells the pilot.
  */
 async function fetchFieldForecasts(
-  airports: AirportResponse[],
-  codes: string[],
+  airports: Array<[code: string, airport: AirportResponse | undefined]>,
   win: { start: Date; end: Date },
 ): Promise<Record<string, OpenMeteoPointForecast>> {
-  const unique = [...new Set(codes.map((c) => c.toUpperCase()))];
+  const unique = new Map(airports);
   const entries = await Promise.all(
-    unique.map(async (code) => {
-      const a = airports.find((x) => x.icaoId?.toUpperCase() === code);
+    [...unique].map(async ([code, a]) => {
       if (
         !a ||
         typeof a.lat !== "number" ||
@@ -246,19 +244,27 @@ export async function fetchWorksheetWeather(
 
     const depTime = new Date(`${worksheet.date}T${worksheet.time}:00Z`);
     const midTime = new Date(depTime.getTime() + ((worksheet.duration ?? 0) / 2) * 3600 * 1000);
+    const airportOf = (code: string): AirportResponse | undefined =>
+      (apiData.airport ?? []).find((x) => x.icaoId?.toUpperCase() === code);
     const latLonOf = (code: string): [number, number] | null => {
-      const a = (apiData.airport ?? []).find((x) => x.icaoId?.toUpperCase() === code);
+      const a = airportOf(code);
       return a && typeof a.lat === "number" && typeof a.lon === "number" ? [a.lat, a.lon] : null;
     };
+    // Same rule as the mapper's arrival time: no valid duration means 0.
+    const durationHours =
+      typeof worksheet.duration === "number" &&
+      Number.isFinite(worksheet.duration) &&
+      worksheet.duration > 0
+        ? worksheet.duration
+        : 0;
     const fieldForecastsPromise = fetchFieldForecasts(
-      apiData.airport ?? [],
-      ([0, 1] as const).flatMap((slot) =>
-        fetchedFor.airport[slot] && !conditions[slot] ? [fetchedFor.airport[slot]] : [],
-      ),
-      {
-        start: depTime,
-        end: new Date(depTime.getTime() + (worksheet.duration ?? 0) * 3600 * 1000),
-      },
+      ([0, 1] as const).flatMap((slot) => {
+        const code = fetchedFor.airport[slot];
+        return code && !conditions[slot]
+          ? [[code, airportOf(code)] as [string, AirportResponse | undefined]]
+          : [];
+      }),
+      { start: depTime, end: new Date(depTime.getTime() + durationHours * 3600 * 1000) },
     );
     const depLatLon = latLonOf(departure);
     const arrLatLon = latLonOf(arrival);

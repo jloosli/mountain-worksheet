@@ -437,4 +437,34 @@ describe("selectAirportWeather: routine TAF gaps (#301)", () => {
       }),
     ]);
   });
+
+  it("fills a fresh METAR's missing temperature from the model forecast", () => {
+    const noTemp = { ...baseMetar, temp: null as unknown as number };
+    const requested = new Date("2026-05-12T15:30:00Z");
+    const result = selectAirportWeather(noTemp, baseTaf, requested, "KSLC", 0, {
+      fieldForecastTemp: 17.6,
+    });
+    expect(result.temp).toBe(18);
+    expect(result.notifications).toEqual([
+      {
+        level: "advisory",
+        subject: fieldSubject("temp", 0),
+        message:
+          "KSLC: current observation has no temperature; using the Open-Meteo model forecast for the field",
+      },
+    ]);
+  });
+
+  it("fills temperature from the model forecast when there is no METAR or TAF, leaving the altimeter Warning", () => {
+    const requested = new Date("2026-05-12T15:00:00Z");
+    const result = selectAirportWeather(undefined, undefined, requested, "KSLC", 0, {
+      fieldForecastTemp: 12.2,
+    });
+    expect(result.temp).toBe(12);
+    expect(result.altimeter).toBeNull();
+    expect(result.notifications.map((n) => [n.level, n.subject])).toEqual([
+      ["advisory", fieldSubject("temp", 0)],
+      ["warning", fieldSubject("altimeter", 0)],
+    ]);
+  });
 });

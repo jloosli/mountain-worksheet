@@ -573,6 +573,14 @@ describe("fetchWorksheetWeather", () => {
       expect(tempNotes[0].message).toMatch(/Open-Meteo model forecast/);
     });
 
+    it("still forecasts the departure when the duration is negative", async () => {
+      mockField.mockResolvedValue(fieldForecast);
+      const { data } = await fetchWorksheetWeather({ ...later, duration: -2 });
+      const [, , , win] = mockField.mock.calls[0];
+      expect(win.end.getTime()).toBeGreaterThanOrEqual(win.start.getTime());
+      expect(data?.temp?.[0]).toBe(27);
+    });
+
     it("doesn't use a field forecast hour that misses the slot's time", async () => {
       mockField.mockResolvedValue({
         hourly: { time: ["2026-05-12T20:00"], temperature_2m: [30] },
