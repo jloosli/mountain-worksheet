@@ -634,7 +634,7 @@ describe("AppContainer — Rate of climb and Runway limit checks (#269)", () => 
     render(<AppContainer />);
     for (const name of ["Rate of climb", "Runway"]) {
       expect(within(callout(name)).getByText("Not checked")).toBeInTheDocument();
-      expect(callout(name)).toHaveTextContent("needs valid weight");
+      expect(callout(name)).toHaveTextContent("needs weight at or below maximum gross");
     }
   });
 });

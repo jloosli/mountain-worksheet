@@ -404,10 +404,24 @@ describe("Rate of climb limit check", () => {
     const check = climbCheck(undefined, { ...baseState(), weight: 3255 });
     expect(check.state).toBe("not-checked");
     expect(check.points.map((p) => p.waitingFor)).toEqual([
-      "needs valid weight",
-      "needs valid weight",
-      "needs valid weight",
+      "needs weight at or below maximum gross",
+      "needs weight at or below maximum gross",
+      "needs weight at or below maximum gross",
     ]);
+  });
+
+  it("is Not checked when an input holds a Warning (e.g. changed after the fetch)", () => {
+    const stale: Notification = {
+      level: "warning",
+      subject: fieldSubject("temp", 2),
+      message: "Arrival temperature changed after the weather fetch.",
+    };
+    const check = climbCheck(undefined, baseState(), [stale]);
+    expect(check.state).toBe("not-checked");
+    expect(check.points[2]).toMatchObject({
+      state: "not-checked",
+      waitingFor: "needs arrival temperature checked (Warning)",
+    });
   });
 
   it("is Not checked where the POH has no data", () => {
@@ -501,9 +515,24 @@ describe("Runway limit check", () => {
     const check = runwayCheck(undefined, { ...baseState(), weight: 3255 });
     expect(check.state).toBe("not-checked");
     expect(check.points.map((p) => p.waitingFor)).toEqual([
-      "needs valid weight",
-      "needs valid weight",
+      "needs weight at or below maximum gross",
+      "needs weight at or below maximum gross",
     ]);
+  });
+
+  it("is Not checked when an input holds a Warning (e.g. changed after the fetch)", () => {
+    const stale: Notification = {
+      level: "warning",
+      subject: fieldSubject("altimeter", 0),
+      message: "Departure altimeter changed after the weather fetch.",
+    };
+    const check = runwayCheck(undefined, baseState(), [stale]);
+    expect(check.state).toBe("not-checked");
+    expect(check.points[0]).toMatchObject({
+      state: "not-checked",
+      waitingFor: "needs departure altimeter checked (Warning)",
+    });
+    expect(check.points[1].state).toBe("within");
   });
 
   it("is Not checked where the POH has no data", () => {

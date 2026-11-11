@@ -27,13 +27,13 @@ interface TakeoffPerformanceProps {
 
 const SLOTS: AirportSlot[] = ["departure", "arrival"];
 
-const ROWS: { label: string; cells: [TOLDValueKey, TOLDValueKey]; checked?: boolean }[] = [
+const ROWS: { label: string; cells: [TOLDValueKey, TOLDValueKey]; runwayChecked?: boolean }[] = [
   { label: "Take Off Ground Roll", cells: ["takeoffGroundRoll", "takeoff50ftObstacle"] },
   { label: "Landing Ground Roll", cells: ["landingGroundRoll", "landing50ftObstacle"] },
   {
     label: "Available runway remaining",
     cells: ["runwayRemainingGroundRoll", "runwayRemaining50ft"],
-    checked: true,
+    runwayChecked: true,
   },
 ];
 
@@ -117,17 +117,17 @@ export default function TakeoffPerformance({
             </tr>
           </thead>
           <tbody>
-            {ROWS.map(({ label, cells: [shortField, obstacle], checked }) => (
+            {ROWS.map(({ label, cells: [shortField, obstacle], runwayChecked }) => (
               <tr key={label} className="border-b dark:border-gray-700">
                 <td className="py-2 px-4">{label}</td>
                 <ValueCell
                   value={told.departure.values[shortField]}
-                  limitState={checked ? runwayStates.departure : undefined}
+                  limitState={runwayChecked ? runwayStates.departure : undefined}
                   inputNotifications={inputNotifications}
                 />
                 <ValueCell
                   value={told.arrival.values[shortField]}
-                  limitState={checked ? runwayStates.arrival : undefined}
+                  limitState={runwayChecked ? runwayStates.arrival : undefined}
                   className="border-r dark:border-gray-700"
                   inputNotifications={inputNotifications}
                 />

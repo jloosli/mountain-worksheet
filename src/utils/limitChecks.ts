@@ -333,19 +333,26 @@ function ceilVisCheck({ state, notifications }: LimitCheckInputs): LimitCheck {
 
 /**
  * A point whose value wasn't computed: withheld points say what they're
- * waiting for; unavailable ones (no POH data) say `unavailable`.
+ * waiting for; unavailable ones (no POH data) say `unavailable`. Above
+ * maximum gross the values are withheld as "needs valid weight"; the point
+ * says the weight is the reason.
  */
 function notCheckedPoint(
   label: string,
   value: Exclude<ComputedValue, { status: "computed" }>,
   unavailable: string,
+  state: WorksheetData,
 ): LimitPoint {
-  return {
-    label,
-    state: "not-checked",
-    waitingFor: value.status === "withheld" ? value.reason : unavailable,
-    substitutions: [],
-  };
+  const aircraft = findAircraft(state.acType);
+  const overMaxGross =
+    aircraft !== undefined && state.weight !== null && state.weight > aircraft.maxGrossWeight;
+  const waitingFor =
+    value.status === "unavailable"
+      ? unavailable
+      : overMaxGross && value.reason === "needs valid weight"
+        ? "needs weight at or below maximum gross"
+        : value.reason;
+  return { label, state: "not-checked", waitingFor, substitutions: [] };
 }
 
 /**
@@ -365,11 +372,8 @@ function valueCautions(
   );
 }
 
-/** The worksheet's minimum rate of climb: at or below it is Exceeded. */
-export const MIN_RATE_OF_CLIMB_FPM = 300;
-
 /** Whether a weight-adjusted rate of climb fails the Rate of climb check. */
-export const isClimbExceeded = (fpm: number) => fpm <= MIN_RATE_OF_CLIMB_FPM;
+const isClimbExceeded = (fpm: number) => fpm <= 300;
 
 /**
  * Rate of climb: the weight-adjusted rate of climb at departure, operating
@@ -390,7 +394,7 @@ function climbCheck({ state, notifications, climb }: LimitCheckInputs): LimitChe
       const roc = climb.rateOfClimbActual[col];
       const label = columnLabel(state, col);
       if (roc.status !== "computed") {
-        return notCheckedPoint(label, roc, "needs POH climb data for these conditions");
+        return notCheckedPoint(label, roc, "needs POH climb data for these conditions", state);
       }
       return {
         label,
@@ -429,6 +433,7 @@ function runwayCheck({ state, notifications, told }: LimitCheckInputs): LimitChe
           label,
           remaining,
           "needs POH takeoff and landing data for these conditions",
+          state,
         );
       }
       return {
