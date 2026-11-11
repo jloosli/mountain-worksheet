@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, act } from "@testing-library/react";
-import PositionInput from "./PositionInput";
+import PositionInput, { POSITION_FORMATS } from "./PositionInput";
 import { getAirportInfo, getNavaidInfo } from "@/utils/aviationWeatherApi";
 import { magneticVariation } from "@/utils/magvar";
 
@@ -89,7 +89,7 @@ describe("PositionInput - async lookup paths", () => {
       "KOGD/285/34",
       expect.arrayContaining([expect.any(Number), expect.any(Number)]),
     );
-    expect(screen.getByText(/\(KOGD\/285\/34\)/)).toBeInTheDocument();
+    expect(screen.getByText(/Read as airport KOGD, 285° radial, 34 NM → \d/)).toBeInTheDocument();
   });
 
   it("calls getNavaidInfo for 3-letter station ids", async () => {
@@ -129,7 +129,7 @@ describe("PositionInput - async lookup paths", () => {
       await Promise.resolve();
       await Promise.resolve();
     });
-    expect(screen.getByText(/Could not find KZZZ/)).toBeInTheDocument();
+    expect(screen.getByText(/Could not find airport KZZZ/)).toBeInTheDocument();
     expect(onChange).toHaveBeenLastCalledWith("KZZZ/285/34", [null, null]);
   });
 
@@ -177,5 +177,94 @@ describe("PositionInput - async lookup paths", () => {
     // Final hint should reference KSLC, not PAMC
     expect(screen.queryByText(/PAMC/)).not.toBeInTheDocument();
     expect(screen.getByText(/KSLC/)).toBeInTheDocument();
+  });
+});
+
+describe("PositionInput - format chips and hints", () => {
+  const chip = (label: string) =>
+    screen.getByRole("button", { name: new RegExp(`^Use ${label} example`) });
+  const activeChips = () =>
+    screen
+      .getAllByRole("button")
+      .filter((b) => b.hasAttribute("data-active"))
+      .map((b) => b.getAttribute("aria-label"));
+
+  afterEach(() => jest.useRealTimers());
+
+  it("shows a chip with an example for every accepted format", () => {
+    render(<PositionInput rawValue="" cachedPosition={[null, null]} onChange={() => {}} />);
+    for (const f of POSITION_FORMATS) {
+      expect(chip(f.label)).toHaveTextContent(f.example);
+    }
+    expect(activeChips()).toEqual([]);
+  });
+
+  it("fills the field with a chip's example and saves it", () => {
+    jest.useFakeTimers();
+    const onChange = jest.fn();
+    render(<PositionInput rawValue="" cachedPosition={[null, null]} onChange={onChange} />);
+    fireEvent.click(chip("Lat/Long"));
+    expect(screen.getByRole("textbox")).toHaveValue("41.43/-112.70");
+    expect(screen.getByRole("textbox")).toHaveFocus();
+    act(() => {
+      jest.advanceTimersByTime(350);
+    });
+    expect(onChange).toHaveBeenCalledWith("41.43/-112.70", [41.43, -112.7]);
+    expect(activeChips()).toEqual(["Use Lat/Long example 41.43/-112.70"]);
+  });
+
+  it("names the recognised format and lights its chip as the user types", () => {
+    jest.useFakeTimers();
+    render(<PositionInput rawValue="" cachedPosition={[null, null]} onChange={() => {}} />);
+    fireEvent.change(screen.getByRole("textbox"), {
+      target: { value: "360051N/0753004W" },
+    });
+    act(() => {
+      jest.advanceTimersByTime(350);
+    });
+    expect(
+      screen.getByText(/Read as degrees, minutes, seconds → 36\.0142, -75\.5011/),
+    ).toBeInTheDocument();
+    expect(activeChips()).toEqual([expect.stringMatching(/^Use Deg Min Sec example/)]);
+  });
+
+  it("points an unrecognised entry back at the formats and lights no chip", () => {
+    jest.useFakeTimers();
+    render(<PositionInput rawValue="" cachedPosition={[null, null]} onChange={() => {}} />);
+    fireEvent.change(screen.getByRole("textbox"), {
+      target: { value: "OGDEN 285 34" },
+    });
+    act(() => {
+      jest.advanceTimersByTime(350);
+    });
+    expect(
+      screen.getByText(/area weather can't be fetched\. Use one of the formats above/),
+    ).toBeInTheDocument();
+    expect(activeChips()).toEqual([]);
+  });
+
+  it("describes a hydrated radial/distance entry from the link", () => {
+    render(
+      <PositionInput rawValue="OGD/285/34" cachedPosition={[41.5, -112.76]} onChange={() => {}} />,
+    );
+    expect(
+      screen.getByText("✓ Read as VOR OGD, 285° radial, 34 NM → 41.5000, -112.7600"),
+    ).toBeInTheDocument();
+    expect(activeChips()).toEqual([expect.stringMatching(/^Use VOR\/Radial\/NM example/)]);
+  });
+
+  it("describes the input by the format list as well as its notifications", () => {
+    render(
+      <PositionInput
+        rawValue=""
+        cachedPosition={[null, null]}
+        onChange={() => {}}
+        inputA11yProps={{ "aria-invalid": true, "aria-describedby": "notes-position" }}
+      />,
+    );
+    expect(screen.getByRole("textbox")).toHaveAttribute(
+      "aria-describedby",
+      "notes-position route-formats",
+    );
   });
 });

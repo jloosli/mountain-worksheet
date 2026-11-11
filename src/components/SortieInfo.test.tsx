@@ -369,6 +369,19 @@ describe("SortieInfo - airport code whitespace (#208)", () => {
     const input = screen.getByLabelText("Area of Operations (position)");
     expect(input).toHaveAttribute("aria-invalid", "true");
     expect(input).toHaveAccessibleDescription(/Operating area weather skipped/);
+    // The notification sits inside the field's own block, not as a separate
+    // grid cell that would push Operating Altitude onto the next row.
+    expect(input.parentElement).toHaveTextContent(/Operating area weather skipped/);
+  });
+
+  it("lays out Takeoff Weight under Operating Altitude beside the Area of Operations block", () => {
+    render(<SortieInfo onUpdate={mockOnUpdate} initialData={defaultInitialData} />);
+    const area = screen.getByLabelText("Area of Operations (position)").parentElement!;
+    expect(area).toHaveClass("md:row-span-2");
+    const altitude = screen.getByLabelText("Operating Altitude (MSL ft)").parentElement!;
+    const weight = screen.getByLabelText("Aircraft Takeoff Weight (lbs)").parentElement!;
+    expect(area.nextElementSibling).toBe(altitude);
+    expect(altitude.nextElementSibling).toBe(weight);
   });
 
   it("shows airport-ID notifications next to the ID they are about (#216)", () => {

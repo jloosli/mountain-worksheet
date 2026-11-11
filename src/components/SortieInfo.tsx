@@ -414,13 +414,16 @@ export default function SortieInfo({ initialData, onUpdate, notifications = [] }
             <InlineNotifications notifications={notifications} subject={AIRPORT_SUBJECTS[1]} />
           </div>
 
+          {/* Spans two rows so its format chips sit beside Operating Altitude and Takeoff Weight. */}
           <PositionInput
             rawValue={formData.route || ""}
             cachedPosition={formData.position ?? [null, null]}
             onChange={handlePositionChange}
             inputA11yProps={notificationA11yProps(notifications, POSITION_SUBJECT)}
-          />
-          <InlineNotifications notifications={notifications} subject={POSITION_SUBJECT} />
+            className="md:row-span-2"
+          >
+            <InlineNotifications notifications={notifications} subject={POSITION_SUBJECT} />
+          </PositionInput>
 
           <div className="space-y-2">
             <label htmlFor="operatingAltitude" className="block text-sm font-medium">
