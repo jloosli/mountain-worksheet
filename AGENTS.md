@@ -71,6 +71,7 @@ Weather-data mappers in `src/utils/weatherDataMapper.ts` must also return new ar
 npm run dev          # Dev server (Turbopack)
 npm run build        # Production build
 npm run lint         # ESLint
+npm run format       # Prettier: run before committing; CI fails on unformatted code
 npm test             # Run all tests
 npx jest src/path/to/file.test.ts  # Single test file
 ```
