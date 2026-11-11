@@ -132,6 +132,12 @@ describe("limitPointClass", () => {
     expect(limitPointClass("not-checked")).toBe("");
     expect(limitPointClass(undefined)).toBe("");
   });
+
+  it("uses light-mode text colors with at least 4.5:1 contrast on white and fetched (blue-50) cells", () => {
+    // amber-600 (3.2:1) and red-600 (4.4:1 on blue-50) fall short; amber-800 and red-700 pass.
+    expect(limitPointClass("near").split(" ")).toContain("text-amber-800");
+    expect(limitPointClass("exceeded").split(" ")).toContain("text-red-700");
+  });
 });
 
 describe("LimitCheckCallout — anchor offset", () => {

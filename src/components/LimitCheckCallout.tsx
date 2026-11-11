@@ -43,8 +43,8 @@ const STYLE: Record<LimitState, { chip: string; dot: string; box: string; text: 
  * Exceeded and Near limit are styled; Within limit and Not checked are not.
  */
 export function limitPointClass(state: LimitState | undefined): string {
-  if (state === "exceeded") return "font-bold text-red-600 dark:text-red-400";
-  if (state === "near") return "font-bold text-amber-600 dark:text-amber-400";
+  if (state === "exceeded") return "font-bold text-red-700 dark:text-red-400";
+  if (state === "near") return "font-bold text-amber-800 dark:text-amber-400";
   return "";
 }
 
