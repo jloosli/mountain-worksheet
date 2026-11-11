@@ -1,0 +1,13 @@
+# Prose and planning docs keep their hand-written layout.
+*.md
+docs/
+tasks/
+notebooks/
+
+# Transcribed POH tables: reflowing them would hide the table shape.
+src/data/
+
+# Generated or vendored.
+package-lock.json
+next-env.d.ts
+public/
