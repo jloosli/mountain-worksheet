@@ -231,6 +231,23 @@ describe("fetchWorksheetWeather", () => {
     });
   });
 
+  it("fetches the G-AIRMET snapshot for the sortie midpoint", async () => {
+    await fetchWorksheetWeather(worksheet);
+    expect(mockGairmets).toHaveBeenCalledWith(expect.any(Date));
+  });
+
+  it("raises a Warning, leaving the flags as they were, when no G-AIRMET forecast covers the sortie", async () => {
+    mockGairmets.mockResolvedValue(null);
+    const { data, result } = await fetchWorksheetWeather(worksheet);
+
+    expect(data?.turb).toBe(true);
+    expect(result.notifications).toContainEqual({
+      level: "warning",
+      subject: { kind: "step", step: "weather" },
+      message: expect.stringMatching(/No G-AIRMET forecast covers .*Check AIRMETs manually/),
+    });
+  });
+
   it("raises a Warning on the position field when there is no position to fetch for", async () => {
     mockBatch.mockResolvedValue({ metar: [], taf: [], airport: [], notifications: [] });
     const { result } = await fetchWorksheetWeather({

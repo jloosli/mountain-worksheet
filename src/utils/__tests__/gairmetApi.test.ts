@@ -1,4 +1,9 @@
-import { pointInPolygon, classifyAirmets, type GAirmetFeature } from "../gairmetApi";
+import {
+  pointInPolygon,
+  classifyAirmets,
+  fetchGAirmets,
+  type GAirmetFeature,
+} from "../gairmetApi";
 import { fieldSubject, stepSubject } from "../notifications";
 
 describe("pointInPolygon", () => {
@@ -36,7 +41,7 @@ describe("pointInPolygon", () => {
 
 describe("classifyAirmets", () => {
   const turbAirmet: GAirmetFeature = {
-    hazard: "TURB",
+    hazard: "TURB-LO",
     validTime: "2026-05-12T16:00:00.000Z",
     forecastHour: 0,
     geom: "AREA",
@@ -50,7 +55,7 @@ describe("classifyAirmets", () => {
   };
   const mtnObscAirmet: GAirmetFeature = {
     ...turbAirmet,
-    hazard: "MTN OBSC",
+    hazard: "MT_OBSC",
   };
   const ifrAirmet: GAirmetFeature = {
     ...turbAirmet,
@@ -145,7 +150,7 @@ describe("classifyAirmets", () => {
     expect(r.notifications.some((n) => /1000 ft \/ 3 sm/i.test(n.message))).toBe(false);
   });
 
-  it("clears flags to false when response has no TURB/IFR/MTN OBSC features", () => {
+  it("clears flags to false when response has no TURB-LO/IFR/MT_OBSC features", () => {
     // e.g. only ICE / LLWS hazards present, or empty array. The fetch succeeded
     // so we should clear stale flags rather than leave them via null sentinel.
     const iceAirmet: GAirmetFeature = { ...turbAirmet, hazard: "ICE" };
@@ -191,6 +196,30 @@ describe("classifyAirmets", () => {
     ]);
   });
 
+  it("ignores TURB-HI: turbulence at FL180 and above does not set the turbulence flag", () => {
+    const turbHi: GAirmetFeature = { ...turbAirmet, hazard: "TURB-HI" };
+    const r = classifyAirmets(
+      [turbHi, ifrAirmet],
+      [41, -112],
+      new Date("2026-05-12T16:00:00Z")
+    );
+    expect(r.turb).toBe(false);
+    expect(r.cielVis).toBe(true);
+  });
+
+  it("does not classify the retired hazard names TURB and MTN OBSC", () => {
+    const r = classifyAirmets(
+      [
+        { ...turbAirmet, hazard: "TURB" },
+        { ...turbAirmet, hazard: "MTN OBSC" },
+      ],
+      [41, -112],
+      new Date("2026-05-12T16:00:00Z")
+    );
+    expect(r.turb).toBe(false);
+    expect(r.mtnObsc).toBe(false);
+  });
+
   it("raises an Advisory on the weather step when flags are cleared because no relevant G-AIRMETs are in effect", () => {
     const r = classifyAirmets(
       [],
@@ -204,5 +233,44 @@ describe("classifyAirmets", () => {
         message: expect.stringMatching(/no turbulence, IFR or mountain obscuration G-AIRMETs/i),
       },
     ]);
+  });
+});
+
+describe("fetchGAirmets", () => {
+  const originalFetch = global.fetch;
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
+  const respond = (status: number, body?: unknown) =>
+    (global.fetch = jest.fn().mockResolvedValue({
+      ok: status >= 200 && status < 300,
+      status,
+      statusText: status === 204 ? "No Content" : "",
+      json: async () => body,
+    }) as unknown as typeof fetch);
+
+  it("asks for the G-AIRMET snapshot nearest the sortie time", async () => {
+    respond(200, []);
+    await fetchGAirmets(new Date("2026-11-11T15:45:00Z"));
+    const url = new URL((global.fetch as jest.Mock).mock.calls[0][0], "http://localhost");
+    expect(url.searchParams.get("endpoint")).toBe("gairmet");
+    expect(url.searchParams.get("date")).toBe("2026-11-11T15:45:00Z");
+  });
+
+  it("returns the features of a 200 response", async () => {
+    const features = [{ hazard: "IFR", validTime: "2026-11-11T15:00:00.000Z" }];
+    respond(200, features);
+    await expect(fetchGAirmets(new Date("2026-11-11T15:45:00Z"))).resolves.toEqual(features);
+  });
+
+  it("returns null on 204: no G-AIRMET forecast covers the sortie time", async () => {
+    respond(204);
+    await expect(fetchGAirmets(new Date("2026-11-12T03:00:00Z"))).resolves.toBeNull();
+  });
+
+  it("throws on an error status", async () => {
+    respond(500);
+    await expect(fetchGAirmets(new Date("2026-11-11T15:45:00Z"))).rejects.toThrow(/500/);
   });
 });

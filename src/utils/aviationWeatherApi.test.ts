@@ -150,6 +150,19 @@ describe("Aviation Weather API", () => {
       expect(url.searchParams.has("hours")).toBe(false);
     });
 
+    it("reads 204 No Content (e.g. an unknown station) as no results, without retrying", async () => {
+      (fetch as jest.Mock).mockResolvedValue({
+        ok: true,
+        status: 204,
+        json: async () => {
+          throw new SyntaxError("Unexpected end of JSON input");
+        },
+      });
+
+      await expect(getMETAR(["KXYZQ"])).resolves.toEqual([]);
+      expect(fetch).toHaveBeenCalledTimes(1);
+    });
+
     it("should handle TAF API errors", async () => {
       (fetch as jest.Mock).mockResolvedValueOnce({
         ok: false,

@@ -52,6 +52,13 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // No data for the request (an unknown station, or a G-AIRMET time beyond
+    // the forecast). Pass it through: as a 200 it would read as data, and
+    // for G-AIRMETs "no forecast" must not read as "no hazards".
+    if (response.status === 204) {
+      return new NextResponse(null, { status: 204 });
+    }
+
     // Check content type and handle accordingly
     const contentType = response.headers.get("content-type");
     let data;

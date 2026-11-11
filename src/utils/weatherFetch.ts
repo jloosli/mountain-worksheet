@@ -31,6 +31,7 @@ import {
   classifyAirmets,
   fetchGAirmets,
   type AirmetClassification,
+  type GAirmetFeature,
 } from "./gairmetApi";
 import { normalizeAirportCode } from "./airportCode";
 import {
@@ -155,6 +156,30 @@ function airportCondition(
   return undefined;
 }
 
+/**
+ * The AIRMET flags from a settled G-AIRMET fetch. A failed fetch, or a sortie
+ * no forecast covers, leaves the flags as they were with a Warning.
+ */
+function classifyGAirmetResult(
+  gairmet: PromiseSettledResult<GAirmetFeature[] | null>,
+  position: [number, number],
+  midTime: Date
+): AirmetClassification {
+  if (gairmet.status === "fulfilled" && gairmet.value !== null) {
+    return classifyAirmets(gairmet.value, position, midTime);
+  }
+  const reason =
+    gairmet.status === "rejected"
+      ? `G-AIRMET request failed (${reasonOf(gairmet.reason)})`
+      : `No G-AIRMET forecast covers ${midTime.toISOString()} (they run 12 hr ahead)`;
+  return {
+    turb: null,
+    cielVis: null,
+    mtnObsc: null,
+    notifications: [airmetFlagsUnavailable(reason)],
+  };
+}
+
 export async function fetchWorksheetWeather(
   worksheet: WorksheetData
 ): Promise<WorksheetWeatherFetch> {
@@ -229,7 +254,7 @@ export async function fetchWorksheetWeather(
       };
       const [point, gairmet] = await Promise.allSettled([
         fetchPointForecast(opPos[0], opPos[1], win),
-        fetchGAirmets(),
+        fetchGAirmets(midTime),
       ]);
       areaOfOps =
         point.status === "fulfilled"
@@ -246,19 +271,7 @@ export async function fetchWorksheetWeather(
                 `Open-Meteo request failed (${reasonOf(point.reason)})`
               )
             );
-      airmets =
-        gairmet.status === "fulfilled"
-          ? classifyAirmets(gairmet.value, opPos, midTime)
-          : {
-              turb: null,
-              cielVis: null,
-              mtnObsc: null,
-              notifications: [
-                airmetFlagsUnavailable(
-                  `G-AIRMET request failed (${reasonOf(gairmet.reason)})`
-                ),
-              ],
-            };
+      airmets = classifyGAirmetResult(gairmet, opPos, midTime);
     }
 
     const mapping = mapWeatherDataToWorksheet(apiData, areaOfOps, airmets, {
