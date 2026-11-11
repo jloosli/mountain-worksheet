@@ -1,0 +1,185 @@
+/**
+ * Limit checks: the Mountain Flight Worksheet's own limits, checked against
+ * the worksheet's values. See GLOSSARY.md (Limit checks) and
+ * docs/adr/0002-limit-checks-separate-from-notifications.md.
+ *
+ * A Limit check is not a notification: it never withholds a value, and it
+ * doesn't count on step badges or change step status. Results are derived
+ * during render from state, the derived view models and the notifications in
+ * force, so they change exactly when their inputs do.
+ */
+import { assessWeight, findAircraft, type ClimbViewModel, type TOLDViewModel } from "./derived";
+import { inputCautions } from "./markers";
+import {
+  fieldSubject,
+  notificationKey,
+  subjectKey,
+  type Notification,
+  type StepId,
+  type Subject,
+} from "./notifications";
+import type { WorksheetData } from "./types";
+
+export type LimitState = "exceeded" | "not-checked" | "near" | "within";
+
+/** Worst first: the state a check takes is the first one among its points. */
+export const LIMIT_STATE_ORDER: readonly LimitState[] = [
+  "exceeded",
+  "not-checked",
+  "near",
+  "within",
+];
+
+/** The glossary names of the states. */
+export const LIMIT_STATE_LABEL: Record<LimitState, string> = {
+  exceeded: "Exceeded",
+  "not-checked": "Not checked",
+  near: "Near limit",
+  within: "Within limit",
+};
+
+export type LimitCheckId = "weight" | "winds" | "ceilVis" | "climb" | "runway";
+
+/** One value a check compares against its limit (an altitude or an airport). */
+export interface LimitPoint {
+  label: string;
+  state: LimitState;
+  /** The value as checked, e.g. "2,790 / 3,100 lbs (90%)". Absent when Not checked. */
+  value?: string;
+  /** What a Not checked point is waiting for, e.g. "needs weight". */
+  waitingFor?: string;
+  /** Cautions on the inputs this value rests on (substitution markers). */
+  substitutions: Notification[];
+}
+
+export interface LimitCheck {
+  id: LimitCheckId;
+  name: string;
+  /** The worksheet's limit, short: "under 90% of maximum gross weight". */
+  limit: string;
+  /** A fixed caveat on what the check doesn't cover, or null. */
+  caveat: string | null;
+  /** The step whose callout shows this check. */
+  step: StepId;
+  state: LimitState;
+  points: LimitPoint[];
+}
+
+export interface LimitCheckInputs {
+  state: WorksheetData;
+  /** All notifications in force. */
+  notifications: readonly Notification[];
+  climb: ClimbViewModel;
+  told: TOLDViewModel;
+}
+
+const rank = (s: LimitState) => LIMIT_STATE_ORDER.indexOf(s);
+
+/** The worst of `states` (Within limit when there are none). */
+export function worstState(states: readonly LimitState[]): LimitState {
+  return states.reduce<LimitState>((worst, s) => (rank(s) < rank(worst) ? s : worst), "within");
+}
+
+/** `checks` worst first; checks in the same state keep their order. */
+export function bySeverity(checks: readonly LimitCheck[]): LimitCheck[] {
+  return [...checks].sort((a, b) => rank(a.state) - rank(b.state));
+}
+
+/**
+ * The action-bar summary sentence, e.g. "2 of 5 worksheet limits exceeded ·
+ * 1 not checked · 2 within limit". Parts with a count of zero are left out.
+ * It states no overall result.
+ */
+export function limitCheckSummary(checks: readonly LimitCheck[]): string {
+  const count = (s: LimitState) => checks.filter((c) => c.state === s).length;
+  const parts: string[] = [];
+  const exceeded = count("exceeded");
+  if (exceeded > 0) {
+    const noun = checks.length === 1 ? "worksheet limit" : "worksheet limits";
+    parts.push(`${exceeded} of ${checks.length} ${noun} exceeded`);
+  }
+  for (const s of ["not-checked", "near", "within"] as const) {
+    const n = count(s);
+    if (n > 0) parts.push(`${n} ${LIMIT_STATE_LABEL[s].toLowerCase()}`);
+  }
+  return parts.join(" · ");
+}
+
+/** The DOM id of a check's callout, for jumping to it. */
+export const limitCheckDomId = (id: LimitCheckId) => `limit-check-${id}`;
+
+/** Every Limit check that exists so far. */
+export function deriveLimitChecks(inputs: LimitCheckInputs): LimitCheck[] {
+  return [weightCheck(inputs)];
+}
+
+const fmt = (n: number) => n.toLocaleString("en-US", { maximumFractionDigits: 1 });
+
+/**
+ * `value` as a percentage of `max`, e.g. "89.9%". Truncated to 0.1, not
+ * rounded, so a value under a percentage limit never reads as the limit.
+ */
+export const formatPercentOfMax = (value: number, max: number) =>
+  `${fmt(Math.floor((value * 1000) / max) / 10)}%`;
+
+function check(
+  base: Omit<LimitCheck, "state" | "points">,
+  points: LimitPoint[],
+): LimitCheck {
+  return { ...base, state: worstState(points.map((p) => p.state)), points };
+}
+
+/**
+ * Weight: % of maximum gross weight, Exceeded at 90% or more. Weight above
+ * maximum gross is still checked: its Warning is about an aircraft
+ * limitation, not about whether the weight can be trusted.
+ */
+function weightCheck({ state, notifications, climb }: LimitCheckInputs): LimitCheck {
+  const base = {
+    id: "weight",
+    name: "Weight",
+    limit: "under 90% of maximum gross weight",
+    caveat: null,
+    step: "sortie",
+  } as const;
+  const dependsOn: Subject[] = [fieldSubject("acType"), fieldSubject("weight")];
+  const substitutions = inputCautions(notifications, { status: "computed", dependsOn });
+  const notChecked = (waitingFor: string) =>
+    check(base, [{ label: "Weight", state: "not-checked", waitingFor, substitutions }]);
+
+  const weight = state.weight;
+  const missing = [
+    ...(state.acType ? [] : ["aircraft type"]),
+    ...(weight === null || weight === undefined ? ["weight"] : []),
+  ];
+  if (missing.length > 0) return notChecked(`needs ${missing.join(" and ")}`);
+  const aircraft = findAircraft(state.acType);
+  if (!aircraft || weight === null) return notChecked("needs a supported aircraft type");
+
+  const { maxGrossWeight } = aircraft;
+  if (weight > maxGrossWeight) {
+    // The over-max-gross Warning withholds %MGW but doesn't make the weight
+    // untrusted; any other Warning on its inputs does.
+    const own = new Set(assessWeight(weight, aircraft).notifications.map(notificationKey));
+    const inputs = new Set(dependsOn.map(subjectKey));
+    const untrusted = notifications.some(
+      (n) =>
+        n.level === "warning" && inputs.has(subjectKey(n.subject)) && !own.has(notificationKey(n)),
+    );
+    if (untrusted) return notChecked("needs weight checked (Warning)");
+  } else if (climb.percentMGW.status === "withheld") {
+    return notChecked(climb.percentMGW.reason);
+  } else if (climb.percentMGW.status === "unavailable") {
+    return notChecked("needs weight");
+  }
+
+  const exceeded = weight * 10 >= maxGrossWeight * 9;
+  return check(base, [
+    {
+      label: "Weight",
+      state: exceeded ? "exceeded" : "within",
+      value: `${fmt(weight)} / ${fmt(maxGrossWeight)} lbs (${formatPercentOfMax(weight, maxGrossWeight)})`,
+      substitutions,
+    },
+  ]);
+}

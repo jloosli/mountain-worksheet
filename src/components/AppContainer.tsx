@@ -27,7 +27,13 @@ import {
   stepSubject,
   type WeatherFetchResult,
 } from "@/utils/notifications";
-import { derivePerformanceNotifications } from "@/utils/derived";
+import {
+  computeClimbViewModel,
+  computePressureColumns,
+  computeTOLDViewModel,
+  derivePerformanceNotifications,
+} from "@/utils/derived";
+import { deriveLimitChecks } from "@/utils/limitChecks";
 import type { WorksheetData } from "@/utils/types";
 import { unverifiedWeatherNotifications } from "@/utils/unverifiedWeather";
 import {
@@ -180,6 +186,16 @@ export default function AppContainer() {
     ]
   );
 
+  // Limit checks are derived during render and read by the action bar and
+  // every step. They don't feed step status or badges (ADR 0002).
+  const { PAs } = computePressureColumns(state.altitude, state.altimeter, state.temp);
+  const limitChecks = deriveLimitChecks({
+    state,
+    notifications,
+    climb: computeClimbViewModel(state, notifications),
+    told: computeTOLDViewModel(state, PAs, notifications),
+  });
+
   const stepStatuses = useMemo(
     () => deriveStepStatuses(state, weatherLastUpdated, notifications),
     [state, weatherLastUpdated, notifications]
@@ -307,6 +323,7 @@ export default function AppContainer() {
           <ActionBar
             state={actionBarState}
             worksheetData={state}
+            limitChecks={limitChecks}
             weatherLastUpdated={weatherLastUpdated ?? undefined}
             onFetch={onClick}
             fetchDisabled={disabled}
@@ -325,6 +342,7 @@ export default function AppContainer() {
             airportRunways={runwayLookup.runways}
             runwayStatus={runwayLookup.status}
             notifications={notifications}
+            limitChecks={limitChecks}
             stepStatuses={stepStatuses}
             rejectedEntries={rejectedEntries}
             onRejectedEntryChange={handleRejectedEntryChange}
@@ -343,7 +361,11 @@ export default function AppContainer() {
               subject={stepSubject("decision")}
               className="mb-4"
             />
-            <Calculations state={state} notifications={notifications} />
+            <Calculations
+              state={state}
+              notifications={notifications}
+              limitChecks={limitChecks}
+            />
           </StepShell>
         </div>
       </main>

@@ -12,12 +12,21 @@ import {
   PrinterIcon,
   StarIcon,
 } from "@heroicons/react/24/outline";
+import { LimitStateDot } from "@/components/LimitCheckCallout";
 import type { ActionBarState } from "@/utils/actionBarState";
+import {
+  bySeverity,
+  limitCheckDomId,
+  limitCheckSummary,
+  type LimitCheck,
+} from "@/utils/limitChecks";
 import type { WorksheetData } from "@/utils/types";
 
 interface ActionBarProps {
   state: ActionBarState;
   worksheetData: WorksheetData;
+  /** The Limit checks, summarized in one sentence that jumps to the worst. */
+  limitChecks?: readonly LimitCheck[];
   weatherLastUpdated?: Date;
   onFetch: () => void;
   fetchDisabled: boolean;
@@ -39,6 +48,7 @@ const formatClockUtc = (d: Date): string => {
 export default function ActionBar({
   state,
   worksheetData,
+  limitChecks = [],
   weatherLastUpdated,
   onFetch,
   fetchDisabled,
@@ -167,6 +177,34 @@ export default function ActionBar({
           </div>
         </div>
       </div>
+      <LimitCheckSummary checks={limitChecks} />
+    </div>
+  );
+}
+
+/**
+ * One line: a dot per check, worst first, then the counts. It has no overall
+ * color and states no verdict; clicking jumps to the worst check.
+ */
+function LimitCheckSummary({ checks }: { checks: readonly LimitCheck[] }) {
+  if (checks.length === 0) return null;
+  const ordered = bySeverity(checks);
+  return (
+    <div className="mx-auto w-full max-w-5xl px-4 pb-2 md:px-6">
+      <a
+        href={`#${limitCheckDomId(ordered[0].id)}`}
+        className="flex items-center gap-2.5 rounded-md border border-slate-200 bg-slate-50 px-3 py-1 text-sm text-slate-800 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-100 dark:hover:bg-slate-800"
+      >
+        <span className="flex gap-1">
+          {ordered.map((c) => (
+            <LimitStateDot key={c.id} state={c.state} />
+          ))}
+        </span>
+        <span className="min-w-0 flex-1 font-medium">{limitCheckSummary(checks)}</span>
+        <span className="hidden text-xs text-slate-500 sm:inline dark:text-slate-400">
+          Worksheet limits ↓
+        </span>
+      </a>
     </div>
   );
 }

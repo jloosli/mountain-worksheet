@@ -1,6 +1,7 @@
 import { render, screen } from "../test-utils/test-utils";
 import ClimbPerformance from "./ClimbPerformance";
 import { computeClimbViewModel } from "@/utils/derived";
+import type { LimitState } from "@/utils/limitChecks";
 import type { WorksheetData } from "@/utils/types";
 
 // Mock the aircraft data
@@ -113,7 +114,10 @@ const baseState: WorksheetData = {
   mtnCert: false,
 };
 
-function renderClimb(overrides: Partial<WorksheetData> = {}) {
+function renderClimb(
+  overrides: Partial<WorksheetData> = {},
+  percentMGWState?: LimitState,
+) {
   const state = { ...baseState, ...overrides };
   const ui = (s: WorksheetData) => (
     <ClimbPerformance
@@ -121,6 +125,7 @@ function renderClimb(overrides: Partial<WorksheetData> = {}) {
       climb={computeClimbViewModel(s)}
       OATs={s.temp}
       altimeters={s.altimeter}
+      percentMGWState={percentMGWState}
     />
   );
   const result = render(ui(state));
@@ -303,5 +308,45 @@ describe("ClimbPerformance Component", () => {
       const cells = getServiceCeilingRow()?.querySelectorAll("td");
       expect(cells?.[1].textContent).toBe(cells?.[3].textContent);
     });
+  });
+});
+
+describe("ClimbPerformance — Percent of MGW cell", () => {
+  const percentCell = () =>
+    screen.getByText("Percent of MGW").closest("tr")!.querySelectorAll("td")[1];
+
+  test("has the Exceeded style when the Weight check's point is Exceeded", () => {
+    renderClimb({ weight: 2790 }, "exceeded");
+    expect(percentCell()).toHaveTextContent("90%");
+    expect(percentCell().className).toMatch(/text-red/);
+    expect(percentCell().className).not.toMatch(/yellow/);
+  });
+
+  test("has no style when the Weight check's point is Within limit", () => {
+    renderClimb({ weight: 2787 }, "within");
+    expect(percentCell().className).not.toMatch(/text-red|yellow/);
+  });
+
+  test("has no yellow style anywhere between 90% and 100%", () => {
+    renderClimb({ weight: 3000 }, "exceeded");
+    expect(percentCell().className).toMatch(/text-red/);
+    expect(percentCell().className).not.toMatch(/yellow/);
+  });
+
+  test("shows the percentage text it is given instead of the rounded value", () => {
+    render(
+      <ClimbPerformance
+        aircraftModel="C182T"
+        climb={computeClimbViewModel({ ...baseState, weight: 2787 })}
+        percentMGWText="89.9%"
+        percentMGWState="within"
+      />,
+    );
+    expect(percentCell()).toHaveTextContent(/^89\.9%$/);
+  });
+
+  test("above maximum gross shows the over-max-gross Warning's withheld marker", () => {
+    renderClimb({ weight: 3255 }, "exceeded");
+    expect(percentCell()).toHaveTextContent("needs valid weight");
   });
 });

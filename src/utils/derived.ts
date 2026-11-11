@@ -321,19 +321,8 @@ export function assessWeight(
       `Weight ${fmt(weight)} lbs exceeds the ${id} maximum gross weight (${fmt(maxGrossWeight)} lbs).`,
     );
   }
-  if (weight >= maxGrossWeight * 0.95) {
-    const percent = Math.round((weight / maxGrossWeight) * 100);
-    return {
-      withheldReason: null,
-      notifications: [
-        {
-          level: "advisory",
-          subject: fieldSubject("weight"),
-          message: `Weight ${fmt(weight)} lbs is ${percent}% of the ${id} maximum gross weight (${fmt(maxGrossWeight)} lbs).`,
-        },
-      ],
-    };
-  }
+  // Weight at or above 90% of maximum gross is reported by the Weight Limit
+  // check (limitChecks.ts), not by a notification (ADR 0002).
   return { withheldReason: null, notifications: [] };
 }
 

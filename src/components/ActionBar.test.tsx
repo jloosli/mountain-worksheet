@@ -2,6 +2,7 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import ActionBar from "./ActionBar";
 import type { WorksheetData } from "@/utils/types";
+import type { LimitCheck } from "@/utils/limitChecks";
 
 const empty: WorksheetData = {
   pilot: "",
@@ -257,5 +258,68 @@ describe("ActionBar — responsive mobile layout (issue #120)", () => {
     expect(slot.className).toMatch(/\bsm:border-l\b/);
     // Plain `border-l` must NOT appear unprefixed — the divider is gated by sm:.
     expect(slot.className).not.toMatch(/(^|\s)border-l(\s|$)/);
+  });
+});
+
+describe("ActionBar — worksheet limits summary", () => {
+  const check = (id: LimitCheck["id"], state: LimitCheck["state"]): LimitCheck => ({
+    id,
+    name: id,
+    limit: "",
+    caveat: null,
+    step: "sortie",
+    state,
+    points: [],
+  });
+
+  it("shows nothing without limit checks", () => {
+    render(<ActionBar {...baseProps} state="incomplete" />);
+    expect(screen.queryByRole("link", { name: /worksheet limit|within limit/ })).toBeNull();
+  });
+
+  it("shows one dot per check in severity order and the counts, omitting zero parts", () => {
+    render(
+      <ActionBar
+        {...baseProps}
+        state="ready"
+        limitChecks={[
+          check("weight", "within"),
+          check("winds", "exceeded"),
+          check("ceilVis", "not-checked"),
+        ]}
+      />,
+    );
+    const summary = screen.getByRole("link", {
+      name: /1 of 3 worksheet limits exceeded · 1 not checked · 1 within limit/,
+    });
+    expect(summary).not.toHaveTextContent(/near limit/);
+    expect(
+      [...summary.querySelectorAll("[data-limit-state]")].map((d) =>
+        d.getAttribute("data-limit-state"),
+      ),
+    ).toEqual(["exceeded", "not-checked", "within"]);
+  });
+
+  it("jumps to the first check in severity order", () => {
+    render(
+      <ActionBar
+        {...baseProps}
+        state="ready"
+        limitChecks={[check("weight", "within"), check("winds", "not-checked")]}
+      />,
+    );
+    expect(screen.getByRole("link", { name: /1 not checked · 1 within limit/ })).toHaveAttribute(
+      "href",
+      "#limit-check-winds",
+    );
+  });
+
+  it("states no overall verdict", () => {
+    render(
+      <ActionBar {...baseProps} state="ready" limitChecks={[check("weight", "within")]} />,
+    );
+    const summary = screen.getByRole("link", { name: /1 within limit/ });
+    expect(summary).not.toHaveTextContent(/all clear|go\b|no-go/i);
+    expect(summary.className).not.toMatch(/red|emerald|green|amber/);
   });
 });

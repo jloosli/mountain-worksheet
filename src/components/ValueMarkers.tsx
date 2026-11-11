@@ -14,20 +14,25 @@ interface ValueMarkersProps {
  * message itself is not repeated here.
  */
 export default function ValueMarkers({ notifications, value }: ValueMarkersProps) {
+  return <CautionMarkers cautions={inputCautions(notifications, value)} />;
+}
+
+/** One marker per input Subject among `cautions`, linking to its Cautions. */
+export function CautionMarkers({ cautions }: { cautions: readonly Notification[] }) {
   const bySubject = new Map<string, Notification[]>();
-  for (const n of inputCautions(notifications, value)) {
+  for (const n of cautions) {
     const key = subjectKey(n.subject);
     bySubject.set(key, [...(bySubject.get(key) ?? []), n]);
   }
   if (bySubject.size === 0) return null;
   return (
     <>
-      {[...bySubject.values()].map((cautions) => {
-        const text = cautions.map((c) => c.message).join("\n");
+      {[...bySubject.values()].map((group) => {
+        const text = group.map((c) => c.message).join("\n");
         return (
           <a
-            key={subjectKey(cautions[0].subject)}
-            href={`#${notificationsDomId(cautions[0].subject)}`}
+            key={subjectKey(group[0].subject)}
+            href={`#${notificationsDomId(group[0].subject)}`}
             title={`Caution on an input: ${text}`}
             aria-label={`Computed from an input with a Caution: ${text}`}
             data-marker="caution"
