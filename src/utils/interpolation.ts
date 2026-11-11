@@ -5,11 +5,6 @@ export interface InterpolationTable {
   data: number[][];
 }
 
-export interface FlexibleInterpolationTable {
-  [key: string]: number[] | number[][] | (number | null)[][];
-  data: (number | null)[][];
-}
-
 export interface InterpolationOptions {
   allowExtrapolation?: boolean;
   xAxisName?: string;
@@ -204,31 +199,6 @@ export function bilinearInterpolate(
   });
 }
 
-// Flexible interpolation function with dynamic property names
-export function bilinearInterpolateFlexible(
-  table: FlexibleInterpolationTable,
-  xValue: number,
-  yValue: number,
-  options: Required<Pick<InterpolationOptions, "xAxisName" | "yAxisName">> &
-    Partial<Pick<InterpolationOptions, "allowExtrapolation">>
-): number {
-  const { xAxisName, yAxisName, allowExtrapolation = true } = options;
-
-  const xAxis = table[xAxisName] as number[];
-  const yAxis = table[yAxisName] as number[];
-  const { data } = table;
-
-  if (!Array.isArray(xAxis) || !Array.isArray(yAxis)) {
-    throw new Error(
-      `Invalid axis data: ${xAxisName} or ${yAxisName} is not an array`
-    );
-  }
-
-  return performInterpolation(xAxis, yAxis, data, xValue, yValue, {
-    allowExtrapolation,
-  });
-}
-
 // Enhanced version that returns detailed results
 export function bilinearInterpolateDetailed(
   table: InterpolationTable,
@@ -258,31 +228,6 @@ export function bilinearInterpolateDetailed(
       yMax: yAxis[yAxis.length - 1],
     },
   };
-}
-
-// Generic table creator function
-export function createInterpolationTable<T extends string>(
-  xAxisValues: number[],
-  yAxisValues: number[],
-  dataMatrix: number[][],
-  xAxisName?: T,
-  yAxisName?: T
-): InterpolationTable | FlexibleInterpolationTable {
-  const baseTable = {
-    xAxis: xAxisValues,
-    yAxis: yAxisValues,
-    data: dataMatrix,
-  };
-
-  if (xAxisName && yAxisName) {
-    return {
-      ...baseTable,
-      [xAxisName]: xAxisValues,
-      [yAxisName]: yAxisValues,
-    } as FlexibleInterpolationTable;
-  }
-
-  return baseTable;
 }
 
 /**
@@ -649,26 +594,4 @@ export function trilinearInterpolate(
 
   const result = c0 * (1 - fw) + c1 * fw;
   return result;
-}
-
-
-/**
- * `trilinearInterpolate`, plus the axes ("weight", "pressureAltitude",
- * "temperature") the lookup extrapolated beyond.
- */
-export function trilinearInterpolateDetailed(
-  table: TrilinearInterpolationTable,
-  weight: number,
-  pressureAltitude: number,
-  temperature: number,
-  options: TrilinearInterpolationOptions = {}
-): { value: number | null; extrapolated: Extrapolation[] } {
-  return {
-    value: trilinearInterpolate(table, weight, pressureAltitude, temperature, options),
-    extrapolated: findExtrapolations([
-      { axis: "weight", values: table.weights, value: weight },
-      { axis: "pressureAltitude", values: table.pressureAltitudes, value: pressureAltitude },
-      { axis: "temperature", values: table.temperatures, value: temperature },
-    ]),
-  };
 }
