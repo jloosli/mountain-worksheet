@@ -29,6 +29,18 @@ describe("unverifiedWeatherNotifications", () => {
     expect(notes[0].message).toMatch(/fetch/i);
   });
 
+  it("covers the weather fields a shared link carries, not the airport data", () => {
+    const [note] = unverifiedWeatherNotifications(withSharedTemp, null);
+    expect(note.covers).toEqual([
+      { kind: "field", field: "temp" },
+      { kind: "field", field: "altimeter" },
+      { kind: "field", field: "wind" },
+      { kind: "field", field: "turb" },
+      { kind: "field", field: "cielVis" },
+      { kind: "field", field: "mtnObsc" },
+    ]);
+  });
+
   it("treats a wind value of 0 as weather data", () => {
     const calmWind = {
       ...blank,

@@ -44,7 +44,7 @@ The worksheet changing what the pilot entered, either silently (normalization th
 A weather fetch where some parts succeed and others fail. The successful parts are applied. A field that unexpectedly could not be filled is left blank with a Warning, which clears once the pilot enters a value.
 
 **Unverified weather**:
-Weather values on the worksheet that were not fetched during the current session, such as values opened from a shared link. They raise a Caution on the weather step until weather is fetched.
+Weather values on the worksheet that were not fetched during the current session, such as values opened from a shared link. They raise a Caution on the weather step until weather is fetched. The Caution covers every weather field, so values and Limit checks computed from weather carry its marker.
 
 ### Airports
 

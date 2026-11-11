@@ -1,4 +1,6 @@
 import { fieldSubject, type Notification, type WeatherFetchResult } from "../notifications";
+import { briefingNotes } from "../briefingNotes";
+import { substitutionsFor } from "../provenance";
 import { windEntryKey } from "../rejectedEntries";
 import type { WorksheetData } from "../types";
 import {
@@ -187,6 +189,20 @@ describe("evaluateWorksheet — Unverified weather", () => {
       const substitutions = check(e.limitChecks, id).points.flatMap((p) => p.substitutions);
       expect(substitutions.some((n) => /came from a shared link/.test(n.message))).toBe(true);
     }
+  });
+
+  it("marks a rate of climb with Unverified weather on screen and on the Briefing, as its Limit check point is", () => {
+    const e = evaluateWorksheet(sortie(), EMPTY_SESSION);
+    const roc = e.climb.rateOfClimbActual[0];
+    const unverified = e.notifications.filter((n) => /came from a shared link/.test(n.message));
+    expect(unverified).toHaveLength(1);
+    // Screen markers and Limit check points both read this one rule.
+    expect(substitutionsFor(roc, e.notifications)).toEqual(unverified);
+    expect(check(e.limitChecks, "climb").points[0].substitutions).toEqual(unverified);
+    // The Briefing prints the same note's reference next to the value.
+    const b = briefingNotes(e.notifications);
+    expect(b.markersOn(roc)).toEqual(b.refsFor(unverified));
+    expect(b.markersOn(roc)).toHaveLength(1);
   });
 
   it("drops the Caution and the markers once weather is fetched this session", () => {

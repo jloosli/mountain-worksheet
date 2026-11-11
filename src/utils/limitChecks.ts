@@ -22,7 +22,6 @@ import {
   type ComputedValue,
   type TOLDViewModel,
 } from "./derived";
-import { inputCautions } from "./markers";
 import {
   fieldSubject,
   notificationKey,
@@ -31,8 +30,8 @@ import {
   type StepId,
   type Subject,
 } from "./notifications";
+import { substitutionsFor } from "./provenance";
 import type { WorksheetData } from "./types";
-import { isUnverifiedWeather } from "./unverifiedWeather";
 
 export type LimitState = "exceeded" | "not-checked" | "near" | "within";
 
@@ -187,7 +186,7 @@ function weightCheck({ state, notifications, climb }: LimitCheckInputs): LimitCh
     step: "sortie",
   } as const;
   const dependsOn: Subject[] = [fieldSubject("acType"), fieldSubject("weight")];
-  const substitutions = inputCautions(notifications, { status: "computed", dependsOn });
+  const substitutions = substitutionsFor({ status: "computed", dependsOn }, notifications);
   const notChecked = (waitingFor: string) =>
     check(base, [{ label: "Weight", state: "not-checked", waitingFor, substitutions }]);
 
@@ -274,14 +273,10 @@ function windsAloftCheck({ state, notifications }: LimitCheckInputs): LimitCheck
     // 0 kt is a real speed; only null means no data.
     const speed = state.wind[1]?.[index] ?? null;
     const untrusted = tableWarned || warned.has(subjectKey(fieldSubject("wind", index)));
-    // Unverified weather sits on the weather step but covers every column.
-    const substitutions = [
-      ...inputCautions(notifications, {
-        status: "computed",
-        dependsOn: [fieldSubject("wind"), fieldSubject("wind", index)],
-      }),
-      ...notifications.filter(isUnverifiedWeather),
-    ];
+    const substitutions = substitutionsFor(
+      { status: "computed", dependsOn: [fieldSubject("wind"), fieldSubject("wind", index)] },
+      notifications,
+    );
     if (untrusted) {
       const waitingFor = speed === null ? "needs speed (Warning)" : "needs speed checked (Warning)";
       points.push({ label, state: "not-checked", waitingFor, substitutions, index });
@@ -325,12 +320,7 @@ function ceilVisCheck({ state, notifications }: LimitCheckInputs): LimitCheck {
   } as const;
   const subject = fieldSubject("cielVis");
   const ticked = state.cielVis;
-  // The box's own Cautions, plus Unverified weather: a shared link carries
-  // the box's value but not the fetch it came from.
-  const substitutions = [
-    ...inputCautions(notifications, { status: "computed", dependsOn: [subject] }),
-    ...notifications.filter(isUnverifiedWeather),
-  ];
+  const substitutions = substitutionsFor({ status: "computed", dependsOn: [subject] }, notifications);
   // A Warning on the box, such as a stale fetch, means an unticked box can't
   // be trusted. A ticked box is Exceeded however it got there.
   const untrusted = notifications.some(
@@ -380,33 +370,6 @@ function notCheckedPoint(
   return { label, state: "not-checked", waitingFor, substitutions: [] };
 }
 
-/** Weather inputs a shared link can carry unverified. */
-const WEATHER_FIELDS = new Set(["temp", "altimeter"]);
-
-/**
- * The substitution markers of a computed value: Cautions on the inputs it
- * rests on, Cautions on the value itself (extrapolated or averaged POH
- * values), and Unverified weather when it rests on temperature or altimeter,
- * in notification order. Other weather-step Cautions aren't about the value.
- */
-function valueCautions(
-  notifications: readonly Notification[],
-  value: ComputedValue,
-  own: readonly Subject[],
-): Notification[] {
-  const onInputs = new Set(inputCautions(notifications, value));
-  const ownKeys = new Set(own.map(subjectKey));
-  const restsOnWeather =
-    value.status === "computed" &&
-    value.dependsOn.some((s) => s.kind === "field" && WEATHER_FIELDS.has(s.field));
-  return notifications.filter(
-    (n) =>
-      onInputs.has(n) ||
-      (n.level === "caution" && ownKeys.has(subjectKey(n.subject))) ||
-      (restsOnWeather && isUnverifiedWeather(n)),
-  );
-}
-
 /** Whether a weight-adjusted rate of climb fails the Rate of climb check. */
 const isClimbExceeded = (fpm: number) => fpm <= 300;
 
@@ -435,7 +398,7 @@ function climbCheck({ state, notifications, climb }: LimitCheckInputs): LimitChe
         label,
         state: isClimbExceeded(roc.value) ? "exceeded" : "within",
         value: `${fmt(roc.value)} fpm`,
-        substitutions: valueCautions(notifications, roc, [climbSubject("rateOfClimb", col)]),
+        substitutions: substitutionsFor(roc, notifications, [climbSubject("rateOfClimb", col)]),
       };
     }),
   );
@@ -475,9 +438,9 @@ function runwayCheck({ state, notifications, told }: LimitCheckInputs): LimitChe
         label,
         state: isRunwayExceeded(remaining.value) ? "exceeded" : "within",
         value: `${fmt(remaining.value)} ft remaining`,
-        substitutions: valueCautions(
-          notifications,
+        substitutions: substitutionsFor(
           remaining,
+          notifications,
           toldValueSubjects(slot, "runwayRemainingGroundRoll"),
         ),
       };

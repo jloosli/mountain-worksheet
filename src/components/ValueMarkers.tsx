@@ -1,6 +1,6 @@
 import { notificationsDomId } from "@/components/InlineNotifications";
-import { inputCautions, type MarkableValue } from "@/utils/markers";
 import { subjectKey, type Notification } from "@/utils/notifications";
+import { substitutionsFor, type MarkableValue } from "@/utils/provenance";
 
 interface ValueMarkersProps {
   /** All notifications in force. */
@@ -9,15 +9,15 @@ interface ValueMarkersProps {
 }
 
 /**
- * A compact marker per input Caution a computed value rests on. Each links to
- * the Caution shown at the input and carries its message as a tooltip; the
- * message itself is not repeated here.
+ * A compact marker per Subject of the Cautions a computed value rests on
+ * (`substitutionsFor`). Each links to the Caution where it is shown and
+ * carries its message as a tooltip; the message itself is not repeated here.
  */
 export default function ValueMarkers({ notifications, value }: ValueMarkersProps) {
-  return <CautionMarkers cautions={inputCautions(notifications, value)} />;
+  return <CautionMarkers cautions={substitutionsFor(value, notifications)} />;
 }
 
-/** One marker per input Subject among `cautions`, linking to its Cautions. */
+/** One marker per Subject among `cautions`, linking to its Cautions. */
 export function CautionMarkers({ cautions }: { cautions: readonly Notification[] }) {
   const bySubject = new Map<string, Notification[]>();
   for (const n of cautions) {

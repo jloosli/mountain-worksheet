@@ -85,6 +85,23 @@ describe("briefingNotes", () => {
     expect(b.markersOn(landing)).toEqual([2]);
     expect(b.markersOn(departure)).toEqual([]);
   });
+
+  it("marks a computed value with the reference of a Caution that covers its input", () => {
+    const unverified: Notification = {
+      level: "caution",
+      subject: stepSubject("weather"),
+      message: "Weather values came from a shared link",
+      covers: [fieldSubject("temp")],
+    };
+    const b = briefingNotes([weightWarning, unverified]);
+    const landing: ComputedValue = {
+      status: "computed",
+      value: 1450,
+      dependsOn: [fieldSubject("acType"), fieldSubject("temp", 2)],
+    };
+    expect(b.markersOn(landing)).toEqual(b.refsFor([unverified]));
+    expect(b.markersOn(landing)).toHaveLength(1);
+  });
 });
 
 describe("briefingNotes refsFor", () => {
