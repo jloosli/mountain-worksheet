@@ -1,5 +1,5 @@
 import { renderHook, act } from "@testing-library/react";
-import { useUrlState } from "../useUrlState";
+import { useUrlReducer, useUrlState } from "../useUrlState";
 import * as nextNavigation from "next/navigation";
 
 // Mock next/navigation
@@ -195,6 +195,38 @@ describe("useUrlState", () => {
     expect(result.current[2]).toEqual({
       state: { count: 0 },
       problem: "count=abc -> NaN",
+    });
+  });
+
+  describe("useUrlReducer", () => {
+    interface Counter {
+      value: { count: number };
+      events: number;
+    }
+    const reducer = (s: Counter, by: number): Counter => ({
+      value: { count: s.value.count + by },
+      events: s.events + 1,
+    });
+    const init = (value: { count: number }): Counter => ({ value, events: 0 });
+    const toUrl = (s: Counter) => s.value;
+
+    it("applies events dispatched before a render to the latest state, and writes only the URL value", () => {
+      (nextNavigation.useSearchParams as jest.Mock).mockReturnValue(
+        new URLSearchParams("count=2")
+      );
+      const { result } = renderHook(() =>
+        useUrlReducer(reducer, { count: 0 }, init, toUrl)
+      );
+      expect(result.current[0]).toEqual({ value: { count: 2 }, events: 0 });
+
+      act(() => {
+        result.current[1](1);
+        result.current[1](10);
+        document.dispatchEvent(new Event("focusin"));
+      });
+
+      expect(result.current[0]).toEqual({ value: { count: 13 }, events: 2 });
+      expect(mockRouter.push).toHaveBeenCalledWith("/test?count=13", { scroll: false });
     });
   });
 });

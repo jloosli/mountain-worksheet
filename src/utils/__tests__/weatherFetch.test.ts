@@ -3,11 +3,11 @@ import { getWeatherDataBatch } from "@/utils/aviationWeatherApi";
 import { fetchPointForecast } from "@/utils/openMeteoApi";
 import { fetchGAirmets } from "@/utils/gairmetApi";
 import {
-  deriveNotifications,
   fieldSubject,
   subjectKey,
   type Notification,
 } from "@/utils/notifications";
+import { fetchNotifications } from "@/utils/weatherSession";
 import type { WorksheetData } from "@/utils/types";
 
 jest.mock("@/utils/aviationWeatherApi", () => ({
@@ -154,7 +154,7 @@ describe("fetchWorksheetWeather", () => {
 
     // The kept elevation isn't blank, so its Warning doesn't show; the
     // blanked runway's does.
-    const shown = deriveNotifications(
+    const shown = fetchNotifications(
       { ...worksheet, ...data } as WorksheetData,
       result
     ).map((n) => subjectKey(n.subject));
@@ -173,12 +173,12 @@ describe("fetchWorksheetWeather", () => {
       position: worksheet.position,
     });
     const state = { ...worksheet, ...data } as WorksheetData;
-    const live = deriveNotifications(state, result);
+    const live = fetchNotifications(state, result);
     expect(subjectsAt(live, "warning")).toContain("field:temp.2");
 
     // The pilot enters the arrival temperature: that Warning goes away.
     const fixed = { ...state, temp: [21, state.temp[1], 12] as WorksheetData["temp"] };
-    expect(subjectsAt(deriveNotifications(fixed, result), "warning")).not.toContain(
+    expect(subjectsAt(fetchNotifications(fixed, result), "warning")).not.toContain(
       "field:temp.2"
     );
   });
@@ -327,7 +327,7 @@ describe("fetchWorksheetWeather", () => {
 
       // The Advisory survives the rewrite of the worksheet's airport.
       const state = { ...worksheet, ...data } as WorksheetData;
-      expect(deriveNotifications(state, result)).toContainEqual(
+      expect(fetchNotifications(state, result)).toContainEqual(
         expect.objectContaining({
           level: "advisory",
           subject: fieldSubject("airport", 1),
@@ -363,11 +363,11 @@ describe("fetchWorksheetWeather", () => {
 
       // The Caution holds until the pilot changes the ID.
       const state = { ...worksheet, ...data } as WorksheetData;
-      expect(subjectsAt(deriveNotifications(state, result), "caution")).toContain(
+      expect(subjectsAt(fetchNotifications(state, result), "caution")).toContain(
         "field:airport.1"
       );
       const retyped = { ...state, airport: ["KORD", "XQY"] as [string, string] };
-      expect(subjectsAt(deriveNotifications(retyped, result), "caution")).not.toContain(
+      expect(subjectsAt(fetchNotifications(retyped, result), "caution")).not.toContain(
         "field:airport.1"
       );
     });

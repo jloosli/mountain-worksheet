@@ -10,7 +10,8 @@ import {
   opTempChangeNotifications,
 } from "../areaOfOpsWeather";
 import { mapWeatherDataToWorksheet, mergeWeatherData } from "../weatherDataMapper";
-import { deriveNotifications, fieldSubject, type WeatherFetchResult } from "../notifications";
+import { fieldSubject, type WeatherFetchResult } from "../notifications";
+import { fetchNotifications } from "../weatherSession";
 import { computeClimbViewModel, pressureColumnDependsOn } from "../derived";
 import { substitutionsFor } from "../provenance";
 import type { OpenMeteoPointForecast } from "../openMeteoApi";
@@ -90,7 +91,7 @@ const midpoint = <T extends { message: string }>(list: T[]) =>
 describe("midpoint Substitution markers on computed values", () => {
   it("marks operating density altitude, climb rate and service ceiling, not the airport columns", () => {
     const { state, fetch } = fetchOverMidpoint();
-    const notifications = deriveNotifications(state, fetch);
+    const notifications = fetchNotifications(state, fetch);
     const climb = computeClimbViewModel(state, notifications);
     const opDA = { status: "computed" as const, dependsOn: pressureColumnDependsOn(1).densityAltitude };
 
@@ -115,7 +116,7 @@ describe("after the operating altitude changes", () => {
     } as WorksheetData;
     expect(next.temp[1]).not.toBe(state.temp[1]);
 
-    const fetched = deriveNotifications(next, fetch);
+    const fetched = fetchNotifications(next, fetch);
     const notifications = [...fetched, ...opTempChangeNotifications(next, change)];
     const climb = computeClimbViewModel(next, notifications);
     // The operating altimeter still holds the midpoint value, so the

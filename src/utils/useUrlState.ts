@@ -4,6 +4,85 @@ import { useRouter, usePathname } from "next/navigation";
 import { serializeState, deserializeState } from "./urlState";
 
 /**
+ * A reducer whose state carries a value persisted to the URL query string.
+ *
+ * The value (`initialValue`'s shape) is opened from the link; `check`, if
+ * given, runs once over it (with the raw query) and may correct it; `init`
+ * builds the reducer state from the opened value and the check's result.
+ * After each event the value `toUrl` picks is written to the URL on the next
+ * focus change. Events reduce against the latest state, so several
+ * dispatched before a render all apply.
+ */
+export function useUrlReducer<S, E, T, R extends { state: T } = { state: T }>(
+  reducer: (state: S, event: E) => S,
+  initialValue: T,
+  init: (opened: T, check: R | null) => S,
+  toUrl: (state: S) => T,
+  check?: (state: T, query: string) => R
+): readonly [S, (event: E) => void] {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const [initial] = useState<S>(() => {
+    const queryString = searchParams.toString();
+    const opened = deserializeState(queryString || null, initialValue);
+    if (!check || !queryString) return init(opened, null);
+    const result = check(opened, queryString);
+    return init(result.state, result);
+  });
+  const [state, setState] = useState<S>(initial);
+  const latestRef = useRef<S>(initial);
+
+  const pendingValueRef = useRef<T | null>(null);
+
+  const updateUrl = useCallback(
+    (value: T) => {
+      const queryString = serializeState(value as Record<string, unknown>);
+      const query = queryString ? `?${queryString}` : "";
+      router.push(`${pathname}${query}`, { scroll: false });
+      pendingValueRef.current = null;
+    },
+    [pathname, router]
+  );
+
+  useEffect(() => {
+    const handleFocusChange = () => {
+      if (pendingValueRef.current !== null) updateUrl(pendingValueRef.current);
+    };
+    document.addEventListener("focusin", handleFocusChange);
+    document.addEventListener("focusout", handleFocusChange);
+    return () => {
+      document.removeEventListener("focusin", handleFocusChange);
+      document.removeEventListener("focusout", handleFocusChange);
+    };
+  }, [updateUrl]);
+
+  const dispatch = useCallback(
+    (event: E) => {
+      const next = reducer(latestRef.current, event);
+      latestRef.current = next;
+      setState(next);
+      pendingValueRef.current = toUrl(next);
+    },
+    [reducer, toUrl]
+  );
+
+  return [state, dispatch] as const;
+}
+
+type Update<T> = T | ((prev: T) => T);
+interface Opened<T, R> {
+  value: T;
+  check: R | null;
+}
+const openedReducer = <T, R>(s: Opened<T, R>, update: Update<T>): Opened<T, R> => ({
+  ...s,
+  value: typeof update === "function" ? (update as (prev: T) => T)(s.value) : update,
+});
+const openedInit = <T, R>(value: T, check: R | null): Opened<T, R> => ({ value, check });
+const openedValue = <T, R>(s: Opened<T, R>): T => s.value;
+
+/**
  * State persisted to the URL query string. `check`, if given, runs once over
  * the state opened from the link (with the raw query) and may correct it; its
  * result is returned as the third element so the caller can report problems.
@@ -11,63 +90,13 @@ import { serializeState, deserializeState } from "./urlState";
 export function useUrlState<T, R extends { state: T } = { state: T }>(
   initialState: T,
   check?: (state: T, query: string) => R
-): readonly [T, (newState: T | ((prev: T) => T)) => void, R | null] {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const [loaded] = useState<{ state: T; check: R | null }>(() => {
-    // Convert URLSearchParams to string for deserialization
-    const queryString = searchParams.toString();
-    const state = deserializeState(queryString || null, initialState);
-    if (!check || !queryString) return { state, check: null };
-    const result = check(state, queryString);
-    return { state: result.state, check: result };
-  });
-  const [state, setState] = useState<T>(loaded.state);
-
-  const pendingStateRef = useRef<T | null>(null);
-
-  const updateUrl = useCallback(
-    (newState: T) => {
-      const queryString = serializeState(newState as Record<string, unknown>);
-      const query = queryString ? `?${queryString}` : "";
-      const url = `${pathname}${query}`;
-      router.push(url, { scroll: false });
-      pendingStateRef.current = null;
-    },
-    [pathname, router]
+): readonly [T, (newState: Update<T>) => void, R | null] {
+  const [opened, dispatch] = useUrlReducer<Opened<T, R>, Update<T>, T, R>(
+    openedReducer,
+    initialState,
+    openedInit,
+    openedValue,
+    check
   );
-
-  // Handle focus change
-  useEffect(() => {
-    const handleFocusChange = () => {
-      if (pendingStateRef.current !== null) {
-        updateUrl(pendingStateRef.current);
-      }
-    };
-
-    // Listen for focus changes within the page
-    document.addEventListener("focusin", handleFocusChange);
-    document.addEventListener("focusout", handleFocusChange);
-
-    return () => {
-      document.removeEventListener("focusin", handleFocusChange);
-      document.removeEventListener("focusout", handleFocusChange);
-    };
-  }, [updateUrl]);
-
-  const updateState = useCallback(
-    (newState: T | ((prev: T) => T)) => {
-      const finalState =
-        typeof newState === "function"
-          ? (newState as (prev: T) => T)(state)
-          : newState;
-
-      setState(finalState);
-      pendingStateRef.current = finalState;
-    },
-    [state]
-  );
-
-  return [state, updateState, loaded.check] as const;
+  return [opened.value, dispatch, opened.check] as const;
 }

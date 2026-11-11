@@ -12,32 +12,26 @@ import Stepper, { type StepperStep } from "@/components/Stepper";
 import StepShell from "@/components/StepShell";
 import WeatherDataIntegration from "@/components/WeatherDataIntegration";
 import WorksheetHeader, { type ShareStatus } from "@/components/WorksheetHeader";
-import { deriveActionBarState } from "@/utils/actionBarState";
-import {
-  applyOpTempForAltitudeChange,
-  describeOpTempChange,
-  type OpTempChange,
-} from "@/utils/areaOfOpsWeather";
 import { formatStepBadge } from "@/utils/stepStatuses";
 import InlineNotifications from "@/components/InlineNotifications";
 import { LimitCheckCallouts } from "@/components/LimitCheckCallout";
-import { stepSubject, type WeatherFetchResult } from "@/utils/notifications";
+import { stepSubject } from "@/utils/notifications";
 import type { WorksheetData } from "@/utils/types";
 import { evaluateWorksheet } from "@/utils/worksheetEvaluation";
-import {
-  retireRejectedEntries,
-  updateRejectedEntries,
-  type RejectedEntries,
-  type RejectedEntry,
-  type RejectedEntryKey,
-} from "@/utils/rejectedEntries";
+import type { RejectedEntry, RejectedEntryKey } from "@/utils/rejectedEntries";
 import { useTempUnit } from "@/utils/useTempUnit";
-import { useUrlState } from "@/utils/useUrlState";
+import { useUrlReducer } from "@/utils/useUrlState";
 import { useAirportRunwayLookup } from "@/utils/useAirportRunways";
 import {
-  retireUrlNotifications,
-  sanitizeWorksheetUrlState,
-} from "@/utils/worksheetUrlState";
+  canFetch,
+  initialWeatherSession,
+  weatherSessionReducer,
+  weatherStatus,
+  type WeatherSession,
+} from "@/utils/weatherSession";
+import { sanitizeWorksheetUrlState } from "@/utils/worksheetUrlState";
+
+const worksheetOf = (session: WeatherSession) => session.worksheet;
 
 const getDefaultSortieDateTime = () => {
   const now = new Date();
@@ -105,43 +99,24 @@ export default function AppContainer() {
     mtnEndorse: false,
     mtnCert: false,
   } as WorksheetData;
-  // Values a shared link coerced or passed through are cleared (or reset)
-  // with a Warning on their field.
-  const [state, setState, urlLoad] = useUrlState(
+  // The worksheet and what this session remembers about it, as one pure
+  // reducer (`weatherSession.ts`). Values a shared link coerced or passed
+  // through are cleared (or reset) with a Warning on their field.
+  const [session, dispatch] = useUrlReducer(
+    weatherSessionReducer,
     initialWorksheet,
-    (loaded, query) =>
-      sanitizeWorksheetUrlState(loaded, query, initialWorksheet)
+    initialWeatherSession,
+    worksheetOf,
+    (loaded, query) => sanitizeWorksheetUrlState(loaded, query, initialWorksheet)
   );
-
-  // The link's notifications still in force; each is retired for good once
-  // the pilot or a weather fetch supersedes the value it is about.
-  const [linkLoad, setLinkLoad] = useState(urlLoad);
-
-  const [weatherLastUpdated, setWeatherLastUpdated] = useState<Date | null>(
-    null
-  );
-
-  // The latest weather fetch (session only). Notifications are derived from
-  // it plus current state during render, so they clear when their cause does.
-  const [weatherFetch, setWeatherFetch] = useState<WeatherFetchResult | null>(
-    null
-  );
+  const state = session.worksheet;
 
   const runwayLookup = useAirportRunwayLookup(state.airport, state.rwy);
 
-  // The latest operating-temperature re-derivation (#117). Its notifications
-  // are derived from it plus current state, so they clear once the pilot
-  // overrides the temperature or changes the altitude again.
-  const [opTempChange, setOpTempChange] = useState<OpTempChange | null>(null);
-
-  // Weather entries the pilot typed that were out of range and not applied.
-  // Held here so their Warnings join the one notifications list (step
-  // status, badge, Briefing).
-  const [rejectedEntries, setRejectedEntries] = useState<RejectedEntries>({});
   const handleRejectedEntryChange = (
     key: RejectedEntryKey,
     entry: RejectedEntry | null
-  ) => setRejectedEntries((prev) => updateRejectedEntries(state, prev, key, entry));
+  ) => dispatch({ type: "entryRejected", key, entry });
 
   const [overlay, setOverlay] = useState<"instructions" | "checklist" | null>(
     null
@@ -155,29 +130,14 @@ export default function AppContainer() {
   const evaluation = useMemo(
     () =>
       evaluateWorksheet(state, {
-        weatherFetch,
-        weatherLastUpdated,
-        opTempChange,
-        linkLoad,
-        rejectedEntries,
+        ...session,
         runwayNotifications: runwayLookup.notifications,
       }),
-    [
-      state,
-      weatherFetch,
-      weatherLastUpdated,
-      opTempChange,
-      linkLoad,
-      rejectedEntries,
-      runwayLookup.notifications,
-    ]
+    [state, session, runwayLookup.notifications]
   );
   const { notifications, limitChecks, stepStatuses } = evaluation;
 
-  const actionBarState = useMemo(
-    () => deriveActionBarState(state, weatherLastUpdated),
-    [state, weatherLastUpdated]
-  );
+  const actionBarState = weatherStatus(session);
 
   const steps = useMemo<StepperStep[]>(
     () => [
@@ -206,40 +166,8 @@ export default function AppContainer() {
     [stepStatuses]
   );
 
-  /**
-   * `fetched` marks an update a weather fetch applied: rejected entries and
-   * link notifications for the fields it filled are retired even when the
-   * value is unchanged.
-   */
-  const handleUpdate = (updates: Partial<WorksheetData>, fetched = false) => {
-    const merged = { ...state, ...updates } as WorksheetData;
-    const replaced = fetched ? updates : undefined;
-    setRejectedEntries((prev) => retireRejectedEntries(merged, prev, replaced));
-    setLinkLoad((prev) => prev && retireUrlNotifications(prev, merged, replaced));
-    const change = describeOpTempChange(state, updates, {
-      fetchedOpTemp: weatherFetch?.applied.temp?.[1] ?? null,
-      previous: opTempChange,
-    });
-    if (change) setOpTempChange(change);
-    setState((prev: WorksheetData) => {
-      const merged = { ...prev, ...updates } as WorksheetData;
-      // Issue #117: When the user changes the operating altitude, re-derive
-      // temp[1] from the persisted winds-aloft temps so it tracks the air
-      // temperature at the new altitude instead of staying frozen at the
-      // last weather fetch.
-      const nextTemp = applyOpTempForAltitudeChange(prev, updates);
-      if (nextTemp) merged.temp = nextTemp;
-      return merged;
-    });
-  };
-
-  const handleWeatherDataUpdate = (data: Partial<WorksheetData>) => {
-    handleUpdate(data, true);
-  };
-
-  const handleWeatherTimestampUpdate = (timestamp: Date) => {
-    setWeatherLastUpdated(timestamp);
-  };
+  const handleUpdate = (updates: Partial<WorksheetData>) =>
+    dispatch({ type: "edit", updates });
 
   const handleReset = () => {
     window.history.replaceState({}, "", window.location.pathname);
@@ -288,16 +216,14 @@ export default function AppContainer() {
       <Stepper steps={steps} />
       <WeatherDataIntegration
         worksheetData={state}
-        onDataUpdate={handleWeatherDataUpdate}
-        onTimestampUpdate={handleWeatherTimestampUpdate}
-        onFetchResult={setWeatherFetch}
-        hideBox
+        canFetch={canFetch(session)}
+        onFetched={dispatch}
         renderButton={({ onClick, disabled, isLoading }) => (
           <ActionBar
             state={actionBarState}
             worksheetData={state}
             limitChecks={limitChecks}
-            weatherLastUpdated={weatherLastUpdated ?? undefined}
+            weatherLastUpdated={session.lastUpdated ?? undefined}
             onFetch={onClick}
             fetchDisabled={disabled}
             isFetching={isLoading}
@@ -315,7 +241,7 @@ export default function AppContainer() {
             airportRunways={runwayLookup.runways}
             runwayStatus={runwayLookup.status}
             evaluation={evaluation}
-            rejectedEntries={rejectedEntries}
+            rejectedEntries={session.rejected}
             onRejectedEntryChange={handleRejectedEntryChange}
           />
           <StepShell

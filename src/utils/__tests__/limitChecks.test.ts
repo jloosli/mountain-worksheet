@@ -21,13 +21,13 @@ import {
 } from "../limitChecks";
 import {
   fieldSubject,
-  staleFetchNotifications,
   stepSubject,
   type Notification,
   type WeatherFetchResult,
 } from "../notifications";
 import type { WorksheetData } from "../types";
 import { unverifiedWeatherNotifications } from "../unverifiedWeather";
+import { staleFetchNotifications } from "../weatherSession";
 
 const baseState = (): WorksheetData => ({
   pilot: "",
