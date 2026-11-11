@@ -444,7 +444,8 @@ describe("AppContainer — Weight limit check (#266)", () => {
     setUp("2787");
     expect(within(callout()).getByText("Within limit")).toBeInTheDocument();
     expect(callout()).toHaveTextContent("2,787 / 3,100 lbs (89.9%)");
-    expect(screen.getByRole("link", { name: /1 within limit/ })).toBeInTheDocument();
+    // Weight and Ceiling/visibility (box unticked) are within limit; Winds aloft is Not checked.
+    expect(screen.getByRole("link", { name: /2 within limit/ })).toBeInTheDocument();
     // The cell shows the check's percentage, never "90%" for a weight under the limit.
     expect(percentCell()).toHaveTextContent(/^89\.9%$/);
     expect(percentCell().className).not.toMatch(/text-red|yellow/);
@@ -454,7 +455,7 @@ describe("AppContainer — Weight limit check (#266)", () => {
     });
     expect(within(callout()).getByText("Exceeded")).toBeInTheDocument();
     expect(callout()).toHaveTextContent("2,790 / 3,100 lbs (90%)");
-    const summary = screen.getByRole("link", { name: /1 of 2 worksheet limits exceeded/ });
+    const summary = screen.getByRole("link", { name: /1 of 3 worksheet limits exceeded/ });
     expect(summary).toHaveAttribute("href", "#limit-check-weight");
     expect(percentCell()).toHaveTextContent(/^90%$/);
     expect(percentCell().className).toMatch(/text-red/);
@@ -516,7 +517,7 @@ describe("AppContainer — Winds aloft limit check (#267)", () => {
     expect(within(callout()).getByText("Exceeded")).toBeInTheDocument();
     expect(speed("12,000").className).toMatch(/text-red/);
     expect(
-      screen.getByRole("link", { name: /1 of 2 worksheet limits exceeded/ })
+      screen.getByRole("link", { name: /1 of 3 worksheet limits exceeded/ })
     ).toHaveAttribute("href", "#limit-check-winds");
   });
 
@@ -528,6 +529,42 @@ describe("AppContainer — Winds aloft limit check (#267)", () => {
     expect(callout()).toHaveTextContent("3,000'10 kt");
     expect(callout()).toHaveTextContent("6,000'needs speed (Warning)");
     expect(speed("6,000").className).not.toMatch(/text-red|text-amber/);
+  });
+});
+
+describe("AppContainer — Ceiling/visibility limit check (#268)", () => {
+  const callout = () => screen.getByRole("region", { name: "Limit check: Ceiling/visibility" });
+
+  it("shows the callout in Weather after Winds aloft, Within limit with the box unticked, with its caveat", () => {
+    const { container } = render(<AppContainer />);
+    const weatherBody = container.querySelector("#step-weather article > header + *");
+    expect(
+      [...(weatherBody?.querySelectorAll(":scope > div:first-child > section") ?? [])].map((s) =>
+        s.getAttribute("aria-label"),
+      ),
+    ).toEqual(["Limit check: Winds aloft", "Limit check: Ceiling/visibility"]);
+    expect(within(callout()).getByText("Within limit")).toBeInTheDocument();
+    expect(callout()).toHaveTextContent("Ceil/Vis boxUnticked");
+    expect(callout()).toHaveTextContent(
+      "Reflects the Ceil/Vis box only (IFR G-AIRMET). Marginal VFR is not checked.",
+    );
+  });
+
+  it("is Exceeded when the pilot ticks the box, and the summary counts it", () => {
+    render(<AppContainer />);
+    fireEvent.click(screen.getByRole("checkbox", { name: /Ceiling \/ Vis/ }));
+    expect(within(callout()).getByText("Exceeded")).toBeInTheDocument();
+    expect(callout()).toHaveTextContent("Ceil/Vis boxTicked");
+    const summary = screen.getByRole("link", { name: /1 of 3 worksheet limits exceeded/ });
+    expect(summary).toHaveAttribute("href", "#limit-check-ceilVis");
+  });
+
+  it("marks a ticked box from a shared link as Unverified weather", () => {
+    mockSearchParams.mockReturnValue(new URLSearchParams("cielVis=1&temp=10,5,10"));
+    render(<AppContainer />);
+    expect(within(callout()).getByText("Exceeded")).toBeInTheDocument();
+    const marker = callout().querySelector('[data-marker="caution"]');
+    expect(marker?.getAttribute("title")).toMatch(/came from a shared link/);
   });
 });
 

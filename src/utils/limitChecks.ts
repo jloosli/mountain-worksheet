@@ -116,7 +116,7 @@ export const limitCheckDomId = (id: LimitCheckId) => `limit-check-${id}`;
 
 /** Every Limit check that exists so far. */
 export function deriveLimitChecks(inputs: LimitCheckInputs): LimitCheck[] {
-  return [weightCheck(inputs), windsAloftCheck(inputs)];
+  return [weightCheck(inputs), windsAloftCheck(inputs), ceilVisCheck(inputs)];
 }
 
 const fmt = (n: number) => n.toLocaleString("en-US", { maximumFractionDigits: 1 });
@@ -262,3 +262,49 @@ function windsAloftCheck({ state, notifications }: LimitCheckInputs): LimitCheck
 /** CAP Mountain Flying Qualification Course, module 3, Mountain Weather (see issue #247). */
 const WINDS_NEAR_NOTE =
   "Near limit from 20 kt: CAP guidance says to proceed with caution when ridgeline winds are 20 kt or more. The app doesn't know ridge height, so every altitude counts.";
+
+/**
+ * Ceiling/visibility: the Ceil/Vis (IFR G-AIRMET) box. Exceeded when ticked,
+ * by a fetch or by the pilot; Within limit when unticked for any reason.
+ * Where the flag came from isn't tracked.
+ */
+function ceilVisCheck({ state, notifications }: LimitCheckInputs): LimitCheck {
+  const base = {
+    id: "ceilVis",
+    name: "Ceiling/visibility",
+    limit: "ceilings and visibility much better than marginal VFR",
+    caveat: "Reflects the Ceil/Vis box only (IFR G-AIRMET). Marginal VFR is not checked.",
+    step: "weather",
+  } as const;
+  const subject = fieldSubject("cielVis");
+  const ticked = state.cielVis;
+  // The box's own Cautions, plus Unverified weather: a shared link carries
+  // the box's value but not the fetch it came from.
+  const substitutions = [
+    ...inputCautions(notifications, { status: "computed", dependsOn: [subject] }),
+    ...notifications.filter(isUnverifiedWeather),
+  ];
+  // A Warning on the box, such as a stale fetch, means an unticked box can't
+  // be trusted. A ticked box is Exceeded however it got there.
+  const untrusted = notifications.some(
+    (n) => n.level === "warning" && subjectKey(n.subject) === subjectKey(subject),
+  );
+  if (!ticked && untrusted) {
+    return check(base, [
+      {
+        label: "Ceil/Vis box",
+        state: "not-checked",
+        waitingFor: "needs Ceil/Vis checked (Warning)",
+        substitutions,
+      },
+    ]);
+  }
+  return check(base, [
+    {
+      label: "Ceil/Vis box",
+      state: ticked ? "exceeded" : "within",
+      value: ticked ? "Ticked" : "Unticked",
+      substitutions,
+    },
+  ]);
+}

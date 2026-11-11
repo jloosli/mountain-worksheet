@@ -12,9 +12,15 @@ import {
   windSpeedStates,
   type LimitCheck,
 } from "../limitChecks";
-import { fieldSubject, stepSubject, type Notification } from "../notifications";
-import { unverifiedWeatherNotifications } from "../unverifiedWeather";
+import {
+  fieldSubject,
+  staleFetchNotifications,
+  stepSubject,
+  type Notification,
+  type WeatherFetchResult,
+} from "../notifications";
 import type { WorksheetData } from "../types";
+import { unverifiedWeatherNotifications } from "../unverifiedWeather";
 
 const baseState = (): WorksheetData => ({
   pilot: "",
@@ -190,6 +196,115 @@ describe("Weight limit check", () => {
   it("no longer raises an Advisory near maximum gross weight", () => {
     const notifications = derivePerformanceNotifications({ ...baseState(), weight: 3000 });
     expect(notifications.filter((n) => n.level === "advisory")).toEqual([]);
+  });
+});
+
+const ceilVisCheck = (state: WorksheetData, extra: Notification[] = []) => {
+  const check = checksFor(state, extra).find((c) => c.id === "ceilVis");
+  if (!check) throw new Error("no ceiling/visibility check");
+  return check;
+};
+
+describe("Ceiling/visibility limit check", () => {
+  it("describes the worksheet limit, its caveat, and belongs to Weather", () => {
+    expect(ceilVisCheck(baseState())).toMatchObject({
+      id: "ceilVis",
+      name: "Ceiling/visibility",
+      limit: "ceilings and visibility much better than marginal VFR",
+      caveat: "Reflects the Ceil/Vis box only (IFR G-AIRMET). Marginal VFR is not checked.",
+      step: "weather",
+    });
+  });
+
+  it("is Exceeded when the Ceil/Vis box is ticked", () => {
+    const check = ceilVisCheck({ ...baseState(), cielVis: true });
+    expect(check.state).toBe("exceeded");
+    expect(check.points).toEqual([
+      { label: "Ceil/Vis box", state: "exceeded", value: "Ticked", substitutions: [] },
+    ]);
+  });
+
+  it("is Within limit when the Ceil/Vis box is unticked, even without a fetch", () => {
+    const check = ceilVisCheck({ ...baseState(), cielVis: false });
+    expect(check.state).toBe("within");
+    expect(check.points).toEqual([
+      { label: "Ceil/Vis box", state: "within", value: "Unticked", substitutions: [] },
+    ]);
+  });
+
+  it("carries the Unverified weather Caution from a shared link as a marker", () => {
+    const state = { ...baseState(), cielVis: true };
+    const unverified = unverifiedWeatherNotifications(state, null);
+    expect(unverified).toHaveLength(1);
+    const check = ceilVisCheck(state, unverified);
+    expect(check.state).toBe("exceeded");
+    expect(check.points[0].substitutions).toEqual(unverified);
+  });
+
+  it("carries a Caution on the Ceil/Vis box as a marker", () => {
+    const caution: Notification = {
+      level: "caution",
+      subject: fieldSubject("cielVis"),
+      message: "Ceil/Vis came from somewhere else.",
+    };
+    const check = ceilVisCheck({ ...baseState(), cielVis: false }, [caution]);
+    expect(check.state).toBe("within");
+    expect(check.points[0].substitutions).toEqual([caution]);
+  });
+
+  it("doesn't mark the box with other weather-step Cautions", () => {
+    const gairmetFailed: Notification = {
+      level: "caution",
+      subject: { kind: "step", step: "weather" },
+      message: "G-AIRMETs unavailable. Check AIRMETs manually.",
+    };
+    expect(ceilVisCheck(baseState(), [gairmetFailed]).points[0].substitutions).toEqual([]);
+  });
+
+  it("counts in the action-bar summary", () => {
+    const checks = checksFor({ ...baseState(), weight: 2700, cielVis: true });
+    // Weight within limit; Winds aloft Not checked (no speeds).
+    expect(limitCheckSummary(checks)).toBe(
+      "1 of 3 worksheet limits exceeded · 1 not checked · 1 within limit",
+    );
+  });
+
+  describe("after the time changes following a fetch", () => {
+    const fetchFor = (state: WorksheetData): WeatherFetchResult => ({
+      fetchedFor: {
+        airport: ["KABC", "KXYZ"],
+        date: state.date,
+        time: "08:00",
+        duration: state.duration,
+        position: state.position,
+      },
+      applied: { cielVis: state.cielVis },
+      notifications: [],
+    });
+
+    it("is Not checked when unticked, naming the Warning", () => {
+      const state = { ...baseState(), cielVis: false };
+      const stale = staleFetchNotifications(state, fetchFor(state));
+      expect(stale).toContainEqual(
+        expect.objectContaining({ level: "warning", subject: fieldSubject("cielVis") }),
+      );
+      const check = ceilVisCheck(state, stale);
+      expect(check.state).toBe("not-checked");
+      expect(check.points).toEqual([
+        {
+          label: "Ceil/Vis box",
+          state: "not-checked",
+          waitingFor: "needs Ceil/Vis checked (Warning)",
+          substitutions: [],
+        },
+      ]);
+    });
+
+    it("is still Exceeded when ticked", () => {
+      const state = { ...baseState(), cielVis: true };
+      const check = ceilVisCheck(state, staleFetchNotifications(state, fetchFor(state)));
+      expect(check.state).toBe("exceeded");
+    });
   });
 });
 
