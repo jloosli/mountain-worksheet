@@ -1,7 +1,8 @@
 // src/utils/stepStatuses.ts
 import type { StepStatus } from "@/components/Stepper";
 import type { WorksheetData } from "@/utils/types";
-import { canFetchWeather, hasWeatherData } from "@/utils/actionBarState";
+import { canFetchWeather } from "@/utils/actionBarState";
+import { hasWeather, type WeatherStatus } from "@/utils/weatherStatus";
 import {
   countByLevel,
   notificationsOnStep,
@@ -24,10 +25,9 @@ export interface StepStatusesResult {
  *
  * - Sortie: `complete` when the minimum fields to fetch weather are present;
  *   otherwise `active` (the user's current focus).
- * - Weather: `complete` when this session has fetched weather OR the
- *   worksheet already carries weather data (e.g. from a shared URL);
- *   otherwise `active` if sortie is complete (the user's next focus), else
- *   `pending`.
+ * - Weather: `complete` when the worksheet has weather (`hasWeather`:
+ *   fetched, stale, or unverified from a shared link); otherwise `active`
+ *   if sortie is complete (the user's next focus), else `pending`.
  * - Decision: `active` once weather is complete (next focus); otherwise
  *   `pending`. It is never `complete`: the worksheet informs the Go/No-Go
  *   decision but never states it (GLOSSARY.md), and Limit checks don't
@@ -38,12 +38,11 @@ export interface StepStatusesResult {
  */
 export function deriveStepStatuses(
   state: WorksheetData,
-  weatherLastUpdated: Date | null,
+  weatherStatus: WeatherStatus,
   notifications: readonly Notification[] = []
 ): StepStatusesResult {
   const sortieReady = canFetchWeather(state);
-  const weatherComplete =
-    weatherLastUpdated !== null || hasWeatherData(state);
+  const weatherComplete = hasWeather(weatherStatus);
 
   const counts: Record<StepId, LevelCounts> = {
     sortie: countByLevel(notificationsOnStep(notifications, "sortie")),

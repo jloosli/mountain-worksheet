@@ -8,7 +8,7 @@
  * plus the current worksheet (`sessionNotifications`). They clear when their
  * cause does (ADR 0001).
  */
-import { canFetchWeather, deriveActionBarState, type ActionBarState } from "./actionBarState";
+import { canFetchWeather } from "./actionBarState";
 import { normalizeAirportCode } from "./airportCode";
 import {
   applyOpTempForAltitudeChange,
@@ -33,6 +33,7 @@ import {
 } from "./rejectedEntries";
 import type { WorksheetData } from "./types";
 import { unverifiedWeatherNotifications } from "./unverifiedWeather";
+import { hasWeatherData, type WeatherStatus } from "./weatherStatus";
 import {
   deriveUrlNotifications,
   retireUrlNotifications,
@@ -43,6 +44,11 @@ export interface WeatherSession {
   worksheet: WorksheetData;
   /** The latest weather fetch this session, successful or not. */
   lastFetch: WeatherFetchResult | null;
+  /**
+   * The latest fetch this session that applied weather. Staleness is judged
+   * against it, so a later failed fetch doesn't hide stale values.
+   */
+  lastApplied: WeatherFetchResult | null;
   /** When a fetch last applied weather this session; null if never. */
   lastUpdated: Date | null;
   /** The latest operating-temperature re-derivation (#117). */
@@ -76,6 +82,7 @@ export function initialWeatherSession(
   return {
     worksheet,
     lastFetch: null,
+    lastApplied: null,
     lastUpdated: null,
     opTempChange: null,
     rejected: {},
@@ -126,6 +133,7 @@ export function weatherSessionReducer(
       return {
         ...applied,
         lastFetch: event.result,
+        lastApplied: event.data ? event.result : session.lastApplied,
         lastUpdated: event.data ? event.at : session.lastUpdated,
       };
     }
@@ -137,22 +145,41 @@ export function weatherSessionReducer(
   }
 }
 
-/** Every notification the session's memory raises against its worksheet. */
-export function sessionNotifications(session: WeatherSession): Notification[] {
+/**
+ * Every notification the session's memory raises against its worksheet.
+ * Pass the session's `weatherStatus` when it is already computed.
+ */
+export function sessionNotifications(
+  session: WeatherSession,
+  status: WeatherStatus = weatherStatus(session),
+): Notification[] {
   const { worksheet, lastFetch } = session;
   return [
     ...fetchNotifications(worksheet, lastFetch),
-    ...staleFetchNotifications(worksheet, lastFetch),
+    ...staleFetchNotifications(worksheet, session.lastApplied),
     ...opTempChangeNotifications(worksheet, session.opTempChange),
     ...deriveUrlNotifications(worksheet, session.linkLoad),
-    ...unverifiedWeatherNotifications(worksheet, session.lastUpdated),
+    ...unverifiedWeatherNotifications(worksheet, status),
     ...rejectedEntryNotifications(worksheet, session.rejected),
   ];
 }
 
-/** The action bar's weather state. */
-export const weatherStatus = (session: WeatherSession): ActionBarState =>
-  deriveActionBarState(session.worksheet, session.lastUpdated);
+/**
+ * Whether the worksheet has weather, and where it came from: the one answer
+ * step statuses, the action bar and Unverified weather read.
+ *
+ * Once a fetch applies weather this session, it is `fetched` while every
+ * fetched value still matches the fetch's inputs, and `stale` while any
+ * doesn't (`staleFetchNotifications`). Before that, weather values on the
+ * worksheet are `unverified`; without any, `none`.
+ */
+export function weatherStatus(session: WeatherSession): WeatherStatus {
+  const { worksheet, lastApplied, lastUpdated } = session;
+  if (lastUpdated !== null) {
+    return staleFetchNotifications(worksheet, lastApplied).length > 0 ? "stale" : "fetched";
+  }
+  return hasWeatherData(worksheet) ? "unverified" : "none";
+}
 
 /** Whether the worksheet holds what a weather fetch needs. */
 export const canFetch = (session: WeatherSession): boolean =>

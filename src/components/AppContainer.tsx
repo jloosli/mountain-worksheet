@@ -26,7 +26,6 @@ import {
   canFetch,
   initialWeatherSession,
   weatherSessionReducer,
-  weatherStatus,
   type WeatherSession,
 } from "@/utils/weatherSession";
 import { sanitizeWorksheetUrlState } from "@/utils/worksheetUrlState";
@@ -137,8 +136,6 @@ export default function AppContainer() {
   );
   const { notifications, limitChecks, stepStatuses } = evaluation;
 
-  const actionBarState = weatherStatus(session);
-
   const steps = useMemo<StepperStep[]>(
     () => [
       {
@@ -220,7 +217,7 @@ export default function AppContainer() {
         onFetched={dispatch}
         renderButton={({ onClick, disabled, isLoading }) => (
           <ActionBar
-            state={actionBarState}
+            state={evaluation.actionBar}
             worksheetData={state}
             limitChecks={limitChecks}
             weatherLastUpdated={session.lastUpdated ?? undefined}

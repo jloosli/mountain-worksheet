@@ -1,7 +1,6 @@
 // src/components/WeatherSection.tsx
 "use client";
 
-import { useState } from "react";
 import AirportCard from "@/components/AirportCard";
 import { limitPointClass } from "@/components/LimitCheckCallout";
 import type { LimitState } from "@/utils/limitChecks";
@@ -19,9 +18,7 @@ import {
 } from "@/utils/notifications";
 import {
   altimeterEntryKey,
-  rejectedEntryNotifications,
   rejectedEntryText,
-  updateRejectedEntries,
   windEntryKey,
   type RejectedEntries,
   type RejectedEntry,
@@ -46,12 +43,11 @@ interface WeatherSectionProps {
   windSpeedStates?: readonly (LimitState | undefined)[];
   /**
    * Entries the pilot typed that were not applied, held by the caller so
-   * their Warnings are part of `notifications`. Without
-   * `onRejectedEntryChange` they are kept locally and added here instead.
+   * their Warnings are part of `notifications`.
    */
-  rejectedEntries?: RejectedEntries;
+  rejectedEntries: RejectedEntries;
   /** Records (`entry`) or clears (`null`) a rejected entry. */
-  onRejectedEntryChange?: (key: RejectedEntryKey, entry: RejectedEntry | null) => void;
+  onRejectedEntryChange: (key: RejectedEntryKey, entry: RejectedEntry | null) => void;
 }
 
 const ALOFT_ALTITUDES = ["3,000", "6,000", "9,000", "12,000", "15,000"];
@@ -69,24 +65,14 @@ export default function WeatherSection({
 }: WeatherSectionProps) {
   const apiPopulated = isApiPopulatedData(state);
 
-  // Rejected entries: held by the caller when it derives notifications,
-  // otherwise kept here and their Warnings added to the ones passed in.
-  const [localRejected, setLocalRejected] = useState<RejectedEntries>({});
-  const controlled = onRejectedEntryChange !== undefined;
-  const rejected = controlled ? (rejectedEntries ?? {}) : localRejected;
-  const setRejected = (key: RejectedEntryKey, entry: RejectedEntry | null) => {
-    if (controlled) onRejectedEntryChange(key, entry);
-    else setLocalRejected((prev) => updateRejectedEntries(state, prev, key, entry));
-  };
-  const reject = (key: RejectedEntryKey, entry: RejectedEntry) => setRejected(key, entry);
+  // Rejected entries are held by the caller, which derives their Warnings
+  // into `notifications`.
+  const reject = (key: RejectedEntryKey, entry: RejectedEntry) => onRejectedEntryChange(key, entry);
   const accept = (key: RejectedEntryKey) => {
-    if (rejected[key]) setRejected(key, null);
+    if (rejectedEntries[key]) onRejectedEntryChange(key, null);
   };
   const rejectedWindText = (row: number, col: number): string | undefined =>
-    rejectedEntryText(state, rejected, windEntryKey(row, col));
-  const allNotifications: readonly Notification[] = controlled
-    ? notifications
-    : [...notifications, ...rejectedEntryNotifications(state, localRejected)];
+    rejectedEntryText(state, rejectedEntries, windEntryKey(row, col));
 
   const handleWindChange = (
     row: 0 | 1 | 2,
@@ -207,7 +193,7 @@ export default function WeatherSection({
         useFahrenheit={useFahrenheit}
         onChange={handleWindChange}
         rejectedText={rejectedWindText}
-        notifications={allNotifications}
+        notifications={notifications}
         speedStates={windSpeedStates}
       />
 
@@ -224,12 +210,12 @@ export default function WeatherSection({
             altimeter={state.altimeter[0]}
             useFahrenheit={useFahrenheit}
             apiPopulated={apiPopulated}
-            notifications={allNotifications}
+            notifications={notifications}
             onTemperatureChange={(v) => handleAirportTempChange(0, v)}
             onAltimeterChange={(v) => handleAirportAltimeterChange(0, v)}
             rejectedAltimeterText={rejectedEntryText(
               state,
-              rejected,
+              rejectedEntries,
               altimeterEntryKey(0)
             )}
             runways={airportRunways[0]}
@@ -244,12 +230,12 @@ export default function WeatherSection({
             altimeter={state.altimeter[1]}
             useFahrenheit={useFahrenheit}
             apiPopulated={apiPopulated}
-            notifications={allNotifications}
+            notifications={notifications}
             onTemperatureChange={(v) => handleAirportTempChange(1, v)}
             onAltimeterChange={(v) => handleAirportAltimeterChange(1, v)}
             rejectedAltimeterText={rejectedEntryText(
               state,
-              rejected,
+              rejectedEntries,
               altimeterEntryKey(1)
             )}
           />
@@ -261,12 +247,12 @@ export default function WeatherSection({
             altimeter={state.altimeter[2]}
             useFahrenheit={useFahrenheit}
             apiPopulated={apiPopulated}
-            notifications={allNotifications}
+            notifications={notifications}
             onTemperatureChange={(v) => handleAirportTempChange(2, v)}
             onAltimeterChange={(v) => handleAirportAltimeterChange(2, v)}
             rejectedAltimeterText={rejectedEntryText(
               state,
-              rejected,
+              rejectedEntries,
               altimeterEntryKey(2)
             )}
             runways={airportRunways[1]}
@@ -288,7 +274,7 @@ export default function WeatherSection({
               checked={state.turb}
               onChange={() => handleAdvisoryToggle("turb")}
               className="rounded border-slate-300"
-              {...notificationA11yProps(allNotifications, fieldSubject("turb"))}
+              {...notificationA11yProps(notifications, fieldSubject("turb"))}
             />
             <span>
               AIRMET Tango (turbulence) —{" "}
@@ -308,7 +294,7 @@ export default function WeatherSection({
               checked={state.cielVis}
               onChange={() => handleAdvisoryToggle("cielVis")}
               className="rounded border-slate-300"
-              {...notificationA11yProps(allNotifications, fieldSubject("cielVis"))}
+              {...notificationA11yProps(notifications, fieldSubject("cielVis"))}
             />
             <span>
               Ceiling / Vis &lt; 10sm/2000′ —{" "}
@@ -328,7 +314,7 @@ export default function WeatherSection({
               checked={state.mtnObsc}
               onChange={() => handleAdvisoryToggle("mtnObsc")}
               className="rounded border-slate-300"
-              {...notificationA11yProps(allNotifications, fieldSubject("mtnObsc"))}
+              {...notificationA11yProps(notifications, fieldSubject("mtnObsc"))}
             />
             <span>
               AIRMET Sierra (mtn obscuration) —{" "}
@@ -346,7 +332,7 @@ export default function WeatherSection({
         {(["turb", "cielVis", "mtnObsc"] as const).map((field) => (
           <InlineNotifications
             key={field}
-            notifications={allNotifications}
+            notifications={notifications}
             subject={fieldSubject(field)}
             className="mt-2"
           />

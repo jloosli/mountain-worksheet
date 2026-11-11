@@ -261,7 +261,8 @@ describe("evaluateWorksheet — session", () => {
 
   it("withholds departure results and leaves the runway check Not checked once the departure airport changes after a fetch", () => {
     const fetchedState = sortie();
-    const session = fetchedSession({ lastFetch: fetchFor(fetchedState) });
+    const fetch = fetchFor(fetchedState);
+    const session = fetchedSession({ lastFetch: fetch, lastApplied: fetch });
     expect(evaluateWorksheet(fetchedState, session).told.departure.values.takeoffGroundRoll.status).toBe(
       "computed",
     );
@@ -294,5 +295,49 @@ describe("evaluateWorksheet — session", () => {
     const e = evaluateWorksheet(emptyState(), EMPTY_SESSION);
     expect(e.notifications).toEqual([]);
     expect(e.stepStatuses).toMatchObject({ sortie: "active", weather: "pending", decision: "pending" });
+  });
+});
+
+describe("evaluateWorksheet — weather status (#285)", () => {
+  const fetchFor = (state: WorksheetData): WeatherFetchResult => ({
+    fetchedFor: {
+      airport: [state.airport[0], state.airport[1]],
+      date: state.date,
+      time: state.time,
+      duration: state.duration,
+      position: state.position,
+    },
+    applied: { temp: state.temp, altimeter: state.altimeter },
+    notifications: [],
+  });
+
+  it("is none for an empty worksheet, leaving the weather step pending", () => {
+    expect(evaluateWorksheet(emptyState(), EMPTY_SESSION).weatherStatus).toBe("none");
+  });
+
+  it("drives the action bar: ready before weather once it can be fetched, fetched with weather", () => {
+    const ready = { ...emptyState(), airport: ["KABC", "KXYZ"] as [string, string] };
+    expect(evaluateWorksheet(emptyState(), EMPTY_SESSION).actionBar).toBe("incomplete");
+    expect(evaluateWorksheet(ready, EMPTY_SESSION).actionBar).toBe("ready");
+    expect(evaluateWorksheet({ ...ready, cielVis: true }, EMPTY_SESSION).actionBar).toBe("ready");
+    expect(evaluateWorksheet(sortie(), EMPTY_SESSION).actionBar).toBe("fetched");
+  });
+
+  it("is unverified for weather values not fetched this session, with the Caution and a complete weather step", () => {
+    const e = evaluateWorksheet(sortie(), EMPTY_SESSION);
+    expect(e.weatherStatus).toBe("unverified");
+    expect(e.stepStatuses.weather).toBe("complete");
+    expect(e.notifications.filter((n) => /came from a shared link/.test(n.message))).toHaveLength(1);
+  });
+
+  it("is stale once a fetch input changes, without an Unverified weather Caution", () => {
+    const fetchedState = sortie();
+    const fetch = fetchFor(fetchedState);
+    const session = fetchedSession({ lastFetch: fetch, lastApplied: fetch });
+    expect(evaluateWorksheet(fetchedState, session).weatherStatus).toBe("fetched");
+    const e = evaluateWorksheet({ ...fetchedState, time: "12:00" }, session);
+    expect(e.weatherStatus).toBe("stale");
+    expect(e.notifications.some((n) => /came from a shared link/.test(n.message))).toBe(false);
+    expect(e.stepStatuses.weather).toBe("warning");
   });
 });

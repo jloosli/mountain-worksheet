@@ -44,7 +44,7 @@ const readyForWeather: WorksheetData = {
 
 describe("deriveStepStatuses", () => {
   it("returns active / pending / pending when nothing is filled and weather not fetched", () => {
-    expect(deriveStepStatuses(empty, null)).toMatchObject({
+    expect(deriveStepStatuses(empty, "none")).toMatchObject({
       sortie: "active",
       weather: "pending",
       decision: "pending",
@@ -52,7 +52,7 @@ describe("deriveStepStatuses", () => {
   });
 
   it("returns complete / active / pending when sortie is ready to fetch but weather hasn't been fetched", () => {
-    expect(deriveStepStatuses(readyForWeather, null)).toMatchObject({
+    expect(deriveStepStatuses(readyForWeather, "none")).toMatchObject({
       sortie: "complete",
       weather: "active",
       decision: "pending",
@@ -60,7 +60,7 @@ describe("deriveStepStatuses", () => {
   });
 
   it("returns complete / complete / active when weather has been fetched", () => {
-    expect(deriveStepStatuses(readyForWeather, new Date())).toMatchObject({
+    expect(deriveStepStatuses(readyForWeather, "fetched")).toMatchObject({
       sortie: "complete",
       weather: "complete",
       decision: "active",
@@ -91,7 +91,7 @@ describe("deriveStepStatuses", () => {
       mtnEndorse: true,
       mtnCert: true,
     };
-    expect(deriveStepStatuses(filled, new Date()).decision).toBe("active");
+    expect(deriveStepStatuses(filled, "fetched").decision).toBe("active");
   });
 
   it("treats sortie as complete based on canFetchWeather, not weather-fetched", () => {
@@ -99,14 +99,14 @@ describe("deriveStepStatuses", () => {
     // current state (incomplete), but weather/decision reflect fetched
     // history.
     const wiped = { ...readyForWeather, airport: ["", ""] as [string, string] };
-    expect(deriveStepStatuses(wiped, new Date())).toMatchObject({
+    expect(deriveStepStatuses(wiped, "fetched")).toMatchObject({
       sortie: "active",
       weather: "complete",
       decision: "active",
     });
   });
 
-  it("treats weather as complete when the worksheet carries weather data (e.g. shared URL) even with no timestamp", () => {
+  it("treats unverified weather (e.g. from a shared URL) as complete", () => {
     const withWind: WorksheetData = {
       ...readyForWeather,
       wind: [
@@ -115,7 +115,7 @@ describe("deriveStepStatuses", () => {
         Array(5).fill(null) as (number | null)[],
       ] as [(number | null)[], (number | null)[], (number | null)[]],
     };
-    expect(deriveStepStatuses(withWind, null)).toMatchObject({
+    expect(deriveStepStatuses(withWind, "unverified")).toMatchObject({
       sortie: "complete",
       weather: "complete",
       decision: "active",
@@ -124,14 +124,21 @@ describe("deriveStepStatuses", () => {
 
   it("doesn't treat a ticked advisory box alone as fetched weather, though it raises the Unverified weather Caution (#277)", () => {
     const boxOnly = { ...readyForWeather, cielVis: true };
-    const result = deriveStepStatuses(boxOnly, null, unverifiedWeatherNotifications(boxOnly, null));
+    const result = deriveStepStatuses(boxOnly, "none", unverifiedWeatherNotifications(boxOnly, "none"));
     expect(result.weather).toBe("active");
     expect(result.decision).toBe("pending");
     expect(result.counts.weather.caution).toBe(1);
   });
 
+  it("treats stale weather as complete; its Warnings mark the step", () => {
+    expect(deriveStepStatuses(readyForWeather, "stale")).toMatchObject({
+      weather: "complete",
+      decision: "active",
+    });
+  });
+
   it("counts no notifications on any step by default", () => {
-    expect(deriveStepStatuses(readyForWeather, new Date()).counts).toEqual({
+    expect(deriveStepStatuses(readyForWeather, "fetched").counts).toEqual({
       sortie: { warning: 0, caution: 0, advisory: 0 },
       weather: { warning: 0, caution: 0, advisory: 0 },
       decision: { warning: 0, caution: 0, advisory: 0 },
@@ -145,7 +152,7 @@ describe("deriveStepStatuses", () => {
       { level: "advisory", subject: fieldSubject("temp", 0), message: "c" },
       { level: "caution", subject: fieldSubject("position"), message: "d" },
     ];
-    const result = deriveStepStatuses(readyForWeather, new Date(), notifications);
+    const result = deriveStepStatuses(readyForWeather, "fetched", notifications);
     expect(result).toMatchObject({
       sortie: "complete",
       weather: "warning",
@@ -160,7 +167,7 @@ describe("deriveStepStatuses", () => {
       { level: "caution", subject: stepSubject("weather"), message: "b" },
     ];
     expect(
-      deriveStepStatuses(readyForWeather, new Date(), notifications).weather
+      deriveStepStatuses(readyForWeather, "fetched", notifications).weather
     ).toBe("complete");
   });
 
@@ -168,7 +175,7 @@ describe("deriveStepStatuses", () => {
     const notifications: Notification[] = [
       { level: "warning", subject: stepSubject("weather"), message: "fetch failed" },
     ];
-    const result = deriveStepStatuses(readyForWeather, null, notifications);
+    const result = deriveStepStatuses(readyForWeather, "none", notifications);
     expect(result.weather).toBe("warning");
     // Warnings never block the other steps.
     expect(result.sortie).toBe("complete");
