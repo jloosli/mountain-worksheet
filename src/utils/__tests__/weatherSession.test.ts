@@ -151,6 +151,14 @@ describe("weather session — one fetch-input table for staleness and Warning re
     expect(sessionNotifications(departureMoved)).not.toContainEqual(noMetar);
   });
 
+  it("calls a fetched -1 °C stale like any other temperature once the time changes (#303)", () => {
+    const s = replay([
+      fetch({ ...fetched, temp: [-1, 5, 15] as WorksheetData["temp"] }),
+      edit({ time: "20:00" }),
+    ]);
+    expect(keys(sessionNotifications(s))).toContain("warning field:temp.0");
+  });
+
   it("keeps an area Warning fetched for an entered position when an airport changes", () => {
     const noForecast: Notification = {
       level: "warning",
