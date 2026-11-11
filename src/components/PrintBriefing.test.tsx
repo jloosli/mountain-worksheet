@@ -498,7 +498,8 @@ describe("PrintBriefing — Worksheet limits (#270)", () => {
 
   it("closes with the summary sentence and the Go/No-Go line", () => {
     withChecks(c182);
-    expect(within(box()).getByText("1 of 1 worksheet limit exceeded")).toBeInTheDocument();
+    // Other checks join the summary as they land; Weight is the one exceeded here.
+    expect(within(box()).getByText(/^1 of \d+ worksheet limits? exceeded/)).toBeInTheDocument();
     expect(
       within(box()).getByText(
         "Limit checks inform the Go/No-Go decision, which belongs to the PIC and FRO.",
@@ -539,9 +540,10 @@ describe("PrintBriefing — Worksheet limits styling (#270)", () => {
       told: computeTOLDViewModel(state, PAs, notifications),
     });
     render(<PrintBriefing state={state} notifications={notifications} limitChecks={limitChecks} />);
-    const cell = within(screen.getByRole("region", { name: "Worksheet limits" })).getByText(
+    const cells = within(screen.getByRole("region", { name: "Worksheet limits" })).getAllByText(
       "Within limit",
     );
-    expect(cell.className).not.toMatch(/text-(emerald|green|red|amber)/);
+    expect(cells.length).toBeGreaterThan(0);
+    for (const cell of cells) expect(cell.className).not.toMatch(/text-(emerald|green|red|amber)/);
   });
 });
