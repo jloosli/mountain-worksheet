@@ -190,7 +190,7 @@ function sleep(ms: number): Promise<void> {
 async function makeApiRequest<T extends unknown[]>(
   endpoint: string,
   params: Record<string, string> = {},
-  retries: number = 3
+  retries: number = 3,
 ): Promise<T> {
   if (!checkRateLimit()) {
     throw new APIError({
@@ -199,10 +199,7 @@ async function makeApiRequest<T extends unknown[]>(
     });
   }
 
-  const url = new URL(
-    `${BASE_URL}?endpoint=${endpoint}`,
-    window.location.origin
-  );
+  const url = new URL(`${BASE_URL}?endpoint=${endpoint}`, window.location.origin);
   Object.entries(params).forEach(([key, value]) => {
     url.searchParams.append(key, value);
   });
@@ -295,7 +292,7 @@ async function makeApiRequest<T extends unknown[]>(
 export async function getMETAR(
   airports: string[],
   hoursBeforeNow: number = 1,
-  retries: number = 3
+  retries: number = 3,
 ): Promise<METARResponse[]> {
   const params = {
     ids: airports.join(","),
@@ -310,10 +307,7 @@ export async function getMETAR(
  * Get the current TAF for each of the specified airports. Unlike METAR, the
  * TAF endpoint takes no `hours` parameter: it rejects it with 400 Bad Request.
  */
-export async function getTAF(
-  airports: string[],
-  retries: number = 3
-): Promise<TAFResponse[]> {
+export async function getTAF(airports: string[], retries: number = 3): Promise<TAFResponse[]> {
   const params = {
     ids: airports.join(","),
     format: "json",
@@ -325,9 +319,7 @@ export async function getTAF(
 /**
  * Get airport information
  */
-export async function getAirportInfo(
-  airports: string[]
-): Promise<AirportResponse[]> {
+export async function getAirportInfo(airports: string[]): Promise<AirportResponse[]> {
   const params = {
     ids: airports.join(","),
     format: "json",
@@ -339,9 +331,7 @@ export async function getAirportInfo(
 /**
  * Get navaid (VOR/NDB/etc.) information by ID.
  */
-export async function getNavaidInfo(
-  ids: string[]
-): Promise<NavaidResponse[]> {
+export async function getNavaidInfo(ids: string[]): Promise<NavaidResponse[]> {
   const params = {
     ids: ids.join(","),
     format: "json",
@@ -379,14 +369,9 @@ export async function getWeatherDataBatch(
     includeTAF?: boolean;
     includeAirport?: boolean;
     metarHours?: number;
-  } = {}
+  } = {},
 ): Promise<WeatherDataBatch> {
-  const {
-    includeMETAR = true,
-    includeTAF = true,
-    includeAirport = true,
-    metarHours = 1,
-  } = options;
+  const { includeMETAR = true, includeTAF = true, includeAirport = true, metarHours = 1 } = options;
 
   const response: WeatherDataBatch = { notifications: [] };
   const failures: (Notification | null)[] = [];
@@ -395,7 +380,7 @@ export async function getWeatherDataBatch(
     slot: number,
     key: K,
     label: string,
-    request: () => Promise<NonNullable<WeatherDataBatch[K]>>
+    request: () => Promise<NonNullable<WeatherDataBatch[K]>>,
   ) => {
     try {
       response[key] = await request();
@@ -413,8 +398,7 @@ export async function getWeatherDataBatch(
   const requests: Promise<void>[] = [];
   if (includeMETAR)
     requests.push(settle(0, "metar", "METAR", () => getMETAR(airports, metarHours)));
-  if (includeTAF)
-    requests.push(settle(1, "taf", "TAF", () => getTAF(airports)));
+  if (includeTAF) requests.push(settle(1, "taf", "TAF", () => getTAF(airports)));
   if (includeAirport)
     requests.push(settle(2, "airport", "Airport", () => getAirportInfo(airports)));
   await Promise.all(requests);
@@ -430,10 +414,7 @@ export async function getWeatherDataBatch(
  */
 let debounceTimer: NodeJS.Timeout | null = null;
 
-export function debouncedRequest<T>(
-  requestFn: () => Promise<T>,
-  delay: number = 1000
-): Promise<T> {
+export function debouncedRequest<T>(requestFn: () => Promise<T>, delay: number = 1000): Promise<T> {
   return new Promise((resolve, reject) => {
     if (debounceTimer) {
       clearTimeout(debounceTimer);

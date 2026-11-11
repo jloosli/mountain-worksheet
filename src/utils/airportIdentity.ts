@@ -25,10 +25,7 @@ export function correctionCandidate(id: string): string | null {
 }
 
 /** Number of airport records whose ICAO ID is exactly `id`. */
-export function matchCount(
-  id: string,
-  airports: readonly AirportResponse[] | undefined
-): number {
+export function matchCount(id: string, airports: readonly AirportResponse[] | undefined): number {
   return (airports ?? []).filter((a) => a.icaoId?.toUpperCase() === id).length;
 }
 
@@ -41,7 +38,7 @@ export function matchCount(
 export function classifyAirport(
   id: string,
   entered: readonly AirportResponse[] | null,
-  candidate?: readonly AirportResponse[] | null
+  candidate?: readonly AirportResponse[] | null,
 ): AirportIdentity {
   if (entered === null) return { kind: "unchecked", id };
   if (matchCount(id, entered) > 0) return { kind: "known", id };
@@ -56,7 +53,7 @@ export function classifyAirport(
 /** The notification an airport's identity raises on its ID field, if any. */
 export function airportIdentityNotification(
   identity: AirportIdentity,
-  slot: 0 | 1
+  slot: 0 | 1,
 ): Notification | null {
   const subject = fieldSubject("airport", slot);
   switch (identity.kind) {

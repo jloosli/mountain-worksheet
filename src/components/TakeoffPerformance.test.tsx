@@ -17,19 +17,19 @@ const computed = (value: number, dependsOn = [fieldSubject("acType")]): Computed
   dependsOn,
 });
 
-function airport(
-  slot: AirportSlot,
-  overrides: Partial<Record<TOLDValueKey, ComputedValue>> = {}
-) {
+function airport(slot: AirportSlot, overrides: Partial<Record<TOLDValueKey, ComputedValue>> = {}) {
   const values = Object.fromEntries(
-    TOLD_VALUE_KEYS.map((key, i) => [key, computed((slot === "departure" ? 1000 : 2000) + i)])
+    TOLD_VALUE_KEYS.map((key, i) => [key, computed((slot === "departure" ? 1000 : 2000) + i)]),
   ) as Record<TOLDValueKey, ComputedValue>;
   return { slot, values: { ...values, ...overrides }, notifications: [] };
 }
 
 function viewModel(
-  overrides: { departure?: Partial<Record<TOLDValueKey, ComputedValue>>; arrival?: Partial<Record<TOLDValueKey, ComputedValue>> } = {},
-  notifications: Notification[] = []
+  overrides: {
+    departure?: Partial<Record<TOLDValueKey, ComputedValue>>;
+    arrival?: Partial<Record<TOLDValueKey, ComputedValue>>;
+  } = {},
+  notifications: Notification[] = [],
 ): TOLDViewModel {
   return {
     departure: airport("departure", overrides.departure),
@@ -45,14 +45,14 @@ function row(name: RegExp) {
 describe("TakeoffPerformance", () => {
   it("renders nothing without an aircraft", () => {
     const { container } = render(
-      <TakeoffPerformance airports={["KSLC", "KPVU"]} told={viewModel()} />
+      <TakeoffPerformance airports={["KSLC", "KPVU"]} told={viewModel()} />,
     );
     expect(container).toBeEmptyDOMElement();
   });
 
   it("shows each airport's distances under its column", () => {
     render(
-      <TakeoffPerformance aircraftModel="C182T" airports={["KSLC", "KPVU"]} told={viewModel()} />
+      <TakeoffPerformance aircraftModel="C182T" airports={["KSLC", "KPVU"]} told={viewModel()} />,
     );
     expect(screen.getByRole("table", { name: /TOLD.*C182T/ })).toBeInTheDocument();
     const cells = within(row(/Take Off Ground Roll/)).getAllByRole("cell");
@@ -77,7 +77,7 @@ describe("TakeoffPerformance", () => {
             landing50ftObstacle: { status: "unavailable" },
           },
         })}
-      />
+      />,
     );
     const cells = within(row(/Landing Ground Roll/)).getAllByRole("cell");
     expect(cells[2]).toHaveTextContent("needs arrival temperature");
@@ -91,7 +91,7 @@ describe("TakeoffPerformance", () => {
         airports={["KSLC", "KPVU"]}
         told={viewModel({ departure: { runwayRemainingGroundRoll: computed(0) } })}
         runwayStates={{ departure: "exceeded", arrival: "within" }}
-      />
+      />,
     );
     const cells = within(row(/runway remaining/)).getAllByRole("cell");
     expect(cells[1]).toHaveTextContent(/^0$/);
@@ -106,7 +106,7 @@ describe("TakeoffPerformance", () => {
         airports={["KSLC", "KPVU"]}
         told={viewModel({ departure: { runwayRemaining50ft: computed(-150) } })}
         runwayStates={{ departure: "exceeded", arrival: "exceeded" }}
-      />
+      />,
     );
     const cells = within(row(/runway remaining/)).getAllByRole("cell");
     expect(cells[3]).toHaveTextContent((-150).toLocaleString());
@@ -137,7 +137,7 @@ describe("TakeoffPerformance", () => {
         aircraftModel="C182T"
         airports={["KSLC", "KPVU"]}
         told={viewModel({}, notifications)}
-      />
+      />,
     );
     for (const n of notifications) {
       expect(screen.getByText(n.message)).toBeInTheDocument();
@@ -149,11 +149,13 @@ describe("TakeoffPerformance", () => {
       <TakeoffPerformance
         aircraftModel="C182T"
         airports={["KSLC", "KPVU"]}
-        told={viewModel({ arrival: { landingGroundRoll: computed(2100, [fieldSubject("temp", 2)]) } })}
+        told={viewModel({
+          arrival: { landingGroundRoll: computed(2100, [fieldSubject("temp", 2)]) },
+        })}
         inputNotifications={[
           { level: "caution", subject: fieldSubject("temp", 2), message: "Nearest TAF period" },
         ]}
-      />
+      />,
     );
     const cells = within(row(/Landing Ground Roll/)).getAllByRole("cell");
     expect(within(cells[2]).getByRole("link", { name: /Nearest TAF period/ })).toBeInTheDocument();

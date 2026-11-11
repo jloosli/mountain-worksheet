@@ -21,7 +21,7 @@ function renderMarkers(notifications: Notification[], value: ComputedValue = arr
   return render(
     <span>
       <ValueMarkers notifications={notifications} value={value} />
-    </span>
+    </span>,
   );
 }
 
@@ -30,7 +30,10 @@ describe("ValueMarkers", () => {
     renderMarkers([tempCaution]);
     const marker = screen.getByRole("link", { name: /KXYZ: using nearest TAF period/ });
     expect(marker).toHaveAttribute("href", "#notifications-field-temp-2");
-    expect(marker).toHaveAttribute("title", expect.stringContaining("KXYZ: using nearest TAF period"));
+    expect(marker).toHaveAttribute(
+      "title",
+      expect.stringContaining("KXYZ: using nearest TAF period"),
+    );
   });
 
   it("shares one marker between several Cautions on the same input", () => {

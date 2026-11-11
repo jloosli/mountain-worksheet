@@ -33,7 +33,13 @@ describe("trilinearTableGaps", () => {
     expect(trilinearTableGaps(table, 2000, 0, 0)).toBe(0);
     const full = {
       ...table,
-      data: [table.data[0], [[140, 150], [160, 170]]],
+      data: [
+        table.data[0],
+        [
+          [140, 150],
+          [160, 170],
+        ],
+      ],
     };
     expect(trilinearTableGaps(full, 2200, 1000, 10)).toBe(0);
   });

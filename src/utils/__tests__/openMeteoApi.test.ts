@@ -48,7 +48,7 @@ describe("openMeteoApi", () => {
         fetchPointForecast(40.5, -112, {
           start: new Date(),
           end: new Date(),
-        })
+        }),
       ).rejects.toThrow(/Open-Meteo/);
     });
   });
@@ -89,24 +89,20 @@ describe("openMeteoApi", () => {
     it("snaps to highest level and warns when target above range", () => {
       const r = interpolateAtAltitude(20000, sample);
       expect(r.temp).toBe(-15); // 500 hPa value
-      expect(r.notes).toEqual([
-        { level: "caution", message: expect.stringMatching(/above/i) },
-      ]);
+      expect(r.notes).toEqual([{ level: "caution", message: expect.stringMatching(/above/i) }]);
     });
 
     it("snaps to lowest level and warns when target below range", () => {
       const r = interpolateAtAltitude(1000, sample);
       expect(r.temp).toBe(20); // 925 hPa value
-      expect(r.notes).toEqual([
-        { level: "caution", message: expect.stringMatching(/below/i) },
-      ]);
+      expect(r.notes).toEqual([{ level: "caution", message: expect.stringMatching(/below/i) }]);
     });
 
     it("raises a Warning note and returns nulls when no level has a height", () => {
       const noHeights = {
         ...sample,
         heightsFtByLevel: Object.fromEntries(
-          Object.keys(sample.heightsFtByLevel).map((k) => [k, NaN])
+          Object.keys(sample.heightsFtByLevel).map((k) => [k, NaN]),
         ) as typeof sample.heightsFtByLevel,
       };
       const r = interpolateAtAltitude(9000, noHeights);
@@ -131,16 +127,40 @@ describe("openMeteoApi", () => {
       const empty = {
         timeIdx: 0,
         heightsFtByLevel: {
-          925: NaN, 900: NaN, 850: NaN, 800: NaN, 700: NaN, 600: NaN, 500: NaN,
+          925: NaN,
+          900: NaN,
+          850: NaN,
+          800: NaN,
+          700: NaN,
+          600: NaN,
+          500: NaN,
         },
         tempByLevel: {
-          925: NaN, 900: NaN, 850: NaN, 800: NaN, 700: NaN, 600: NaN, 500: NaN,
+          925: NaN,
+          900: NaN,
+          850: NaN,
+          800: NaN,
+          700: NaN,
+          600: NaN,
+          500: NaN,
         },
         wspdByLevel: {
-          925: NaN, 900: NaN, 850: NaN, 800: NaN, 700: NaN, 600: NaN, 500: NaN,
+          925: NaN,
+          900: NaN,
+          850: NaN,
+          800: NaN,
+          700: NaN,
+          600: NaN,
+          500: NaN,
         },
         wdirByLevel: {
-          925: NaN, 900: NaN, 850: NaN, 800: NaN, 700: NaN, 600: NaN, 500: NaN,
+          925: NaN,
+          900: NaN,
+          850: NaN,
+          800: NaN,
+          700: NaN,
+          600: NaN,
+          500: NaN,
         },
       };
       const r = interpolateAtAltitude(9000, empty);

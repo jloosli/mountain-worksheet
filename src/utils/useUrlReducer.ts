@@ -18,7 +18,7 @@ export function useUrlReducer<S, E, T, R extends { state: T } = { state: T }>(
   initialValue: T,
   init: (opened: T, check: R | null) => S,
   toUrl: (state: S) => T,
-  check?: (state: T, query: string) => R
+  check?: (state: T, query: string) => R,
 ): readonly [S, (event: E) => void] {
   const router = useRouter();
   const pathname = usePathname();
@@ -42,7 +42,7 @@ export function useUrlReducer<S, E, T, R extends { state: T } = { state: T }>(
       router.push(`${pathname}${query}`, { scroll: false });
       pendingValueRef.current = null;
     },
-    [pathname, router]
+    [pathname, router],
   );
 
   useEffect(() => {
@@ -64,7 +64,7 @@ export function useUrlReducer<S, E, T, R extends { state: T } = { state: T }>(
       setState(next);
       pendingValueRef.current = toUrl(next);
     },
-    [reducer, toUrl]
+    [reducer, toUrl],
   );
 
   return [state, dispatch] as const;

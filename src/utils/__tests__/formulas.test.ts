@@ -121,12 +121,7 @@ describe("Rate of Climb Function", () => {
     const temp = 15;
     const result = getRateOfClimb(mockTable, pressureAlt, temp);
 
-    expect(bilinearInterpolate).toHaveBeenCalledWith(
-      mockTable,
-      pressureAlt,
-      temp,
-      {}
-    );
+    expect(bilinearInterpolate).toHaveBeenCalledWith(mockTable, pressureAlt, temp, {});
     expect(result).toBe(500);
   });
 
@@ -139,12 +134,7 @@ describe("Rate of Climb Function", () => {
   test("handles custom options", () => {
     const options = { allowExtrapolation: true };
     getRateOfClimb(mockTable, 3000, 15, options);
-    expect(bilinearInterpolate).toHaveBeenCalledWith(
-      mockTable,
-      3000,
-      15,
-      options
-    );
+    expect(bilinearInterpolate).toHaveBeenCalledWith(mockTable, 3000, 15, options);
   });
 });
 

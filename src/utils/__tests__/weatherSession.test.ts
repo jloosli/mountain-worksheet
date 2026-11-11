@@ -81,9 +81,10 @@ const replay = (
     initialWeatherSession(worksheet, null),
   );
 
-const edit =
-  (updates: Partial<WorksheetData>) =>
-  (): WeatherSessionEvent => ({ type: "edit", updates });
+const edit = (updates: Partial<WorksheetData>) => (): WeatherSessionEvent => ({
+  type: "edit",
+  updates,
+});
 const fetch =
   (data: Partial<WorksheetData> | null = fetched, notifications: Notification[] = []) =>
   (s: WeatherSession) =>
@@ -174,9 +175,13 @@ describe("weather session — one fetch-input table for staleness and Warning re
       message: "KLGU: no runway data",
     };
     const s = replay([fetch(fetched, [noRunway])]);
-    expect(sessionNotifications(weatherSessionReducer(s, { type: "edit", updates: { time: "19:00" } }))).toContainEqual(noRunway);
     expect(
-      sessionNotifications(weatherSessionReducer(s, { type: "edit", updates: { airport: ["KOGD", "KSLC"] } })),
+      sessionNotifications(weatherSessionReducer(s, { type: "edit", updates: { time: "19:00" } })),
+    ).toContainEqual(noRunway);
+    expect(
+      sessionNotifications(
+        weatherSessionReducer(s, { type: "edit", updates: { airport: ["KOGD", "KSLC"] } }),
+      ),
     ).not.toContainEqual(noRunway);
   });
 
@@ -188,10 +193,14 @@ describe("weather session — one fetch-input table for staleness and Warning re
     };
     const s = replay([fetch(fetched, [noPosition])]);
     for (const updates of [{ time: "19:00" }, { duration: 2 }]) {
-      expect(sessionNotifications(weatherSessionReducer(s, { type: "edit", updates }))).toContainEqual(noPosition);
+      expect(
+        sessionNotifications(weatherSessionReducer(s, { type: "edit", updates })),
+      ).toContainEqual(noPosition);
     }
     expect(
-      sessionNotifications(weatherSessionReducer(s, { type: "edit", updates: { airport: ["KSLC", "KLGU"] } })),
+      sessionNotifications(
+        weatherSessionReducer(s, { type: "edit", updates: { airport: ["KSLC", "KLGU"] } }),
+      ),
     ).not.toContainEqual(noPosition);
   });
 
@@ -201,12 +210,18 @@ describe("weather session — one fetch-input table for staleness and Warning re
       subject: fieldSubject("altitude", 2),
       message: "KLGU: no field elevation",
     };
-    const s = replay([fetch({ ...fetched, altitude: [4473, -1, null] as WorksheetData["altitude"] }, [noElevation])]);
+    const s = replay([
+      fetch({ ...fetched, altitude: [4473, -1, null] as WorksheetData["altitude"] }, [noElevation]),
+    ]);
     for (const updates of [{ time: "19:00" }, { duration: 2 }]) {
-      expect(sessionNotifications(weatherSessionReducer(s, { type: "edit", updates }))).toContainEqual(noElevation);
+      expect(
+        sessionNotifications(weatherSessionReducer(s, { type: "edit", updates })),
+      ).toContainEqual(noElevation);
     }
     expect(
-      sessionNotifications(weatherSessionReducer(s, { type: "edit", updates: { airport: ["KOGD", "KSLC"] } })),
+      sessionNotifications(
+        weatherSessionReducer(s, { type: "edit", updates: { airport: ["KOGD", "KSLC"] } }),
+      ),
     ).not.toContainEqual(noElevation);
   });
 
@@ -328,7 +343,10 @@ describe("weather session — link notifications", () => {
       cells: [{ field: "temp", index: 1 }],
     });
     expect(sessionNotifications(s0)).toContainEqual(linkWarning);
-    const s = weatherSessionReducer(s0, { type: "edit", updates: { altitude: [4473, 9000, 4457] } });
+    const s = weatherSessionReducer(s0, {
+      type: "edit",
+      updates: { altitude: [4473, 9000, 4457] },
+    });
     expect(s.worksheet.temp[1]).toBe(-2);
     expect(s.linkLoad?.notifications).toEqual([]);
   });
@@ -339,7 +357,6 @@ describe("weather session — selectors", () => {
     expect(canFetch(initialWeatherSession(base, null))).toBe(true);
     expect(canFetch(initialWeatherSession({ ...base, airport: ["KOGD", " "] }, null))).toBe(false);
   });
-
 });
 
 describe("weather session — weather status (#285)", () => {

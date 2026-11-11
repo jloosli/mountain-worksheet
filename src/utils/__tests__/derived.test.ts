@@ -17,7 +17,7 @@ describe("computePressureColumns", () => {
     const { PAs, DAs } = computePressureColumns(
       [null, null, null],
       [null, null, null],
-      [null, null, null]
+      [null, null, null],
     );
     expect(PAs).toEqual([null, null, null]);
     expect(DAs).toEqual([null, null, null]);
@@ -27,7 +27,7 @@ describe("computePressureColumns", () => {
     const { PAs, DAs } = computePressureColumns(
       [5000, null, null],
       [null, null, null],
-      [null, null, null]
+      [null, null, null],
     );
     expect(PAs[0]).toBeNull();
     expect(DAs[0]).toBeNull();
@@ -37,7 +37,7 @@ describe("computePressureColumns", () => {
     const { PAs } = computePressureColumns(
       [5000, null, null],
       [29.92, null, null],
-      [15, null, null]
+      [15, null, null],
     );
     expect(PAs[0]).toBeCloseTo(5000, 5);
   });
@@ -46,17 +46,13 @@ describe("computePressureColumns", () => {
     const { PAs } = computePressureColumns(
       [5000, null, null],
       [28.92, null, null],
-      [15, null, null]
+      [15, null, null],
     );
     expect(PAs[0]).toBeCloseTo(6000, 5);
   });
 
   it("computes DA = PA at ISA temperature (PA = 0, temp = 15°C)", () => {
-    const { DAs } = computePressureColumns(
-      [0, null, null],
-      [29.92, null, null],
-      [15, null, null]
-    );
+    const { DAs } = computePressureColumns([0, null, null], [29.92, null, null], [15, null, null]);
     expect(DAs[0]).toBeCloseTo(0, 5);
   });
 
@@ -64,7 +60,7 @@ describe("computePressureColumns", () => {
     const { PAs, DAs } = computePressureColumns(
       [5000, 10000, 5000],
       [-1, 29.92, 29.92],
-      [15, -1, 15]
+      [15, -1, 15],
     );
     expect(PAs[0]).toBeNull(); // altimeter -1 → missing
     expect(DAs[0]).toBeNull();
@@ -77,7 +73,7 @@ describe("computePressureColumns", () => {
     const { PAs, DAs } = computePressureColumns(
       [-1, 5000, 5000],
       [29.92, 29.92, 29.92],
-      [15, 15, 15]
+      [15, 15, 15],
     );
     expect(PAs[0]).toBeNull();
     expect(DAs[0]).toBeNull();
@@ -88,7 +84,7 @@ describe("computePressureColumns", () => {
     const { PAs, DAs } = computePressureColumns(
       [1000, 8000, 2000],
       [29.92, 29.92, 29.92],
-      [15, 0, 10]
+      [15, 0, 10],
     );
     expect(PAs[0]).toBeCloseTo(1000, 5);
     expect(PAs[1]).toBeCloseTo(8000, 5);
@@ -197,7 +193,9 @@ describe("computeTOLDViewModel", () => {
     // POH landing table covers 0–8,000 ft PA; KXYZ is at 9,000 ft.
     const vm = computeTOLDViewModel(
       { ...baseState(), altitude: [1000, 10000, 9000] },
-      [1000, 10000, 9000], []);
+      [1000, 10000, 9000],
+      [],
+    );
 
     expect(vm.arrival.notifications).toContainEqual({
       level: "caution",
@@ -210,9 +208,7 @@ describe("computeTOLDViewModel", () => {
   });
 
   it("puts a Caution on takeoff distances extrapolated beyond the takeoff table", () => {
-    const vm = computeTOLDViewModel(
-      { ...baseState(), temp: [45, 10, 20] },
-      [1000, 8000, 1000], []);
+    const vm = computeTOLDViewModel({ ...baseState(), temp: [45, 10, 20] }, [1000, 8000, 1000], []);
     expect(vm.departure.notifications).toContainEqual({
       level: "caution",
       subject: valueSubject("told.departure.takeoff", "decision"),
@@ -225,7 +221,9 @@ describe("computeTOLDViewModel", () => {
     // Both airports at 9,000 ft and 45°C: both tables extrapolate on two axes.
     const vm = computeTOLDViewModel(
       { ...baseState(), altitude: [9000, 10000, 9000], temp: [45, 10, 45], weight: 2600 },
-      [9000, 10000, 9000], []);
+      [9000, 10000, 9000],
+      [],
+    );
     const messages = vm.notifications.map((n) => n.message);
     expect(new Set(messages).size).toBe(messages.length);
     const keys = vm.notifications.map((n) => JSON.stringify(n.subject));
@@ -281,7 +279,9 @@ describe("computeTOLDViewModel", () => {
   it("shows an Advisory when an airport's pressure altitude is above 15,000 ft", () => {
     const vm = computeTOLDViewModel(
       { ...baseState(), altitude: [1000, 10000, 15200] },
-      [1000, 10000, 15200], []);
+      [1000, 10000, 15200],
+      [],
+    );
     expect(vm.arrival.notifications).toContainEqual({
       level: "advisory",
       subject: valueSubject("told.arrival", "decision"),
@@ -297,7 +297,9 @@ describe("computeTOLDViewModel", () => {
         temp: [-25, 10, 38],
         rwy: [1800, 2500],
       },
-      [11000, 10000, 12000], []);
+      [11000, 10000, 12000],
+      [],
+    );
     const text = vm.notifications.map((n) => n.message).join("\n");
     expect(text).not.toMatch(/careful performance planning/);
     expect(text).not.toMatch(/Short runway operations/);
@@ -324,7 +326,9 @@ describe("computeTOLDViewModel", () => {
     // C182T 3,100 lb takeoff table is blank at 7,000 ft/40°C, 8,000 ft/30°C and 8,000 ft/40°C.
     const vm = computeTOLDViewModel(
       { ...baseState(), weight: 2900, altitude: [7500, 10000, 1000], temp: [35, 10, 20] },
-      [7500, 10000, 1000], []);
+      [7500, 10000, 1000],
+      [],
+    );
     expect(vm.departure.notifications).toEqual([
       {
         level: "caution",
@@ -340,7 +344,9 @@ describe("computeTOLDViewModel", () => {
   it("computes values at 0°C and sea level (falsy but valid)", () => {
     const vm = computeTOLDViewModel(
       { ...baseState(), altitude: [0, 8000, 0], temp: [0, 10, 0] },
-      [0, 8000, 0], []);
+      [0, 8000, 0],
+      [],
+    );
     for (const slot of ["departure", "arrival"] as const) {
       for (const v of Object.values(vm[slot].values)) {
         expect(v.status).toBe("computed");
@@ -351,7 +357,9 @@ describe("computeTOLDViewModel", () => {
   it("names everything an airport is waiting for", () => {
     const vm = computeTOLDViewModel(
       { ...baseState(), altitude: [null, 8000, 1000], altimeter: [null, 29.92, 29.92] },
-      [null, 8000, 1000], []);
+      [null, 8000, 1000],
+      [],
+    );
     expect(vm.departure.values.takeoffGroundRoll).toEqual({
       status: "withheld",
       reason: "needs departure field elevation and altimeter",
@@ -372,7 +380,10 @@ describe("computeClimbViewModel", () => {
     const vm = computeClimbViewModel(state, []);
     expect(vm.vy[1]).toEqual(expect.objectContaining({ status: "computed", value: 72 }));
     expect(vm.notifications).toContainEqual(
-      expect.objectContaining({ level: "caution", subject: expect.objectContaining({ id: "climb.vy.operating" }) }),
+      expect.objectContaining({
+        level: "caution",
+        subject: expect.objectContaining({ id: "climb.vy.operating" }),
+      }),
     );
   });
 
@@ -382,8 +393,14 @@ describe("computeClimbViewModel", () => {
     expect(vm.rateOfClimb[0]).toEqual(
       expect.objectContaining({ status: "computed", value: expect.any(Number) }),
     );
-    expect(vm.rateOfClimb[1]).toEqual({ status: "withheld", reason: "needs operating temperature" });
-    expect(vm.serviceCeiling[1]).toEqual({ status: "withheld", reason: "needs operating temperature" });
+    expect(vm.rateOfClimb[1]).toEqual({
+      status: "withheld",
+      reason: "needs operating temperature",
+    });
+    expect(vm.serviceCeiling[1]).toEqual({
+      status: "withheld",
+      reason: "needs operating temperature",
+    });
     // Vx and Vy depend on pressure altitude only, not temperature.
     expect(vm.vx[1].status).toBe("computed");
     expect(vm.vy[1].status).toBe("computed");
@@ -436,7 +453,11 @@ describe("computeClimbViewModel", () => {
 
   it("raises no Vy Caution within the climb table", () => {
     const vm = computeClimbViewModel({ ...baseState(), altitude: [1000, 14000, 1000] }, []);
-    expect(vm.notifications.filter((n) => n.subject.kind === "value" && n.subject.id.startsWith("climb.vy"))).toEqual([]);
+    expect(
+      vm.notifications.filter(
+        (n) => n.subject.kind === "value" && n.subject.id.startsWith("climb.vy"),
+      ),
+    ).toEqual([]);
   });
 
   it("puts a Caution on Va extrapolated beyond the maneuvering table (single-axis)", () => {
@@ -453,13 +474,16 @@ describe("computeClimbViewModel", () => {
 
   it("explains a rate of climb the POH table has no data for", () => {
     // C172S climb table has no entry at 12,000 ft / 40°C.
-    const vm = computeClimbViewModel({
-      ...baseState(),
-      acType: "C172S",
-      weight: 2400,
-      altitude: [1000, 11000, 1000],
-      temp: [20, 30, 20],
-    }, []);
+    const vm = computeClimbViewModel(
+      {
+        ...baseState(),
+        acType: "C172S",
+        weight: 2400,
+        altitude: [1000, 11000, 1000],
+        temp: [20, 30, 20],
+      },
+      [],
+    );
     expect(vm.rateOfClimb[1]).toEqual({ status: "unavailable" });
     expect(vm.notifications).toContainEqual({
       level: "warning",
@@ -486,7 +510,8 @@ describe("computeClimbViewModel", () => {
     expect(vm.notifications).toContainEqual({
       level: "warning",
       subject: fieldSubject("temp", 1),
-      message: "Operating altitude temperature -60°C is outside the -50 to 60°C the worksheet accepts.",
+      message:
+        "Operating altitude temperature -60°C is outside the -50 to 60°C the worksheet accepts.",
     });
     expect(vm.rateOfClimb[1]).toEqual({
       status: "withheld",
@@ -550,18 +575,31 @@ describe("dependsOn (value → input Subjects)", () => {
 
   it("lists each TOLD value's own inputs", () => {
     const vm = computeTOLDViewModel(baseState(), PAS_OK, []);
-    const deps = (v: ReturnType<typeof computeTOLDViewModel>["departure"]["values"]["takeoffGroundRoll"]) =>
-      v.status === "computed" ? v.dependsOn : null;
+    const deps = (
+      v: ReturnType<typeof computeTOLDViewModel>["departure"]["values"]["takeoffGroundRoll"],
+    ) => (v.status === "computed" ? v.dependsOn : null);
 
     expect(deps(vm.departure.values.takeoffGroundRoll)).toEqual([
-      f("acType"), f("weight"), f("altitude", 0), f("altimeter", 0), f("temp", 0),
+      f("acType"),
+      f("weight"),
+      f("altitude", 0),
+      f("altimeter", 0),
+      f("temp", 0),
     ]);
     // Landing distances don't use weight.
     expect(deps(vm.arrival.values.landing50ftObstacle)).toEqual([
-      f("acType"), f("altitude", 2), f("altimeter", 2), f("temp", 2),
+      f("acType"),
+      f("altitude", 2),
+      f("altimeter", 2),
+      f("temp", 2),
     ]);
     expect(deps(vm.arrival.values.runwayRemaining50ft)).toEqual([
-      f("acType"), f("weight"), f("altitude", 2), f("altimeter", 2), f("temp", 2), f("rwy", 1),
+      f("acType"),
+      f("weight"),
+      f("altitude", 2),
+      f("altimeter", 2),
+      f("temp", 2),
+      f("rwy", 1),
     ]);
   });
 
@@ -571,7 +609,11 @@ describe("dependsOn (value → input Subjects)", () => {
 
     expect(deps(vm.vx[1])).toEqual([f("acType"), f("altitude", 1), f("altimeter", 1)]);
     expect(deps(vm.rateOfClimbActual[2])).toEqual([
-      f("acType"), f("weight"), f("altitude", 2), f("altimeter", 2), f("temp", 2),
+      f("acType"),
+      f("weight"),
+      f("altitude", 2),
+      f("altimeter", 2),
+      f("temp", 2),
     ]);
     expect(deps(vm.va)).toEqual([f("acType"), f("weight")]);
     expect(deps(vm.vra)).toEqual([f("acType")]);

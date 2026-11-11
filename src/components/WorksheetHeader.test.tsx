@@ -34,9 +34,7 @@ describe("WorksheetHeader", () => {
 
   it("does not render a Fetch Weather button (moved to the action bar)", () => {
     render(<WorksheetHeader {...defaultProps} />);
-    expect(
-      screen.queryByRole("button", { name: /Fetch Weather/i })
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Fetch Weather/i })).not.toBeInTheDocument();
   });
 
   it("stacks the title above the controls below the sm breakpoint", () => {

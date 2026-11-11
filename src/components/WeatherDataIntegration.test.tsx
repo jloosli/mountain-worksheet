@@ -33,9 +33,7 @@ const fetchResult: WeatherFetchResult = {
   ],
 };
 
-const renderWith = (
-  props: Partial<React.ComponentProps<typeof WeatherDataIntegration>> = {}
-) =>
+const renderWith = (props: Partial<React.ComponentProps<typeof WeatherDataIntegration>> = {}) =>
   render(
     <WeatherDataIntegration
       worksheetData={worksheetData}
@@ -47,7 +45,7 @@ const renderWith = (
         </button>
       )}
       {...props}
-    />
+    />,
   );
 
 describe("WeatherDataIntegration", () => {
@@ -66,7 +64,7 @@ describe("WeatherDataIntegration", () => {
         data: { temp: [20, null, null] },
         result: fetchResult,
         at: expect.any(Date),
-      })
+      }),
     );
     expect(mockFetch).toHaveBeenCalledWith(worksheetData);
   });
@@ -76,7 +74,11 @@ describe("WeatherDataIntegration", () => {
       ...fetchResult,
       applied: {},
       notifications: [
-        { level: "warning", subject: { kind: "step", step: "weather" }, message: "Weather fetch failed (boom)" },
+        {
+          level: "warning",
+          subject: { kind: "step", step: "weather" },
+          message: "Weather fetch failed (boom)",
+        },
       ],
     };
     mockFetch.mockResolvedValue({ data: null, result: failed });
@@ -86,7 +88,9 @@ describe("WeatherDataIntegration", () => {
     fireEvent.click(screen.getByText("Fetch"));
 
     await waitFor(() =>
-      expect(onFetched).toHaveBeenCalledWith(expect.objectContaining({ data: null, result: failed }))
+      expect(onFetched).toHaveBeenCalledWith(
+        expect.objectContaining({ data: null, result: failed }),
+      ),
     );
     // Only the loading indicator was ever a dialog, and it closes.
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());

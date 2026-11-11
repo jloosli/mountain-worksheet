@@ -59,7 +59,7 @@ export default function ManeuveringPerformance({
   const getSpeed = (flapSetting: number, bankAngle: number): number | null => {
     if (!maneuveringSpeeds) return null;
     const speedData = maneuveringSpeeds.speeds.find(
-      (s) => s.flapSetting === flapSetting && s.bankAngle === bankAngle
+      (s) => s.flapSetting === flapSetting && s.bankAngle === bankAngle,
     );
     return speedData ? speedData.speed : null;
   };
@@ -73,79 +73,67 @@ export default function ManeuveringPerformance({
       <h3 className="text-xl font-semibold mb-4">
         Minimum Maneuver/Canyon Turn Speed (kts) ({aircraftModel})
       </h3>
-        <table className="min-w-full border-collapse border border-gray-300 dark:border-gray-700">
-          <thead>
-            <tr>
-              <th className="border border-gray-300 dark:border-gray-700 p-2 text-center"></th>
-              <th className="border border-gray-300 dark:border-gray-700 p-2 text-center"></th>
-              <th
-                className="border border-gray-300 dark:border-gray-700 p-2 text-center"
-                colSpan={3}
-              >
-                Bank Angles
-              </th>
-              <th
-                className="border border-gray-300 dark:border-gray-700 p-2 text-center"
-                rowSpan={2}
-              >
-                Canyon-turn entry
-                <div className="text-xs font-normal">1.4 × Vso to Va</div>
-              </th>
-            </tr>
-            <tr>
-              <th className="border border-gray-300 dark:border-gray-700 p-2 text-left"></th>
-              <th className="border border-gray-300 dark:border-gray-700 p-2 text-left"></th>
-              <th className="border border-gray-300 dark:border-gray-700 p-2 text-right">
-                0&deg;
-              </th>
-              <th className="border border-gray-300 dark:border-gray-700 p-2 text-right">
-                45&deg;
-              </th>
-              <th className="border border-gray-300 dark:border-gray-700 p-2 text-right">
-                60&deg;
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {flapSettings.map((flapSetting, index) => (
-              <tr key={flapSetting}>
-                {index === 0 && (
-                  <th
-                    className="border border-gray-300 dark:border-gray-700 p-2 text-center"
-                    rowSpan={flapSettings.length}
+      <table className="min-w-full border-collapse border border-gray-300 dark:border-gray-700">
+        <thead>
+          <tr>
+            <th className="border border-gray-300 dark:border-gray-700 p-2 text-center"></th>
+            <th className="border border-gray-300 dark:border-gray-700 p-2 text-center"></th>
+            <th className="border border-gray-300 dark:border-gray-700 p-2 text-center" colSpan={3}>
+              Bank Angles
+            </th>
+            <th className="border border-gray-300 dark:border-gray-700 p-2 text-center" rowSpan={2}>
+              Canyon-turn entry
+              <div className="text-xs font-normal">1.4 × Vso to Va</div>
+            </th>
+          </tr>
+          <tr>
+            <th className="border border-gray-300 dark:border-gray-700 p-2 text-left"></th>
+            <th className="border border-gray-300 dark:border-gray-700 p-2 text-left"></th>
+            <th className="border border-gray-300 dark:border-gray-700 p-2 text-right">0&deg;</th>
+            <th className="border border-gray-300 dark:border-gray-700 p-2 text-right">45&deg;</th>
+            <th className="border border-gray-300 dark:border-gray-700 p-2 text-right">60&deg;</th>
+          </tr>
+        </thead>
+        <tbody>
+          {flapSettings.map((flapSetting, index) => (
+            <tr key={flapSetting}>
+              {index === 0 && (
+                <th
+                  className="border border-gray-300 dark:border-gray-700 p-2 text-center"
+                  rowSpan={flapSettings.length}
+                >
+                  <div className="transform rotate-270">Flaps</div>
+                </th>
+              )}
+              <td className="border border-gray-300 dark:border-gray-700 p-2">
+                {flapSetting}&deg;
+              </td>
+              {bankAngles.map((bankAngle) => {
+                const speed = getSpeed(flapSetting, bankAngle);
+                return (
+                  <td
+                    key={bankAngle}
+                    className="border border-gray-300 dark:border-gray-700 p-2 text-right"
                   >
-                    <div className="transform rotate-270">Flaps</div>
-                  </th>
-                )}
-                <td className="border border-gray-300 dark:border-gray-700 p-2">
-                  {flapSetting}&deg;
-                </td>
-                {bankAngles.map((bankAngle) => {
-                  const speed = getSpeed(flapSetting, bankAngle);
-                  return (
-                    <td
-                      key={bankAngle}
-                      className="border border-gray-300 dark:border-gray-700 p-2 text-right"
-                    >
-                      {speed !== null ? speed : "TBD"}
-                    </td>
-                  );
-                })}
-                <td className="border border-gray-300 dark:border-gray-700 p-2 text-right">
-                  <EntryRange
-                    range={entryRanges.find((r) => r.flapSetting === flapSetting)}
-                    notes={inputNotifications}
-                  />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        <InlineNotifications
-          notifications={notifications}
-          subject={MANEUVERING_SUBJECT}
-          className="mt-2"
-        />
-      </div>
+                    {speed !== null ? speed : "TBD"}
+                  </td>
+                );
+              })}
+              <td className="border border-gray-300 dark:border-gray-700 p-2 text-right">
+                <EntryRange
+                  range={entryRanges.find((r) => r.flapSetting === flapSetting)}
+                  notes={inputNotifications}
+                />
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <InlineNotifications
+        notifications={notifications}
+        subject={MANEUVERING_SUBJECT}
+        className="mt-2"
+      />
+    </div>
   );
 }

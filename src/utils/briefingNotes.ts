@@ -74,7 +74,12 @@ export function briefingNotes(notifications: readonly Notification[]): BriefingN
     const key = notificationKey(n);
     if (seen.has(key)) continue;
     seen.add(key);
-    kept.push({ level: n.level, subject: n.subject, message: n.message, section: briefingSection(n.subject) });
+    kept.push({
+      level: n.level,
+      subject: n.subject,
+      message: n.message,
+      section: briefingSection(n.subject),
+    });
   }
   const order = (s: BriefingSection) => BRIEFING_SECTIONS.indexOf(s);
   // Stable sort: within a section, notes keep the order they were raised in.

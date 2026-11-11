@@ -6,7 +6,7 @@ describe("SlideOver — open state", () => {
     render(
       <SlideOver isOpen={true} onClose={() => {}} title="Test title">
         <p>Body content</p>
-      </SlideOver>
+      </SlideOver>,
     );
     expect(screen.getByText("Test title")).toBeInTheDocument();
     expect(screen.getByText("Body content")).toBeInTheDocument();
@@ -16,7 +16,7 @@ describe("SlideOver — open state", () => {
     render(
       <SlideOver isOpen={true} onClose={() => {}} title="Test title">
         <p>Body</p>
-      </SlideOver>
+      </SlideOver>,
     );
     expect(screen.getByRole("button", { name: /close/i })).toBeInTheDocument();
   });
@@ -26,7 +26,7 @@ describe("SlideOver — open state", () => {
     render(
       <SlideOver isOpen={true} onClose={onClose} title="Test title">
         <p>Body</p>
-      </SlideOver>
+      </SlideOver>,
     );
     fireEvent.click(screen.getByRole("button", { name: /close/i }));
     expect(onClose).toHaveBeenCalled();
@@ -36,7 +36,7 @@ describe("SlideOver — open state", () => {
     render(
       <SlideOver isOpen={true} onClose={() => {}} title="Visible title">
         <p>Body</p>
-      </SlideOver>
+      </SlideOver>,
     );
     const dialog = screen.getByRole("dialog");
     expect(dialog.className).toMatch(/print:hidden/);
@@ -48,7 +48,7 @@ describe("SlideOver — closed state", () => {
     render(
       <SlideOver isOpen={false} onClose={() => {}} title="Hidden title">
         <p>Hidden body</p>
-      </SlideOver>
+      </SlideOver>,
     );
     // With unmount={false} on the root Transition and its children, the
     // dialog stays mounted when closed so Headless UI can animate it back

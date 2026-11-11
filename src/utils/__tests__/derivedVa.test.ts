@@ -28,7 +28,18 @@ jest.mock("@/data/aircraft.json", () => [
       weights: [2400],
       pressureAltitudes: [0, 8000],
       temperatures: [0, 40],
-      data: [{ groundRoll: [[800, 900], [1200, 1400]], groundRoll50ft: [[1500, 1700], [2200, 2500]] }],
+      data: [
+        {
+          groundRoll: [
+            [800, 900],
+            [1200, 1400],
+          ],
+          groundRoll50ft: [
+            [1500, 1700],
+            [2200, 2500],
+          ],
+        },
+      ],
     },
   },
 ]);

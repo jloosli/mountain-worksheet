@@ -3,9 +3,9 @@ import { render, screen } from "@testing-library/react";
 import Stepper from "./Stepper";
 
 const defaultSteps = [
-  { id: "step-sortie",   number: 1, label: "Sortie Details", status: "active"   as const },
-  { id: "step-weather",  number: 2, label: "Weather",        status: "pending"  as const },
-  { id: "step-decision", number: 3, label: "Decision",       status: "pending"  as const },
+  { id: "step-sortie", number: 1, label: "Sortie Details", status: "active" as const },
+  { id: "step-weather", number: 2, label: "Weather", status: "pending" as const },
+  { id: "step-decision", number: 3, label: "Decision", status: "pending" as const },
 ];
 
 describe("Stepper", () => {
@@ -21,9 +21,15 @@ describe("Stepper", () => {
 
   it("renders each step as an anchor pointing to its section id", () => {
     render(<Stepper steps={defaultSteps} />);
-    expect(screen.getByRole("link", { name: /Sortie Details/ })).toHaveAttribute("href", "#step-sortie");
+    expect(screen.getByRole("link", { name: /Sortie Details/ })).toHaveAttribute(
+      "href",
+      "#step-sortie",
+    );
     expect(screen.getByRole("link", { name: /Weather/ })).toHaveAttribute("href", "#step-weather");
-    expect(screen.getByRole("link", { name: /Decision/ })).toHaveAttribute("href", "#step-decision");
+    expect(screen.getByRole("link", { name: /Decision/ })).toHaveAttribute(
+      "href",
+      "#step-decision",
+    );
   });
 
   it("marks the active step with data-active when activeId is explicitly set", () => {
@@ -40,7 +46,7 @@ describe("Stepper", () => {
           { ...defaultSteps[1], status: "warning", badge: "1 warning" },
           defaultSteps[2],
         ]}
-      />
+      />,
     );
     expect(screen.getByText("2").className).toMatch(/bg-red-/);
     expect(screen.getByText("1 warning").className).toMatch(/text-red-/);

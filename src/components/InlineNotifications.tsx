@@ -39,7 +39,7 @@ export function notificationsDomId(subject: Subject): string {
  */
 export function notificationA11yProps(
   notifications: readonly Notification[],
-  subject: Subject
+  subject: Subject,
 ): { "aria-invalid"?: true; "aria-describedby"?: string } {
   const mine = notificationsFor(notifications, subject);
   if (mine.length === 0) return {};
@@ -66,7 +66,7 @@ export default function InlineNotifications({
   className = "",
 }: InlineNotificationsProps) {
   const mine = notificationsFor(notifications, subject).sort(
-    (a, b) => LEVEL_ORDER[a.level] - LEVEL_ORDER[b.level]
+    (a, b) => LEVEL_ORDER[a.level] - LEVEL_ORDER[b.level],
   );
   // A polite live region, mounted even when empty so screen readers hear a
   // notification raised later (e.g. by a weather fetch) without moving focus.
@@ -80,8 +80,7 @@ export default function InlineNotifications({
               data-level={n.level}
               className={`rounded border px-2 py-1 text-xs ${LEVEL_STYLE[n.level]}`}
             >
-              <span className="font-semibold">{LEVEL_LABEL[n.level]}:</span>{" "}
-              {n.message}
+              <span className="font-semibold">{LEVEL_LABEL[n.level]}:</span> {n.message}
             </li>
           ))}
         </ul>

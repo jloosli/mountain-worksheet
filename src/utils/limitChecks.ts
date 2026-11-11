@@ -165,10 +165,7 @@ const fmt = (n: number) => n.toLocaleString("en-US", { maximumFractionDigits: 1 
 export const formatPercentOfMax = (value: number, max: number) =>
   `${fmt(Math.floor((value * 1000) / max) / 10)}%`;
 
-function check(
-  base: Omit<LimitCheck, "state" | "points">,
-  points: LimitPoint[],
-): LimitCheck {
+function check(base: Omit<LimitCheck, "state" | "points">, points: LimitPoint[]): LimitCheck {
   return { ...base, state: worstState(points.map((p) => p.state)), points };
 }
 
@@ -320,7 +317,10 @@ function ceilVisCheck({ state, notifications }: LimitCheckInputs): LimitCheck {
   } as const;
   const subject = fieldSubject("cielVis");
   const ticked = state.cielVis;
-  const substitutions = substitutionsFor({ status: "computed", dependsOn: [subject] }, notifications);
+  const substitutions = substitutionsFor(
+    { status: "computed", dependsOn: [subject] },
+    notifications,
+  );
   // A Warning on the box, such as a stale fetch, means an unticked box can't
   // be trusted. A ticked box is Exceeded however it got there.
   const untrusted = notifications.some(

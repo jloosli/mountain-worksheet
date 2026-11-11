@@ -11,7 +11,7 @@ export function geodesicDestination(
   startLat: number,
   startLon: number,
   trueBearingDeg: number,
-  distanceNm: number
+  distanceNm: number,
 ): { lat: number; lon: number } {
   const angularDistance = distanceNm / EARTH_RADIUS_NM;
   const lat1 = toRad(startLat);

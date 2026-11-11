@@ -15,11 +15,7 @@ import {
 import { enteredPosition } from "@/utils/areaOfOpsWeather";
 import { isRunwayExceeded } from "@/utils/limitChecks";
 import type { WorksheetEvaluation } from "@/utils/worksheetEvaluation";
-import {
-  fieldSubject,
-  valueSubject,
-  type FieldName,
-} from "@/utils/notifications";
+import { fieldSubject, valueSubject, type FieldName } from "@/utils/notifications";
 import {
   briefingNotes,
   type BriefingNote,
@@ -89,9 +85,7 @@ function Notes({ notes }: { notes: readonly BriefingNote[] }) {
       {notes.map((n) => (
         <li key={n.ref} data-ref={n.ref} data-level={n.level}>
           <span className="font-semibold">{n.ref}.</span>{" "}
-          <span className={`font-semibold ${LEVEL_CLASS[n.level]}`}>
-            {LEVEL_LABEL[n.level]}:
-          </span>{" "}
+          <span className={`font-semibold ${LEVEL_CLASS[n.level]}`}>{LEVEL_LABEL[n.level]}:</span>{" "}
           <span data-message>{n.message}</span>
         </li>
       ))}
@@ -135,7 +129,9 @@ function ValueCell({
   return (
     <td
       className={
-        bad ? `${className} print-keep-color print-margin-bad text-red-700 font-semibold` : className
+        bad
+          ? `${className} print-keep-color print-margin-bad text-red-700 font-semibold`
+          : className
       }
     >
       {format(value.value)}
@@ -163,7 +159,11 @@ function EntryCell({
     ]),
   ].sort((x, y) => x - y);
   return (
-    <td className={range.status === "noVa" ? "py-0.5 text-right italic text-slate-600" : "py-0.5 text-right"}>
+    <td
+      className={
+        range.status === "noVa" ? "py-0.5 text-right italic text-slate-600" : "py-0.5 text-right"
+      }
+    >
       {describeCanyonTurnEntryRange(range)}
       <Refs refs={refs} />
     </td>
@@ -208,7 +208,11 @@ function WorksheetLimits({
         </thead>
         <tbody>
           {checks.map((c) => (
-            <tr key={c.id} data-limit-state={c.state} className="border-b border-slate-200 align-top">
+            <tr
+              key={c.id}
+              data-limit-state={c.state}
+              className="border-b border-slate-200 align-top"
+            >
               <td className="py-0.5 pr-2 font-semibold">{c.name}</td>
               <td className="py-0.5 pr-2">{c.limit}</td>
               <td className={`py-0.5 pr-2 font-semibold ${LIMIT_STATE_CLASS[c.state]}`}>
@@ -263,27 +267,28 @@ const TOLD_ROWS: ReadonlyArray<{
   { label: "Runway remaining (50' obstacle)", key: "runwayRemaining50ft" },
 ];
 
-export default function PrintBriefing({
-  state,
-  evaluation,
-}: PrintBriefingProps) {
+export default function PrintBriefing({ state, evaluation }: PrintBriefingProps) {
   const { notifications, limitChecks, told, climb, maneuvering } = evaluation;
   const { PAs, DAs } = evaluation.pressure;
   const [dep, arr] = state.airport;
   const entered = enteredPosition(state.position);
-  const position = entered
-    ? `${entered[0].toFixed(2)}, ${entered[1].toFixed(2)}`
-    : "—";
+  const position = entered ? `${entered[0].toFixed(2)}, ${entered[1].toFixed(2)}` : "—";
 
   const b = briefingNotes(notifications);
   const notesIn = (section: BriefingSection) => <Notes notes={b.inSection(section)} />;
-  const on = (field: FieldName, index?: number) => <Refs refs={b.refsOn(fieldSubject(field, index))} />;
+  const on = (field: FieldName, index?: number) => (
+    <Refs refs={b.refsOn(fieldSubject(field, index))} />
+  );
 
   /**
    * A pressure/density-altitude cell, marked when its inputs carry a Caution
    * and withheld when one carries a Warning.
    */
-  const altitudeCell = (values: Triple, col: 0 | 1 | 2, kind: "pressureAltitude" | "densityAltitude") => {
+  const altitudeCell = (
+    values: Triple,
+    col: 0 | 1 | 2,
+    kind: "pressureAltitude" | "densityAltitude",
+  ) => {
     const value = pressureColumnValue(values, col, kind, notifications);
     if (value.status === "withheld") {
       return <span className="italic text-slate-600">{value.reason}</span>;
@@ -347,12 +352,10 @@ export default function PrintBriefing({
       <WorksheetLimits checks={limitChecks} briefing={b} />
 
       <div className="mb-1.5">
-        <span className="font-semibold">Pilot:</span>{" "}
-        <span>{dash(state.pilot)}</span>
+        <span className="font-semibold">Pilot:</span> <span>{dash(state.pilot)}</span>
         {on("pilot")}
         <span className="mx-2">·</span>
-        <span className="font-semibold">AC:</span>{" "}
-        <span>{dash(state.acType)}</span>
+        <span className="font-semibold">AC:</span> <span>{dash(state.acType)}</span>
         {on("acType")} / <span>{dash(state.tailN)}</span>
         {on("tailN")}
         <span className="mx-2">·</span>
@@ -362,10 +365,8 @@ export default function PrintBriefing({
           {on("weight")}
         </span>
         <span className="mx-2">·</span>
-        <span className="font-semibold">UTC:</span>{" "}
-        <span>{dash(state.date)}</span>
-        {on("date")}{" "}
-        <span>{dash(state.time)}</span>
+        <span className="font-semibold">UTC:</span> <span>{dash(state.date)}</span>
+        {on("date")} <span>{dash(state.time)}</span>
         {on("time")}
         <span className="mx-2">·</span>
         <span className="font-semibold">Duration:</span>{" "}
@@ -378,19 +379,15 @@ export default function PrintBriefing({
       </div>
 
       <div className="mb-2">
-        <span className="font-semibold">Route:</span>{" "}
-        <span>{dash(dep)}</span>
-        {on("airport", 0)} →{" "}
-        <span>{dash(arr)}</span>
+        <span className="font-semibold">Route:</span> <span>{dash(dep)}</span>
+        {on("airport", 0)} → <span>{dash(arr)}</span>
         {on("airport", 1)}
         <Refs refs={b.refsOn(fieldSubject("airport"))} />
         <span className="mx-2">·</span>
-        <span className="font-semibold">Area:</span>{" "}
-        <span>{dash(state.route)}</span>
+        <span className="font-semibold">Area:</span> <span>{dash(state.route)}</span>
         {on("route")}
         <span className="mx-2">·</span>
-        <span className="font-semibold">Position:</span>{" "}
-        <span>{position}</span>
+        <span className="font-semibold">Position:</span> <span>{position}</span>
         {on("position")}
       </div>
       {notesIn("sortie")}
@@ -419,10 +416,7 @@ export default function PrintBriefing({
                 <tr key={rowLabel} className="border-b border-slate-200">
                   <td className="py-0.5 pr-2">{rowLabel}</td>
                   {WIND_LABELS.map((altLabel, colIdx) => (
-                    <td
-                      key={altLabel}
-                      className="py-0.5 pr-2 text-right last:pr-0"
-                    >
+                    <td key={altLabel} className="py-0.5 pr-2 text-right last:pr-0">
                       {dash(state.wind[rowIdx][colIdx] ?? null)}
                     </td>
                   ))}
@@ -435,19 +429,31 @@ export default function PrintBriefing({
           <div className="font-semibold mb-0.5">AIRMETs</div>
           <ul className="space-y-0.5 text-[8pt]">
             <li>
-              <span className={state.turb ? "print-keep-color text-amber-700 font-semibold" : "text-slate-500"}>
+              <span
+                className={
+                  state.turb ? "print-keep-color text-amber-700 font-semibold" : "text-slate-500"
+                }
+              >
                 Turb {tick(state.turb)}
               </span>
               {on("turb")}
             </li>
             <li>
-              <span className={state.cielVis ? "print-keep-color text-amber-700 font-semibold" : "text-slate-500"}>
+              <span
+                className={
+                  state.cielVis ? "print-keep-color text-amber-700 font-semibold" : "text-slate-500"
+                }
+              >
                 Ceil/Vis {tick(state.cielVis)}
               </span>
               {on("cielVis")}
             </li>
             <li>
-              <span className={state.mtnObsc ? "print-keep-color text-amber-700 font-semibold" : "text-slate-500"}>
+              <span
+                className={
+                  state.mtnObsc ? "print-keep-color text-amber-700 font-semibold" : "text-slate-500"
+                }
+              >
                 Mtn Obsc {tick(state.mtnObsc)}
               </span>
               {on("mtnObsc")}
@@ -472,7 +478,10 @@ export default function PrintBriefing({
             <tr key={row.label} className="border-b border-slate-200">
               <td className="py-0.5 pr-2">{row.label}</td>
               {COLUMNS.map((col) => (
-                <td key={col} className={col === 2 ? "py-0.5 text-right" : "py-0.5 pr-2 text-right"}>
+                <td
+                  key={col}
+                  className={col === 2 ? "py-0.5 text-right" : "py-0.5 pr-2 text-right"}
+                >
                   {row.fmt(state[row.field][col])}
                   {on(row.field, col)}
                 </td>
@@ -515,12 +524,8 @@ export default function PrintBriefing({
             </tr>
             <tr className="border-b border-slate-300">
               <th className="text-left pr-2 font-medium"></th>
-              <th className="text-right pr-2 font-medium">
-                {dash(state.airport[0])}
-              </th>
-              <th className="text-right font-medium">
-                {dash(state.airport[1])}
-              </th>
+              <th className="text-right pr-2 font-medium">{dash(state.airport[0])}</th>
+              <th className="text-right font-medium">{dash(state.airport[1])}</th>
             </tr>
           </thead>
           <tbody>
@@ -612,10 +617,7 @@ export default function PrintBriefing({
                       </td>
                     );
                   })}
-                  <EntryCell
-                    range={entryRanges.find((r) => r.flapSetting === flap)}
-                    briefing={b}
-                  />
+                  <EntryCell range={entryRanges.find((r) => r.flapSetting === flap)} briefing={b} />
                 </tr>
               ))}
             </tbody>
@@ -626,10 +628,7 @@ export default function PrintBriefing({
       {notesIn("general")}
 
       <footer className="border-t border-slate-400 pt-1 mt-1 text-[7pt] text-slate-700 flex justify-between">
-        <span>
-          For reference only — PIC and FRO are responsible for the go/no-go
-          decision.
-        </span>
+        <span>For reference only — PIC and FRO are responsible for the go/no-go decision.</span>
         <span>mountain-worksheet.vercel.app</span>
       </footer>
     </section>

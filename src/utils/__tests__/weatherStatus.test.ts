@@ -32,7 +32,7 @@ describe("hasWeatherData", () => {
     "doesn't count a ticked %s box alone as weather data (#277)",
     (box) => {
       expect(hasWeatherData({ ...empty, [box]: true })).toBe(false);
-    }
+    },
   );
 });
 

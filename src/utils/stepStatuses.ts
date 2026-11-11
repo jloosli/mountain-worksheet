@@ -39,7 +39,7 @@ export interface StepStatusesResult {
 export function deriveStepStatuses(
   state: WorksheetData,
   weatherStatus: WeatherStatus,
-  notifications: readonly Notification[] = []
+  notifications: readonly Notification[] = [],
 ): StepStatusesResult {
   const sortieReady = canFetchWeather(state);
   const weatherComplete = hasWeather(weatherStatus);
@@ -53,11 +53,7 @@ export function deriveStepStatuses(
     counts[step].warning > 0 ? "warning" : status;
 
   const sortie: StepStatus = sortieReady ? "complete" : "active";
-  const weather: StepStatus = weatherComplete
-    ? "complete"
-    : sortieReady
-      ? "active"
-      : "pending";
+  const weather: StepStatus = weatherComplete ? "complete" : sortieReady ? "active" : "pending";
   const decision: StepStatus = weatherComplete ? "active" : "pending";
 
   return {

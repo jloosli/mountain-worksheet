@@ -7,7 +7,7 @@ describe("StepShell", () => {
     const { container } = render(
       <StepShell id="step-sortie" number={1} status="active" title="Sortie Details">
         <p>body</p>
-      </StepShell>
+      </StepShell>,
     );
     expect(container.querySelector("section#step-sortie")).not.toBeNull();
   });
@@ -16,7 +16,7 @@ describe("StepShell", () => {
     render(
       <StepShell id="step-weather" number={2} status="pending" title="Weather">
         <p data-testid="body">child content</p>
-      </StepShell>
+      </StepShell>,
     );
     expect(screen.getByText("2")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Weather", level: 2 })).toBeInTheDocument();
@@ -33,7 +33,7 @@ describe("StepShell", () => {
         subtitle="Who's flying, when, and where"
       >
         body
-      </StepShell>
+      </StepShell>,
     );
     expect(screen.getByText("Who's flying, when, and where")).toBeInTheDocument();
   });
@@ -48,7 +48,7 @@ describe("StepShell", () => {
         badge="Fetched 14:31 UTC"
       >
         body
-      </StepShell>
+      </StepShell>,
     );
     expect(screen.getByText("Fetched 14:31 UTC")).toBeInTheDocument();
   });
@@ -57,35 +57,23 @@ describe("StepShell", () => {
     const { container, rerender } = render(
       <StepShell id="step-sortie" number={1} status="active" title="Sortie Details">
         body
-      </StepShell>
+      </StepShell>,
     );
     expect(container.querySelector('[data-testid="step-spine"]')).not.toBeNull();
 
     rerender(
-      <StepShell
-        id="step-decision"
-        number={3}
-        status="pending"
-        title="Decision"
-        showSpine={false}
-      >
+      <StepShell id="step-decision" number={3} status="pending" title="Decision" showSpine={false}>
         body
-      </StepShell>
+      </StepShell>,
     );
     expect(container.querySelector('[data-testid="step-spine"]')).toBeNull();
   });
 
   it("shows the warning status and its badge in red (a Warning, per ADR 0001)", () => {
     const { container } = render(
-      <StepShell
-        id="step-weather"
-        number={2}
-        status="warning"
-        title="Weather"
-        badge="2 warnings"
-      >
+      <StepShell id="step-weather" number={2} status="warning" title="Weather" badge="2 warnings">
         <p>body</p>
-      </StepShell>
+      </StepShell>,
     );
     const circle = screen.getByText("2", { selector: "div" });
     expect(circle.className).toMatch(/bg-red-/);

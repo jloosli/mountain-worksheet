@@ -9,7 +9,7 @@ describe("Altitudes (pure display)", () => {
         altitudes={[null, null, null]}
         PAs={[null, null, null]}
         DAs={[null, null, null]}
-      />
+      />,
     );
     const dashes = screen.getAllByText("-");
     // 3 altitudes + 3 PAs + 3 DAs = 9 dashes
@@ -22,7 +22,7 @@ describe("Altitudes (pure display)", () => {
         altitudes={[4472, 10000, 4321]}
         PAs={[4500, 10500, 4400]}
         DAs={[6000, 13000, 5800]}
-      />
+      />,
     );
     expect(screen.getByText("4,500")).toBeInTheDocument();
     expect(screen.getByText("10,500")).toBeInTheDocument();
@@ -38,7 +38,7 @@ describe("Altitudes (pure display)", () => {
         altitudes={[1000, 8000, 1000]}
         PAs={[1000, 8000, 1000]}
         DAs={[1500, 9500, 1500]}
-      />
+      />,
     );
     expect(screen.getByText("9,500")).toBeInTheDocument();
 
@@ -47,7 +47,7 @@ describe("Altitudes (pure display)", () => {
         altitudes={[1000, 8000, 1000]}
         PAs={[1000, 8000, 1000]}
         DAs={[1500, 11000, 1500]}
-      />
+      />,
     );
     expect(screen.getByText("11,000")).toBeInTheDocument();
     expect(screen.queryByText("9,500")).not.toBeInTheDocument();
@@ -59,10 +59,8 @@ describe("Altitudes (pure display)", () => {
         altitudes={[4472, 10000, 4321]}
         PAs={[4500, 10500, 4400]}
         DAs={[6000, 13000, 5800]}
-        notifications={[
-          { level: "warning", subject: fieldSubject("temp", 2), message: "stale" },
-        ]}
-      />
+        notifications={[{ level: "warning", subject: fieldSubject("temp", 2), message: "stale" }]}
+      />,
     );
     expect(screen.getByText(/needs arrival temperature checked/)).toBeInTheDocument();
     expect(screen.queryByText("5,800")).not.toBeInTheDocument();

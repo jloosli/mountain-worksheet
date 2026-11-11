@@ -143,11 +143,11 @@ describe("maneuveringCalculations", () => {
 
     it("calculates speeds correctly for C182T", () => {
       const result = calculateManeuveringSpeeds("C182T");
-      
+
       expect(result).not.toBeNull();
       expect(result!.flapSettings).toEqual([0, 30]);
       expect(result!.speeds).toHaveLength(6); // 2 flap settings × 3 bank angles
-      
+
       // Check specific calculations for C182T: flaps [0,30], Vso [51,41]
       // 0° bank = Vso, 45° bank = 1.2×Vso, 60° bank = 1.4×Vso
       expect(result!.speeds).toContainEqual({ flapSetting: 0, bankAngle: 0, speed: 51 });
@@ -160,11 +160,11 @@ describe("maneuveringCalculations", () => {
 
     it("calculates speeds correctly for C172N with multiple flap settings", () => {
       const result = calculateManeuveringSpeeds("C172N");
-      
+
       expect(result).not.toBeNull();
       expect(result!.flapSettings).toEqual([0, 10, 20, 30]);
       expect(result!.speeds).toHaveLength(12); // 4 flap settings × 3 bank angles
-      
+
       // Check specific calculations for C172N: flaps [0,10,20,30], Vso [48,44,40,36]
       expect(result!.speeds).toContainEqual({ flapSetting: 0, bankAngle: 0, speed: 48 });
       expect(result!.speeds).toContainEqual({ flapSetting: 0, bankAngle: 45, speed: 58 }); // 48 * 1.2 = 57.6 ≈ 58

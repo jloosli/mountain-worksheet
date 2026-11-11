@@ -1,9 +1,9 @@
 export type ParsedPosition =
-  | { kind: "decimal";      raw: string; lat: number; lon: number }
-  | { kind: "dms";          raw: string; lat: number; lon: number }
-  | { kind: "ddm";          raw: string; lat: number; lon: number }
-  | { kind: "airport-rd";   raw: string; stationId: string; radial: number; distanceNm: number }
-  | { kind: "vor-rd";       raw: string; stationId: string; radial: number; distanceNm: number }
+  | { kind: "decimal"; raw: string; lat: number; lon: number }
+  | { kind: "dms"; raw: string; lat: number; lon: number }
+  | { kind: "ddm"; raw: string; lat: number; lon: number }
+  | { kind: "airport-rd"; raw: string; stationId: string; radial: number; distanceNm: number }
+  | { kind: "vor-rd"; raw: string; stationId: string; radial: number; distanceNm: number }
   | { kind: "unrecognized"; raw: string };
 
 const round4 = (n: number): number => Math.round(n * 10000) / 10000;
@@ -101,8 +101,13 @@ const tryDmsMinus = (s: string): { lat: number; lon: number } | null => {
 };
 
 const tryRadialDistance = (
-  s: string
-): { kind: "airport-rd" | "vor-rd"; stationId: string; radial: number; distanceNm: number } | null => {
+  s: string,
+): {
+  kind: "airport-rd" | "vor-rd";
+  stationId: string;
+  radial: number;
+  distanceNm: number;
+} | null => {
   // Letters 3 or 4, slash, exactly 3-digit radial, slash, distance (int or decimal)
   const m = s.match(/^([A-Z]{3,4})\/(\d{3})\/(\d+(?:\.\d+)?)$/);
   if (!m) return null;

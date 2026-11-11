@@ -15,12 +15,8 @@ jest.mock("@headlessui/react", () => ({
   Dialog: ({ children, show }: { children: React.ReactNode; show: boolean }) =>
     show ? <div data-testid="modal">{children}</div> : null,
   Transition: {
-    Root: ({ children }: { children: React.ReactNode }) => (
-      <div>{children}</div>
-    ),
-    Child: ({ children }: { children: React.ReactNode }) => (
-      <div>{children}</div>
-    ),
+    Root: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+    Child: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   },
 }));
 

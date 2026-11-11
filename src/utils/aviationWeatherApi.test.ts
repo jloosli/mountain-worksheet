@@ -67,7 +67,7 @@ describe("Aviation Weather API", () => {
             Accept: "application/json",
             "User-Agent": "Mountain-Worksheet/1.0",
           },
-        })
+        }),
       );
 
       expect(result).toEqual(mockMETARResponse);
@@ -83,7 +83,7 @@ describe("Aviation Weather API", () => {
 
       expect(fetch).toHaveBeenCalledWith(
         expect.stringContaining("ids=KORD%2CKLAX%2CKJFK"),
-        expect.any(Object)
+        expect.any(Object),
       );
     });
 
@@ -95,7 +95,7 @@ describe("Aviation Weather API", () => {
       });
 
       await expect(getMETAR(["INVALID"], 1, 0)).rejects.toThrow(
-        "Not Found - Resource or data not available"
+        "Not Found - Resource or data not available",
       );
     });
   });
@@ -130,7 +130,7 @@ describe("Aviation Weather API", () => {
             Accept: "application/json",
             "User-Agent": "Mountain-Worksheet/1.0",
           },
-        })
+        }),
       );
 
       expect(result).toEqual(mockTAFResponse);
@@ -170,9 +170,7 @@ describe("Aviation Weather API", () => {
         text: async () => "Bad request",
       });
 
-      await expect(getTAF(["KORD"], 0)).rejects.toThrow(
-        "Bad Request - Invalid parameters"
-      );
+      await expect(getTAF(["KORD"], 0)).rejects.toThrow("Bad Request - Invalid parameters");
     });
   });
 
@@ -222,7 +220,7 @@ describe("Aviation Weather API", () => {
             Accept: "application/json",
             "User-Agent": "Mountain-Worksheet/1.0",
           },
-        })
+        }),
       );
 
       expect(result).toEqual(mockAirportResponse);
@@ -257,7 +255,7 @@ describe("Aviation Weather API", () => {
             Accept: "application/json",
             "User-Agent": "Mountain-Worksheet/1.0",
           },
-        })
+        }),
       );
 
       const calledUrl = (fetch as jest.Mock).mock.calls[0][0] as string;
@@ -367,7 +365,7 @@ describe("Aviation Weather API", () => {
           (fetch as jest.Mock).mockResolvedValueOnce(
             i === failingCall
               ? { ok: false, status: 400, text: async () => "Bad request" }
-              : { ok: true, json: async () => body }
+              : { ok: true, json: async () => body },
           );
         });
 
@@ -384,7 +382,7 @@ describe("Aviation Weather API", () => {
         expect(result[key]).toEqual([]);
         // So an empty result can be told apart from "nothing found" (#216).
         expect(result.failed).toEqual([key]);
-      }
+      },
     );
 
     it("should handle partial failures in batch requests", async () => {
@@ -436,9 +434,7 @@ describe("Aviation Weather API", () => {
         text: async () => "Bad request",
       });
 
-      await expect(getMETAR(["INVALID"], 1, 0)).rejects.toThrow(
-        "Bad Request - Invalid parameters"
-      );
+      await expect(getMETAR(["INVALID"], 1, 0)).rejects.toThrow("Bad Request - Invalid parameters");
       expect(fetch).toHaveBeenCalledTimes(1);
     });
 
@@ -450,7 +446,7 @@ describe("Aviation Weather API", () => {
       });
 
       await expect(getMETAR(["INVALID"], 1, 0)).rejects.toThrow(
-        "Not Found - Resource or data not available"
+        "Not Found - Resource or data not available",
       );
       expect(fetch).toHaveBeenCalledTimes(1);
     });
@@ -462,17 +458,13 @@ describe("Aviation Weather API", () => {
         text: async () => "Bad request",
       });
 
-      await expect(getMETAR(["KORD"], 1, 0)).rejects.toThrow(
-        "Bad Request - Invalid parameters"
-      );
+      await expect(getMETAR(["KORD"], 1, 0)).rejects.toThrow("Bad Request - Invalid parameters");
     });
   });
 
   describe("debouncedRequest", () => {
     it("should handle errors in debounced requests", async () => {
-      const mockRequest = jest
-        .fn()
-        .mockRejectedValue(new Error("Request failed"));
+      const mockRequest = jest.fn().mockRejectedValue(new Error("Request failed"));
 
       const promise = debouncedRequest(mockRequest, 1000);
 

@@ -1,10 +1,6 @@
 // src/utils/stepStatuses.test.ts
 import { deriveStepStatuses, formatStepBadge } from "./stepStatuses";
-import {
-  fieldSubject,
-  stepSubject,
-  type Notification,
-} from "@/utils/notifications";
+import { fieldSubject, stepSubject, type Notification } from "@/utils/notifications";
 import type { WorksheetData } from "@/utils/types";
 import { unverifiedWeatherNotifications } from "@/utils/unverifiedWeather";
 
@@ -124,7 +120,11 @@ describe("deriveStepStatuses", () => {
 
   it("doesn't treat a ticked advisory box alone as fetched weather, though it raises the Unverified weather Caution (#277)", () => {
     const boxOnly = { ...readyForWeather, cielVis: true };
-    const result = deriveStepStatuses(boxOnly, "none", unverifiedWeatherNotifications(boxOnly, "none"));
+    const result = deriveStepStatuses(
+      boxOnly,
+      "none",
+      unverifiedWeatherNotifications(boxOnly, "none"),
+    );
     expect(result.weather).toBe("active");
     expect(result.decision).toBe("pending");
     expect(result.counts.weather.caution).toBe(1);
@@ -166,9 +166,7 @@ describe("deriveStepStatuses", () => {
     const notifications: Notification[] = [
       { level: "caution", subject: stepSubject("weather"), message: "b" },
     ];
-    expect(
-      deriveStepStatuses(readyForWeather, "fetched", notifications).weather
-    ).toBe("complete");
+    expect(deriveStepStatuses(readyForWeather, "fetched", notifications).weather).toBe("complete");
   });
 
   it("marks the weather step `warning` after a total fetch failure, before any weather is applied", () => {
@@ -189,9 +187,7 @@ describe("formatStepBadge", () => {
 
   it("counts Warnings and Cautions", () => {
     expect(formatStepBadge({ warning: 1, caution: 0, advisory: 0 })).toBe("1 warning");
-    expect(formatStepBadge({ warning: 2, caution: 1, advisory: 5 })).toBe(
-      "2 warnings · 1 caution"
-    );
+    expect(formatStepBadge({ warning: 2, caution: 1, advisory: 5 })).toBe("2 warnings · 1 caution");
     expect(formatStepBadge({ warning: 0, caution: 3, advisory: 0 })).toBe("3 cautions");
   });
 });

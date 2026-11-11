@@ -3,11 +3,7 @@ import { briefingNotes } from "../briefingNotes";
 import { substitutionsFor } from "../provenance";
 import { windEntryKey } from "../rejectedEntries";
 import type { WorksheetData } from "../types";
-import {
-  EMPTY_SESSION,
-  evaluateWorksheet,
-  type WorksheetSession,
-} from "../worksheetEvaluation";
+import { EMPTY_SESSION, evaluateWorksheet, type WorksheetSession } from "../worksheetEvaluation";
 import type { LimitCheck } from "../limitChecks";
 
 const emptyState = (): WorksheetData => ({
@@ -121,10 +117,16 @@ describe("evaluateWorksheet — Weight limit check", () => {
   });
 
   it("is Within limit at 89.9% and Exceeded at 90.0%", () => {
-    const under = check(evaluateWorksheet(sortie({ weight: 2787 }), fetchedSession()).limitChecks, "weight");
+    const under = check(
+      evaluateWorksheet(sortie({ weight: 2787 }), fetchedSession()).limitChecks,
+      "weight",
+    );
     expect(under.state).toBe("within");
     expect(under.points[0].value).toBe("2,787 / 3,100 lbs (89.9%)");
-    const at = check(evaluateWorksheet(sortie({ weight: 2790 }), fetchedSession()).limitChecks, "weight");
+    const at = check(
+      evaluateWorksheet(sortie({ weight: 2790 }), fetchedSession()).limitChecks,
+      "weight",
+    );
     expect(at.state).toBe("exceeded");
     expect(at.points[0].value).toBe("2,790 / 3,100 lbs (90%)");
   });
@@ -263,9 +265,9 @@ describe("evaluateWorksheet — session", () => {
     const fetchedState = sortie();
     const fetch = fetchFor(fetchedState);
     const session = fetchedSession({ lastFetch: fetch, lastApplied: fetch });
-    expect(evaluateWorksheet(fetchedState, session).told.departure.values.takeoffGroundRoll.status).toBe(
-      "computed",
-    );
+    expect(
+      evaluateWorksheet(fetchedState, session).told.departure.values.takeoffGroundRoll.status,
+    ).toBe("computed");
 
     const moved = { ...fetchedState, airport: ["KSLC", "KXYZ"] as [string, string] };
     const e = evaluateWorksheet(moved, session);
@@ -294,7 +296,11 @@ describe("evaluateWorksheet — session", () => {
   it("evaluates an empty worksheet without notifications", () => {
     const e = evaluateWorksheet(emptyState(), EMPTY_SESSION);
     expect(e.notifications).toEqual([]);
-    expect(e.stepStatuses).toMatchObject({ sortie: "active", weather: "pending", decision: "pending" });
+    expect(e.stepStatuses).toMatchObject({
+      sortie: "active",
+      weather: "pending",
+      decision: "pending",
+    });
   });
 });
 
@@ -327,7 +333,9 @@ describe("evaluateWorksheet — weather status (#285)", () => {
     const e = evaluateWorksheet(sortie(), EMPTY_SESSION);
     expect(e.weatherStatus).toBe("unverified");
     expect(e.stepStatuses.weather).toBe("complete");
-    expect(e.notifications.filter((n) => /came from a shared link/.test(n.message))).toHaveLength(1);
+    expect(e.notifications.filter((n) => /came from a shared link/.test(n.message))).toHaveLength(
+      1,
+    );
   });
 
   it("is stale once a fetch input changes, without an Unverified weather Caution", () => {

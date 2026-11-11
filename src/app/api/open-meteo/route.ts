@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
     if (!searchParams.get("latitude") || !searchParams.get("longitude")) {
       return NextResponse.json(
         { error: "Missing required latitude/longitude parameters" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -44,10 +44,7 @@ export async function GET(request: NextRequest) {
       if (Number.isFinite(startMs) && Number.isFinite(endMs)) {
         const maxMs = MAX_WINDOW_DAYS * 24 * 3600 * 1000;
         if (endMs - startMs > maxMs) {
-          upstreamParams.set(
-            "end_date",
-            dateOnly(new Date(startMs + maxMs))
-          );
+          upstreamParams.set("end_date", dateOnly(new Date(startMs + maxMs)));
         }
       }
     }
@@ -65,7 +62,7 @@ export async function GET(request: NextRequest) {
           status: response.status,
           statusText: response.statusText,
         },
-        { status: response.status }
+        { status: response.status },
       );
     }
 
@@ -77,9 +74,6 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Open-Meteo proxy error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

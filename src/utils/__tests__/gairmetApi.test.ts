@@ -1,9 +1,4 @@
-import {
-  pointInPolygon,
-  classifyAirmets,
-  fetchGAirmets,
-  type GAirmetFeature,
-} from "../gairmetApi";
+import { pointInPolygon, classifyAirmets, fetchGAirmets, type GAirmetFeature } from "../gairmetApi";
 import { fieldSubject, stepSubject } from "../notifications";
 
 describe("pointInPolygon", () => {
@@ -66,7 +61,7 @@ describe("classifyAirmets", () => {
     const r = classifyAirmets(
       [turbAirmet, mtnObscAirmet, ifrAirmet],
       [41, -112],
-      new Date("2026-05-12T16:00:00Z")
+      new Date("2026-05-12T16:00:00Z"),
     );
     expect(r.turb).toBe(true);
     expect(r.mtnObsc).toBe(true);
@@ -86,7 +81,7 @@ describe("classifyAirmets", () => {
     const r = classifyAirmets(
       [turbAirmet, mtnObscAirmet],
       [50, -100],
-      new Date("2026-05-12T16:00:00Z")
+      new Date("2026-05-12T16:00:00Z"),
     );
     expect(r.turb).toBe(false);
     expect(r.mtnObsc).toBe(false);
@@ -109,20 +104,12 @@ describe("classifyAirmets", () => {
         { lat: "0", lon: "0" },
       ],
     };
-    const r = classifyAirmets(
-      [closer, farther],
-      [41, -112],
-      new Date("2026-05-12T16:00:00Z")
-    );
+    const r = classifyAirmets([closer, farther], [41, -112], new Date("2026-05-12T16:00:00Z"));
     expect(r.turb).toBe(true);
   });
 
   it("warns when no AIRMET set within 3 hr of midTime", () => {
-    const r = classifyAirmets(
-      [turbAirmet],
-      [41, -112],
-      new Date("2026-06-01T00:00:00Z")
-    );
+    const r = classifyAirmets([turbAirmet], [41, -112], new Date("2026-06-01T00:00:00Z"));
     expect(r.notifications).toEqual([
       {
         level: "warning",
@@ -133,20 +120,12 @@ describe("classifyAirmets", () => {
   });
 
   it("emits the IFR threshold-mismatch note whenever IFR was classified", () => {
-    const r = classifyAirmets(
-      [ifrAirmet],
-      [41, -112],
-      new Date("2026-05-12T16:00:00Z")
-    );
+    const r = classifyAirmets([ifrAirmet], [41, -112], new Date("2026-05-12T16:00:00Z"));
     expect(r.notifications.some((n) => /1000 ft \/ 3 sm/i.test(n.message))).toBe(true);
   });
 
   it("does not emit the IFR threshold-mismatch note when no IFR AIRMET was within threshold", () => {
-    const r = classifyAirmets(
-      [turbAirmet],
-      [41, -112],
-      new Date("2026-05-12T16:00:00Z")
-    );
+    const r = classifyAirmets([turbAirmet], [41, -112], new Date("2026-05-12T16:00:00Z"));
     expect(r.notifications.some((n) => /1000 ft \/ 3 sm/i.test(n.message))).toBe(false);
   });
 
@@ -154,22 +133,14 @@ describe("classifyAirmets", () => {
     // e.g. only ICE / LLWS hazards present, or empty array. The fetch succeeded
     // so we should clear stale flags rather than leave them via null sentinel.
     const iceAirmet: GAirmetFeature = { ...turbAirmet, hazard: "ICE" };
-    const r = classifyAirmets(
-      [iceAirmet],
-      [41, -112],
-      new Date("2026-05-12T16:00:00Z")
-    );
+    const r = classifyAirmets([iceAirmet], [41, -112], new Date("2026-05-12T16:00:00Z"));
     expect(r.turb).toBe(false);
     expect(r.cielVis).toBe(false);
     expect(r.mtnObsc).toBe(false);
   });
 
   it("clears flags to false on an empty G-AIRMET response", () => {
-    const r = classifyAirmets(
-      [],
-      [41, -112],
-      new Date("2026-05-12T16:00:00Z")
-    );
+    const r = classifyAirmets([], [41, -112], new Date("2026-05-12T16:00:00Z"));
     expect(r.turb).toBe(false);
     expect(r.cielVis).toBe(false);
     expect(r.mtnObsc).toBe(false);
@@ -183,7 +154,7 @@ describe("classifyAirmets", () => {
     const r = classifyAirmets(
       [staleTurb, mtnObscAirmet],
       [41, -112],
-      new Date("2026-05-12T16:00:00Z")
+      new Date("2026-05-12T16:00:00Z"),
     );
     expect(r.turb).toBe(false);
     expect(r.mtnObsc).toBe(true);
@@ -198,11 +169,7 @@ describe("classifyAirmets", () => {
 
   it("ignores TURB-HI: turbulence at FL180 and above does not set the turbulence flag", () => {
     const turbHi: GAirmetFeature = { ...turbAirmet, hazard: "TURB-HI" };
-    const r = classifyAirmets(
-      [turbHi, ifrAirmet],
-      [41, -112],
-      new Date("2026-05-12T16:00:00Z")
-    );
+    const r = classifyAirmets([turbHi, ifrAirmet], [41, -112], new Date("2026-05-12T16:00:00Z"));
     expect(r.turb).toBe(false);
     expect(r.cielVis).toBe(true);
   });
@@ -214,18 +181,14 @@ describe("classifyAirmets", () => {
         { ...turbAirmet, hazard: "MTN OBSC" },
       ],
       [41, -112],
-      new Date("2026-05-12T16:00:00Z")
+      new Date("2026-05-12T16:00:00Z"),
     );
     expect(r.turb).toBe(false);
     expect(r.mtnObsc).toBe(false);
   });
 
   it("raises an Advisory on the weather step when flags are cleared because no relevant G-AIRMETs are in effect", () => {
-    const r = classifyAirmets(
-      [],
-      [41, -112],
-      new Date("2026-05-12T16:00:00Z")
-    );
+    const r = classifyAirmets([], [41, -112], new Date("2026-05-12T16:00:00Z"));
     expect(r.notifications).toEqual([
       {
         level: "advisory",

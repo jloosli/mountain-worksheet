@@ -24,7 +24,7 @@ describe("GET /api/open-meteo", () => {
     });
 
     const req = new NextRequest(
-      "http://localhost/api/open-meteo?latitude=40.5&longitude=-112&hourly=temperature_700hPa&start_date=2026-05-12&end_date=2026-05-12"
+      "http://localhost/api/open-meteo?latitude=40.5&longitude=-112&hourly=temperature_700hPa&start_date=2026-05-12&end_date=2026-05-12",
     );
     const res = await GET(req);
     const body = await res.json();
@@ -51,9 +51,7 @@ describe("GET /api/open-meteo", () => {
       headers: { get: () => "application/json" },
       text: async () => "upstream down",
     });
-    const req = new NextRequest(
-      "http://localhost/api/open-meteo?latitude=40.5&longitude=-112"
-    );
+    const req = new NextRequest("http://localhost/api/open-meteo?latitude=40.5&longitude=-112");
     const res = await GET(req);
     expect(res.status).toBe(503);
   });
@@ -65,7 +63,7 @@ describe("GET /api/open-meteo", () => {
       json: async () => ({}),
     });
     const req = new NextRequest(
-      "http://localhost/api/open-meteo?latitude=40.5&longitude=-112&hourly=temperature_700hPa&models=ecmwf_ifs04&api_key=leak"
+      "http://localhost/api/open-meteo?latitude=40.5&longitude=-112&hourly=temperature_700hPa&models=ecmwf_ifs04&api_key=leak",
     );
     await GET(req);
     const calledUrl = (fetch as jest.Mock).mock.calls[0][0] as string;
@@ -82,7 +80,7 @@ describe("GET /api/open-meteo", () => {
       json: async () => ({}),
     });
     const req = new NextRequest(
-      "http://localhost/api/open-meteo?latitude=40.5&longitude=-112&start_date=2026-05-12&end_date=2026-12-31"
+      "http://localhost/api/open-meteo?latitude=40.5&longitude=-112&start_date=2026-05-12&end_date=2026-12-31",
     );
     await GET(req);
     const calledUrl = (fetch as jest.Mock).mock.calls[0][0] as string;
@@ -98,7 +96,7 @@ describe("GET /api/open-meteo", () => {
       json: async () => ({}),
     });
     const req = new NextRequest(
-      "http://localhost/api/open-meteo?latitude=40.5&longitude=-112&start_date=2026-05-12&end_date=2026-05-14"
+      "http://localhost/api/open-meteo?latitude=40.5&longitude=-112&start_date=2026-05-12&end_date=2026-05-14",
     );
     await GET(req);
     const calledUrl = (fetch as jest.Mock).mock.calls[0][0] as string;

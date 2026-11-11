@@ -13,13 +13,9 @@ const altitudeToPressureAltitude = (altitude: number, altimeter: number) => {
   return altitude + (29.92 - altimeter) * 1000;
 };
 
-const pressureAltitudeToDensityAltitude = (
-  pressureAltitude: number,
-  temperatureC: number
-) => {
+const pressureAltitudeToDensityAltitude = (pressureAltitude: number, temperatureC: number) => {
   const standardTempC = 15 - (pressureAltitude / 1000) * 2;
-  const densityAltitude =
-    pressureAltitude + 120 * (temperatureC - standardTempC);
+  const densityAltitude = pressureAltitude + 120 * (temperatureC - standardTempC);
   return densityAltitude;
 };
 
@@ -28,11 +24,9 @@ function getRateOfClimb(
   table: InterpolationTable,
   pressureAltitude: number,
   outsideAirTemp: number,
-  options: InterpolationOptions = {}
+  options: InterpolationOptions = {},
 ): number {
-  return Math.round(
-    bilinearInterpolate(table, pressureAltitude, outsideAirTemp, options)
-  );
+  return Math.round(bilinearInterpolate(table, pressureAltitude, outsideAirTemp, options));
 }
 
 /**
@@ -70,10 +64,7 @@ function calculateVra(aircraft: Aircraft | null): number | null {
  * @param altitude - The pressure altitude in feet
  * @returns The calculated Vx speed in knots, rounded to nearest whole number, or null if Vx data is missing
  */
-function calculateVx(
-  aircraft: Aircraft | null,
-  altitude: number
-): number | null {
+function calculateVx(aircraft: Aircraft | null, altitude: number): number | null {
   if (!aircraft || !aircraft.Vx) {
     return null;
   }
@@ -130,8 +121,7 @@ function calculateVx(
     return Math.round(speed1);
   }
 
-  const speed =
-    speed1 + ((speed2 - speed1) * (altitude - alt1)) / (alt2 - alt1);
+  const speed = speed1 + ((speed2 - speed1) * (altitude - alt1)) / (alt2 - alt1);
   return Math.round(speed);
 }
 

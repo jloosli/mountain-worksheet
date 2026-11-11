@@ -1,10 +1,6 @@
 import { selectAirportWeather } from "../airportTimeWeather";
 import { fieldSubject } from "../notifications";
-import type {
-  METARResponse,
-  TAFForecast,
-  TAFResponse,
-} from "../aviationWeatherApi";
+import type { METARResponse, TAFForecast, TAFResponse } from "../aviationWeatherApi";
 
 const baseMetar: METARResponse = {
   icaoId: "KSLC",
@@ -115,10 +111,7 @@ describe("selectAirportWeather", () => {
     expect(result.source).toBe("none");
     expect(result.temp).toBeNull();
     expect(result.altimeter).toBeNull();
-    expect(result.notifications.map((n) => n.level)).toEqual([
-      "warning",
-      "warning",
-    ]);
+    expect(result.notifications.map((n) => n.level)).toEqual(["warning", "warning"]);
   });
 
   it("names the requested airport ID when neither METAR nor TAF exists (issue #220)", () => {
@@ -205,7 +198,7 @@ describe("selectAirportWeather", () => {
         level: "advisory",
         subject: fieldSubject("temp", 0),
         message: expect.stringMatching(/could not be parsed/i),
-      })
+      }),
     );
   });
 
@@ -249,9 +242,7 @@ describe("selectAirportWeather", () => {
     const result = selectAirportWeather(baseMetar, tafWithNullAltim, requested, "KSLC");
     expect(result.source).toBe("taf-nearest");
     const on = (field: "temp" | "altimeter") =>
-      result.notifications.filter(
-        (n) => n.subject.kind === "field" && n.subject.field === field
-      );
+      result.notifications.filter((n) => n.subject.kind === "field" && n.subject.field === field);
     expect(on("temp")).toEqual([
       expect.objectContaining({ message: expect.stringMatching(/using nearest TAF period/) }),
     ]);

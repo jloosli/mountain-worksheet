@@ -47,13 +47,16 @@ body {
 
 @media print {
   /* Force two-color rendering and remove dark-mode backgrounds. */
-  html, body {
+  html,
+  body {
     background: #ffffff !important;
     color: #0f172a !important;
   }
 
   /* Suppress effects that don't print well. */
-  *, *::before, *::after {
+  *,
+  *::before,
+  *::after {
     box-shadow: none !important;
     text-shadow: none !important;
     animation: none !important;

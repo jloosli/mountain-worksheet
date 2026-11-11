@@ -2,11 +2,7 @@ import { fetchWorksheetWeather } from "@/utils/weatherFetch";
 import { getWeatherDataBatch } from "@/utils/aviationWeatherApi";
 import { fetchPointForecast } from "@/utils/openMeteoApi";
 import { fetchGAirmets } from "@/utils/gairmetApi";
-import {
-  fieldSubject,
-  subjectKey,
-  type Notification,
-} from "@/utils/notifications";
+import { fieldSubject, subjectKey, type Notification } from "@/utils/notifications";
 import { fetchNotifications } from "@/utils/weatherSession";
 import type { WorksheetData } from "@/utils/types";
 
@@ -148,16 +144,15 @@ describe("fetchWorksheetWeather", () => {
         "field:altimeter.2",
         "field:rwy.1",
         "field:altitude.2",
-      ])
+      ]),
     );
     expect(warned).not.toContain("field:temp.0");
 
     // The kept elevation isn't blank, so its Warning doesn't show; the
     // blanked runway's does.
-    const shown = fetchNotifications(
-      { ...worksheet, ...data } as WorksheetData,
-      result
-    ).map((n) => subjectKey(n.subject));
+    const shown = fetchNotifications({ ...worksheet, ...data } as WorksheetData, result).map((n) =>
+      subjectKey(n.subject),
+    );
     expect(shown).not.toContain("field:altitude.2");
     expect(shown).toContain("field:rwy.1");
   });
@@ -178,9 +173,7 @@ describe("fetchWorksheetWeather", () => {
 
     // The pilot enters the arrival temperature: that Warning goes away.
     const fixed = { ...state, temp: [21, state.temp[1], 12] as WorksheetData["temp"] };
-    expect(subjectsAt(fetchNotifications(fixed, result), "warning")).not.toContain(
-      "field:temp.2"
-    );
+    expect(subjectsAt(fetchNotifications(fixed, result), "warning")).not.toContain("field:temp.2");
   });
 
   it("passes on METAR/TAF/airport request failures", async () => {
@@ -203,11 +196,7 @@ describe("fetchWorksheetWeather", () => {
     mockPoint.mockRejectedValue(new Error("network down"));
     const { data, result } = await fetchWorksheetWeather(worksheet);
 
-    expect(data?.wind).toEqual([
-      Array(5).fill(null),
-      Array(5).fill(null),
-      Array(5).fill(null),
-    ]);
+    expect(data?.wind).toEqual([Array(5).fill(null), Array(5).fill(null), Array(5).fill(null)]);
     expect(data?.altimeter?.[1]).toBeNull();
     expect(result.notifications).toContainEqual({
       level: "warning",
@@ -215,7 +204,7 @@ describe("fetchWorksheetWeather", () => {
       message: expect.stringMatching(/Open-Meteo.*network down/),
     });
     expect(subjectsAt(result.notifications, "warning")).toEqual(
-      expect.arrayContaining(["field:temp.1", "field:altimeter.1"])
+      expect.arrayContaining(["field:temp.1", "field:altimeter.1"]),
     );
   });
 
@@ -259,7 +248,7 @@ describe("fetchWorksheetWeather", () => {
       expect.objectContaining({
         level: "warning",
         subject: fieldSubject("position"),
-      })
+      }),
     );
   });
 
@@ -303,10 +292,7 @@ describe("fetchWorksheetWeather", () => {
       temp: 18,
       altim: 1016.9,
     };
-    const directory: Record<
-      string,
-      { airport?: object; metar?: object; taf?: object }
-    > = {
+    const directory: Record<string, { airport?: object; metar?: object; taf?: object }> = {
       KORD: { airport: kordAirport, metar: kordMetar },
       KBOI: { airport: kboiAirport, metar: kboiMetar },
     };
@@ -348,7 +334,7 @@ describe("fetchWorksheetWeather", () => {
         expect.objectContaining({
           level: "advisory",
           subject: fieldSubject("airport", 1),
-        })
+        }),
       );
     });
 
@@ -362,9 +348,7 @@ describe("fetchWorksheetWeather", () => {
       expect(result.notifications).toContainEqual({
         level: "caution",
         subject: fieldSubject("airport", 1),
-        message: expect.stringMatching(
-          /XQZ or KXQZ.*check the ID.*elevation, runway.*weather/i
-        ),
+        message: expect.stringMatching(/XQZ or KXQZ.*check the ID.*elevation, runway.*weather/i),
       });
       // Its weather needs input: blank, with no Warning of its own. Its
       // runway and elevation keep whatever the worksheet held (#227).
@@ -380,12 +364,10 @@ describe("fetchWorksheetWeather", () => {
 
       // The Caution holds until the pilot changes the ID.
       const state = { ...worksheet, ...data } as WorksheetData;
-      expect(subjectsAt(fetchNotifications(state, result), "caution")).toContain(
-        "field:airport.1"
-      );
+      expect(subjectsAt(fetchNotifications(state, result), "caution")).toContain("field:airport.1");
       const retyped = { ...state, airport: ["KORD", "XQY"] as [string, string] };
       expect(subjectsAt(fetchNotifications(retyped, result), "caution")).not.toContain(
-        "field:airport.1"
+        "field:airport.1",
       );
     });
 
@@ -401,7 +383,7 @@ describe("fetchWorksheetWeather", () => {
           level: "caution",
           subject: fieldSubject("airport", 0),
           message: expect.stringMatching(/No airport found for KQQQ\./),
-        })
+        }),
       );
     });
 
@@ -424,8 +406,7 @@ describe("fetchWorksheetWeather", () => {
       expect(result.notifications).toContainEqual({
         level: "advisory",
         subject: fieldSubject("airport", 1),
-        message:
-          "KXNR doesn't report weather; enter temperature and altimeter manually",
+        message: "KXNR doesn't report weather; enter temperature and altimeter manually",
       });
       expect(data?.temp?.[2]).toBeNull();
       expect(data?.altimeter?.[2]).toBeNull();
@@ -438,8 +419,14 @@ describe("fetchWorksheetWeather", () => {
     it.each(["KORD", "PAJN", "PHNL"])(
       "never modifies %s, an ID that already resolves",
       async (id) => {
-        directory.PAJN = { airport: { ...kordAirport, icaoId: "PAJN" }, metar: { ...kordMetar, icaoId: "PAJN" } };
-        directory.PHNL = { airport: { ...kordAirport, icaoId: "PHNL" }, metar: { ...kordMetar, icaoId: "PHNL" } };
+        directory.PAJN = {
+          airport: { ...kordAirport, icaoId: "PAJN" },
+          metar: { ...kordMetar, icaoId: "PAJN" },
+        };
+        directory.PHNL = {
+          airport: { ...kordAirport, icaoId: "PHNL" },
+          metar: { ...kordMetar, icaoId: "PHNL" },
+        };
         const { data, result } = await fetchWorksheetWeather({
           ...worksheet,
           airport: [id, "KORD"],
@@ -450,9 +437,9 @@ describe("fetchWorksheetWeather", () => {
         expect(data?.airport).toEqual([id, "KORD"]);
         expect(mockBatch).toHaveBeenCalledTimes(1);
         expect(
-          result.notifications.filter((n) => subjectKey(n.subject).startsWith("field:airport"))
+          result.notifications.filter((n) => subjectKey(n.subject).startsWith("field:airport")),
         ).toEqual([]);
-      }
+      },
     );
 
     it("never applies an ambiguous correction", async () => {
@@ -491,7 +478,7 @@ describe("fetchWorksheetWeather", () => {
       expect(mockBatch).toHaveBeenCalledTimes(1);
       expect(data?.airport).toEqual(["KORD", "BOI"]);
       expect(
-        result.notifications.filter((n) => subjectKey(n.subject).startsWith("field:airport"))
+        result.notifications.filter((n) => subjectKey(n.subject).startsWith("field:airport")),
       ).toEqual([]);
       // Unfilled fields are Warnings, as for any Partial fetch.
       expect(subjectsAt(result.notifications, "warning")).toContain("field:rwy.1");
@@ -500,8 +487,14 @@ describe("fetchWorksheetWeather", () => {
     it("does not apply a correction when looking it up fails", async () => {
       mockBatch.mockImplementation(async (ids: string[]) =>
         ids.includes("KBOI")
-          ? { metar: [], taf: [], airport: [], notifications: [], failed: ["metar", "taf", "airport"] }
-          : { metar: [kordMetar], taf: [], airport: [kordAirport], notifications: [] }
+          ? {
+              metar: [],
+              taf: [],
+              airport: [],
+              notifications: [],
+              failed: ["metar", "taf", "airport"],
+            }
+          : { metar: [kordMetar], taf: [], airport: [kordAirport], notifications: [] },
       );
       const { data, result } = await fetchWorksheetWeather({
         ...worksheet,
@@ -509,7 +502,7 @@ describe("fetchWorksheetWeather", () => {
       });
       expect(data?.airport).toEqual(["KORD", "BOI"]);
       expect(
-        result.notifications.filter((n) => subjectKey(n.subject).startsWith("field:airport"))
+        result.notifications.filter((n) => subjectKey(n.subject).startsWith("field:airport")),
       ).toEqual([]);
     });
 
@@ -521,7 +514,7 @@ describe("fetchWorksheetWeather", () => {
       expect(data?.airport).toEqual(["KBOI", "KBOI"]);
       expect(mockBatch.mock.calls.map((c) => c[0])).toEqual([["BOI"], ["KBOI"]]);
       expect(subjectsAt(result.notifications, "advisory")).toEqual(
-        expect.arrayContaining(["field:airport.0", "field:airport.1"])
+        expect.arrayContaining(["field:airport.0", "field:airport.1"]),
       );
     });
   });

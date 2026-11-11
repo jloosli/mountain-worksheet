@@ -44,10 +44,8 @@ describe("buildSkyvectorUrl", () => {
         departure: "KPVU",
         arrival: "KSGU",
         operating: [40.5023, -110.7456],
-      })
-    ).toBe(
-      "https://skyvector.com/?fpl=KPVU%20403008N1104444W%20KSGU"
-    );
+      }),
+    ).toBe("https://skyvector.com/?fpl=KPVU%20403008N1104444W%20KSGU");
   });
 
   it("omits operating waypoint when operating tuple has both nulls", () => {
@@ -56,7 +54,7 @@ describe("buildSkyvectorUrl", () => {
         departure: "KPVU",
         arrival: "KSGU",
         operating: [null, null],
-      })
+      }),
     ).toBe("https://skyvector.com/?fpl=KPVU%20KSGU");
   });
 
@@ -66,19 +64,19 @@ describe("buildSkyvectorUrl", () => {
         departure: "KPVU",
         arrival: "KSGU",
         operating: [40.5, null],
-      })
+      }),
     ).toBe("https://skyvector.com/?fpl=KPVU%20KSGU");
   });
 
   it("returns null when departure is empty", () => {
     expect(
-      buildSkyvectorUrl({ departure: "", arrival: "KSGU", operating: [null, null] })
+      buildSkyvectorUrl({ departure: "", arrival: "KSGU", operating: [null, null] }),
     ).toBeNull();
   });
 
   it("returns null when arrival is whitespace-only", () => {
     expect(
-      buildSkyvectorUrl({ departure: "KPVU", arrival: "   ", operating: [null, null] })
+      buildSkyvectorUrl({ departure: "KPVU", arrival: "   ", operating: [null, null] }),
     ).toBeNull();
   });
 
@@ -88,7 +86,7 @@ describe("buildSkyvectorUrl", () => {
         departure: " kpvu ",
         arrival: "kSgU",
         operating: [null, null],
-      })
+      }),
     ).toBe("https://skyvector.com/?fpl=KPVU%20KSGU");
   });
 
@@ -98,7 +96,7 @@ describe("buildSkyvectorUrl", () => {
         departure: "KPVU",
         arrival: "KSGU",
         operating: [0, 0],
-      })
+      }),
     ).toBe("https://skyvector.com/?fpl=KPVU%20000000N0000000E%20KSGU");
   });
 
@@ -109,7 +107,7 @@ describe("buildSkyvectorUrl", () => {
         departure: "KPVU&foo=bar",
         arrival: "KSGU#frag",
         operating: [null, null],
-      })
+      }),
     ).toBe("https://skyvector.com/?fpl=KPVU%26FOO%3DBAR%20KSGU%23FRAG");
   });
 });

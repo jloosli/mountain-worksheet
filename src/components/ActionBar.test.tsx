@@ -52,7 +52,7 @@ describe("ActionBar — incomplete state", () => {
   it("renders the incomplete title and a disabled Fetch weather button", () => {
     render(<ActionBar {...baseProps} state="incomplete" fetchDisabled={true} />);
     expect(
-      screen.getByText(/Add departure airport, arrival airport, date, and time/i)
+      screen.getByText(/Add departure airport, arrival airport, date, and time/i),
     ).toBeInTheDocument();
     const fetchBtn = screen.getByRole("button", { name: /Fetch weather/i });
     expect(fetchBtn).toBeDisabled();
@@ -149,20 +149,13 @@ describe("ActionBar — isFetching", () => {
           time: "18:00",
         }}
         isFetching={true}
-      />
+      />,
     );
     expect(screen.getByText(/Loading/i)).toBeInTheDocument();
   });
 
   it("reflects isFetching even in the incomplete state (race: fields cleared mid-fetch)", () => {
-    render(
-      <ActionBar
-        {...baseProps}
-        state="incomplete"
-        fetchDisabled={true}
-        isFetching={true}
-      />
-    );
+    render(<ActionBar {...baseProps} state="incomplete" fetchDisabled={true} isFetching={true} />);
     expect(screen.getByText(/Loading/i)).toBeInTheDocument();
   });
 });
@@ -170,15 +163,8 @@ describe("ActionBar — isFetching", () => {
 describe("ActionBar — Checklist trigger", () => {
   it("renders a Checklist button visible across all states", () => {
     for (const state of ACTION_BAR_STATES) {
-      const { unmount } = render(
-        <ActionBar
-          {...baseProps}
-          state={state}
-        />
-      );
-      expect(
-        screen.getByRole("button", { name: /Checklist/i })
-      ).toBeInTheDocument();
+      const { unmount } = render(<ActionBar {...baseProps} state={state} />);
+      expect(screen.getByRole("button", { name: /Checklist/i })).toBeInTheDocument();
       unmount();
     }
   });
@@ -196,9 +182,7 @@ describe("ActionBar — Print trigger", () => {
       const { unmount } = render(
         <ActionBar {...baseProps} state={state} fetchDisabled={state === "incomplete"} />,
       );
-      expect(
-        screen.getByRole("button", { name: /Print briefing/i }),
-      ).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Print briefing/i })).toBeInTheDocument();
       unmount();
     }
   });
@@ -243,9 +227,7 @@ describe("ActionBar — responsive mobile layout (issue #120)", () => {
 
   it("fetched subtitle is hidden on mobile", () => {
     render(<ActionBar {...fetched} />);
-    const subtitle = screen.getByText(
-      /Review the weather below, then proceed to the decision/i
-    );
+    const subtitle = screen.getByText(/Review the weather below, then proceed to the decision/i);
     expect(subtitle.className).toMatch(/\bhidden\b/);
     expect(subtitle.className).toMatch(/\bsm:block\b/);
   });
@@ -322,9 +304,7 @@ describe("ActionBar — worksheet limits summary", () => {
   });
 
   it("states no overall verdict", () => {
-    render(
-      <ActionBar {...baseProps} state="ready" limitChecks={[check("weight", "within")]} />,
-    );
+    render(<ActionBar {...baseProps} state="ready" limitChecks={[check("weight", "within")]} />);
     const summary = screen.getByRole("link", { name: /1 within limit/ });
     expect(summary).not.toHaveTextContent(/all clear|go\b|no-go/i);
     expect(summary.className).not.toMatch(/red|emerald|green|amber/);

@@ -22,24 +22,24 @@ interface StepperProps {
 }
 
 const circleBg: Record<StepStatus, string> = {
-  pending:  "bg-slate-300 dark:bg-slate-700",
-  active:   "bg-slate-900 dark:bg-slate-100",
+  pending: "bg-slate-300 dark:bg-slate-700",
+  active: "bg-slate-900 dark:bg-slate-100",
   complete: "bg-emerald-500",
-  warning:  "bg-red-600",
+  warning: "bg-red-600",
 };
 
 const circleText: Record<StepStatus, string> = {
-  pending:  "text-slate-700 dark:text-slate-300",
-  active:   "text-white dark:text-slate-900",
+  pending: "text-slate-700 dark:text-slate-300",
+  active: "text-white dark:text-slate-900",
   complete: "text-white",
-  warning:  "text-white",
+  warning: "text-white",
 };
 
 const badgeColor: Record<StepStatus, string> = {
-  pending:  "text-slate-500 dark:text-slate-500",
-  active:   "text-slate-900 dark:text-slate-100",
+  pending: "text-slate-500 dark:text-slate-500",
+  active: "text-slate-900 dark:text-slate-100",
   complete: "text-emerald-600 dark:text-emerald-400",
-  warning:  "text-red-600 dark:text-red-400",
+  warning: "text-red-600 dark:text-red-400",
 };
 
 export default function Stepper({ steps, activeId }: StepperProps) {
@@ -53,13 +53,11 @@ export default function Stepper({ steps, activeId }: StepperProps) {
         const visible = entries.filter((e) => e.isIntersecting);
         if (visible.length === 0) return;
         const topMost = visible.sort(
-          (a, b) =>
-            a.target.getBoundingClientRect().top -
-            b.target.getBoundingClientRect().top
+          (a, b) => a.target.getBoundingClientRect().top - b.target.getBoundingClientRect().top,
         )[0];
         setScrollSpyId(topMost.target.id);
       },
-      { rootMargin: "-30% 0px -60% 0px", threshold: 0 }
+      { rootMargin: "-30% 0px -60% 0px", threshold: 0 },
     );
     steps.forEach((step) => {
       const el = document.getElementById(step.id);
@@ -82,10 +80,7 @@ export default function Stepper({ steps, activeId }: StepperProps) {
             return (
               <Fragment key={step.id}>
                 {i > 0 && (
-                  <li
-                    aria-hidden="true"
-                    className="text-slate-300 dark:text-slate-700"
-                  >
+                  <li aria-hidden="true" className="text-slate-300 dark:text-slate-700">
                     <ChevronRightIcon className="h-3.5 w-3.5" />
                   </li>
                 )}
@@ -110,9 +105,7 @@ export default function Stepper({ steps, activeId }: StepperProps) {
                       {step.label}
                     </span>
                     {step.badge && (
-                      <span
-                        className={`text-xs font-medium ${badgeColor[step.status]}`}
-                      >
+                      <span className={`text-xs font-medium ${badgeColor[step.status]}`}>
                         {step.badge}
                       </span>
                     )}

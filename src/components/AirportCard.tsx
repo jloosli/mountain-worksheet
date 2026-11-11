@@ -5,9 +5,7 @@ import { useEffect, useId, useState } from "react";
 import { ArrowUpRightIcon } from "@heroicons/react/24/outline";
 import type { RunwayOption } from "@/utils/types";
 import { celciusToFarenheit } from "@/utils/formulas";
-import InlineNotifications, {
-  notificationA11yProps,
-} from "@/components/InlineNotifications";
+import InlineNotifications, { notificationA11yProps } from "@/components/InlineNotifications";
 import { fieldSubject, type Notification } from "@/utils/notifications";
 import type { RunwayLookupStatus } from "@/utils/useAirportRunways";
 
@@ -49,10 +47,7 @@ interface AirportCardOperatingProps extends AirportCardCommonProps {
 
 type AirportCardProps = AirportCardAirportProps | AirportCardOperatingProps;
 
-const formatTemperatureValue = (
-  stored: number | null,
-  useFahrenheit: boolean
-): string => {
+const formatTemperatureValue = (stored: number | null, useFahrenheit: boolean): string => {
   if (stored === null) return "";
   if (useFahrenheit) return Math.round(celciusToFarenheit(stored)).toString();
   return parseFloat(stored.toFixed(1)).toString();
@@ -103,11 +98,9 @@ export default function AirportCard(props: AirportCardProps) {
   // controlled-input round-trip. When the parent accepts a valid value, the
   // prop changes and the effect below resyncs the display.
   const [tempStr, setTempStr] = useState<string>(() =>
-    formatTemperatureValue(props.temperature, !!props.useFahrenheit)
+    formatTemperatureValue(props.temperature, !!props.useFahrenheit),
   );
-  const [altStr, setAltStr] = useState<string>(() =>
-    altimeterDisplayValue(props.altimeter)
-  );
+  const [altStr, setAltStr] = useState<string>(() => altimeterDisplayValue(props.altimeter));
 
   useEffect(() => {
     setTempStr(formatTemperatureValue(props.temperature, !!props.useFahrenheit));
@@ -211,10 +204,7 @@ export default function AirportCard(props: AirportCardProps) {
                   : "—"}
               </span>
             </div>
-            <InlineNotifications
-              notifications={notifications}
-              subject={elevSubject}
-            />
+            <InlineNotifications notifications={notifications} subject={elevSubject} />
             <RunwayRow
               runways={props.runways ?? null}
               status={props.runwayStatus ?? "idle"}
@@ -223,15 +213,10 @@ export default function AirportCard(props: AirportCardProps) {
               onSelect={props.onRunwaySelect}
               id={rwyId}
               apiPopulatedRunway={props.apiPopulated.runway}
-              a11yProps={
-                rwySubject ? notificationA11yProps(notifications, rwySubject) : {}
-              }
+              a11yProps={rwySubject ? notificationA11yProps(notifications, rwySubject) : {}}
             />
             {rwySubject && (
-              <InlineNotifications
-                notifications={notifications}
-                subject={rwySubject}
-              />
+              <InlineNotifications notifications={notifications} subject={rwySubject} />
             )}
           </>
         )}
@@ -251,10 +236,7 @@ interface RunwayRowProps {
   a11yProps: ReturnType<typeof notificationA11yProps>;
 }
 
-const runwayPlaceholder = (
-  status: RunwayLookupStatus,
-  airportCode: string | undefined
-): string => {
+const runwayPlaceholder = (status: RunwayLookupStatus, airportCode: string | undefined): string => {
   switch (status) {
     case "idle":
       return "Enter an airport ID to load runways";

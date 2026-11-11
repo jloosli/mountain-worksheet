@@ -1,12 +1,11 @@
 import { enteredPosition } from "./areaOfOpsWeather";
 
-const pad = (n: number, width: number): string =>
-  String(n).padStart(width, "0");
+const pad = (n: number, width: number): string => String(n).padStart(width, "0");
 
 export function latLonToDmsWaypoint(lat: number, lon: number): string {
   const formatComponent = (
     value: number,
-    maxDeg: number
+    maxDeg: number,
   ): { deg: number; min: number; sec: number } => {
     const abs = Math.abs(value);
     let deg = Math.floor(abs);

@@ -40,7 +40,7 @@ const load = (query: string) =>
 describe("sanitizeWorksheetUrlState", () => {
   it("passes a well-formed link through with no notifications", () => {
     const r = load(
-      "weight=2300&temp=12,,8&wind=,90,180,,||5,10,15,,||,,,,&turb=1&date=2026-11-05&time=09:30"
+      "weight=2300&temp=12,,8&wind=,90,180,,||5,10,15,,||,,,,&turb=1&date=2026-11-05&time=09:30",
     );
     expect(r.notifications).toEqual([]);
     expect(r.state.weight).toBe(2300);
@@ -221,9 +221,7 @@ describe("deriveUrlNotifications", () => {
   it("keeps a link Warning while the field still holds the value it was given, and drops it after", () => {
     const r = load("weight=abc");
     expect(deriveUrlNotifications(r.state, r)).toHaveLength(1);
-    expect(
-      deriveUrlNotifications({ ...r.state, weight: 2300 }, r)
-    ).toEqual([]);
+    expect(deriveUrlNotifications({ ...r.state, weight: 2300 }, r)).toEqual([]);
   });
 
   it("keeps a malformed wind cell's Warning when only another cell in its column changes", () => {

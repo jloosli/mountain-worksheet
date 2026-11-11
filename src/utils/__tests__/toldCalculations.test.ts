@@ -195,14 +195,10 @@ describe("TOLD Calculations", () => {
 
     it("should return null for null inputs", () => {
       const nullWeightParams = { ...validParams, weight: null };
-      expect(
-        calculateTakeoff50ftObstacle("C182T", nullWeightParams)
-      ).toBeNull();
+      expect(calculateTakeoff50ftObstacle("C182T", nullWeightParams)).toBeNull();
 
       const nullAltitudeParams = { ...validParams, pressureAltitude: null };
-      expect(
-        calculateTakeoff50ftObstacle("C182T", nullAltitudeParams)
-      ).toBeNull();
+      expect(calculateTakeoff50ftObstacle("C182T", nullAltitudeParams)).toBeNull();
 
       const nullTempParams = { ...validParams, temperature: null };
       expect(calculateTakeoff50ftObstacle("C182T", nullTempParams)).toBeNull();
@@ -286,9 +282,7 @@ describe("TOLD Calculations", () => {
 
     it("should return null for null inputs", () => {
       const nullAltitudeParams = { ...validParams, pressureAltitude: null };
-      expect(
-        calculateLanding50ftObstacle("C182T", nullAltitudeParams)
-      ).toBeNull();
+      expect(calculateLanding50ftObstacle("C182T", nullAltitudeParams)).toBeNull();
 
       const nullTempParams = { ...validParams, temperature: null };
       expect(calculateLanding50ftObstacle("C182T", nullTempParams)).toBeNull();

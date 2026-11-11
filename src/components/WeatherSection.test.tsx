@@ -62,7 +62,10 @@ function Section(props: SectionProps) {
   return (
     <WeatherSection
       {...props}
-      notifications={[...(props.notifications ?? []), ...rejectedEntryNotifications(props.state, rejected)]}
+      notifications={[
+        ...(props.notifications ?? []),
+        ...rejectedEntryNotifications(props.state, rejected),
+      ]}
       rejectedEntries={rejected}
       onRejectedEntryChange={(key, entry) =>
         setRejected((prev) => updateRejectedEntries(props.state, prev, key, entry))
@@ -73,26 +76,14 @@ function Section(props: SectionProps) {
 
 describe("WeatherSection — sub-headings", () => {
   it("renders the three sub-headings", () => {
-    render(
-      <Section
-        state={empty}
-        onUpdate={() => {}}
-        airportRunways={[null, null]}
-      />
-    );
+    render(<Section state={empty} onUpdate={() => {}} airportRunways={[null, null]} />);
     expect(screen.getByText("Aloft")).toBeInTheDocument();
     expect(screen.getByText("At airports")).toBeInTheDocument();
     expect(screen.getByText("Advisories")).toBeInTheDocument();
   });
 
   it("renders three airport cards under 'At airports'", () => {
-    render(
-      <Section
-        state={populated}
-        onUpdate={() => {}}
-        airportRunways={[null, null]}
-      />
-    );
+    render(<Section state={populated} onUpdate={() => {}} airportRunways={[null, null]} />);
     expect(screen.getByText("Departure")).toBeInTheDocument();
     expect(screen.getByText("Operating")).toBeInTheDocument();
     expect(screen.getByText("Arrival")).toBeInTheDocument();
@@ -108,13 +99,7 @@ describe("WeatherSection — runway dropdown wiring", () => {
       { id: "16/34", length: 5500, alignment: 160 },
       { id: "03/21", length: 8103, alignment: 30 },
     ];
-    render(
-      <Section
-        state={populated}
-        onUpdate={onUpdate}
-        airportRunways={[depRunways, null]}
-      />
-    );
+    render(<Section state={populated} onUpdate={onUpdate} airportRunways={[depRunways, null]} />);
     const select = screen.getAllByRole("combobox", { name: /Runway/i })[0];
     fireEvent.change(select, { target: { value: "8103" } });
     expect(onUpdate).toHaveBeenCalledWith({ rwy: [8103, 5861] });
@@ -124,37 +109,19 @@ describe("WeatherSection — runway dropdown wiring", () => {
 describe("WeatherSection — advisories", () => {
   it("renders three advisory checkboxes and toggles on click", () => {
     const onUpdate = jest.fn();
-    render(
-      <Section
-        state={populated}
-        onUpdate={onUpdate}
-        airportRunways={[null, null]}
-      />
-    );
+    render(<Section state={populated} onUpdate={onUpdate} airportRunways={[null, null]} />);
     fireEvent.click(screen.getByLabelText(/AIRMET Tango/i));
-    expect(onUpdate).toHaveBeenLastCalledWith(
-      expect.objectContaining({ turb: true })
-    );
+    expect(onUpdate).toHaveBeenLastCalledWith(expect.objectContaining({ turb: true }));
     fireEvent.click(screen.getByLabelText(/Ceiling \/ Vis/i));
-    expect(onUpdate).toHaveBeenLastCalledWith(
-      expect.objectContaining({ cielVis: true })
-    );
+    expect(onUpdate).toHaveBeenLastCalledWith(expect.objectContaining({ cielVis: true }));
     fireEvent.click(screen.getByLabelText(/AIRMET Sierra/i));
-    expect(onUpdate).toHaveBeenLastCalledWith(
-      expect.objectContaining({ mtnObsc: true })
-    );
+    expect(onUpdate).toHaveBeenLastCalledWith(expect.objectContaining({ mtnObsc: true }));
   });
 });
 
 describe("WeatherSection — winds aloft", () => {
   it("renders the 5-column aloft table with the right altitude headers", () => {
-    render(
-      <Section
-        state={empty}
-        onUpdate={() => {}}
-        airportRunways={[null, null]}
-      />
-    );
+    render(<Section state={empty} onUpdate={() => {}} airportRunways={[null, null]} />);
     expect(screen.getByText(/3,000/)).toBeInTheDocument();
     expect(screen.getByText(/6,000/)).toBeInTheDocument();
     expect(screen.getByText(/9,000/)).toBeInTheDocument();
@@ -164,13 +131,7 @@ describe("WeatherSection — winds aloft", () => {
 
   it("calls onUpdate with the new wind array when a cell changes", () => {
     const onUpdate = jest.fn();
-    render(
-      <Section
-        state={empty}
-        onUpdate={onUpdate}
-        airportRunways={[null, null]}
-      />
-    );
+    render(<Section state={empty} onUpdate={onUpdate} airportRunways={[null, null]} />);
     // First wind-direction input — the 3,000 ft column.
     const dirInputs = screen.getAllByLabelText(/Wind direction at/i);
     fireEvent.change(dirInputs[0], { target: { value: "270" } });
@@ -188,7 +149,7 @@ describe("WeatherSection — notifications", () => {
         onUpdate={() => {}}
         airportRunways={[null, null]}
         notifications={notifications}
-      />
+      />,
     );
 
   it("shows a whole-table winds-aloft Warning and marks every cell invalid", () => {
@@ -213,12 +174,12 @@ describe("WeatherSection — notifications", () => {
         message: "Target altitude 3000 ft below available pressure-level range",
       },
     ]);
-    expect(
-      screen.getByLabelText("Temperature at 3,000 ft")
-    ).toHaveAccessibleDescription(/3000 ft below/);
-    expect(
-      screen.getByLabelText("Temperature at 6,000 ft")
-    ).not.toHaveAttribute("aria-describedby");
+    expect(screen.getByLabelText("Temperature at 3,000 ft")).toHaveAccessibleDescription(
+      /3000 ft below/,
+    );
+    expect(screen.getByLabelText("Temperature at 6,000 ft")).not.toHaveAttribute(
+      "aria-describedby",
+    );
   });
 
   it("passes airport-field notifications to the matching card", () => {
@@ -240,82 +201,52 @@ describe("WeatherSection — notifications", () => {
         message: "AIRMET IFR auto-flag uses 1000 ft / 3 sm threshold",
       },
     ]);
-    expect(
-      screen.getByRole("checkbox", { name: /Ceiling \/ Vis/ })
-    ).toHaveAccessibleDescription(/1000 ft \/ 3 sm/);
+    expect(screen.getByRole("checkbox", { name: /Ceiling \/ Vis/ })).toHaveAccessibleDescription(
+      /1000 ft \/ 3 sm/,
+    );
   });
 });
 
 describe("WeatherSection — invalid entries (#225)", () => {
   it("shows a Warning on the winds-aloft column instead of silently dropping an out-of-range direction", () => {
     const onUpdate = jest.fn();
-    render(
-      <Section
-        state={empty}
-        onUpdate={onUpdate}
-        airportRunways={[null, null]}
-      />
-    );
+    render(<Section state={empty} onUpdate={onUpdate} airportRunways={[null, null]} />);
     const cell = screen.getByLabelText("Wind direction at 9,000 ft");
     fireEvent.change(cell, { target: { value: "400" } });
     expect(onUpdate).not.toHaveBeenCalled();
     expect(cell).toHaveValue(400);
     expect(cell).toHaveAttribute("aria-invalid", "true");
-    expect(
-      screen.getByText(/Wind direction 400 at 9,000 ft is not valid/i)
-    ).toBeInTheDocument();
+    expect(screen.getByText(/Wind direction 400 at 9,000 ft is not valid/i)).toBeInTheDocument();
   });
 
   it("clears the Warning once the pilot enters a valid value", () => {
     const onUpdate = jest.fn();
-    render(
-      <Section
-        state={empty}
-        onUpdate={onUpdate}
-        airportRunways={[null, null]}
-      />
-    );
+    render(<Section state={empty} onUpdate={onUpdate} airportRunways={[null, null]} />);
     const cell = screen.getByLabelText("Wind velocity at 3,000 ft");
     fireEvent.change(cell, { target: { value: "200" } });
     expect(screen.getByText(/Wind velocity 200 at 3,000 ft is not valid/i)).toBeInTheDocument();
     fireEvent.change(cell, { target: { value: "20" } });
     expect(onUpdate).toHaveBeenCalled();
-    expect(
-      screen.queryByText(/Wind velocity 200 at 3,000 ft/i)
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/Wind velocity 200 at 3,000 ft/i)).not.toBeInTheDocument();
   });
 
   it("shows a Warning for an out-of-range winds-aloft temperature", () => {
-    render(
-      <Section
-        state={empty}
-        onUpdate={() => {}}
-        airportRunways={[null, null]}
-      />
-    );
+    render(<Section state={empty} onUpdate={() => {}} airportRunways={[null, null]} />);
     fireEvent.change(screen.getByLabelText("Temperature at 15,000 ft"), {
       target: { value: "-70" },
     });
-    expect(
-      screen.getByText(/Temperature -70 at 15,000 ft is not valid/i)
-    ).toBeInTheDocument();
+    expect(screen.getByText(/Temperature -70 at 15,000 ft is not valid/i)).toBeInTheDocument();
   });
 
   it("shows a Warning on the airport altimeter instead of silently dropping it", () => {
     const onUpdate = jest.fn();
-    render(
-      <Section
-        state={empty}
-        onUpdate={onUpdate}
-        airportRunways={[null, null]}
-      />
-    );
+    render(<Section state={empty} onUpdate={onUpdate} airportRunways={[null, null]} />);
     const altimeter = screen.getAllByLabelText("Altimeter")[0];
     fireEvent.change(altimeter, { target: { value: "35.00" } });
     expect(onUpdate).not.toHaveBeenCalled();
     expect(altimeter).toHaveAttribute("aria-invalid", "true");
     expect(
-      screen.getByText(/Altimeter 35.00 is not valid; enter 28.00–31.00 inHg/i)
+      screen.getByText(/Altimeter 35.00 is not valid; enter 28.00–31.00 inHg/i),
     ).toBeInTheDocument();
   });
 });
@@ -323,23 +254,17 @@ describe("WeatherSection — invalid entries (#225)", () => {
 describe("WeatherSection — worksheet opened from a link", () => {
   it("renders a truncated winds-aloft table and explains it, instead of crashing", () => {
     const query = "wind=90,90,90||5,10,15";
-    const loaded = sanitizeWorksheetUrlState(
-      deserializeState(query, empty),
-      query,
-      empty
-    );
+    const loaded = sanitizeWorksheetUrlState(deserializeState(query, empty), query, empty);
     render(
       <Section
         state={loaded.state}
         onUpdate={() => {}}
         airportRunways={[null, null]}
         notifications={loaded.notifications}
-      />
+      />,
     );
     expect(screen.getByText("Aloft")).toBeInTheDocument();
-    expect(
-      screen.getByText(/winds aloft.*direction, speed and temperature/)
-    ).toBeInTheDocument();
+    expect(screen.getByText(/winds aloft.*direction, speed and temperature/)).toBeInTheDocument();
   });
 });
 
@@ -360,7 +285,7 @@ describe("WeatherSection — winds aloft point styles (#267)", () => {
         onUpdate={() => {}}
         airportRunways={[null, null]}
         windSpeedStates={["within", "near", "exceeded", "not-checked", undefined]}
-      />
+      />,
     );
     const speed = (alt: string) => screen.getByLabelText(`Wind velocity at ${alt} ft`);
     expect(speed("9,000").className).toMatch(/text-red/);
@@ -383,13 +308,15 @@ describe("WeatherSection — rejected entries are held by the caller (#285)", ()
         airportRunways={[null, null]}
         rejectedEntries={{}}
         onRejectedEntryChange={onRejectedEntryChange}
-      />
+      />,
     );
     fireEvent.change(screen.getByLabelText("Wind direction at 9,000 ft"), {
       target: { value: "400" },
     });
     expect(onRejectedEntryChange).toHaveBeenCalledWith(windEntryKey(0, 2), expect.anything());
     // Its Warning comes from the caller's notifications, not from here.
-    expect(screen.queryByText(/Wind direction 400 at 9,000 ft is not valid/i)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/Wind direction 400 at 9,000 ft is not valid/i),
+    ).not.toBeInTheDocument();
   });
 });

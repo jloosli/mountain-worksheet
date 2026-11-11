@@ -33,7 +33,12 @@ describe("LimitCheckCallout", () => {
             { label: "3,000'", state: "within", value: "10 kt", substitutions: [] },
             { label: "6,000'", state: "near", value: "22 kt", substitutions: [] },
             { label: "9,000'", state: "exceeded", value: "35 kt", substitutions: [] },
-            { label: "12,000'", state: "not-checked", waitingFor: "needs speed (Warning)", substitutions: [] },
+            {
+              label: "12,000'",
+              state: "not-checked",
+              waitingFor: "needs speed (Warning)",
+              substitutions: [],
+            },
           ],
         })}
       />,
@@ -75,7 +80,12 @@ describe("LimitCheckCallout", () => {
         check={weight({
           state: "not-checked",
           points: [
-            { label: "Weight", state: "not-checked", waitingFor: "needs weight", substitutions: [] },
+            {
+              label: "Weight",
+              state: "not-checked",
+              waitingFor: "needs weight",
+              substitutions: [],
+            },
           ],
         })}
       />,
@@ -108,7 +118,9 @@ describe("LimitCheckCallout", () => {
   });
 
   it("shows the fixed caveat when there is one", () => {
-    render(<LimitCheckCallout check={weight({ caveat: "Surface wind and gusts are not checked." })} />);
+    render(
+      <LimitCheckCallout check={weight({ caveat: "Surface wind and gusts are not checked." })} />,
+    );
     expect(screen.getByText("Surface wind and gusts are not checked.")).toBeInTheDocument();
   });
 });

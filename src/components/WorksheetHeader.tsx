@@ -4,9 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { LinkIcon, QuestionMarkCircleIcon } from "@heroicons/react/24/outline";
 
 /** Outcome of the last "Copy link". */
-export type ShareStatus =
-  | { kind: "copied" }
-  | { kind: "failed"; link: string; reason: string };
+export type ShareStatus = { kind: "copied" } | { kind: "failed"; link: string; reason: string };
 
 interface WorksheetHeaderProps {
   onReset: () => void;
@@ -113,9 +111,13 @@ export default function WorksheetHeader({
               title="Toggle temperature unit"
               className="flex items-center gap-1 rounded-md border border-slate-700/60 px-2.5 py-1 text-xs font-mono"
             >
-              <span className={useFahrenheit ? "text-slate-500" : "font-semibold text-white"}>°C</span>
+              <span className={useFahrenheit ? "text-slate-500" : "font-semibold text-white"}>
+                °C
+              </span>
               <span className="text-slate-600">|</span>
-              <span className={useFahrenheit ? "font-semibold text-white" : "text-slate-500"}>°F</span>
+              <span className={useFahrenheit ? "font-semibold text-white" : "text-slate-500"}>
+                °F
+              </span>
             </button>
           </div>
         </div>
@@ -141,8 +143,8 @@ function ShareStatusLine({ status }: { status: ShareStatus }) {
         role="alert"
         className="rounded border border-red-800 bg-red-950/60 px-2 py-1.5 text-xs text-red-100"
       >
-        <span className="font-semibold">Warning:</span> Couldn&apos;t copy the
-        link ({status.reason}). Copy it from here:
+        <span className="font-semibold">Warning:</span> Couldn&apos;t copy the link ({status.reason}
+        ). Copy it from here:
         <input
           readOnly
           aria-label="Worksheet link"

@@ -42,7 +42,7 @@ const base: WorksheetData = {
 
 const fetchFor = (
   notifications: Notification[],
-  applied: Partial<WorksheetData> = {}
+  applied: Partial<WorksheetData> = {},
 ): WeatherFetchResult => ({
   fetchedFor: {
     airport: ["KOGD", "KLGU"],
@@ -60,9 +60,7 @@ describe("subjects", () => {
     expect(subjectKey(fieldSubject("temp", 0))).toBe("field:temp.0");
     expect(subjectKey(fieldSubject("wind"))).toBe("field:wind");
     expect(subjectKey(stepSubject("weather"))).toBe("step:weather");
-    expect(subjectKey(valueSubject("da.departure", "decision"))).toBe(
-      "value:da.departure"
-    );
+    expect(subjectKey(valueSubject("da.departure", "decision"))).toBe("value:da.departure");
   });
 
   it("maps each subject to the step that shows it", () => {
@@ -101,7 +99,6 @@ describe("subjects", () => {
   });
 });
 
-
 describe("notificationKey", () => {
   const n: Notification = {
     level: "caution",
@@ -135,4 +132,3 @@ describe("valueSubjectGroup", () => {
     expect(valueSubjectGroup(stepSubject("decision"))).toBeUndefined();
   });
 });
-

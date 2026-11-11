@@ -31,10 +31,9 @@ export const TARGET_ALTITUDES_FT = [3000, 6000, 9000, 12000, 15000];
  */
 export function interpolateOpTempFromAloft(
   altitudeFt: number | null | undefined,
-  aloftTemps: (number | null | undefined)[] | null | undefined
+  aloftTemps: (number | null | undefined)[] | null | undefined,
 ): number | null {
-  if (typeof altitudeFt !== "number" || !Number.isFinite(altitudeFt))
-    return null;
+  if (typeof altitudeFt !== "number" || !Number.isFinite(altitudeFt)) return null;
   if (!aloftTemps || aloftTemps.length === 0) return null;
 
   const points: { alt: number; temp: number }[] = [];
@@ -76,21 +75,13 @@ export function applyOpTempForAltitudeChange(
   prev: {
     altitude?: [number | null, number | null, number | null] | null;
     temp?: [number | null, number | null, number | null] | null;
-    wind?: [
-      (number | null)[],
-      (number | null)[],
-      (number | null)[],
-    ] | null;
+    wind?: [(number | null)[], (number | null)[], (number | null)[]] | null;
   },
   updates: {
     altitude?: [number | null, number | null, number | null];
     temp?: [number | null, number | null, number | null];
-    wind?: [
-      (number | null)[],
-      (number | null)[],
-      (number | null)[],
-    ];
-  }
+    wind?: [(number | null)[], (number | null)[], (number | null)[]];
+  },
 ): [number | null, number | null, number | null] | null {
   const newOpTemp = rederivedOpTemp(prev, updates);
   if (newOpTemp === null) return null;
@@ -108,7 +99,7 @@ export function applyOpTempForAltitudeChange(
  */
 function rederivedOpTemp(
   prev: Parameters<typeof applyOpTempForAltitudeChange>[0],
-  updates: Parameters<typeof applyOpTempForAltitudeChange>[1]
+  updates: Parameters<typeof applyOpTempForAltitudeChange>[1],
 ): number | null {
   if (updates.altitude === undefined) return null;
   if (updates.altitude[1] === prev.altitude?.[1]) return null;
@@ -142,7 +133,7 @@ export interface OpTempChange {
 export function describeOpTempChange(
   prev: Parameters<typeof applyOpTempForAltitudeChange>[0],
   updates: Parameters<typeof applyOpTempForAltitudeChange>[1],
-  context: { fetchedOpTemp?: number | null; previous?: OpTempChange | null }
+  context: { fetchedOpTemp?: number | null; previous?: OpTempChange | null },
 ): OpTempChange | null {
   // Described even when the stored temperature already equals the new one:
   // the value may still be snapped to the edge of the winds-aloft table.
@@ -161,12 +152,11 @@ export function describeOpTempChange(
 
   const aloftTemps = (updates.wind ?? prev.wind)?.[2] ?? [];
   const available = TARGET_ALTITUDES_FT.filter(
-    (_, i) => typeof aloftTemps[i] === "number" && Number.isFinite(aloftTemps[i])
+    (_, i) => typeof aloftTemps[i] === "number" && Number.isFinite(aloftTemps[i]),
   );
   const lowest = available[0];
   const highest = available[available.length - 1];
-  const snappedToFt =
-    altitudeFt < lowest ? lowest : altitudeFt > highest ? highest : null;
+  const snappedToFt = altitudeFt < lowest ? lowest : altitudeFt > highest ? highest : null;
 
   return { value, altitudeFt, replaced, snappedToFt };
 }
@@ -184,13 +174,9 @@ export function opTempChangeNotifications(
     altitude: [number | null, number | null, number | null];
     temp: [number | null, number | null, number | null];
   },
-  change: OpTempChange | null
+  change: OpTempChange | null,
 ): Notification[] {
-  if (
-    !change ||
-    state.altitude[1] !== change.altitudeFt ||
-    state.temp[1] !== change.value
-  ) {
+  if (!change || state.altitude[1] !== change.altitudeFt || state.temp[1] !== change.value) {
     return [];
   }
   const subject = fieldSubject("temp", 1);
@@ -200,7 +186,7 @@ export function opTempChangeNotifications(
       level: "caution",
       subject,
       message: `Operating temperature re-derived from winds aloft at ${formatFt(
-        change.altitudeFt
+        change.altitudeFt,
       )} (${change.value}°C), replacing your entry of ${change.replaced}°C. Re-enter it to keep your value.`,
     });
   }
@@ -210,9 +196,9 @@ export function opTempChangeNotifications(
       level: "caution",
       subject,
       message: `Operating altitude ${formatFt(
-        change.altitudeFt
+        change.altitudeFt,
       )} is ${side} the winds-aloft temperatures; using the ${formatFt(
-        change.snappedToFt
+        change.snappedToFt,
       )} temperature.`,
     });
   }
@@ -226,10 +212,8 @@ export type AreaOfOpsPositionSource = "user" | "midpoint" | "none";
  * It counts only when both latitude and longitude are entered; otherwise the
  * area weather falls back to the airport midpoint.
  */
-export function enteredPosition([lat, lon]: readonly [
-  number | null,
-  number | null,
-]): [number, number] | null {
+export function enteredPosition([lat, lon]: readonly [number | null, number | null]):
+  [number, number] | null {
   return lat !== null && lon !== null ? [lat, lon] : null;
 }
 
@@ -246,10 +230,7 @@ export interface AreaOfOpsWeather {
   notifications: Notification[];
 }
 
-export function greatCircleMidpoint(
-  a: [number, number],
-  b: [number, number]
-): [number, number] {
+export function greatCircleMidpoint(a: [number, number], b: [number, number]): [number, number] {
   const toRad = (d: number) => (d * Math.PI) / 180;
   const toDeg = (r: number) => (r * 180) / Math.PI;
   const lat1 = toRad(a[0]);
@@ -260,7 +241,7 @@ export function greatCircleMidpoint(
   const By = Math.cos(lat2) * Math.sin(dLon);
   const lat3 = Math.atan2(
     Math.sin(lat1) + Math.sin(lat2),
-    Math.sqrt((Math.cos(lat1) + Bx) ** 2 + By ** 2)
+    Math.sqrt((Math.cos(lat1) + Bx) ** 2 + By ** 2),
   );
   const lon3 = lon1 + Math.atan2(By, Math.cos(lat1) + Bx);
 
@@ -269,10 +250,7 @@ export function greatCircleMidpoint(
   while (lonDeg > 180) lonDeg -= 360;
   while (lonDeg < -180) lonDeg += 360;
 
-  return [
-    Math.round(toDeg(lat3) * 10000) / 10000,
-    Math.round(lonDeg * 10000) / 10000,
-  ];
+  return [Math.round(toDeg(lat3) * 10000) / 10000, Math.round(lonDeg * 10000) / 10000];
 }
 
 interface BuildOptions {
@@ -307,10 +285,7 @@ export function buildAreaOfOpsWeather(opts: BuildOptions): AreaOfOpsWeather {
   if (position) {
     positionSource = "user";
   } else if (opts.depAirportLatLon && opts.arrAirportLatLon) {
-    position = greatCircleMidpoint(
-      opts.depAirportLatLon,
-      opts.arrAirportLatLon
-    );
+    position = greatCircleMidpoint(opts.depAirportLatLon, opts.arrAirportLatLon);
     positionSource = "midpoint";
     areaWide.push({
       level: "caution",
@@ -362,23 +337,17 @@ export function buildAreaOfOpsWeather(opts: BuildOptions): AreaOfOpsWeather {
     wind.direction[i] = r.wdir;
     wind.speed[i] = r.wspd;
     wind.temp[i] = r.temp;
-    notifications.push(
-      ...r.notes.map((n) => withSubject(n, fieldSubject("wind", i)))
-    );
+    notifications.push(...r.notes.map((n) => withSubject(n, fieldSubject("wind", i))));
   });
 
   let opTemp: number | null = null;
   if (typeof opts.opAltitudeFt === "number" && opts.opAltitudeFt > 0) {
     const r = interpolateAtAltitude(opts.opAltitudeFt, sample);
     opTemp = r.temp;
-    notifications.push(
-      ...r.notes.map((n) => withSubject(n, fieldSubject("temp", 1)))
-    );
+    notifications.push(...r.notes.map((n) => withSubject(n, fieldSubject("temp", 1))));
   }
 
-  const pressureMsl = (opts.raw.hourly.pressure_msl as number[] | undefined)?.[
-    idx
-  ];
+  const pressureMsl = (opts.raw.hourly.pressure_msl as number[] | undefined)?.[idx];
   const opAltimeter =
     typeof pressureMsl === "number" && Number.isFinite(pressureMsl)
       ? Math.round(pressureMsl * HPA_TO_INHG * 100) / 100
@@ -431,9 +400,7 @@ export function noPositionWarning(): Notification {
  * winds-aloft table and the operating temperature and altimeter.
  */
 export function areaOfOpsUnavailable(reason: string): Notification[] {
-  return [
-    fieldSubject("wind"),
-    fieldSubject("temp", 1),
-    fieldSubject("altimeter", 1),
-  ].map((subject) => ({ level: "warning" as const, subject, message: reason }));
+  return [fieldSubject("wind"), fieldSubject("temp", 1), fieldSubject("altimeter", 1)].map(
+    (subject) => ({ level: "warning" as const, subject, message: reason }),
+  );
 }

@@ -52,13 +52,23 @@ export default function Altitudes({ altitudes, PAs, DAs, notifications = [] }: A
       </thead>
       <tbody>
         <tr>
-          <td className="border border-gray-300 dark:border-gray-700 p-2">Actual Altitude (feet)</td>
-          <td className="border border-gray-300 dark:border-gray-700 p-2 text-right">{fmt(altitudes[0])}</td>
-          <td className="border border-gray-300 dark:border-gray-700 p-2 text-right">{fmt(altitudes[1])}</td>
-          <td className="border border-gray-300 dark:border-gray-700 p-2 text-right">{fmt(altitudes[2])}</td>
+          <td className="border border-gray-300 dark:border-gray-700 p-2">
+            Actual Altitude (feet)
+          </td>
+          <td className="border border-gray-300 dark:border-gray-700 p-2 text-right">
+            {fmt(altitudes[0])}
+          </td>
+          <td className="border border-gray-300 dark:border-gray-700 p-2 text-right">
+            {fmt(altitudes[1])}
+          </td>
+          <td className="border border-gray-300 dark:border-gray-700 p-2 text-right">
+            {fmt(altitudes[2])}
+          </td>
         </tr>
         <tr>
-          <td className="border border-gray-300 dark:border-gray-700 p-2">Pressure Altitude (feet)</td>
+          <td className="border border-gray-300 dark:border-gray-700 p-2">
+            Pressure Altitude (feet)
+          </td>
           {COLS.map((i) => (
             <td key={i} className={CELL}>
               {cell(PAs, i, "pressureAltitude")}
@@ -66,7 +76,9 @@ export default function Altitudes({ altitudes, PAs, DAs, notifications = [] }: A
           ))}
         </tr>
         <tr>
-          <td className="border border-gray-300 dark:border-gray-700 p-2">Density Altitude (feet)</td>
+          <td className="border border-gray-300 dark:border-gray-700 p-2">
+            Density Altitude (feet)
+          </td>
           {COLS.map((i) => (
             <td key={i} className={CELL}>
               {cell(DAs, i, "densityAltitude")}

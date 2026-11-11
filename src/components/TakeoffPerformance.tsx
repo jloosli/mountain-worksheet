@@ -56,9 +56,7 @@ function ValueCell({
   const base = `py-2 px-4 text-right ${className}`;
   if (value.status === "withheld") {
     return (
-      <td className={`${base} text-xs italic text-gray-500 dark:text-gray-400`}>
-        {value.reason}
-      </td>
+      <td className={`${base} text-xs italic text-gray-500 dark:text-gray-400`}>{value.reason}</td>
     );
   }
   if (value.status === "unavailable") {
@@ -96,10 +94,7 @@ export default function TakeoffPerformance({
           <thead>
             <tr className="border-b dark:border-gray-700">
               <th className="py-2 px-4 text-left"></th>
-              <th
-                className="py-2 px-4 text-center border-r dark:border-gray-700"
-                colSpan={2}
-              >
+              <th className="py-2 px-4 text-center border-r dark:border-gray-700" colSpan={2}>
                 Short Field
               </th>
               <th className="py-2 px-4 text-center" colSpan={2}>

@@ -45,39 +45,51 @@ describe("SortieInfo", () => {
   });
 
   it("populates operating altitude from initialData", () => {
-    const initialData = { ...defaultInitialData, altitude: [4471, 9000, 4229] as [number | null, number | null, number | null] };
+    const initialData = {
+      ...defaultInitialData,
+      altitude: [4471, 9000, 4229] as [number | null, number | null, number | null],
+    };
     render(<SortieInfo onUpdate={mockOnUpdate} initialData={initialData} />);
     const input = screen.getByLabelText(/Operating Altitude/i) as HTMLInputElement;
     expect(input.value).toBe("9000");
   });
 
   it("calls onUpdate with updated altitude[1] when operating altitude changes", () => {
-    const initialData = { ...defaultInitialData, altitude: [4471, null, 4229] as [number | null, number | null, number | null] };
+    const initialData = {
+      ...defaultInitialData,
+      altitude: [4471, null, 4229] as [number | null, number | null, number | null],
+    };
     render(<SortieInfo onUpdate={mockOnUpdate} initialData={initialData} />);
     const input = screen.getByLabelText(/Operating Altitude/i);
     fireEvent.change(input, { target: { value: "9000" } });
     expect(mockOnUpdate).toHaveBeenCalledWith(
-      expect.objectContaining({ altitude: [4471, 9000, 4229] })
+      expect.objectContaining({ altitude: [4471, 9000, 4229] }),
     );
   });
 
   it("preserves departure and arrival altitude when operating altitude changes", () => {
-    const initialData = { ...defaultInitialData, altitude: [5000, 8000, 3500] as [number | null, number | null, number | null] };
+    const initialData = {
+      ...defaultInitialData,
+      altitude: [5000, 8000, 3500] as [number | null, number | null, number | null],
+    };
     render(<SortieInfo onUpdate={mockOnUpdate} initialData={initialData} />);
     const input = screen.getByLabelText(/Operating Altitude/i);
     fireEvent.change(input, { target: { value: "10000" } });
     expect(mockOnUpdate).toHaveBeenCalledWith(
-      expect.objectContaining({ altitude: [5000, 10000, 3500] })
+      expect.objectContaining({ altitude: [5000, 10000, 3500] }),
     );
   });
 
   it("clears operating altitude when input is empty", () => {
-    const initialData = { ...defaultInitialData, altitude: [4471, 9000, 4229] as [number | null, number | null, number | null] };
+    const initialData = {
+      ...defaultInitialData,
+      altitude: [4471, 9000, 4229] as [number | null, number | null, number | null],
+    };
     render(<SortieInfo onUpdate={mockOnUpdate} initialData={initialData} />);
     const input = screen.getByLabelText(/Operating Altitude/i);
     fireEvent.change(input, { target: { value: "" } });
     expect(mockOnUpdate).toHaveBeenCalledWith(
-      expect.objectContaining({ altitude: [4471, null, 4229] })
+      expect.objectContaining({ altitude: [4471, null, 4229] }),
     );
   });
 
@@ -120,33 +132,31 @@ describe("SortieInfo", () => {
     expect(screen.getByRole("heading", { name: "Pilot & Aircraft", level: 3 })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "When", level: 3 })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Where", level: 3 })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Pilot Qualifications", level: 3 })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Pilot Qualifications", level: 3 }),
+    ).toBeInTheDocument();
   });
 
   it("renders the mountain qualification checkboxes", () => {
     render(<SortieInfo onUpdate={mockOnUpdate} initialData={defaultInitialData} />);
     expect(
-      screen.getByLabelText(/Current CAPF 70-5 Mountain Flight Endorsement/i)
+      screen.getByLabelText(/Current CAPF 70-5 Mountain Flight Endorsement/i),
     ).toBeInTheDocument();
     expect(
-      screen.getByLabelText(/Current CAPF 70-91 and Mountain Flying Certification/i)
+      screen.getByLabelText(/Current CAPF 70-91 and Mountain Flying Certification/i),
     ).toBeInTheDocument();
   });
 
   it("calls onUpdate with mtnEndorse when the endorsement checkbox is toggled", () => {
     render(<SortieInfo onUpdate={mockOnUpdate} initialData={defaultInitialData} />);
     fireEvent.click(screen.getByLabelText(/Current CAPF 70-5 Mountain Flight Endorsement/i));
-    expect(mockOnUpdate).toHaveBeenCalledWith(
-      expect.objectContaining({ mtnEndorse: true })
-    );
+    expect(mockOnUpdate).toHaveBeenCalledWith(expect.objectContaining({ mtnEndorse: true }));
   });
 
   it("calls onUpdate with mtnCert when the certification checkbox is toggled", () => {
     render(<SortieInfo onUpdate={mockOnUpdate} initialData={defaultInitialData} />);
     fireEvent.click(screen.getByLabelText(/Current CAPF 70-91 and Mountain Flying Certification/i));
-    expect(mockOnUpdate).toHaveBeenCalledWith(
-      expect.objectContaining({ mtnCert: true })
-    );
+    expect(mockOnUpdate).toHaveBeenCalledWith(expect.objectContaining({ mtnCert: true }));
   });
 });
 
@@ -248,7 +258,7 @@ describe("SortieInfo — SkyVector button", () => {
     expect(openSpy).toHaveBeenCalledWith(
       "https://skyvector.com/?fpl=KPVU%20KSGU",
       "_blank",
-      "noopener,noreferrer"
+      "noopener,noreferrer",
     );
   });
 
@@ -264,7 +274,7 @@ describe("SortieInfo — SkyVector button", () => {
     expect(openSpy).toHaveBeenCalledWith(
       "https://skyvector.com/?fpl=KPVU%20403008N1104444W%20KSGU",
       "_blank",
-      "noopener,noreferrer"
+      "noopener,noreferrer",
     );
   });
 
@@ -280,7 +290,7 @@ describe("SortieInfo — SkyVector button", () => {
     expect(openSpy).toHaveBeenCalledWith(
       "https://skyvector.com/?fpl=KPVU%20KSGU",
       "_blank",
-      "noopener,noreferrer"
+      "noopener,noreferrer",
     );
   });
 });
@@ -306,12 +316,7 @@ describe("SortieInfo - position field wiring", () => {
       route: "KOGD/285/34",
       position: [41.4321, -112.7042] as [number | null, number | null],
     };
-    render(
-      <SortieInfo
-        initialData={initialData as never}
-        onUpdate={() => {}}
-      />
-    );
+    render(<SortieInfo initialData={initialData as never} onUpdate={() => {}} />);
     expect(screen.getByDisplayValue("KOGD/285/34")).toBeInTheDocument();
     expect(screen.getByText(/41\.4321, -112\.7042/)).toBeInTheDocument();
   });
@@ -329,11 +334,11 @@ describe("SortieInfo - airport code whitespace (#208)", () => {
     const arrival = screen.getByLabelText("Arrival Airport");
     fireEvent.change(arrival, { target: { value: "kogd " } });
     expect(mockOnUpdate).toHaveBeenLastCalledWith(
-      expect.objectContaining({ airport: ["", "KOGD "] })
+      expect.objectContaining({ airport: ["", "KOGD "] }),
     );
     fireEvent.blur(arrival);
     expect(mockOnUpdate).toHaveBeenLastCalledWith(
-      expect.objectContaining({ airport: ["", "KOGD"] })
+      expect.objectContaining({ airport: ["", "KOGD"] }),
     );
     expect(arrival).toHaveValue("KOGD");
   });
@@ -359,7 +364,7 @@ describe("SortieInfo - airport code whitespace (#208)", () => {
             message: "Operating area weather skipped: enter a position",
           },
         ]}
-      />
+      />,
     );
     const input = screen.getByLabelText("Area of Operations (position)");
     expect(input).toHaveAttribute("aria-invalid", "true");
@@ -383,7 +388,7 @@ describe("SortieInfo - airport code whitespace (#208)", () => {
             message: "Using KBOI for BOI",
           },
         ]}
-      />
+      />,
     );
     const departure = screen.getByLabelText("Departure Airport");
     const arrival = screen.getByLabelText("Arrival Airport");

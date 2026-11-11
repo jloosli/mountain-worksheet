@@ -180,9 +180,7 @@ describe("Weight limit check", () => {
       subject: fieldSubject("weight"),
       message: "The shared link's weight could not be read.",
     };
-    expect(weightCheck({ ...baseState(), weight: 2900 }, [linkWarning]).state).toBe(
-      "not-checked",
-    );
+    expect(weightCheck({ ...baseState(), weight: 2900 }, [linkWarning]).state).toBe("not-checked");
     // Above max gross the extra Warning still makes it untrusted.
     const over = weightCheck({ ...baseState(), weight: 3255 }, [linkWarning]);
     expect(over.state).toBe("not-checked");
@@ -573,7 +571,9 @@ describe("Runway limit check", () => {
       subject: { kind: "step", step: "weather" },
       message: "G-AIRMETs unavailable. Check AIRMETs manually.",
     };
-    expect(runwayCheck(undefined, baseState(), [gairmetFailed]).points[0].substitutions).toEqual([]);
+    expect(runwayCheck(undefined, baseState(), [gairmetFailed]).points[0].substitutions).toEqual(
+      [],
+    );
     expect(
       byId(checksWith(baseState(), {}, [gairmetFailed]), "climb").points[0].substitutions,
     ).toEqual([]);
@@ -669,7 +669,10 @@ describe("Winds aloft limit check", () => {
     ]);
   });
 
-  const columnWarning = (col: number, message = "Fetched for KABC at 2026-01-01 10:00; refetch weather."): Notification => ({
+  const columnWarning = (
+    col: number,
+    message = "Fetched for KABC at 2026-01-01 10:00; refetch weather.",
+  ): Notification => ({
     level: "warning",
     subject: fieldSubject("wind", col),
     message,
@@ -698,13 +701,21 @@ describe("Winds aloft limit check", () => {
     expect(check.state).toBe("not-checked");
     expect(check.points).toEqual([
       expect.objectContaining({ label: "3,000'", state: "within" }),
-      expect.objectContaining({ label: "12,000'", state: "not-checked", waitingFor: "needs speed (Warning)" }),
+      expect.objectContaining({
+        label: "12,000'",
+        state: "not-checked",
+        waitingFor: "needs speed (Warning)",
+      }),
     ]);
   });
 
   it("treats a Warning on the whole winds table as a Warning on every column", () => {
     const check = windsCheck(withSpeeds([10, 40, null, null, null]), [
-      { level: "warning", subject: fieldSubject("wind"), message: "The link's winds aloft table is malformed." },
+      {
+        level: "warning",
+        subject: fieldSubject("wind"),
+        message: "The link's winds aloft table is malformed.",
+      },
     ]);
     expect(check.state).toBe("not-checked");
     expect(check.points.every((p) => p.state === "not-checked")).toBe(true);
@@ -802,9 +813,7 @@ describe("limitCheckSummary", () => {
   });
 
   it("uses the singular for one worksheet limit", () => {
-    expect(limitCheckSummary([check("a", "exceeded")])).toBe(
-      "1 of 1 worksheet limit exceeded",
-    );
+    expect(limitCheckSummary([check("a", "exceeded")])).toBe("1 of 1 worksheet limit exceeded");
   });
 });
 

@@ -12,9 +12,9 @@ export type ActionBarState = "incomplete" | "ready" | "fetched";
 export function canFetchWeather(state: WorksheetData): boolean {
   return Boolean(
     normalizeAirportCode(state.airport[0]) &&
-      normalizeAirportCode(state.airport[1]) &&
-      state.date &&
-      state.time
+    normalizeAirportCode(state.airport[1]) &&
+    state.date &&
+    state.time,
   );
 }
 
@@ -29,7 +29,7 @@ export function canFetchWeather(state: WorksheetData): boolean {
  */
 export function deriveActionBarState(
   weatherStatus: WeatherStatus,
-  canFetch: boolean
+  canFetch: boolean,
 ): ActionBarState {
   if (hasWeather(weatherStatus)) return "fetched";
   return canFetch ? "ready" : "incomplete";

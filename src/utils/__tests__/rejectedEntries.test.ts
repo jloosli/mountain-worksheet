@@ -48,7 +48,7 @@ describe("rejected weather entries", () => {
       s,
       updateRejectedEntries(s, {}, windEntryKey(0, 2), windEntry),
       altimeterEntryKey(0),
-      altimeterEntry
+      altimeterEntry,
     );
     expect(rejectedEntryNotifications(s, entries)).toEqual([
       windEntry.notification,
@@ -74,7 +74,7 @@ describe("rejected weather entries", () => {
     const s = state();
     const entries = updateRejectedEntries(s, {}, windEntryKey(0, 2), windEntry);
     expect(
-      rejectedEntryNotifications(s, updateRejectedEntries(s, entries, windEntryKey(0, 2), null))
+      rejectedEntryNotifications(s, updateRejectedEntries(s, entries, windEntryKey(0, 2), null)),
     ).toEqual([]);
   });
 
@@ -98,7 +98,7 @@ describe("retireRejectedEntries", () => {
       state({ altimeter: [29.92, null, null] }),
       updateRejectedEntries(state(), {}, windEntryKey(0, 2), windEntry),
       altimeterEntryKey(0),
-      altimeterEntry
+      altimeterEntry,
     );
 
   it("clears an entry whose field a weather fetch replaced, even with the same number", () => {

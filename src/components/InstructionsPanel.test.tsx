@@ -19,17 +19,15 @@ describe("InstructionsPanel", () => {
 
   it("emphasises the 'reference only' operational note", () => {
     render(<InstructionsPanel />);
-    expect(
-      screen.getByText(/This tool is for reference purposes only/i)
-    ).toBeInTheDocument();
+    expect(screen.getByText(/This tool is for reference purposes only/i)).toBeInTheDocument();
   });
 
   it("keeps the worksheet's PIC/FRO disclaimer wording verbatim", () => {
     render(<InstructionsPanel />);
     expect(
       screen.getByText(
-        /It is up to the PIC and FRO to responsibly evaluate risks prior to release or departure\. If risks cannot be reduced to an acceptable level, a no-go decision should be considered\./
-      )
+        /It is up to the PIC and FRO to responsibly evaluate risks prior to release or departure\. If risks cannot be reduced to an acceptable level, a no-go decision should be considered\./,
+      ),
     ).toBeInTheDocument();
   });
 
@@ -37,8 +35,8 @@ describe("InstructionsPanel", () => {
     render(<InstructionsPanel />);
     expect(
       screen.getByText(
-        "Warnings and exceeded worksheet limits are highlighted, but the worksheet does not cover all the risks involved."
-      )
+        "Warnings and exceeded worksheet limits are highlighted, but the worksheet does not cover all the risks involved.",
+      ),
     ).toBeInTheDocument();
     expect(screen.queryByText(/highlighted in red\/yellow/i)).not.toBeInTheDocument();
   });

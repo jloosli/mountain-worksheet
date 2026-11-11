@@ -2,10 +2,7 @@ import { render, screen, fireEvent, waitFor, within } from "../test-utils/test-u
 import AppContainer from "./AppContainer";
 import { fetchWorksheetWeather } from "@/utils/weatherFetch";
 import { useSearchParams } from "next/navigation";
-import {
-  useAirportRunwayLookup,
-  type RunwayLookup,
-} from "@/utils/useAirportRunways";
+import { useAirportRunwayLookup, type RunwayLookup } from "@/utils/useAirportRunways";
 
 jest.mock("@/utils/weatherFetch");
 jest.mock("next/navigation", () => ({
@@ -58,28 +55,20 @@ describe("AppContainer", () => {
 
   it("subtitles the Decision step with worksheet limits, not a go/no-go summary", () => {
     render(<AppContainer />);
-    expect(
-      onScreen().getByText("Worksheet limits and detailed calculations")
-    ).toBeInTheDocument();
+    expect(onScreen().getByText("Worksheet limits and detailed calculations")).toBeInTheDocument();
     expect(onScreen().queryByText(/go \/ no-go summary/i)).not.toBeInTheDocument();
   });
 
   it("renders the slide-over triggers (instructions in header, checklist on action bar)", () => {
     render(<AppContainer />);
-    expect(
-      screen.getByRole("button", { name: /Open instructions/i })
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /Checklist/i })
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Open instructions/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Checklist/i })).toBeInTheDocument();
   });
 
   it("renders the sticky ActionBar region", () => {
     render(<AppContainer />);
     // ActionBar always renders a Fetch weather button (disabled in incomplete state)
-    expect(
-      screen.getByRole("button", { name: /Fetch weather/i })
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Fetch weather/i })).toBeInTheDocument();
   });
 });
 
@@ -113,9 +102,7 @@ describe("AppContainer — link Warnings retire for good", () => {
 describe("AppContainer — print wiring", () => {
   it("renders the Print briefing button", () => {
     render(<AppContainer />);
-    expect(
-      screen.getByRole("button", { name: /Print briefing/i }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Print briefing/i })).toBeInTheDocument();
   });
 
   it("calls window.print when Print briefing is clicked", () => {
@@ -128,16 +115,12 @@ describe("AppContainer — print wiring", () => {
 
   it("renders the PrintBriefing region in the tree", () => {
     render(<AppContainer />);
-    expect(
-      screen.getByRole("region", { name: /Print briefing/i }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: /Print briefing/i })).toBeInTheDocument();
   });
 });
 
 describe("AppContainer — notifications (#221)", () => {
-  const mockFetch = fetchWorksheetWeather as jest.MockedFunction<
-    typeof fetchWorksheetWeather
-  >;
+  const mockFetch = fetchWorksheetWeather as jest.MockedFunction<typeof fetchWorksheetWeather>;
 
   const enterAirports = () => {
     fireEvent.change(screen.getByLabelText("Departure Airport"), {
@@ -178,26 +161,16 @@ describe("AppContainer — notifications (#221)", () => {
     enterAirports();
     fireEvent.click(screen.getByRole("button", { name: /Fetch weather/i }));
 
-    expect(
-      await onScreen().findByText(/BOI: no METAR or TAF data available/)
-    ).toBeInTheDocument();
+    expect(await onScreen().findByText(/BOI: no METAR or TAF data available/)).toBeInTheDocument();
     expect(arrivalTemperature()).toHaveAttribute("aria-invalid", "true");
-    expect(container.querySelector("#step-weather header")).toHaveTextContent(
-      "1 warning"
-    );
-    expect(
-      screen.getByRole("link", { name: /Weather.*1 warning/ })
-    ).toBeInTheDocument();
+    expect(container.querySelector("#step-weather header")).toHaveTextContent("1 warning");
+    expect(screen.getByRole("link", { name: /Weather.*1 warning/ })).toBeInTheDocument();
 
     fireEvent.change(arrivalTemperature(), { target: { value: "12" } });
 
-    expect(
-      onScreen().queryByText(/BOI: no METAR or TAF data available/)
-    ).not.toBeInTheDocument();
+    expect(onScreen().queryByText(/BOI: no METAR or TAF data available/)).not.toBeInTheDocument();
     expect(arrivalTemperature()).not.toHaveAttribute("aria-invalid");
-    expect(container.querySelector("#step-weather header")).not.toHaveTextContent(
-      "warning"
-    );
+    expect(container.querySelector("#step-weather header")).not.toHaveTextContent("warning");
   });
 
   it("drops the fetch's Warnings when the airport they were about changes", async () => {
@@ -210,9 +183,7 @@ describe("AppContainer — notifications (#221)", () => {
       target: { value: "KSLC" },
     });
 
-    expect(
-      onScreen().queryByText(/BOI: no METAR or TAF data available/)
-    ).not.toBeInTheDocument();
+    expect(onScreen().queryByText(/BOI: no METAR or TAF data available/)).not.toBeInTheDocument();
   });
 
   it("keeps the worksheet usable and shows no modal after a total failure", async () => {
@@ -242,9 +213,7 @@ describe("AppContainer — notifications (#221)", () => {
 
     const message = await onScreen().findByText(/Weather fetch failed \(boom\)/);
     expect(container.querySelector("#step-weather")).toContainElement(message);
-    await waitFor(() =>
-      expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
-    );
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
     // Other steps and actions remain available.
     expect(screen.getByRole("button", { name: /Fetch weather/i })).toBeEnabled();
     expect(screen.getByRole("button", { name: /Print briefing/i })).toBeEnabled();
@@ -254,9 +223,7 @@ describe("AppContainer — notifications (#221)", () => {
 });
 
 describe("AppContainer — rejected entries and weather fetches", () => {
-  const mockFetch = fetchWorksheetWeather as jest.MockedFunction<
-    typeof fetchWorksheetWeather
-  >;
+  const mockFetch = fetchWorksheetWeather as jest.MockedFunction<typeof fetchWorksheetWeather>;
 
   it("clears a rejected altimeter entry when a fetch fills that field, even with the same value", async () => {
     // The fetch couldn't get the departure altimeter: it writes blank, which
@@ -289,16 +256,14 @@ describe("AppContainer — rejected entries and weather fetches", () => {
     fireEvent.click(screen.getByRole("button", { name: /Fetch weather/i }));
 
     await waitFor(() =>
-      expect(onScreen().queryByText(/Altimeter 35.00 is not valid/)).not.toBeInTheDocument()
+      expect(onScreen().queryByText(/Altimeter 35.00 is not valid/)).not.toBeInTheDocument(),
     );
     expect(altimeter()).toHaveValue(null);
   });
 });
 
 describe("AppContainer — rejected entry across two fetches", () => {
-  const mockFetch = fetchWorksheetWeather as jest.MockedFunction<
-    typeof fetchWorksheetWeather
-  >;
+  const mockFetch = fetchWorksheetWeather as jest.MockedFunction<typeof fetchWorksheetWeather>;
   const fetchReturning = (altimeter: [number | null, null, null]) =>
     (async (worksheet: Parameters<typeof fetchWorksheetWeather>[0]) => ({
       data: { altimeter },
@@ -340,9 +305,7 @@ describe("AppContainer — rejected entry across two fetches", () => {
 });
 
 describe("AppContainer — results from stale fetched weather (#222)", () => {
-  const mockFetch = fetchWorksheetWeather as jest.MockedFunction<
-    typeof fetchWorksheetWeather
-  >;
+  const mockFetch = fetchWorksheetWeather as jest.MockedFunction<typeof fetchWorksheetWeather>;
 
   it("withholds departure results, including runway remaining, once the departure airport changes", async () => {
     const data = {
@@ -379,9 +342,7 @@ describe("AppContainer — results from stale fetched weather (#222)", () => {
       target: { value: "KLGU" },
     });
     fireEvent.click(screen.getByRole("button", { name: /Fetch weather/i }));
-    await waitFor(() =>
-      expect(screen.getAllByLabelText("Temperature")[0]).toHaveValue(20)
-    );
+    await waitFor(() => expect(screen.getAllByLabelText("Temperature")[0]).toHaveValue(20));
     expect(onScreen().queryAllByText(/checked \(Warning\)/)).toHaveLength(0);
 
     fireEvent.change(screen.getByLabelText("Departure Airport"), {
@@ -403,14 +364,14 @@ describe("AppContainer — performance notifications (#222)", () => {
     fireEvent.change(weight, { target: { value: "3200" } });
 
     expect(
-      onScreen().getByText(/Weight 3,200 lbs exceeds the C182T maximum gross weight/)
+      onScreen().getByText(/Weight 3,200 lbs exceeds the C182T maximum gross weight/),
     ).toBeInTheDocument();
     expect(weight).toHaveAttribute("aria-invalid", "true");
     expect(container.querySelector("#step-sortie header")).toHaveTextContent("1 warning");
 
     fireEvent.change(weight, { target: { value: "2976" } });
     expect(
-      onScreen().queryByText(/exceeds the C182T maximum gross weight/)
+      onScreen().queryByText(/exceeds the C182T maximum gross weight/),
     ).not.toBeInTheDocument();
     expect(weight).not.toHaveAttribute("aria-invalid");
     expect(container.querySelector("#step-sortie header")).not.toHaveTextContent("warning");
@@ -465,7 +426,7 @@ describe("AppContainer — Weight limit check (#266)", () => {
     setUp("3255");
     expect(within(callout()).getByText("Exceeded")).toBeInTheDocument();
     expect(
-      onScreen().getByText(/Weight 3,255 lbs exceeds the C182T maximum gross weight/)
+      onScreen().getByText(/Weight 3,255 lbs exceeds the C182T maximum gross weight/),
     ).toBeInTheDocument();
     expect(percentCell()).toHaveTextContent("needs valid weight");
   });
@@ -499,9 +460,10 @@ describe("AppContainer — Winds aloft limit check (#267)", () => {
     fireEvent.change(speed("12,000"), { target: { value: "30" } });
     expect(within(callout()).getByText("Exceeded")).toBeInTheDocument();
     expect(speed("12,000").className).toMatch(/text-red/);
-    expect(
-      screen.getByRole("link", { name: /1 of 5 worksheet limits exceeded/ })
-    ).toHaveAttribute("href", "#limit-check-winds");
+    expect(screen.getByRole("link", { name: /1 of 5 worksheet limits exceeded/ })).toHaveAttribute(
+      "href",
+      "#limit-check-winds",
+    );
   });
 
   it("is Not checked when a typed speed is rejected, even though the other column passes", () => {
@@ -568,7 +530,9 @@ describe("AppContainer — Rate of climb and Runway limit checks (#269)", () => 
   it("shows both callouts at the top of Decision, Not checked until there are inputs", () => {
     const { container } = render(<AppContainer />);
     const decisionBody = container.querySelector("#step-decision article > header + *");
-    const sections = [...(decisionBody?.querySelectorAll(":scope > div:first-child > section") ?? [])];
+    const sections = [
+      ...(decisionBody?.querySelectorAll(":scope > div:first-child > section") ?? []),
+    ];
     expect(sections).toEqual([callout("Rate of climb"), callout("Runway")]);
     expect(within(callout("Rate of climb")).getByText("Not checked")).toBeInTheDocument();
     expect(callout("Rate of climb")).toHaveTextContent("needs aircraft type");
@@ -638,12 +602,10 @@ describe("AppContainer — runway lookup (#225)", () => {
     });
     const { container } = render(<AppContainer />);
     expect(
-      onScreen().getByText(/Couldn't look up runways for KDEN \(network down\)/)
+      onScreen().getByText(/Couldn't look up runways for KDEN \(network down\)/),
     ).toBeInTheDocument();
     expect(onScreen().getByText(/Runway lookup failed/)).toBeInTheDocument();
-    expect(container.querySelector("#step-weather header")).toHaveTextContent(
-      "1 warning"
-    );
+    expect(container.querySelector("#step-weather header")).toHaveTextContent("1 warning");
   });
 });
 
@@ -671,9 +633,7 @@ describe("AppContainer — share (#225)", () => {
     fireEvent.click(screen.getByRole("button", { name: /Copy link/i }));
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent(/Couldn't copy the link \(denied\)/);
-    expect(screen.getByLabelText(/Worksheet link/i)).toHaveValue(
-      window.location.href
-    );
+    expect(screen.getByLabelText(/Worksheet link/i)).toHaveValue(window.location.href);
     jest.restoreAllMocks();
   });
 });
@@ -687,8 +647,7 @@ describe("AppContainer — operating temperature re-derivation (#225)", () => {
     });
   };
   const operatingTemperature = () => screen.getAllByLabelText("Temperature")[1];
-  const operatingAltitude = () =>
-    screen.getByLabelText("Operating Altitude (MSL ft)");
+  const operatingAltitude = () => screen.getByLabelText("Operating Altitude (MSL ft)");
 
   it("announces a Caution when an altitude change replaces the pilot's operating temperature", () => {
     render(<AppContainer />);
@@ -697,9 +656,7 @@ describe("AppContainer — operating temperature re-derivation (#225)", () => {
     fireEvent.change(operatingAltitude(), { target: { value: "9000" } });
 
     expect(operatingTemperature()).toHaveValue(8);
-    expect(
-      onScreen().getByText(/replacing your entry of 5°C/)
-    ).toBeInTheDocument();
+    expect(onScreen().getByText(/replacing your entry of 5°C/)).toBeInTheDocument();
 
     fireEvent.change(operatingTemperature(), { target: { value: "5" } });
     expect(onScreen().queryByText(/replacing your entry/)).not.toBeInTheDocument();
@@ -710,7 +667,7 @@ describe("AppContainer — operating temperature re-derivation (#225)", () => {
     enterAloftTemps([20, 14, 8, 2, -10]);
     fireEvent.change(operatingAltitude(), { target: { value: "17000" } });
     expect(
-      onScreen().getByText(/17,000 ft is above the winds-aloft temperatures/)
+      onScreen().getByText(/17,000 ft is above the winds-aloft temperatures/),
     ).toBeInTheDocument();
   });
 });
@@ -722,9 +679,7 @@ describe("AppContainer — malformed link values (#225)", () => {
     const weight = screen.getByLabelText(/Aircraft Takeoff Weight/i);
     expect(weight).toHaveValue(null);
     expect(onScreen().getByText(/"heavy" isn't a number/)).toBeInTheDocument();
-    expect(container.querySelector("#step-sortie header")).toHaveTextContent(
-      "1 warning"
-    );
+    expect(container.querySelector("#step-sortie header")).toHaveTextContent("1 warning");
 
     fireEvent.change(weight, { target: { value: "2300" } });
     expect(onScreen().queryByText(/"heavy" isn't a number/)).not.toBeInTheDocument();
@@ -732,17 +687,13 @@ describe("AppContainer — malformed link values (#225)", () => {
 });
 
 describe("AppContainer — unverified weather (#224)", () => {
-  const mockFetch = fetchWorksheetWeather as jest.MockedFunction<
-    typeof fetchWorksheetWeather
-  >;
+  const mockFetch = fetchWorksheetWeather as jest.MockedFunction<typeof fetchWorksheetWeather>;
   const unverified = /came from a shared link/i;
 
-  const mockSearchParams = useSearchParams as jest.MockedFunction<
-    typeof useSearchParams
-  >;
+  const mockSearchParams = useSearchParams as jest.MockedFunction<typeof useSearchParams>;
   const openSharedLink = (query: string) =>
     mockSearchParams.mockReturnValue(
-      new URLSearchParams(query) as unknown as ReturnType<typeof useSearchParams>
+      new URLSearchParams(query) as unknown as ReturnType<typeof useSearchParams>,
     );
 
   beforeEach(() => {
@@ -764,8 +715,8 @@ describe("AppContainer — unverified weather (#224)", () => {
 
   afterEach(() =>
     mockSearchParams.mockImplementation(
-      () => new URLSearchParams() as unknown as ReturnType<typeof useSearchParams>
-    )
+      () => new URLSearchParams() as unknown as ReturnType<typeof useSearchParams>,
+    ),
   );
 
   it("shows a Caution on the weather step when a shared link carries weather values", () => {
@@ -774,9 +725,7 @@ describe("AppContainer — unverified weather (#224)", () => {
 
     const caution = onScreen().getByText(unverified);
     expect(container.querySelector("#step-weather")).toContainElement(caution);
-    expect(container.querySelector("#step-weather header")).toHaveTextContent(
-      "1 caution"
-    );
+    expect(container.querySelector("#step-weather header")).toHaveTextContent("1 caution");
     // A Caution never blocks: fetching stays available.
     expect(screen.getByRole("button", { name: /Re-fetch/i })).toBeEnabled();
   });
@@ -788,12 +737,8 @@ describe("AppContainer — unverified weather (#224)", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /Re-fetch/i }));
 
-    await waitFor(() =>
-      expect(onScreen().queryByText(unverified)).not.toBeInTheDocument()
-    );
-    expect(
-      container.querySelector("#step-weather header")
-    ).not.toHaveTextContent("caution");
+    await waitFor(() => expect(onScreen().queryByText(unverified)).not.toBeInTheDocument());
+    expect(container.querySelector("#step-weather header")).not.toHaveTextContent("caution");
   });
 
   it("shows no Caution on a fresh worksheet with no weather values", () => {
@@ -810,7 +755,7 @@ describe("AppContainer — unverified weather (#224)", () => {
     const ceilVis = screen.getByRole("region", { name: "Limit check: Ceiling/visibility" });
     expect(within(ceilVis).getByText("Exceeded")).toBeInTheDocument();
     expect(ceilVis.querySelector('[data-marker="caution"]')?.getAttribute("title")).toMatch(
-      unverified
+      unverified,
     );
     // A box alone isn't fetched weather: the action bar still offers a first fetch.
     expect(screen.getByRole("button", { name: "Fetch weather" })).toBeEnabled();
@@ -819,17 +764,15 @@ describe("AppContainer — unverified weather (#224)", () => {
 });
 
 describe("AppContainer — markers from a Substitution (#223)", () => {
-  const mockFetch = fetchWorksheetWeather as jest.MockedFunction<
-    typeof fetchWorksheetWeather
-  >;
+  const mockFetch = fetchWorksheetWeather as jest.MockedFunction<typeof fetchWorksheetWeather>;
   const substitution = "KLGU: forecast period has no temperature; using current observation";
 
   beforeEach(() => {
     mockSearchParams.mockReturnValue(
       new URLSearchParams(
         "acType=T182T&weight=3000&airport=KOGD,KLGU&altitude=4000,8000,4500" +
-          "&altimeter=29.92,29.92,29.92&temp=20,10,15&rwy=4000,6500"
-      )
+          "&altimeter=29.92,29.92,29.92&temp=20,10,15&rwy=4000,6500",
+      ),
     );
     mockFetch.mockImplementation(async (worksheet) => ({
       data: { temp: [20, 10, 15] },
@@ -843,7 +786,11 @@ describe("AppContainer — markers from a Substitution (#223)", () => {
         },
         applied: { temp: [20, 10, 15] },
         notifications: [
-          { level: "caution", subject: { kind: "field", field: "temp", index: 2 }, message: substitution },
+          {
+            level: "caution",
+            subject: { kind: "field", field: "temp", index: 2 },
+            message: substitution,
+          },
         ],
       },
     }));
@@ -865,12 +812,14 @@ describe("AppContainer — markers from a Substitution (#223)", () => {
 
     const briefing = screen.getByLabelText("Print briefing");
     const note = Array.from(briefing.querySelectorAll("li[data-ref]")).find((li) =>
-      li.textContent?.includes(substitution)
+      li.textContent?.includes(substitution),
     )!;
     const printedLanding = Array.from(briefing.querySelectorAll("tr"))
       .find((tr) => tr.querySelector("td")?.textContent === "Landing Ground Roll")!
       .querySelectorAll("td");
-    expect(printedLanding[2].querySelector(`[data-ref="${note.getAttribute("data-ref")}"]`)).not.toBeNull();
+    expect(
+      printedLanding[2].querySelector(`[data-ref="${note.getAttribute("data-ref")}"]`),
+    ).not.toBeNull();
     expect(printedLanding[1].querySelector("[data-ref]")).toBeNull();
   });
 });
@@ -889,16 +838,12 @@ describe("AppContainer — rejected weather entries", () => {
     expect(onScreen().getByText(message)).toBeInTheDocument();
     expect(header()).toHaveTextContent("1 warning");
     expect(container.querySelector("#step-weather .bg-red-600")).not.toBeNull();
-    expect(
-      within(screen.getByLabelText("Print briefing")).getByText(message)
-    ).toBeInTheDocument();
+    expect(within(screen.getByLabelText("Print briefing")).getByText(message)).toBeInTheDocument();
   });
 });
 
 describe("AppContainer — weather fetched for other inputs", () => {
-  const mockFetch = fetchWorksheetWeather as jest.MockedFunction<
-    typeof fetchWorksheetWeather
-  >;
+  const mockFetch = fetchWorksheetWeather as jest.MockedFunction<typeof fetchWorksheetWeather>;
   const fetched = {
     temp: [21, null, 15] as [number | null, number | null, number | null],
     altimeter: [30.01, null, 29.95] as [number | null, number | null, number | null],
@@ -924,8 +869,7 @@ describe("AppContainer — weather fetched for other inputs", () => {
   const stale = /Fetched for BOI at .*; refetch weather/;
   const arrivalTemperature = () => onScreen().getAllByLabelText("Temperature")[2];
   const departureTemperature = () => onScreen().getAllByLabelText("Temperature")[0];
-  const weatherHeader = (container: HTMLElement) =>
-    container.querySelector("#step-weather header");
+  const weatherHeader = (container: HTMLElement) => container.querySelector("#step-weather header");
 
   async function fetchThenChangeArrival() {
     const utils = render(<AppContainer />);
@@ -945,7 +889,7 @@ describe("AppContainer — weather fetched for other inputs", () => {
     expect(departureTemperature()).not.toHaveAttribute("aria-invalid");
     expect(weatherHeader(container)).toHaveTextContent("2 warnings");
     expect(
-      within(screen.getByLabelText("Print briefing")).getAllByText(stale).length
+      within(screen.getByLabelText("Print briefing")).getAllByText(stale).length,
     ).toBeGreaterThan(0);
   });
 

@@ -20,8 +20,7 @@ export interface PhaseDistances {
   tableGaps: number;
 }
 
-const round = (v: number | null): number | null =>
-  v === null ? null : Math.round(v);
+const round = (v: number | null): number | null => (v === null ? null : Math.round(v));
 
 function mergeExtrapolations(...lists: Extrapolation[][]): Extrapolation[] {
   const out: Extrapolation[] = [];
@@ -39,13 +38,12 @@ export function calculateTakeoffDistances(
   aircraftModel: string,
   weight: number,
   pressureAltitude: number,
-  temperature: number
+  temperature: number,
 ): PhaseDistances | null {
   const aircraft = aircraftData.find((a) => a.id === aircraftModel);
   if (!aircraft || !aircraft.shortFieldTakeoff) return null;
 
-  const { weights, pressureAltitudes, temperatures, data } =
-    aircraft.shortFieldTakeoff;
+  const { weights, pressureAltitudes, temperatures, data } = aircraft.shortFieldTakeoff;
   const weightIndex = findWeightIndex(weights, weight);
   if (weightIndex === -1) return null;
 
@@ -91,7 +89,7 @@ export function calculateTakeoffDistances(
 export function calculateLandingDistances(
   aircraftModel: string,
   pressureAltitude: number,
-  temperature: number
+  temperature: number,
 ): PhaseDistances | null {
   const aircraft = aircraftData.find((a) => a.id === aircraftModel);
   if (!aircraft || !aircraft.shortFieldLanding) return null;
@@ -103,7 +101,7 @@ export function calculateLandingDistances(
         { xAxis: pressureAltitudes, yAxis: temperatures, data: data[0][column] as number[][] },
         pressureAltitude,
         temperature,
-        { xAxisName: "pressureAltitude", yAxisName: "temperature" }
+        { xAxisName: "pressureAltitude", yAxisName: "temperature" },
       );
     } catch {
       return { value: null, extrapolated: [] };
@@ -135,7 +133,7 @@ function landingFor(aircraftModel: string, params: TOLDCalculationParams) {
 /** Takeoff ground roll in feet, or null if it can't be computed. */
 export function calculateTakeoffGroundRoll(
   aircraftModel: string,
-  params: TOLDCalculationParams
+  params: TOLDCalculationParams,
 ): number | null {
   return takeoffFor(aircraftModel, params)?.groundRoll ?? null;
 }
@@ -143,7 +141,7 @@ export function calculateTakeoffGroundRoll(
 /** Takeoff distance over a 50 ft obstacle in feet, or null. */
 export function calculateTakeoff50ftObstacle(
   aircraftModel: string,
-  params: TOLDCalculationParams
+  params: TOLDCalculationParams,
 ): number | null {
   return takeoffFor(aircraftModel, params)?.obstacle50ft ?? null;
 }
@@ -151,7 +149,7 @@ export function calculateTakeoff50ftObstacle(
 /** Landing ground roll in feet, or null. */
 export function calculateLandingGroundRoll(
   aircraftModel: string,
-  params: TOLDCalculationParams
+  params: TOLDCalculationParams,
 ): number | null {
   return landingFor(aircraftModel, params)?.groundRoll ?? null;
 }
@@ -159,7 +157,7 @@ export function calculateLandingGroundRoll(
 /** Landing distance over a 50 ft obstacle in feet, or null. */
 export function calculateLanding50ftObstacle(
   aircraftModel: string,
-  params: TOLDCalculationParams
+  params: TOLDCalculationParams,
 ): number | null {
   return landingFor(aircraftModel, params)?.obstacle50ft ?? null;
 }
@@ -174,7 +172,7 @@ export function calculateLanding50ftObstacle(
 export function calculateAvailableRunwayRemaining(
   runwayLength: number | null,
   takeoffDistance: number | null,
-  landingDistance: number | null
+  landingDistance: number | null,
 ): number | null {
   try {
     // If runway length is not specified, return null
@@ -231,4 +229,3 @@ function findWeightIndex(weights: number[], targetWeight: number): number {
 
   return -1;
 }
-

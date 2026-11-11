@@ -1,13 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
-import InlineNotifications, {
-  notificationA11yProps,
-} from "./InlineNotifications";
-import {
-  fieldSubject,
-  stepSubject,
-  type Notification,
-} from "@/utils/notifications";
+import InlineNotifications, { notificationA11yProps } from "./InlineNotifications";
+import { fieldSubject, stepSubject, type Notification } from "@/utils/notifications";
 
 const warning: Notification = {
   level: "warning",
@@ -44,10 +38,7 @@ function Field({ notifications }: { notifications: Notification[] }) {
 describe("InlineNotifications", () => {
   it("keeps an empty live region mounted when its Subject has no notifications", () => {
     const { container } = render(
-      <InlineNotifications
-        notifications={[elsewhere]}
-        subject={fieldSubject("temp", 2)}
-      />
+      <InlineNotifications notifications={[elsewhere]} subject={fieldSubject("temp", 2)} />,
     );
     const region = container.firstElementChild as HTMLElement;
     expect(region).toHaveAttribute("aria-live", "polite");
@@ -57,7 +48,7 @@ describe("InlineNotifications", () => {
   it("announces a newly raised Warning politely, inside a list in the live region", () => {
     const subject = fieldSubject("temp", 2);
     const { container, rerender } = render(
-      <InlineNotifications notifications={[]} subject={subject} />
+      <InlineNotifications notifications={[]} subject={subject} />,
     );
     const region = container.firstElementChild as HTMLElement;
     rerender(<InlineNotifications notifications={[warning]} subject={subject} />);
@@ -73,7 +64,7 @@ describe("InlineNotifications", () => {
       <InlineNotifications
         notifications={[warning, caution, advisory, elsewhere]}
         subject={fieldSubject("temp", 2)}
-      />
+      />,
     );
     expect(screen.getByText(/BOI: no METAR or TAF/)).toBeInTheDocument();
     expect(screen.getByText(/using nearest TAF period/)).toBeInTheDocument();
@@ -94,7 +85,7 @@ describe("InlineNotifications", () => {
       <InlineNotifications
         notifications={[warning, caution, advisory]}
         subject={fieldSubject("temp", 2)}
-      />
+      />,
     );
     const [w, c, a] = screen.getAllByRole("listitem");
     expect(w.className).toMatch(/red/);
