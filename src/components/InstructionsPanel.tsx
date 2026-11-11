@@ -31,7 +31,7 @@ const operationalNotes: OperationalNote[] = [
     emphasis: "This tool is for reference purposes only.",
     body: " It is up to the PIC and FRO to responsibly evaluate risks prior to release or departure. If risks cannot be reduced to an acceptable level, a no-go decision should be considered.",
   },
-  "Warnings are highlighted in red/yellow, but the worksheet does not cover all the risks involved.",
+  "Warnings and exceeded worksheet limits are highlighted, but the worksheet does not cover all the risks involved.",
   "Complete and upload this document to 'Sortie Files' for a mountain flight.",
   "If computations reveal that a particular performance item is marginal, consult the POH prior to flight.",
   "C206: 16,000' altitude limit is based on aircraft operations below critical altitude. See POH for operations above this altitude.",

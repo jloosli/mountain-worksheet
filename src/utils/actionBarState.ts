@@ -2,11 +2,7 @@
 import type { WorksheetData } from "@/utils/types";
 import { normalizeAirportCode } from "@/utils/airportCode";
 
-export type ActionBarState =
-  | "incomplete"
-  | "ready"
-  | "fetched"
-  | "all-done";
+export type ActionBarState = "incomplete" | "ready" | "fetched";
 
 /**
  * Returns true when the worksheet has the minimum required fields to fetch
@@ -40,9 +36,9 @@ export function hasWeatherData(state: WorksheetData): boolean {
  * Derives the action bar's state from the worksheet data and the
  * weather-fetch timestamp.
  *
- * Phase 3 returns only `incomplete | ready | fetched`. The `all-done` state
- * is reserved for after the Go / No-Go panel ships; until then, fetched is
- * the terminal state. "Fetched" is reached when either the session has a
+ * `fetched` is the terminal state: the worksheet never states a Go/No-Go
+ * decision (see GLOSSARY.md), so there is no "done" state beyond it.
+ * "Fetched" is reached when either the session has a
  * fresh fetch timestamp OR the worksheet already carries weather data (e.g.
  * from a shared URL).
  */
