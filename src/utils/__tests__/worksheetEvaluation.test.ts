@@ -314,6 +314,14 @@ describe("evaluateWorksheet — weather status (#285)", () => {
     expect(evaluateWorksheet(emptyState(), EMPTY_SESSION).weatherStatus).toBe("none");
   });
 
+  it("drives the action bar: ready before weather once it can be fetched, fetched with weather", () => {
+    const ready = { ...emptyState(), airport: ["KABC", "KXYZ"] as [string, string] };
+    expect(evaluateWorksheet(emptyState(), EMPTY_SESSION).actionBar).toBe("incomplete");
+    expect(evaluateWorksheet(ready, EMPTY_SESSION).actionBar).toBe("ready");
+    expect(evaluateWorksheet({ ...ready, cielVis: true }, EMPTY_SESSION).actionBar).toBe("ready");
+    expect(evaluateWorksheet(sortie(), EMPTY_SESSION).actionBar).toBe("fetched");
+  });
+
   it("is unverified for weather values not fetched this session, with the Caution and a complete weather step", () => {
     const e = evaluateWorksheet(sortie(), EMPTY_SESSION);
     expect(e.weatherStatus).toBe("unverified");

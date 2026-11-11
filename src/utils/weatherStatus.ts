@@ -1,7 +1,9 @@
 /**
- * Whether the worksheet has weather, and where it came from. Computed once
- * per session (`weatherStatus` in `weatherSession.ts`); step statuses, the
- * action bar and Unverified weather all read it.
+ * The weather status type and the worksheet predicate behind it. The
+ * selector that computes it, `weatherStatus`, lives with the session memory
+ * it reads (`weatherSession.ts`); `evaluateWorksheet` calls it once per
+ * render, and step statuses, the action bar and Unverified weather all read
+ * that one result.
  */
 import type { WorksheetData } from "./types";
 

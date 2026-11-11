@@ -17,7 +17,6 @@ import InlineNotifications from "@/components/InlineNotifications";
 import { LimitCheckCallouts } from "@/components/LimitCheckCallout";
 import { stepSubject } from "@/utils/notifications";
 import type { WorksheetData } from "@/utils/types";
-import { deriveActionBarState } from "@/utils/actionBarState";
 import { evaluateWorksheet } from "@/utils/worksheetEvaluation";
 import type { RejectedEntry, RejectedEntryKey } from "@/utils/rejectedEntries";
 import { useTempUnit } from "@/utils/useTempUnit";
@@ -137,8 +136,6 @@ export default function AppContainer() {
   );
   const { notifications, limitChecks, stepStatuses } = evaluation;
 
-  const actionBarState = deriveActionBarState(evaluation.weatherStatus, canFetch(session));
-
   const steps = useMemo<StepperStep[]>(
     () => [
       {
@@ -220,7 +217,7 @@ export default function AppContainer() {
         onFetched={dispatch}
         renderButton={({ onClick, disabled, isLoading }) => (
           <ActionBar
-            state={actionBarState}
+            state={evaluation.actionBar}
             worksheetData={state}
             limitChecks={limitChecks}
             weatherLastUpdated={session.lastUpdated ?? undefined}

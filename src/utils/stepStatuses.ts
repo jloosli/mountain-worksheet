@@ -26,8 +26,8 @@ export interface StepStatusesResult {
  * - Sortie: `complete` when the minimum fields to fetch weather are present;
  *   otherwise `active` (the user's current focus).
  * - Weather: `complete` when the worksheet has weather (`hasWeather`:
- *   fetched, stale, or unverified from a shared link); otherwise `active` if sortie is complete (the user's next focus), else
- *   `pending`.
+ *   fetched, stale, or unverified from a shared link); otherwise `active`
+ *   if sortie is complete (the user's next focus), else `pending`.
  * - Decision: `active` once weather is complete (next focus); otherwise
  *   `pending`. It is never `complete`: the worksheet informs the Go/No-Go
  *   decision but never states it (GLOSSARY.md), and Limit checks don't

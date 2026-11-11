@@ -18,6 +18,7 @@ import { deriveStepStatuses, type StepStatusesResult } from "./stepStatuses";
 import type { ManeuveringSpeeds, WorksheetData } from "./types";
 import { sessionNotifications, weatherStatus, type WeatherSession } from "./weatherSession";
 import type { WeatherStatus } from "./weatherStatus";
+import { canFetchWeather, deriveActionBarState, type ActionBarState } from "./actionBarState";
 
 /**
  * What the worksheet remembers about this session beyond the worksheet
@@ -61,6 +62,8 @@ export interface WorksheetEvaluation {
   limitChecks: LimitCheck[];
   /** Whether the worksheet has weather, and where it came from. */
   weatherStatus: WeatherStatus;
+  /** The action bar's state, from the weather status. */
+  actionBar: ActionBarState;
   stepStatuses: StepStatusesResult;
 }
 
@@ -84,9 +87,9 @@ export function evaluateWorksheet(
   const maneuveringWarnings = maneuveringNotifications(aircraft);
 
   const weatherSession: WeatherSession = { ...session, worksheet: state };
-  const weather = weatherStatus(weatherSession);
+  const status = weatherStatus(weatherSession);
   const notifications = [
-    ...sessionNotifications(weatherSession),
+    ...sessionNotifications(weatherSession, status),
     ...session.runwayNotifications,
     ...derivePerformanceNotifications(state),
   ];
@@ -110,7 +113,8 @@ export function evaluateWorksheet(
       notifications: maneuveringWarnings,
     },
     limitChecks: deriveLimitChecks({ state, notifications, climb, told }),
-    weatherStatus: weather,
-    stepStatuses: deriveStepStatuses(state, weather, notifications),
+    weatherStatus: status,
+    actionBar: deriveActionBarState(status, canFetchWeather(state)),
+    stepStatuses: deriveStepStatuses(state, status, notifications),
   };
 }

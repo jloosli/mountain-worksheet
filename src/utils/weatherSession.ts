@@ -138,15 +138,21 @@ export function weatherSessionReducer(
   }
 }
 
-/** Every notification the session's memory raises against its worksheet. */
-export function sessionNotifications(session: WeatherSession): Notification[] {
+/**
+ * Every notification the session's memory raises against its worksheet.
+ * Pass the session's `weatherStatus` when it is already computed.
+ */
+export function sessionNotifications(
+  session: WeatherSession,
+  status: WeatherStatus = weatherStatus(session),
+): Notification[] {
   const { worksheet, lastFetch } = session;
   return [
     ...fetchNotifications(worksheet, lastFetch),
     ...staleFetchNotifications(worksheet, lastFetch),
     ...opTempChangeNotifications(worksheet, session.opTempChange),
     ...deriveUrlNotifications(worksheet, session.linkLoad),
-    ...unverifiedWeatherNotifications(worksheet, weatherStatus(session)),
+    ...unverifiedWeatherNotifications(worksheet, status),
     ...rejectedEntryNotifications(worksheet, session.rejected),
   ];
 }
