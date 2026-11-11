@@ -104,6 +104,8 @@ export default function LimitCheckCallout({ check }: { check: LimitCheck }) {
               <span className="italic text-slate-600 dark:text-slate-400">{p.waitingFor}</span>
             )}
             <CautionMarkers cautions={p.substitutions} />
+            {/* The dot and color are aria-hidden or visual only; name the state in text. */}
+            <span className="sr-only"> ({LIMIT_STATE_LABEL[p.state]})</span>
           </li>
         ))}
       </ul>

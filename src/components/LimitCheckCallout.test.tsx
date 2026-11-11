@@ -22,6 +22,33 @@ const weight = (overrides: Partial<LimitCheck> = {}): LimitCheck => ({
 });
 
 describe("LimitCheckCallout", () => {
+  it("names each point's state in text, not only by color, for a mixed-state check", () => {
+    render(
+      <LimitCheckCallout
+        check={weight({
+          id: "winds",
+          name: "Winds aloft",
+          state: "exceeded",
+          points: [
+            { label: "3,000'", state: "within", value: "10 kt", substitutions: [] },
+            { label: "6,000'", state: "near", value: "22 kt", substitutions: [] },
+            { label: "9,000'", state: "exceeded", value: "35 kt", substitutions: [] },
+            { label: "12,000'", state: "not-checked", waitingFor: "needs speed (Warning)", substitutions: [] },
+          ],
+        })}
+      />,
+    );
+    const items = within(screen.getByRole("region", { name: "Limit check: Winds aloft" }))
+      .getAllByRole("listitem")
+      .map((li) => li.textContent);
+    expect(items).toEqual([
+      "3,000'10 kt (Within limit)",
+      "6,000'22 kt (Near limit)",
+      "9,000'35 kt (Exceeded)",
+      "12,000'needs speed (Warning) (Not checked)",
+    ]);
+  });
+
   it("shows a check's guidance note when it has one", () => {
     render(
       <LimitCheckCallout
