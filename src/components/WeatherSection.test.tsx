@@ -2,7 +2,6 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import WeatherSection from "./WeatherSection";
 import type { RunwayOption, WorksheetData } from "@/utils/types";
 import { fieldSubject, type Notification } from "@/utils/notifications";
-import type { LimitCheck } from "@/utils/limitChecks";
 import { deserializeState } from "@/utils/urlState";
 import { sanitizeWorksheetUrlState } from "@/utils/worksheetUrlState";
 
@@ -315,20 +314,6 @@ describe("WeatherSection — worksheet opened from a link", () => {
 });
 
 describe("WeatherSection — winds aloft point styles (#267)", () => {
-  const winds: LimitCheck = {
-    id: "winds",
-    name: "Winds aloft",
-    limit: "mountain winds under 30 kt at every altitude",
-    caveat: "Surface wind and gusts are not checked.",
-    step: "weather",
-    state: "exceeded",
-    points: [
-      { label: "3,000'", state: "within", value: "10 kt", substitutions: [], index: 0 },
-      { label: "6,000'", state: "near", value: "20 kt", substitutions: [], index: 1 },
-      { label: "9,000'", state: "exceeded", value: "30 kt", substitutions: [], index: 2 },
-      { label: "12,000'", state: "not-checked", waitingFor: "needs speed checked (Warning)", substitutions: [], index: 3 },
-    ],
-  };
   const state: WorksheetData = {
     ...populated,
     wind: [
@@ -344,7 +329,7 @@ describe("WeatherSection — winds aloft point styles (#267)", () => {
         state={state}
         onUpdate={() => {}}
         airportRunways={[null, null]}
-        limitChecks={[winds]}
+        windSpeedStates={["within", "near", "exceeded", "not-checked", undefined]}
       />
     );
     const speed = (alt: string) => screen.getByLabelText(`Wind velocity at ${alt} ft`);

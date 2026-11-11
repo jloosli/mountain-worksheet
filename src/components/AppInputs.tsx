@@ -5,7 +5,7 @@ import InlineNotifications from "@/components/InlineNotifications";
 import SortieInfo from "@/components/SortieInfo";
 import StepShell from "@/components/StepShell";
 import { LimitCheckCallouts } from "@/components/LimitCheckCallout";
-import type { LimitCheck } from "@/utils/limitChecks";
+import { windSpeedStates, type LimitCheck } from "@/utils/limitChecks";
 import WeatherSection from "@/components/WeatherSection";
 import { stepSubject, type Notification } from "@/utils/notifications";
 import {
@@ -96,7 +96,7 @@ export default function AppInputs({
           runwayStatus={runwayStatus}
           useFahrenheit={useFahrenheit}
           notifications={notifications}
-          limitChecks={limitChecks}
+          windSpeedStates={windSpeedStates(limitChecks)}
           rejectedEntries={rejectedEntries}
           onRejectedEntryChange={onRejectedEntryChange}
         />

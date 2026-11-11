@@ -4,7 +4,7 @@
 import { useState } from "react";
 import AirportCard from "@/components/AirportCard";
 import { limitPointClass } from "@/components/LimitCheckCallout";
-import type { LimitCheck, LimitState } from "@/utils/limitChecks";
+import type { LimitState } from "@/utils/limitChecks";
 import { isApiPopulatedData } from "@/utils/weatherDataMapper";
 import { celciusToFarenheit, farenheitToCelcius } from "@/utils/formulas";
 import type { RunwayOption, WorksheetData } from "@/utils/types";
@@ -42,8 +42,8 @@ interface WeatherSectionProps {
   useFahrenheit?: boolean;
   /** All notifications in force; each is shown next to its Subject. */
   notifications?: readonly Notification[];
-  /** Limit checks; the Winds aloft check styles the speeds it evaluates. */
-  limitChecks?: readonly LimitCheck[];
+  /** The Winds aloft check's state per column; styles the speeds it evaluates. */
+  windSpeedStates?: readonly (LimitState | undefined)[];
   /**
    * Entries the pilot typed that were not applied, held by the caller so
    * their Warnings are part of `notifications`. Without
@@ -63,7 +63,7 @@ export default function WeatherSection({
   runwayStatus = ["idle", "idle"],
   useFahrenheit = false,
   notifications = [],
-  limitChecks = [],
+  windSpeedStates = [],
   rejectedEntries,
   onRejectedEntryChange,
 }: WeatherSectionProps) {
@@ -208,7 +208,7 @@ export default function WeatherSection({
         onChange={handleWindChange}
         rejectedText={rejectedWindText}
         notifications={allNotifications}
-        speedStates={windSpeedStates(limitChecks)}
+        speedStates={windSpeedStates}
       />
 
       <div>
@@ -385,14 +385,6 @@ interface WindsAloftBlockProps {
   speedStates?: readonly (LimitState | undefined)[];
 }
 
-/** Each winds-aloft column's point state in the Winds aloft check. */
-function windSpeedStates(checks: readonly LimitCheck[]): (LimitState | undefined)[] {
-  const states: (LimitState | undefined)[] = ALOFT_ALTITUDES.map(() => undefined);
-  for (const p of checks.find((c) => c.id === "winds")?.points ?? []) {
-    if (p.index !== undefined) states[p.index] = p.state;
-  }
-  return states;
-}
 
 function WindsAloftBlock({
   wind,

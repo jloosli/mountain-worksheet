@@ -9,6 +9,7 @@ import {
   limitCheckSummary,
   bySeverity,
   worstState,
+  windSpeedStates,
   type LimitCheck,
 } from "../limitChecks";
 import { fieldSubject, stepSubject, type Notification } from "../notifications";
@@ -352,6 +353,19 @@ describe("Winds aloft limit check", () => {
     expect(note).toMatch(/20 kt/);
     expect(note).toMatch(/ridge/);
     expect(note).toMatch(/doesn't know ridge height/);
+  });
+
+  it("gives each column's state for the winds table, undefined where it wasn't checked", () => {
+    const checks = checksFor(withSpeeds([10, null, 22, 31, null]), [
+      { level: "warning", subject: fieldSubject("wind", 4), message: "Stale; refetch weather." },
+    ]);
+    expect(windSpeedStates(checks)).toEqual([
+      "within",
+      undefined,
+      "near",
+      "exceeded",
+      "not-checked",
+    ]);
   });
 });
 

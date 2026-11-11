@@ -8,6 +8,7 @@
  * during render from state, the derived view models and the notifications in
  * force, so they change exactly when their inputs do.
  */
+import { TARGET_ALTITUDES_FT } from "./areaOfOpsWeather";
 import { assessWeight, findAircraft, type ClimbViewModel, type TOLDViewModel } from "./derived";
 import { inputCautions } from "./markers";
 import {
@@ -189,8 +190,20 @@ function weightCheck({ state, notifications, climb }: LimitCheckInputs): LimitCh
   ]);
 }
 
-/** The winds-aloft columns, matching `state.wind`'s column order. */
-const WIND_ALTITUDES = ["3,000'", "6,000'", "9,000'", "12,000'", "15,000'"];
+/** The winds-aloft column labels, in `state.wind`'s column order: "3,000'". */
+const WIND_ALTITUDES = TARGET_ALTITUDES_FT.map((ft) => `${fmt(ft)}'`);
+
+/**
+ * The Winds aloft check's state for each winds-aloft column, undefined where
+ * it didn't check that column, for styling the speeds in the winds table.
+ */
+export function windSpeedStates(checks: readonly LimitCheck[]): (LimitState | undefined)[] {
+  const states: (LimitState | undefined)[] = WIND_ALTITUDES.map(() => undefined);
+  for (const p of checks.find((c) => c.id === "winds")?.points ?? []) {
+    if (p.index !== undefined) states[p.index] = p.state;
+  }
+  return states;
+}
 
 /**
  * Winds aloft: each entered winds-aloft speed, Exceeded at 30 kt or more and
