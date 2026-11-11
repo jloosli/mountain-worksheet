@@ -455,7 +455,7 @@ describe("AppContainer — Weight limit check (#266)", () => {
     });
     expect(within(callout()).getByText("Exceeded")).toBeInTheDocument();
     expect(callout()).toHaveTextContent("2,790 / 3,100 lbs (90%)");
-    const summary = screen.getByRole("link", { name: /1 of 3 worksheet limits exceeded/ });
+    const summary = screen.getByRole("link", { name: /1 of 5 worksheet limits exceeded/ });
     expect(summary).toHaveAttribute("href", "#limit-check-weight");
     expect(percentCell()).toHaveTextContent(/^90%$/);
     expect(percentCell().className).toMatch(/text-red/);
@@ -517,7 +517,7 @@ describe("AppContainer — Winds aloft limit check (#267)", () => {
     expect(within(callout()).getByText("Exceeded")).toBeInTheDocument();
     expect(speed("12,000").className).toMatch(/text-red/);
     expect(
-      screen.getByRole("link", { name: /1 of 3 worksheet limits exceeded/ })
+      screen.getByRole("link", { name: /1 of 5 worksheet limits exceeded/ })
     ).toHaveAttribute("href", "#limit-check-winds");
   });
 
@@ -555,7 +555,7 @@ describe("AppContainer — Ceiling/visibility limit check (#268)", () => {
     fireEvent.click(screen.getByRole("checkbox", { name: /Ceiling \/ Vis/ }));
     expect(within(callout()).getByText("Exceeded")).toBeInTheDocument();
     expect(callout()).toHaveTextContent("Ceil/Vis boxTicked");
-    const summary = screen.getByRole("link", { name: /1 of 3 worksheet limits exceeded/ });
+    const summary = screen.getByRole("link", { name: /1 of 5 worksheet limits exceeded/ });
     expect(summary).toHaveAttribute("href", "#limit-check-ceilVis");
   });
 
@@ -565,6 +565,87 @@ describe("AppContainer — Ceiling/visibility limit check (#268)", () => {
     expect(within(callout()).getByText("Exceeded")).toBeInTheDocument();
     const marker = callout().querySelector('[data-marker="caution"]');
     expect(marker?.getAttribute("title")).toMatch(/came from a shared link/);
+  });
+});
+
+describe("AppContainer — Rate of climb and Runway limit checks (#269)", () => {
+  const link = (overrides: Record<string, string> = {}) =>
+    new URLSearchParams({
+      acType: "C182T",
+      weight: "2700",
+      airport: "KABC,KXYZ",
+      altitude: "1000,8000,1000",
+      altimeter: "29.92,29.92,29.92",
+      temp: "20,10,20",
+      rwy: "3000,3000",
+      ...overrides,
+    });
+  const callout = (name: string) => screen.getByRole("region", { name: `Limit check: ${name}` });
+
+  it("shows both callouts at the top of Decision, Not checked until there are inputs", () => {
+    const { container } = render(<AppContainer />);
+    const decisionBody = container.querySelector("#step-decision article > header + *");
+    const sections = [...(decisionBody?.querySelectorAll(":scope > div:first-child > section") ?? [])];
+    expect(sections).toEqual([callout("Rate of climb"), callout("Runway")]);
+    expect(within(callout("Rate of climb")).getByText("Not checked")).toBeInTheDocument();
+    expect(callout("Rate of climb")).toHaveTextContent("needs aircraft type");
+    expect(within(callout("Runway")).getByText("Not checked")).toBeInTheDocument();
+  });
+
+  it("is Within limit with a climb over 300 fpm and runway to spare", () => {
+    mockSearchParams.mockReturnValue(link());
+    render(<AppContainer />);
+    expect(within(callout("Rate of climb")).getByText("Within limit")).toBeInTheDocument();
+    expect(callout("Rate of climb")).toHaveTextContent(/Operating altitude[\d,]+ fpm/);
+    expect(within(callout("Runway")).getByText("Within limit")).toBeInTheDocument();
+    expect(callout("Runway")).toHaveTextContent(/Departure \(KABC\)[\d,]+ ft remaining/);
+  });
+
+  it("marks only the exceeded values in the climb and TOLD tables", () => {
+    // A 600 ft arrival runway can't hold both ground rolls; 16,000 ft is
+    // above where the C182T climbs at 300 fpm.
+    mockSearchParams.mockReturnValue(link({ rwy: "3000,600", altitude: "1000,16000,1000" }));
+    render(<AppContainer />);
+    expect(within(callout("Runway")).getByText("Exceeded")).toBeInTheDocument();
+    expect(within(callout("Rate of climb")).getByText("Exceeded")).toBeInTheDocument();
+
+    const rocCells = onScreen()
+      .getByText("Rate of Climb (Actual Wt, note 11)")
+      .closest("tr")!
+      .querySelectorAll("td");
+    expect(rocCells[1].className).not.toMatch(/text-red/);
+    expect(rocCells[2].className).toMatch(/text-red/);
+    expect(rocCells[3].className).not.toMatch(/text-red/);
+
+    const runwayCells = onScreen()
+      .getByText("Available runway remaining")
+      .closest("tr")!
+      .querySelectorAll("td");
+    expect(runwayCells[1].className).not.toMatch(/text-red/);
+    expect(runwayCells[2].className).toMatch(/text-red/);
+    expect(runwayCells[2].textContent).toMatch(/^-/);
+    // The over-50-ft-obstacle column is never styled, even when negative.
+    expect(runwayCells[4].textContent).toMatch(/^-/);
+    expect(runwayCells[4].className).not.toMatch(/text-red/);
+  });
+
+  it("marks both checks with the Unverified weather Caution when opened from a shared link", () => {
+    mockSearchParams.mockReturnValue(link());
+    render(<AppContainer />);
+    for (const name of ["Rate of climb", "Runway"]) {
+      const markers = callout(name).querySelectorAll('[data-marker="caution"]');
+      expect(markers.length).toBeGreaterThan(0);
+      expect(markers[0].getAttribute("title")).toMatch(/came from a shared link/);
+    }
+  });
+
+  it("is Not checked above maximum gross, saying why", () => {
+    mockSearchParams.mockReturnValue(link({ weight: "3255" }));
+    render(<AppContainer />);
+    for (const name of ["Rate of climb", "Runway"]) {
+      expect(within(callout(name)).getByText("Not checked")).toBeInTheDocument();
+      expect(callout(name)).toHaveTextContent("needs weight at or below maximum gross");
+    }
   });
 });
 

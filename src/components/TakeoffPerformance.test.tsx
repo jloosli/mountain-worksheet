@@ -84,17 +84,34 @@ describe("TakeoffPerformance", () => {
     expect(cells[4]).toHaveTextContent("—");
   });
 
-  it("shows a negative runway remaining in red", () => {
+  it("styles ground-roll runway remaining with the Runway check's point states", () => {
     render(
       <TakeoffPerformance
         aircraftModel="C182T"
         airports={["KSLC", "KPVU"]}
-        told={viewModel({ departure: { runwayRemainingGroundRoll: computed(-150) } })}
+        told={viewModel({ departure: { runwayRemainingGroundRoll: computed(0) } })}
+        runwayStates={{ departure: "exceeded", arrival: "within" }}
       />
     );
-    const cell = within(row(/runway remaining/)).getAllByRole("cell")[1];
-    expect(cell).toHaveTextContent((-150).toLocaleString());
-    expect(cell.className).toMatch(/text-red/);
+    const cells = within(row(/runway remaining/)).getAllByRole("cell");
+    expect(cells[1]).toHaveTextContent(/^0$/);
+    expect(cells[1].className).toMatch(/text-red/);
+    expect(cells[2].className).not.toMatch(/text-red/);
+  });
+
+  it("never styles the over-50-ft-obstacle runway remaining, even when negative", () => {
+    render(
+      <TakeoffPerformance
+        aircraftModel="C182T"
+        airports={["KSLC", "KPVU"]}
+        told={viewModel({ departure: { runwayRemaining50ft: computed(-150) } })}
+        runwayStates={{ departure: "exceeded", arrival: "exceeded" }}
+      />
+    );
+    const cells = within(row(/runway remaining/)).getAllByRole("cell");
+    expect(cells[3]).toHaveTextContent((-150).toLocaleString());
+    expect(cells[3].className).not.toMatch(/text-red/);
+    expect(cells[4].className).not.toMatch(/text-red/);
   });
 
   it("shows airport, takeoff and landing notifications under the table", () => {

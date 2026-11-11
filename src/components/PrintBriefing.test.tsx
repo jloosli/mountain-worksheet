@@ -190,18 +190,45 @@ describe("PrintBriefing — TOLD", () => {
     render(<PrintBriefing state={stateWithPerf} />);
     expect(screen.getByText(/TO Ground Roll/i)).toBeInTheDocument();
     expect(screen.getByText(/Landing Ground Roll/i)).toBeInTheDocument();
-    expect(screen.getByText(/Runway remaining/i)).toBeInTheDocument();
+    expect(screen.getByText(/Runway remaining \(ground roll\)/i)).toBeInTheDocument();
+    expect(screen.getByText(/Runway remaining \(50' obstacle\)/i)).toBeInTheDocument();
   });
 
-  it("applies the negative-margin class when runway remaining is negative", () => {
-    // Pick a tiny runway so the calculation comes back negative.
-    const tightRwy: WorksheetData = {
-      ...stateWithPerf,
-      rwy: [100, 100] as [number, number],
-    };
-    const { container } = render(<PrintBriefing state={tightRwy} />);
-    const reds = container.querySelectorAll(".print-margin-bad");
-    expect(reds.length).toBeGreaterThan(0);
+  /** A runway exactly `extra` ft longer than both departure ground rolls. */
+  const withDepartureRemaining = (extra: number): WorksheetData => {
+    const { PAs } = computePressureColumns(
+      stateWithPerf.altitude,
+      stateWithPerf.altimeter,
+      stateWithPerf.temp,
+    );
+    const { values } = computeTOLDViewModel(stateWithPerf, PAs).departure;
+    const roll = (v: (typeof values)["takeoffGroundRoll"]) =>
+      v.status === "computed" ? v.value : NaN;
+    const rolls = roll(values.takeoffGroundRoll) + roll(values.landingGroundRoll);
+    return { ...stateWithPerf, rwy: [rolls + extra, 6500] };
+  };
+  const runwayRow = (label: RegExp) => screen.getByText(label).closest("tr")!;
+
+  it("marks ground-roll runway remaining red at 0 ft, matching the Runway check", () => {
+    render(<PrintBriefing state={withDepartureRemaining(0)} />);
+    const departure = runwayRow(/Runway remaining \(ground roll\)/).querySelectorAll("td")[1];
+    expect(departure).toHaveTextContent(/^0$/);
+    expect(departure).toHaveClass("print-margin-bad");
+  });
+
+  it("leaves 1 ft of ground-roll runway remaining unmarked", () => {
+    render(<PrintBriefing state={withDepartureRemaining(1)} />);
+    const departure = runwayRow(/Runway remaining \(ground roll\)/).querySelectorAll("td")[1];
+    expect(departure).toHaveTextContent(/^1$/);
+    expect(departure).not.toHaveClass("print-margin-bad");
+  });
+
+  it("never marks the over-50-ft-obstacle runway remaining, even when negative", () => {
+    render(<PrintBriefing state={{ ...stateWithPerf, rwy: [100, 100] }} />);
+    const cells = runwayRow(/Runway remaining \(50' obstacle\)/).querySelectorAll("td");
+    expect(cells[1].textContent).toMatch(/^-/);
+    expect(cells[1]).not.toHaveClass("print-margin-bad");
+    expect(cells[2]).not.toHaveClass("print-margin-bad");
   });
 });
 

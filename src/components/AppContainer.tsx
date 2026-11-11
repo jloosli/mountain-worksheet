@@ -21,6 +21,7 @@ import {
 } from "@/utils/areaOfOpsWeather";
 import { deriveStepStatuses, formatStepBadge } from "@/utils/stepStatuses";
 import InlineNotifications from "@/components/InlineNotifications";
+import { LimitCheckCallouts } from "@/components/LimitCheckCallout";
 import {
   deriveNotifications,
   staleFetchNotifications,
@@ -356,6 +357,7 @@ export default function AppContainer() {
             subtitle="Worksheet limits and detailed calculations"
             showSpine={false}
           >
+            <LimitCheckCallouts checks={limitChecks} step="decision" />
             <InlineNotifications
               notifications={notifications}
               subject={stepSubject("decision")}

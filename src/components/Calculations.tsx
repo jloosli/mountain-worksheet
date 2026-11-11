@@ -49,7 +49,10 @@ export default function Calculations({
       ? calculateManeuveringSpeeds(state.acType)
       : null;
   const entryRanges = computeCanyonTurnEntryRanges(maneuveringSpeeds, climb.va);
+  const pointStates = (id: LimitCheck["id"]) =>
+    limitChecks.find((c) => c.id === id)?.points.map((p) => p.state) ?? [];
   const weightPoint = limitChecks.find((c) => c.id === "weight")?.points[0];
+  const [departureRunway, arrivalRunway] = pointStates("runway");
   const percentMGWText =
     aircraft && state.weight !== null && state.weight !== undefined
       ? formatPercentOfMax(state.weight, aircraft.maxGrossWeight)
@@ -83,12 +86,14 @@ export default function Calculations({
           inputNotifications={notifications}
           percentMGWState={weightPoint?.state}
           percentMGWText={percentMGWText}
+          rateOfClimbStates={pointStates("climb")}
         />
         <TakeoffPerformance
           aircraftModel={state.acType}
           airports={state.airport}
           told={told}
           inputNotifications={notifications}
+          runwayStates={{ departure: departureRunway, arrival: arrivalRunway }}
         />
         <ManeuveringPerformance
           aircraftModel={state.acType}

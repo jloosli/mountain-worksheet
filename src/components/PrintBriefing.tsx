@@ -18,6 +18,7 @@ import {
 } from "@/utils/derived";
 import { calculateManeuveringSpeeds } from "@/utils/maneuveringCalculations";
 import { enteredPosition } from "@/utils/areaOfOpsWeather";
+import { isRunwayExceeded } from "@/utils/limitChecks";
 import {
   fieldSubject,
   valueSubject,
@@ -116,14 +117,15 @@ function ValueCell({
   briefing,
   format = fmtNum,
   className = "py-0.5 pr-2 text-right",
-  colorNegative,
+  exceeded,
 }: {
   value: ComputedValue;
   refs: number[];
   briefing: BriefingNotes;
   format?: (v: number) => string;
   className?: string;
-  colorNegative?: boolean;
+  /** For a value a Limit check evaluates: whether it fails the check, which prints it red. */
+  exceeded?: (v: number) => boolean;
 }) {
   if (value.status === "withheld") {
     return <td className={`${className} italic text-slate-600`}>{value.reason}</td>;
@@ -135,7 +137,7 @@ function ValueCell({
       </td>
     );
   }
-  const bad = colorNegative && value.value < 0;
+  const bad = exceeded?.(value.value) ?? false;
   const all = [...new Set([...refs, ...briefing.markersOn(value)])].sort((a, b) => a - b);
   return (
     <td
@@ -254,13 +256,18 @@ const SLOTS: AirportSlot[] = ["departure", "arrival"];
 const TOLD_ROWS: ReadonlyArray<{
   label: string;
   key: TOLDValueKey;
-  colorNegative?: boolean;
+  exceeded?: (v: number) => boolean;
 }> = [
   { label: "TO Ground Roll", key: "takeoffGroundRoll" },
   { label: "TO over 50' obstacle", key: "takeoff50ftObstacle" },
   { label: "Landing Ground Roll", key: "landingGroundRoll" },
   { label: "Landing over 50' obstacle", key: "landing50ftObstacle" },
-  { label: "Runway remaining (50' obstacle)", key: "runwayRemaining50ft", colorNegative: true },
+  {
+    label: "Runway remaining (ground roll)",
+    key: "runwayRemainingGroundRoll",
+    exceeded: isRunwayExceeded,
+  },
+  { label: "Runway remaining (50' obstacle)", key: "runwayRemaining50ft" },
 ];
 
 export default function PrintBriefing({
@@ -530,7 +537,7 @@ export default function PrintBriefing({
             </tr>
           </thead>
           <tbody>
-            {TOLD_ROWS.map(({ label, key, colorNegative }) => (
+            {TOLD_ROWS.map(({ label, key, exceeded }) => (
               <tr key={key} className="border-b border-slate-200">
                 <td className="py-0.5 pr-2">{label}</td>
                 {SLOTS.map((slot) => (
@@ -540,7 +547,7 @@ export default function PrintBriefing({
                     refs={b.refsOn(...toldValueSubjects(slot, key))}
                     briefing={b}
                     format={fmtFt}
-                    colorNegative={colorNegative}
+                    exceeded={exceeded}
                     className={slot === "arrival" ? "py-0.5 text-right" : "py-0.5 pr-2 text-right"}
                   />
                 ))}
