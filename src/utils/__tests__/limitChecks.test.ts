@@ -1,8 +1,13 @@
 import {
+  climbSubject,
   computeClimbViewModel,
   computePressureColumns,
   computeTOLDViewModel,
   derivePerformanceNotifications,
+  toldSubject,
+  type AirportSlot,
+  type ComputedValue,
+  type TOLDValueKey,
 } from "../derived";
 import {
   deriveLimitChecks,
@@ -263,9 +268,9 @@ describe("Ceiling/visibility limit check", () => {
 
   it("counts in the action-bar summary", () => {
     const checks = checksFor({ ...baseState(), weight: 2700, cielVis: true });
-    // Weight within limit; Winds aloft Not checked (no speeds).
+    // Weight, Rate of climb and Runway within limit; Winds aloft Not checked (no speeds).
     expect(limitCheckSummary(checks)).toBe(
-      "1 of 3 worksheet limits exceeded · 1 not checked · 1 within limit",
+      "1 of 5 worksheet limits exceeded · 1 not checked · 3 within limit",
     );
   });
 
@@ -305,6 +310,232 @@ describe("Ceiling/visibility limit check", () => {
       const check = ceilVisCheck(state, staleFetchNotifications(state, fetchFor(state)));
       expect(check.state).toBe("exceeded");
     });
+  });
+});
+
+/**
+ * The checks with chosen values substituted into the derived view models, so
+ * boundaries can be tested without hunting for POH conditions that land on them.
+ */
+function checksWith(
+  state: WorksheetData,
+  overrides: {
+    roc?: [ComputedValue, ComputedValue, ComputedValue];
+    runway?: Partial<Record<AirportSlot, Partial<Record<TOLDValueKey, ComputedValue>>>>;
+  },
+  extra: Notification[] = [],
+): LimitCheck[] {
+  const notifications = [...derivePerformanceNotifications(state), ...extra];
+  const { PAs } = computePressureColumns(state.altitude, state.altimeter, state.temp);
+  const climb = computeClimbViewModel(state, notifications);
+  const told = computeTOLDViewModel(state, PAs, notifications);
+  const airport = (slot: AirportSlot) => ({
+    ...told[slot],
+    values: { ...told[slot].values, ...overrides.runway?.[slot] },
+  });
+  return deriveLimitChecks({
+    state,
+    notifications,
+    climb: overrides.roc ? { ...climb, rateOfClimbActual: overrides.roc } : climb,
+    told: { ...told, departure: airport("departure"), arrival: airport("arrival") },
+  });
+}
+
+const byId = (checks: LimitCheck[], id: LimitCheck["id"]) => {
+  const found = checks.find((c) => c.id === id);
+  if (!found) throw new Error(`no ${id} check`);
+  return found;
+};
+
+const fpm = (value: number): ComputedValue => ({ status: "computed", value, dependsOn: [] });
+const ft = fpm;
+
+describe("Rate of climb limit check", () => {
+  const climbCheck = (
+    roc?: [ComputedValue, ComputedValue, ComputedValue],
+    state = baseState(),
+    extra: Notification[] = [],
+  ) => byId(checksWith(state, { roc }, extra), "climb");
+
+  it("describes the worksheet limit and belongs to Decision", () => {
+    expect(climbCheck()).toMatchObject({
+      id: "climb",
+      name: "Rate of climb",
+      limit: "over 300 fpm all along the route",
+      caveat: null,
+      step: "decision",
+    });
+  });
+
+  it("is Within limit at 301 fpm and Exceeded at 300 fpm", () => {
+    const check = climbCheck([fpm(900), fpm(301), fpm(300)]);
+    expect(check.state).toBe("exceeded");
+    expect(check.points).toEqual([
+      { label: "Departure (KABC)", state: "within", value: "900 fpm", substitutions: [] },
+      { label: "Operating altitude", state: "within", value: "301 fpm", substitutions: [] },
+      { label: "Arrival (KXYZ)", state: "exceeded", value: "300 fpm", substitutions: [] },
+    ]);
+    expect(climbCheck([fpm(301), fpm(1200), fpm(301)]).state).toBe("within");
+  });
+
+  it("is Not checked at a withheld column, naming what it needs", () => {
+    const check = climbCheck(undefined, { ...baseState(), temp: [20, null, 20] });
+    expect(check.state).toBe("not-checked");
+    expect(check.points[1]).toEqual({
+      label: "Operating altitude",
+      state: "not-checked",
+      waitingFor: "needs operating temperature",
+      substitutions: [],
+    });
+    expect(check.points[0].state).toBe("within");
+  });
+
+  it("is Exceeded when one column is Exceeded and another Not checked", () => {
+    const check = climbCheck([
+      fpm(250),
+      { status: "withheld", reason: "needs operating temperature" },
+      fpm(800),
+    ]);
+    expect(check.state).toBe("exceeded");
+    expect(check.points.map((p) => p.state)).toEqual(["exceeded", "not-checked", "within"]);
+  });
+
+  it("is Not checked above maximum gross weight, saying why", () => {
+    const check = climbCheck(undefined, { ...baseState(), weight: 3255 });
+    expect(check.state).toBe("not-checked");
+    expect(check.points.map((p) => p.waitingFor)).toEqual([
+      "needs valid weight",
+      "needs valid weight",
+      "needs valid weight",
+    ]);
+  });
+
+  it("is Not checked where the POH has no data", () => {
+    const check = climbCheck([fpm(900), { status: "unavailable" }, fpm(900)]);
+    expect(check.state).toBe("not-checked");
+    expect(check.points[1]).toMatchObject({
+      state: "not-checked",
+      waitingFor: "needs POH climb data for these conditions",
+    });
+  });
+
+  it("carries a substituted input's Caution and an extrapolated POH value's Caution, and still evaluates", () => {
+    const tempCaution: Notification = {
+      level: "caution",
+      subject: fieldSubject("temp", 1),
+      message: "Operating temperature is from the nearest forecast.",
+    };
+    const extrapolated: Notification = {
+      level: "caution",
+      subject: climbSubject("rateOfClimb", 1),
+      message: "Operating altitude rate of climb is extrapolated beyond the POH climb table.",
+    };
+    const check = climbCheck(undefined, baseState(), [tempCaution, extrapolated]);
+    expect(check.points[1].state).not.toBe("not-checked");
+    expect(check.points[1].substitutions).toEqual([tempCaution, extrapolated]);
+    expect(check.points[0].substitutions).toEqual([]);
+  });
+
+  it("is Not checked when the inputs are blank", () => {
+    const check = climbCheck(undefined, { ...baseState(), acType: "" });
+    expect(check.state).toBe("not-checked");
+    expect(check.points[0].waitingFor).toBe("needs aircraft type");
+  });
+});
+
+describe("Runway limit check", () => {
+  const runwayCheck = (
+    runway?: Partial<Record<AirportSlot, Partial<Record<TOLDValueKey, ComputedValue>>>>,
+    state = baseState(),
+    extra: Notification[] = [],
+  ) => byId(checksWith(state, { runway }, extra), "runway");
+  const remaining = (departure: ComputedValue, arrival: ComputedValue) => ({
+    departure: { runwayRemainingGroundRoll: departure },
+    arrival: { runwayRemainingGroundRoll: arrival },
+  });
+
+  it("describes the worksheet limit and belongs to Decision", () => {
+    expect(runwayCheck()).toMatchObject({
+      id: "runway",
+      name: "Runway",
+      limit: "takeoff ground roll + landing ground roll less than runway length",
+      caveat: null,
+      step: "decision",
+    });
+  });
+
+  it("is Within limit with 1 ft remaining and Exceeded with 0 ft", () => {
+    const check = runwayCheck(remaining(ft(1), ft(0)));
+    expect(check.state).toBe("exceeded");
+    expect(check.points).toEqual([
+      { label: "Departure (KABC)", state: "within", value: "1 ft remaining", substitutions: [] },
+      { label: "Arrival (KXYZ)", state: "exceeded", value: "0 ft remaining", substitutions: [] },
+    ]);
+    expect(runwayCheck(remaining(ft(1), ft(1))).state).toBe("within");
+    expect(runwayCheck(remaining(ft(-450), ft(1))).points[0]).toMatchObject({
+      state: "exceeded",
+      value: "-450 ft remaining",
+    });
+  });
+
+  it("doesn't check the over-50-ft-obstacle values", () => {
+    const check = runwayCheck({
+      departure: { runwayRemainingGroundRoll: ft(500), runwayRemaining50ft: ft(-200) },
+      arrival: { runwayRemainingGroundRoll: ft(500), runwayRemaining50ft: ft(-200) },
+    });
+    expect(check.state).toBe("within");
+  });
+
+  it("is Not checked when a runway length is blank, naming it", () => {
+    const check = runwayCheck(undefined, { ...baseState(), rwy: [3000, null] });
+    expect(check.state).toBe("not-checked");
+    expect(check.points[1]).toEqual({
+      label: "Arrival (KXYZ)",
+      state: "not-checked",
+      waitingFor: "needs arrival runway length",
+      substitutions: [],
+    });
+  });
+
+  it("is Not checked above maximum gross weight, saying why", () => {
+    const check = runwayCheck(undefined, { ...baseState(), weight: 3255 });
+    expect(check.state).toBe("not-checked");
+    expect(check.points.map((p) => p.waitingFor)).toEqual([
+      "needs valid weight",
+      "needs valid weight",
+    ]);
+  });
+
+  it("is Not checked where the POH has no data", () => {
+    const check = runwayCheck(remaining({ status: "unavailable" }, ft(900)));
+    expect(check.points[0]).toMatchObject({
+      state: "not-checked",
+      waitingFor: "needs POH takeoff and landing data for these conditions",
+    });
+  });
+
+  it("is Exceeded at one airport even when the other is Not checked", () => {
+    const check = runwayCheck(
+      remaining(ft(-10), { status: "withheld", reason: "needs arrival runway length" }),
+    );
+    expect(check.state).toBe("exceeded");
+  });
+
+  it("carries the runway's and the POH's Cautions, and still evaluates", () => {
+    const rwyCaution: Notification = {
+      level: "caution",
+      subject: fieldSubject("rwy", 0),
+      message: "Departure runway length is from the airport database.",
+    };
+    const averaged: Notification = {
+      level: "caution",
+      subject: toldSubject("departure", "landing"),
+      message: "Departure landing distances fill 1 blank POH table entry.",
+    };
+    const check = runwayCheck(undefined, baseState(), [rwyCaution, averaged]);
+    expect(check.points[0].state).not.toBe("not-checked");
+    expect(check.points[0].substitutions).toEqual([rwyCaution, averaged]);
+    expect(check.points[1].substitutions).toEqual([]);
   });
 });
 

@@ -350,3 +350,25 @@ describe("ClimbPerformance — Percent of MGW cell", () => {
     expect(percentCell()).toHaveTextContent("needs valid weight");
   });
 });
+
+describe("ClimbPerformance — Rate of climb limit check styles (#269)", () => {
+  const rocCells = () =>
+    screen.getByText("Rate of Climb (Actual Wt, note 11)").closest("tr")!.querySelectorAll("td");
+
+  test("styles only the actual-weight cells the Rate of climb check marks Exceeded", () => {
+    render(
+      <ClimbPerformance
+        aircraftModel="C182T"
+        climb={computeClimbViewModel(baseState)}
+        rateOfClimbStates={["within", "exceeded", "not-checked"]}
+      />,
+    );
+    const cells = rocCells();
+    expect(cells[1].className).not.toMatch(/text-red/);
+    expect(cells[2].className).toMatch(/text-red/);
+    expect(cells[3].className).not.toMatch(/text-red/);
+    // The MGW rate of climb isn't what the check evaluates.
+    const mgw = screen.getByText("Rate of Climb (MGW)").closest("tr")!.querySelectorAll("td");
+    expect(mgw[2].className).not.toMatch(/text-red/);
+  });
+});

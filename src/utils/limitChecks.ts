@@ -9,7 +9,19 @@
  * force, so they change exactly when their inputs do.
  */
 import { TARGET_ALTITUDES_FT } from "./areaOfOpsWeather";
-import { assessWeight, findAircraft, type ClimbViewModel, type TOLDViewModel } from "./derived";
+import {
+  airportLabel,
+  assessWeight,
+  climbSubject,
+  COLUMNS,
+  columnLabel,
+  findAircraft,
+  toldValueSubjects,
+  type AirportSlot,
+  type ClimbViewModel,
+  type ComputedValue,
+  type TOLDViewModel,
+} from "./derived";
 import { inputCautions } from "./markers";
 import {
   fieldSubject,
@@ -119,7 +131,13 @@ export const limitCheckDomId = (id: LimitCheckId) => `limit-check-${id}`;
 
 /** Every Limit check that exists so far. */
 export function deriveLimitChecks(inputs: LimitCheckInputs): LimitCheck[] {
-  return [weightCheck(inputs), windsAloftCheck(inputs), ceilVisCheck(inputs)];
+  return [
+    weightCheck(inputs),
+    windsAloftCheck(inputs),
+    ceilVisCheck(inputs),
+    climbCheck(inputs),
+    runwayCheck(inputs),
+  ];
 }
 
 const fmt = (n: number) => n.toLocaleString("en-US", { maximumFractionDigits: 1 });
@@ -311,4 +329,118 @@ function ceilVisCheck({ state, notifications }: LimitCheckInputs): LimitCheck {
       substitutions,
     },
   ]);
+}
+
+/**
+ * A point whose value wasn't computed: withheld points say what they're
+ * waiting for; unavailable ones (no POH data) say `unavailable`.
+ */
+function notCheckedPoint(
+  label: string,
+  value: Exclude<ComputedValue, { status: "computed" }>,
+  unavailable: string,
+): LimitPoint {
+  return {
+    label,
+    state: "not-checked",
+    waitingFor: value.status === "withheld" ? value.reason : unavailable,
+    substitutions: [],
+  };
+}
+
+/**
+ * The substitution markers of a computed value: Cautions on the inputs it
+ * rests on, then Cautions on the value itself (extrapolated or averaged POH
+ * values), in notification order.
+ */
+function valueCautions(
+  notifications: readonly Notification[],
+  value: ComputedValue,
+  own: readonly Subject[],
+): Notification[] {
+  const onInputs = new Set(inputCautions(notifications, value));
+  const ownKeys = new Set(own.map(subjectKey));
+  return notifications.filter(
+    (n) => onInputs.has(n) || (n.level === "caution" && ownKeys.has(subjectKey(n.subject))),
+  );
+}
+
+/** The worksheet's minimum rate of climb: at or below it is Exceeded. */
+export const MIN_RATE_OF_CLIMB_FPM = 300;
+
+/** Whether a weight-adjusted rate of climb fails the Rate of climb check. */
+export const isClimbExceeded = (fpm: number) => fpm <= MIN_RATE_OF_CLIMB_FPM;
+
+/**
+ * Rate of climb: the weight-adjusted rate of climb at departure, operating
+ * altitude and arrival, Exceeded at 300 fpm or less. The operating-altitude
+ * point stands in for the service ceiling, so there's no separate check.
+ */
+function climbCheck({ state, notifications, climb }: LimitCheckInputs): LimitCheck {
+  const base = {
+    id: "climb",
+    name: "Rate of climb",
+    limit: "over 300 fpm all along the route",
+    caveat: null,
+    step: "decision",
+  } as const;
+  return check(
+    base,
+    COLUMNS.map((col): LimitPoint => {
+      const roc = climb.rateOfClimbActual[col];
+      const label = columnLabel(state, col);
+      if (roc.status !== "computed") {
+        return notCheckedPoint(label, roc, "needs POH climb data for these conditions");
+      }
+      return {
+        label,
+        state: isClimbExceeded(roc.value) ? "exceeded" : "within",
+        value: `${fmt(roc.value)} fpm`,
+        substitutions: valueCautions(notifications, roc, [climbSubject("rateOfClimb", col)]),
+      };
+    }),
+  );
+}
+
+/** Whether runway remaining after both ground rolls fails the Runway check. */
+export const isRunwayExceeded = (remainingFt: number) => remainingFt <= 0;
+
+/**
+ * Runway: at each airport, runway length minus takeoff and landing ground
+ * roll, Exceeded at 0 ft or less. The over-50-ft-obstacle values stay
+ * informational.
+ */
+function runwayCheck({ state, notifications, told }: LimitCheckInputs): LimitCheck {
+  const base = {
+    id: "runway",
+    name: "Runway",
+    limit: "takeoff ground roll + landing ground roll less than runway length",
+    caveat: null,
+    step: "decision",
+  } as const;
+  const slots: AirportSlot[] = ["departure", "arrival"];
+  return check(
+    base,
+    slots.map((slot): LimitPoint => {
+      const remaining = told[slot].values.runwayRemainingGroundRoll;
+      const label = airportLabel(state, slot);
+      if (remaining.status !== "computed") {
+        return notCheckedPoint(
+          label,
+          remaining,
+          "needs POH takeoff and landing data for these conditions",
+        );
+      }
+      return {
+        label,
+        state: isRunwayExceeded(remaining.value) ? "exceeded" : "within",
+        value: `${fmt(remaining.value)} ft remaining`,
+        substitutions: valueCautions(
+          notifications,
+          remaining,
+          toldValueSubjects(slot, "runwayRemainingGroundRoll"),
+        ),
+      };
+    }),
+  );
 }

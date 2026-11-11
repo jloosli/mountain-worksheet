@@ -23,6 +23,8 @@ interface ClimbPerformanceProps {
   percentMGWState?: LimitState;
   /** The %MGW text the Weight check shows, so the cell and check agree. */
   percentMGWText?: string;
+  /** The Rate of climb Limit check's point states per column, which style the actual-weight cells. */
+  rateOfClimbStates?: readonly (LimitState | undefined)[];
 }
 
 const CELL = "py-2 px-4 text-right";
@@ -110,6 +112,7 @@ export default function ClimbPerformance({
   inputNotifications = [],
   percentMGWState,
   percentMGWText,
+  rateOfClimbStates = [],
 }: ClimbPerformanceProps) {
   if (!aircraftModel) return null;
   const empty = <td className={CELL}></td>;
@@ -136,7 +139,14 @@ export default function ClimbPerformance({
             </tr>
             <tr className="border-b dark:border-gray-700">
               <td className="py-2 px-4">Rate of Climb (Actual Wt, note 11)</td>
-              {COLUMNS.map((i) => <Value key={i} notes={inputNotifications} value={climb.rateOfClimbActual[i]} />)}
+              {COLUMNS.map((i) => (
+                <Value
+                  key={i}
+                  notes={inputNotifications}
+                  value={climb.rateOfClimbActual[i]}
+                  className={limitPointClass(rateOfClimbStates[i])}
+                />
+              ))}
             </tr>
             <tr className="border-b dark:border-gray-700">
               <td className="py-2 px-4">Vx (Best Angle)</td>

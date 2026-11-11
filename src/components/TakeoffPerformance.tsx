@@ -1,6 +1,8 @@
 import React, { useId } from "react";
 import InlineNotifications from "./InlineNotifications";
 import ValueMarkers from "./ValueMarkers";
+import { limitPointClass } from "./LimitCheckCallout";
+import type { LimitState } from "@/utils/limitChecks";
 import { valueSubject, type Notification } from "@/utils/notifications";
 import {
   toldSubject,
@@ -16,29 +18,38 @@ interface TakeoffPerformanceProps {
   told: TOLDViewModel;
   /** All notifications in force, for markers on values whose inputs carry a Caution. */
   inputNotifications?: readonly Notification[];
+  /**
+   * The Runway Limit check's point state at each airport, which styles the
+   * ground-roll runway-remaining cells. The over-50-ft-obstacle column isn't checked.
+   */
+  runwayStates?: Partial<Record<AirportSlot, LimitState>>;
 }
 
 const SLOTS: AirportSlot[] = ["departure", "arrival"];
 
-const ROWS: { label: string; cells: [TOLDValueKey, TOLDValueKey]; margin?: boolean }[] = [
+const ROWS: { label: string; cells: [TOLDValueKey, TOLDValueKey]; checked?: boolean }[] = [
   { label: "Take Off Ground Roll", cells: ["takeoffGroundRoll", "takeoff50ftObstacle"] },
   { label: "Landing Ground Roll", cells: ["landingGroundRoll", "landing50ftObstacle"] },
   {
     label: "Available runway remaining",
     cells: ["runwayRemainingGroundRoll", "runwayRemaining50ft"],
-    margin: true,
+    checked: true,
   },
 ];
 
-/** One TOLD cell: the value, what it is waiting for, or a dash when it couldn't be computed. */
+/**
+ * One TOLD cell: the value, what it is waiting for, or a dash when it
+ * couldn't be computed. `limitState` is the Limit check point state of a value
+ * a check evaluates.
+ */
 function ValueCell({
   value,
-  margin,
+  limitState,
   className = "",
   inputNotifications,
 }: {
   value: ComputedValue;
-  margin?: boolean;
+  limitState?: LimitState;
   className?: string;
   inputNotifications: readonly Notification[];
 }) {
@@ -53,9 +64,8 @@ function ValueCell({
   if (value.status === "unavailable") {
     return <td className={`${base} text-gray-500 dark:text-gray-400`}>—</td>;
   }
-  const negative = margin && value.value < 0;
   return (
-    <td className={`${base} ${negative ? "text-red-600 dark:text-red-400" : ""}`}>
+    <td className={`${base} ${limitPointClass(limitState)}`}>
       {value.value.toLocaleString()}
       <ValueMarkers notifications={inputNotifications} value={value} />
     </td>
@@ -67,6 +77,7 @@ export default function TakeoffPerformance({
   airports,
   told,
   inputNotifications = [],
+  runwayStates = {},
 }: TakeoffPerformanceProps) {
   const headingId = useId();
   if (!aircraftModel) return null;
@@ -106,28 +117,26 @@ export default function TakeoffPerformance({
             </tr>
           </thead>
           <tbody>
-            {ROWS.map(({ label, cells: [shortField, obstacle], margin }) => (
+            {ROWS.map(({ label, cells: [shortField, obstacle], checked }) => (
               <tr key={label} className="border-b dark:border-gray-700">
                 <td className="py-2 px-4">{label}</td>
                 <ValueCell
                   value={told.departure.values[shortField]}
-                  margin={margin}
+                  limitState={checked ? runwayStates.departure : undefined}
                   inputNotifications={inputNotifications}
                 />
                 <ValueCell
                   value={told.arrival.values[shortField]}
-                  margin={margin}
+                  limitState={checked ? runwayStates.arrival : undefined}
                   className="border-r dark:border-gray-700"
                   inputNotifications={inputNotifications}
                 />
                 <ValueCell
                   value={told.departure.values[obstacle]}
-                  margin={margin}
                   inputNotifications={inputNotifications}
                 />
                 <ValueCell
                   value={told.arrival.values[obstacle]}
-                  margin={margin}
                   inputNotifications={inputNotifications}
                 />
               </tr>
