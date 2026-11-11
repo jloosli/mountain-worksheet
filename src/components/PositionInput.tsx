@@ -48,7 +48,7 @@ type Hint = { type: "ok" | "warn"; text: string; kind?: PositionKind };
 
 const UNRECOGNIZED_HINT: Hint = {
   type: "warn",
-  text: "⚠ Unrecognized format — saved as free text, so area weather can't be fetched. Use one of the formats above.",
+  text: "⚠ Unrecognized format — saved as free text and not used as the operating position (area weather falls back to the departure–arrival midpoint). Use one of the formats above.",
 };
 
 /** How a parsed entry is being read, e.g. "VOR OGD, 285° radial, 34 NM". */
@@ -65,7 +65,9 @@ function describe(parsed: ParsedPosition): string {
 }
 
 function resolvedHint(parsed: ParsedPosition, lat: number, lon: number): Hint {
-  if (parsed.kind === "unrecognized") return UNRECOGNIZED_HINT;
+  // A link can carry a free-text route alongside valid coordinates; those
+  // coordinates are still the operating position, so show them, not a warning.
+  if (parsed.kind === "unrecognized") return { type: "ok", text: `→ ${formatLatLon(lat, lon)}` };
   return {
     type: "ok",
     text: `✓ Read as ${describe(parsed)} → ${formatLatLon(lat, lon)}`,
@@ -198,7 +200,7 @@ export default function PositionInput({
     return () => clearTimeout(handle);
   }, [localRaw, onChange]);
 
-  const describedBy = [inputA11yProps?.["aria-describedby"], "route-formats"]
+  const describedBy = [inputA11yProps?.["aria-describedby"], "route-hint", "route-formats"]
     .filter(Boolean)
     .join(" ");
 
@@ -236,7 +238,7 @@ export default function PositionInput({
                 key={f.kind}
                 type="button"
                 onClick={() => fillExample(f.example)}
-                data-active={active || undefined}
+                aria-current={active || undefined}
                 aria-label={`Use ${f.label} example ${f.example}`}
                 className={`inline-flex items-baseline gap-1.5 rounded-full border px-2.5 py-0.5 text-xs transition-colors ${
                   active
@@ -253,17 +255,18 @@ export default function PositionInput({
           })}
         </div>
       </div>
-      {hint && (
-        <div
-          className={`text-xs ${
-            hint.type === "warn"
-              ? "text-amber-600 dark:text-amber-400"
-              : "text-gray-600 dark:text-gray-400"
-          }`}
-        >
-          {hint.text}
-        </div>
-      )}
+      {/* Mounted even when empty so a hint set later is announced. */}
+      <div
+        id="route-hint"
+        aria-live="polite"
+        className={`text-xs ${
+          hint?.type === "warn"
+            ? "text-amber-600 dark:text-amber-400"
+            : "text-gray-600 dark:text-gray-400"
+        }`}
+      >
+        {hint?.text}
+      </div>
       {children}
     </div>
   );

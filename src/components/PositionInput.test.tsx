@@ -186,7 +186,7 @@ describe("PositionInput - format chips and hints", () => {
   const activeChips = () =>
     screen
       .getAllByRole("button")
-      .filter((b) => b.hasAttribute("data-active"))
+      .filter((b) => b.getAttribute("aria-current") === "true")
       .map((b) => b.getAttribute("aria-label"));
 
   afterEach(() => jest.useRealTimers());
@@ -238,7 +238,9 @@ describe("PositionInput - format chips and hints", () => {
       jest.advanceTimersByTime(350);
     });
     expect(
-      screen.getByText(/area weather can't be fetched\. Use one of the formats above/),
+      screen.getByText(
+        /not used as the operating position \(area weather falls back to the departure–arrival midpoint\)\. Use one of the formats above/,
+      ),
     ).toBeInTheDocument();
     expect(activeChips()).toEqual([]);
   });
@@ -264,7 +266,32 @@ describe("PositionInput - format chips and hints", () => {
     );
     expect(screen.getByRole("textbox")).toHaveAttribute(
       "aria-describedby",
-      "notes-position route-formats",
+      "notes-position route-hint route-formats",
     );
+  });
+
+  it("shows cached coordinates, not a warning, for a free-text route from a link", () => {
+    render(
+      <PositionInput
+        rawValue="CACHE VALLEY"
+        cachedPosition={[41.73, -111.83]}
+        onChange={() => {}}
+      />,
+    );
+    expect(screen.getByText("→ 41.7300, -111.8300")).toBeInTheDocument();
+    expect(screen.queryByText(/Unrecognized format/)).not.toBeInTheDocument();
+    expect(activeChips()).toEqual([]);
+  });
+
+  it("announces the hint and includes it in the input's description", () => {
+    jest.useFakeTimers();
+    render(<PositionInput rawValue="" cachedPosition={[null, null]} onChange={() => {}} />);
+    fireEvent.change(screen.getByRole("textbox"), { target: { value: "41.43/-112.70" } });
+    act(() => {
+      jest.advanceTimersByTime(350);
+    });
+    const hint = screen.getByText(/Read as decimal lat\/long/);
+    expect(hint).toHaveAttribute("aria-live", "polite");
+    expect(screen.getByRole("textbox")).toHaveAccessibleDescription(/Read as decimal lat\/long/);
   });
 });
