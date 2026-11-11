@@ -33,6 +33,7 @@ export interface WorksheetSession extends Omit<WeatherSession, "worksheet"> {
 
 export const EMPTY_SESSION: WorksheetSession = {
   lastFetch: null,
+  lastApplied: null,
   lastUpdated: null,
   opTempChange: null,
   linkLoad: null,

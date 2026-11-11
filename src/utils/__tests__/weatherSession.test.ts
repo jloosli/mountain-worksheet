@@ -379,6 +379,18 @@ describe("weather session — weather status (#285)", () => {
     );
   });
 
+  it("stays stale, with its Warnings, when a refetch for the new inputs fails", () => {
+    const failure: Notification = {
+      level: "warning",
+      subject: stepSubject("weather"),
+      message: "Weather fetch failed.",
+    };
+    const s = replay([fetch(), edit({ time: "20:00" }), fetch(null, [failure])]);
+    expect(weatherStatus(s)).toBe("stale");
+    expect(warnings(s)).toContain("warning field:temp.0");
+    expect(warnings(s)).toContain("warning step:weather");
+  });
+
   it("is fetched again once the pilot replaces every stale value with their own", () => {
     const atPosition = { ...base, position: [40.5, -111.2] as WorksheetData["position"] };
     const stale = replay([fetch(), edit({ airport: ["KOGD", "KSLC"] })], atPosition);

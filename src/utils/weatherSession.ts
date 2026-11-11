@@ -44,6 +44,11 @@ export interface WeatherSession {
   worksheet: WorksheetData;
   /** The latest weather fetch this session, successful or not. */
   lastFetch: WeatherFetchResult | null;
+  /**
+   * The latest fetch this session that applied weather. Staleness is judged
+   * against it, so a later failed fetch doesn't hide stale values.
+   */
+  lastApplied: WeatherFetchResult | null;
   /** When a fetch last applied weather this session; null if never. */
   lastUpdated: Date | null;
   /** The latest operating-temperature re-derivation (#117). */
@@ -77,6 +82,7 @@ export function initialWeatherSession(
   return {
     worksheet,
     lastFetch: null,
+    lastApplied: null,
     lastUpdated: null,
     opTempChange: null,
     rejected: {},
@@ -127,6 +133,7 @@ export function weatherSessionReducer(
       return {
         ...applied,
         lastFetch: event.result,
+        lastApplied: event.data ? event.result : session.lastApplied,
         lastUpdated: event.data ? event.at : session.lastUpdated,
       };
     }
@@ -149,7 +156,7 @@ export function sessionNotifications(
   const { worksheet, lastFetch } = session;
   return [
     ...fetchNotifications(worksheet, lastFetch),
-    ...staleFetchNotifications(worksheet, lastFetch),
+    ...staleFetchNotifications(worksheet, session.lastApplied),
     ...opTempChangeNotifications(worksheet, session.opTempChange),
     ...deriveUrlNotifications(worksheet, session.linkLoad),
     ...unverifiedWeatherNotifications(worksheet, status),
@@ -167,9 +174,9 @@ export function sessionNotifications(
  * worksheet are `unverified`; without any, `none`.
  */
 export function weatherStatus(session: WeatherSession): WeatherStatus {
-  const { worksheet, lastFetch, lastUpdated } = session;
+  const { worksheet, lastApplied, lastUpdated } = session;
   if (lastUpdated !== null) {
-    return staleFetchNotifications(worksheet, lastFetch).length > 0 ? "stale" : "fetched";
+    return staleFetchNotifications(worksheet, lastApplied).length > 0 ? "stale" : "fetched";
   }
   return hasWeatherData(worksheet) ? "unverified" : "none";
 }

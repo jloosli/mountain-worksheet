@@ -261,7 +261,8 @@ describe("evaluateWorksheet — session", () => {
 
   it("withholds departure results and leaves the runway check Not checked once the departure airport changes after a fetch", () => {
     const fetchedState = sortie();
-    const session = fetchedSession({ lastFetch: fetchFor(fetchedState) });
+    const fetch = fetchFor(fetchedState);
+    const session = fetchedSession({ lastFetch: fetch, lastApplied: fetch });
     expect(evaluateWorksheet(fetchedState, session).told.departure.values.takeoffGroundRoll.status).toBe(
       "computed",
     );
@@ -331,7 +332,8 @@ describe("evaluateWorksheet — weather status (#285)", () => {
 
   it("is stale once a fetch input changes, without an Unverified weather Caution", () => {
     const fetchedState = sortie();
-    const session = fetchedSession({ lastFetch: fetchFor(fetchedState) });
+    const fetch = fetchFor(fetchedState);
+    const session = fetchedSession({ lastFetch: fetch, lastApplied: fetch });
     expect(evaluateWorksheet(fetchedState, session).weatherStatus).toBe("fetched");
     const e = evaluateWorksheet({ ...fetchedState, time: "12:00" }, session);
     expect(e.weatherStatus).toBe("stale");
