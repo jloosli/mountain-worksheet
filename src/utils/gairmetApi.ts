@@ -49,7 +49,7 @@ const HAZARD_FLAG: Record<
   string,
   { field: "turb" | "cielVis" | "mtnObsc"; label: string } | undefined
 > = {
-  "TURB-LO": { field: "turb", label: "turbulence" },
+  "TURB-LO": { field: "turb", label: "low-level turbulence" },
   IFR: { field: "cielVis", label: "IFR" },
   MT_OBSC: { field: "mtnObsc", label: "mountain obscuration" },
 };
@@ -109,7 +109,7 @@ export function classifyAirmets(
       level: "advisory",
       subject: stepSubject("weather"),
       message:
-        "No turbulence, IFR or mountain obscuration G-AIRMETs in effect; those flags were cleared",
+        "No low-level turbulence, IFR or mountain obscuration G-AIRMETs in effect; those flags were cleared",
     });
     return { turb: false, cielVis: false, mtnObsc: false, notifications };
   }
