@@ -35,13 +35,18 @@ import {
 export type Triple = [number | null, number | null, number | null];
 
 // -1 is the legacy "no value" sentinel used by the weather mapper. In mapper
-// output it means "don't update this slot": for temp/altimeter, for the
-// operating altitude (manual entry only), and for the runway and elevation of
-// an airport the lookup didn't match (#227). mergeWeatherData skips it. Treated as missing uniformly here so any -1 that
-// does reach state (e.g. from a fresh weather fetch when no altitude is set
-// yet) is rendered as missing rather than as a real altitude of -1 ft.
+// output it means "don't update this slot" for the altimeter, the operating
+// altitude (manual entry only), and the runway and elevation of an airport the
+// lookup didn't match (#227). mergeWeatherData skips it. Treated as missing
+// here so any -1 that does reach state is rendered as missing rather than as
+// a real altitude of -1 ft. Never use it for temperature: see hasTemp.
 export function isReal(v: number | null | undefined): v is number {
   return v !== null && v !== undefined && v !== -1;
+}
+
+/** A temperature is present whenever it's a number: -1 °C is a real value. */
+export function hasTemp(v: number | null | undefined): v is number {
+  return typeof v === "number" && Number.isFinite(v);
 }
 
 export function computePressureColumns(
@@ -55,7 +60,7 @@ export function computePressureColumns(
     const alt = altitudes[i];
     const altim = altimeters[i];
     const temp = temperatures[i];
-    if (isReal(alt) && isReal(altim) && isReal(temp)) {
+    if (isReal(alt) && isReal(altim) && hasTemp(temp)) {
       const pa = altitudeToPressureAltitude(alt, altim);
       PAs[i] = pa;
       DAs[i] = pressureAltitudeToDensityAltitude(pa, temp);
@@ -341,7 +346,7 @@ function computeAirportTOLD(
     return { slot, values, notifications };
   };
 
-  const tempInvalid = isReal(temp) && (temp < TEMP_LIMITS_C.min || temp > TEMP_LIMITS_C.max);
+  const tempInvalid = hasTemp(temp) && (temp < TEMP_LIMITS_C.min || temp > TEMP_LIMITS_C.max);
   if (tempInvalid) {
     notifications.push({
       level: "warning",
@@ -371,8 +376,8 @@ function computeAirportTOLD(
   const missing: string[] = [];
   if (!isReal(state.altitude[i])) missing.push("field elevation");
   if (!isReal(state.altimeter[i])) missing.push("altimeter");
-  if (!isReal(temp)) missing.push("temperature");
-  if (missing.length > 0 || pa === null || !isReal(temp)) {
+  if (!hasTemp(temp)) missing.push("temperature");
+  if (missing.length > 0 || pa === null || !hasTemp(temp)) {
     return withholdAll(joinNeeds(slot, missing.length ? missing : ["pressure altitude"]));
   }
   if (tempInvalid) {
@@ -640,7 +645,7 @@ function climbViewModel(state: WorksheetData): ClimbViewModel {
   // Operating temperature limit (departure/arrival limits are raised by TOLD).
   const opTemp = state.temp[1];
   const opTempNotifications: Notification[] =
-    isReal(opTemp) && (opTemp < TEMP_LIMITS_C.min || opTemp > TEMP_LIMITS_C.max)
+    hasTemp(opTemp) && (opTemp < TEMP_LIMITS_C.min || opTemp > TEMP_LIMITS_C.max)
       ? [
           {
             level: "warning",
@@ -653,7 +658,7 @@ function climbViewModel(state: WorksheetData): ClimbViewModel {
   /** The column's temperature, or why values needing it are withheld. */
   const tempFor = (col: Column): number | string => {
     const t = state.temp[col];
-    if (!isReal(t)) return columnNeeds(col, ["temperature"]);
+    if (!hasTemp(t)) return columnNeeds(col, ["temperature"]);
     if (t < TEMP_LIMITS_C.min || t > TEMP_LIMITS_C.max) {
       return `needs valid ${COLUMN_SLOT[col]} temperature`;
     }
@@ -668,7 +673,7 @@ function climbViewModel(state: WorksheetData): ClimbViewModel {
     const temp = tempFor(col);
     const missing = [
       ...missingPressureInputs(state, col),
-      ...(isReal(state.temp[col]) ? [] : ["temperature"]),
+      ...(hasTemp(state.temp[col]) ? [] : ["temperature"]),
     ];
     if (missing.length > 0) return lookup(withheld(columnNeeds(col, missing)));
     if (typeof pa === "string") return lookup(withheld(pa));

@@ -56,16 +56,13 @@ describe("computePressureColumns", () => {
     expect(DAs[0]).toBeCloseTo(0, 5);
   });
 
-  it("treats the -1 sentinel as missing for altimeter and temperature", () => {
-    const { PAs, DAs } = computePressureColumns(
-      [5000, 10000, 5000],
-      [-1, 29.92, 29.92],
-      [15, -1, 15],
-    );
+  it("treats the -1 sentinel as missing for altimeter, but -1 °C as a real temperature", () => {
+    const { PAs, DAs } = computePressureColumns([5000, 0, 5000], [-1, 29.92, 29.92], [15, -1, 15]);
     expect(PAs[0]).toBeNull(); // altimeter -1 → missing
     expect(DAs[0]).toBeNull();
-    expect(PAs[1]).toBeNull(); // temp -1 → missing (matches legacy Altitudes.tsx behavior)
-    expect(DAs[1]).toBeNull();
+    // -1 °C is a common mountain temperature, not a missing value.
+    expect(PAs[1]).toBeCloseTo(0, 5);
+    expect(DAs[1]).toBeLessThan(0); // 16 °C below ISA at sea level
     expect(PAs[2]).toBeCloseTo(5000, 5);
   });
 

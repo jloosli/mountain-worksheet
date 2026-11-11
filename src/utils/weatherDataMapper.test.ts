@@ -480,7 +480,7 @@ describe("Weather Data Mapper", () => {
         flightTime: "12:00",
       });
       expect(warnedSubjects(result.notifications)).not.toContain("field:temp.1");
-      expect(result.data.temp?.[1]).toBe(-1);
+      expect(result.data.temp?.[1]).toBeUndefined(); // "don't update"
     });
 
     it("fills one airport and blanks the other with Warnings when only one airport reports", () => {

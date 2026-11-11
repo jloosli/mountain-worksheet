@@ -589,6 +589,15 @@ describe("fetchWorksheetWeather", () => {
       expect(win.end.toISOString().slice(0, 10)).toBe("2026-05-13");
     });
 
+    it("applies a forecast that rounds to -1 °C", async () => {
+      mockField.mockResolvedValue({
+        hourly: { time: ["2026-05-13T01:00", "2026-05-13T03:00"], temperature_2m: [-1.2, -0.8] },
+      });
+      const { data } = await fetchWorksheetWeather(later);
+      expect(data?.temp?.[0]).toBe(-1);
+      expect(data?.temp?.[2]).toBe(-1);
+    });
+
     it("doesn't use a field forecast hour that misses the slot's time", async () => {
       mockField.mockResolvedValue({
         hourly: { time: ["2026-05-12T20:00"], temperature_2m: [30] },

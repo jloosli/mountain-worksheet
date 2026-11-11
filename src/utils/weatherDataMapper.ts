@@ -29,7 +29,9 @@ export interface WeatherMappingResult {
   /**
    * Values to merge into the worksheet. A weather field the fetch was
    * expected to fill but couldn't is `null` (blank) — never left holding an
-   * earlier fetch's value. `-1` in an array slot means "don't update": runway
+   * earlier fetch's value. In a temperature or altimeter slot, `undefined`
+   * means "don't update" (never -1: -1 °C is a real temperature). In a runway
+   * or elevation slot, `-1` means "don't update": runway
    * and field elevation use it for an airport the lookup didn't match, so
    * the worksheet keeps whatever it held (#227). Either way the field gets a
    * Warning, which only shows while the field is blank.
@@ -102,7 +104,7 @@ export function mapAirportSpecificWeatherData(
   const arrTime = new Date(depTime.getTime() + durationHours * 3600 * 1000);
 
   const setSlot = (key: "temp" | "altimeter", index: 0 | 2, value: number | null) => {
-    const next = (result[key] ? [...result[key]!] : [-1, -1, -1]) as [
+    const next = (result[key] ? [...result[key]!] : keptTriple()) as [
       number | null,
       number | null,
       number | null,
@@ -220,6 +222,13 @@ export function mapAirportElevationData(
 }
 
 type Triple = [number | null, number | null, number | null];
+
+/**
+ * "Don't update" for a temperature or altimeter slot. `undefined`, not -1,
+ * because -1 °C is a real temperature (#303); mergeWeatherData skips it.
+ */
+const KEEP_SLOT = undefined as unknown as null;
+const keptTriple = (): Triple => [KEEP_SLOT, KEEP_SLOT, KEEP_SLOT];
 type WindTable = [(number | null)[], (number | null)[], (number | null)[]];
 
 const ALOFT_LABELS = TARGET_ALTITUDES_FT.map((ft) => `${ft.toLocaleString("en-US")} ft`);
@@ -264,8 +273,8 @@ export function mapWeatherDataToWorksheet(
     data.altitude = elevation.altitude ?? [-1, -1, -1];
 
     // Area-of-ops weather (Open-Meteo): winds aloft and operating conditions
-    const temp = (data.temp ? [...data.temp] : [-1, -1, -1]) as Triple;
-    const altimeter = (data.altimeter ? [...data.altimeter] : [-1, -1, -1]) as Triple;
+    const temp = (data.temp ? [...data.temp] : keptTriple()) as Triple;
+    const altimeter = (data.altimeter ? [...data.altimeter] : keptTriple()) as Triple;
     let wind: WindTable = [Array(5).fill(null), Array(5).fill(null), Array(5).fill(null)];
     if (areaOfOps) {
       notifications.push(...areaOfOps.notifications);
@@ -281,11 +290,11 @@ export function mapWeatherDataToWorksheet(
     }
     if (typeof options.opAltitudeFt === "number" && options.opAltitudeFt > 0) {
       // An operating temperature is expected only once there's an altitude.
-      if (temp[1] === -1) temp[1] = null;
+      if (temp[1] === KEEP_SLOT) temp[1] = null;
     }
 
     if (options.validateData) {
-      if (temp[1] !== null && temp[1] !== -1 && !isValidTemperature(temp[1])) {
+      if (temp[1] != null && !isValidTemperature(temp[1])) {
         notifications.push({
           level: "warning",
           subject: fieldSubject("temp", 1),
@@ -293,7 +302,7 @@ export function mapWeatherDataToWorksheet(
         });
         temp[1] = null;
       }
-      if (altimeter[1] !== null && altimeter[1] !== -1 && !isValidAltimeter(altimeter[1])) {
+      if (altimeter[1] != null && !isValidAltimeter(altimeter[1])) {
         notifications.push({
           level: "warning",
           subject: fieldSubject("altimeter", 1),
@@ -576,7 +585,8 @@ export function mergeWeatherData(
       number | null,
     ];
     apiData.temp.forEach((val, i) => {
-      if (val !== undefined && val !== -1) {
+      // Only `undefined` means "don't update": -1 °C is a real temperature.
+      if (val !== undefined) {
         next[i] = val;
       }
     });
