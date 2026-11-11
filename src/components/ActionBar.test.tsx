@@ -2,6 +2,7 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import ActionBar from "./ActionBar";
 import type { WorksheetData } from "@/utils/types";
+import type { ActionBarState } from "@/utils/actionBarState";
 import type { LimitCheck } from "@/utils/limitChecks";
 
 const empty: WorksheetData = {
@@ -39,6 +40,8 @@ const baseProps = {
   onOpenChecklist: jest.fn(),
   onPrint: jest.fn(),
 };
+
+const ACTION_BAR_STATES: readonly ActionBarState[] = ["incomplete", "ready", "fetched"];
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -121,11 +124,14 @@ describe("ActionBar — fetched state", () => {
   });
 });
 
-describe("ActionBar — all-done state", () => {
-  it("renders the all-done title and the Acknowledge button", () => {
-    render(<ActionBar {...baseProps} state="all-done" />);
-    expect(screen.getByText(/All checks complete/i)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Acknowledge/i })).toBeInTheDocument();
+describe("ActionBar — never states a Go/No-Go decision", () => {
+  it("shows no verdict text or Acknowledge button in any state", () => {
+    for (const state of ACTION_BAR_STATES) {
+      const { unmount } = render(<ActionBar {...baseProps} state={state} />);
+      expect(screen.queryByText(/verdict/i)).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /Acknowledge/i })).not.toBeInTheDocument();
+      unmount();
+    }
   });
 });
 
@@ -162,7 +168,7 @@ describe("ActionBar — isFetching", () => {
 
 describe("ActionBar — Checklist trigger", () => {
   it("renders a Checklist button visible across all states", () => {
-    for (const state of ["incomplete", "ready", "fetched", "all-done"] as const) {
+    for (const state of ACTION_BAR_STATES) {
       const { unmount } = render(
         <ActionBar
           {...baseProps}
@@ -185,7 +191,7 @@ describe("ActionBar — Checklist trigger", () => {
 
 describe("ActionBar — Print trigger", () => {
   it("renders a Print briefing button visible across all states", () => {
-    for (const state of ["incomplete", "ready", "fetched", "all-done"] as const) {
+    for (const state of ACTION_BAR_STATES) {
       const { unmount } = render(
         <ActionBar {...baseProps} state={state} fetchDisabled={state === "incomplete"} />,
       );

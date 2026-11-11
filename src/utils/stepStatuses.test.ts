@@ -66,6 +66,33 @@ describe("deriveStepStatuses", () => {
     });
   });
 
+  it("never marks Decision complete, even with every field filled and weather fetched", () => {
+    // The worksheet informs the Go/No-Go decision but never states it
+    // (GLOSSARY.md), so the Decision step has no "done" status.
+    const filled: WorksheetData = {
+      ...readyForWeather,
+      pilot: "Pilot",
+      duration: 2,
+      acType: "C182T",
+      tailN: "N123AB",
+      route: "Area",
+      position: [40.5, -111.5],
+      wind: [
+        [270, 270, 270, 270, 270],
+        [10, 10, 10, 10, 10],
+        [10, 5, 0, -5, -10],
+      ],
+      temp: [15, 5, 15],
+      altimeter: [30.0, 30.0, 30.0],
+      altitude: [4500, 10500, 4500],
+      rwy: [8000, 8000],
+      weight: 2600,
+      mtnEndorse: true,
+      mtnCert: true,
+    };
+    expect(deriveStepStatuses(filled, new Date()).decision).toBe("active");
+  });
+
   it("treats sortie as complete based on canFetchWeather, not weather-fetched", () => {
     // Edge: weather fetched but airports later cleared — sortie reflects
     // current state (incomplete), but weather/decision reflect fetched

@@ -11,7 +11,6 @@ import {
   CloudArrowDownIcon,
   ExclamationCircleIcon,
   PrinterIcon,
-  StarIcon,
 } from "@heroicons/react/24/outline";
 import { LimitStateDot } from "@/components/LimitCheckCallout";
 import type { ActionBarState } from "@/utils/actionBarState";
@@ -137,17 +136,6 @@ export default function ActionBar({
           </div>
         )}
 
-        {state === "all-done" && (
-          <div className="flex items-center gap-3 flex-1 min-w-0">
-            <StarIcon className="h-5 w-5 text-slate-900 shrink-0 dark:text-slate-100" />
-            <div className="min-w-0">
-              <div className="text-sm font-medium text-slate-900 dark:text-slate-100">
-                All checks complete — verdict ready for review
-              </div>
-            </div>
-          </div>
-        )}
-
         <div className="flex items-center justify-end gap-2 shrink-0">
           {state === "incomplete" && (
             <FetchButton onClick={onFetch} disabled={true} isLoading={isFetching} />
@@ -176,16 +164,6 @@ export default function ActionBar({
                 <ChevronDownIcon className="h-3.5 w-3.5" />
               </a>
             </>
-          )}
-
-          {state === "all-done" && (
-            <button
-              type="button"
-              className="flex items-center gap-2 rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
-            >
-              <CheckCircleIcon className="h-4 w-4" />
-              Acknowledge &amp; proceed
-            </button>
           )}
 
           <div className="flex items-center gap-1.5 sm:ml-0.5 sm:border-l sm:border-slate-200 sm:pl-2.5 dark:sm:border-slate-700">

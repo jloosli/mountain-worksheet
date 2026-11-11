@@ -353,7 +353,7 @@ export default function AppContainer() {
             status={stepStatuses.decision}
             badge={formatStepBadge(stepStatuses.counts.decision)}
             title="Decision"
-            subtitle="Go / no-go summary, with detailed calculations below"
+            subtitle="Worksheet limits and detailed calculations"
             showSpine={false}
           >
             <InlineNotifications

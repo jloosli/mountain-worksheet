@@ -56,6 +56,14 @@ describe("AppContainer", () => {
     expect(anchor).not.toBeNull();
   });
 
+  it("subtitles the Decision step with worksheet limits, not a go/no-go summary", () => {
+    render(<AppContainer />);
+    expect(
+      onScreen().getByText("Worksheet limits and detailed calculations")
+    ).toBeInTheDocument();
+    expect(onScreen().queryByText(/go \/ no-go summary/i)).not.toBeInTheDocument();
+  });
+
   it("renders the slide-over triggers (instructions in header, checklist on action bar)", () => {
     render(<AppContainer />);
     expect(
