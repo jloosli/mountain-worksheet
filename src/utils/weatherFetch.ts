@@ -37,6 +37,7 @@ import {
 import { normalizeAirportCode } from "./airportCode";
 import { stepSubject, type Notification, type WeatherFetchResult } from "./notifications";
 import {
+  FIELD_FORECAST_MAX_OFFSET_MS,
   fetchFieldForecast,
   fetchPointForecast,
   type OpenMeteoPointForecast,
@@ -264,7 +265,14 @@ export async function fetchWorksheetWeather(
           ? [[code, airportOf(code)] as [string, AirportResponse | undefined]]
           : [];
       }),
-      { start: depTime, end: new Date(depTime.getTime() + durationHours * 3600 * 1000) },
+      // Padded by the nearest-hour allowance: Open-Meteo windows are whole
+      // days, so a 23:45Z slot needs the next day's 00:00Z hour.
+      {
+        start: new Date(depTime.getTime() - FIELD_FORECAST_MAX_OFFSET_MS),
+        end: new Date(
+          depTime.getTime() + durationHours * 3600 * 1000 + FIELD_FORECAST_MAX_OFFSET_MS,
+        ),
+      },
     );
     const depLatLon = latLonOf(departure);
     const arrLatLon = latLonOf(arrival);

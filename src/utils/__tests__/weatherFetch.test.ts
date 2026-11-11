@@ -581,6 +581,14 @@ describe("fetchWorksheetWeather", () => {
       expect(data?.temp?.[0]).toBe(27);
     });
 
+    it("asks for the next day's midnight hour when a slot is late in the day", async () => {
+      mockField.mockResolvedValue(fieldForecast);
+      await fetchWorksheetWeather({ ...later, date: "2026-05-12", time: "23:45", duration: 0 });
+      const [, , , win] = mockField.mock.calls[0];
+      // Open-Meteo windows are whole days, so the end must reach 2026-05-13.
+      expect(win.end.toISOString().slice(0, 10)).toBe("2026-05-13");
+    });
+
     it("doesn't use a field forecast hour that misses the slot's time", async () => {
       mockField.mockResolvedValue({
         hourly: { time: ["2026-05-12T20:00"], temperature_2m: [30] },

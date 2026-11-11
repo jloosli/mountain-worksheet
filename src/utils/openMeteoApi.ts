@@ -93,7 +93,7 @@ export async function fetchFieldForecast(
  * Hourly output is on the hour, so any time inside the series is within
  * 30 min of a value; a time farther off is past the end of the forecast.
  */
-const FIELD_FORECAST_MAX_OFFSET_MS = 30 * 60 * 1000;
+export const FIELD_FORECAST_MAX_OFFSET_MS = 30 * 60 * 1000;
 
 /**
  * The field forecast's 2 m temperature for the hour nearest `at`, or null
