@@ -8,6 +8,7 @@
  * during render from state, the derived view models and the notifications in
  * force, so they change exactly when their inputs do.
  */
+import { TARGET_ALTITUDES_FT } from "./areaOfOpsWeather";
 import { assessWeight, findAircraft, type ClimbViewModel, type TOLDViewModel } from "./derived";
 import { inputCautions } from "./markers";
 import {
@@ -19,6 +20,7 @@ import {
   type Subject,
 } from "./notifications";
 import type { WorksheetData } from "./types";
+import { isUnverifiedWeather } from "./unverifiedWeather";
 
 export type LimitState = "exceeded" | "not-checked" | "near" | "within";
 
@@ -50,6 +52,8 @@ export interface LimitPoint {
   waitingFor?: string;
   /** Cautions on the inputs this value rests on (substitution markers). */
   substitutions: Notification[];
+  /** The column or airport slot this point is about, for styling its table cell. */
+  index?: number;
 }
 
 export interface LimitCheck {
@@ -59,6 +63,8 @@ export interface LimitCheck {
   limit: string;
   /** A fixed caveat on what the check doesn't cover, or null. */
   caveat: string | null;
+  /** Guidance behind the check's current state, e.g. why Near limit starts where it does. */
+  note?: string;
   /** The step whose callout shows this check. */
   step: StepId;
   state: LimitState;
@@ -110,7 +116,7 @@ export const limitCheckDomId = (id: LimitCheckId) => `limit-check-${id}`;
 
 /** Every Limit check that exists so far. */
 export function deriveLimitChecks(inputs: LimitCheckInputs): LimitCheck[] {
-  return [weightCheck(inputs)];
+  return [weightCheck(inputs), windsAloftCheck(inputs)];
 }
 
 const fmt = (n: number) => n.toLocaleString("en-US", { maximumFractionDigits: 1 });
@@ -183,3 +189,76 @@ function weightCheck({ state, notifications, climb }: LimitCheckInputs): LimitCh
     },
   ]);
 }
+
+/** The winds-aloft column labels, in `state.wind`'s column order: "3,000'". */
+const WIND_ALTITUDES = TARGET_ALTITUDES_FT.map((ft) => `${fmt(ft)}'`);
+
+/**
+ * The Winds aloft check's state for each winds-aloft column, undefined where
+ * it didn't check that column, for styling the speeds in the winds table.
+ */
+export function windSpeedStates(checks: readonly LimitCheck[]): (LimitState | undefined)[] {
+  const states: (LimitState | undefined)[] = WIND_ALTITUDES.map(() => undefined);
+  for (const p of checks.find((c) => c.id === "winds")?.points ?? []) {
+    if (p.index !== undefined) states[p.index] = p.state;
+  }
+  return states;
+}
+
+/**
+ * Winds aloft: each entered winds-aloft speed, Exceeded at 30 kt or more and
+ * Near limit at 20 kt or more. Blank columns are skipped, but a column whose
+ * values (or the whole table) hold a Warning is Not checked, blank or not.
+ */
+function windsAloftCheck({ state, notifications }: LimitCheckInputs): LimitCheck {
+  const base = {
+    id: "winds",
+    name: "Winds aloft",
+    limit: "mountain winds under 30 kt at every altitude",
+    caveat: "Surface wind and gusts are not checked.",
+    step: "weather",
+  } as const;
+  const warned = new Set(
+    notifications.filter((n) => n.level === "warning").map((n) => subjectKey(n.subject)),
+  );
+  const tableWarned = warned.has(subjectKey(fieldSubject("wind")));
+
+  const points: LimitPoint[] = [];
+  WIND_ALTITUDES.forEach((label, index) => {
+    // 0 kt is a real speed; only null means no data.
+    const speed = state.wind[1]?.[index] ?? null;
+    const untrusted = tableWarned || warned.has(subjectKey(fieldSubject("wind", index)));
+    // Unverified weather sits on the weather step but covers every column.
+    const substitutions = [
+      ...inputCautions(notifications, {
+        status: "computed",
+        dependsOn: [fieldSubject("wind"), fieldSubject("wind", index)],
+      }),
+      ...notifications.filter(isUnverifiedWeather),
+    ];
+    if (untrusted) {
+      const waitingFor = speed === null ? "needs speed (Warning)" : "needs speed checked (Warning)";
+      points.push({ label, state: "not-checked", waitingFor, substitutions, index });
+      return;
+    }
+    if (speed === null) return;
+    const pointState: LimitState = speed >= 30 ? "exceeded" : speed >= 20 ? "near" : "within";
+    points.push({ label, state: pointState, value: `${fmt(speed)} kt`, substitutions, index });
+  });
+  if (points.length === 0) {
+    return check(base, [
+      {
+        label: "Winds aloft",
+        state: "not-checked",
+        waitingFor: "needs winds-aloft speeds",
+        substitutions: [],
+      },
+    ]);
+  }
+  const result = check(base, points);
+  return points.some((p) => p.state === "near") ? { ...result, note: WINDS_NEAR_NOTE } : result;
+}
+
+/** CAP Mountain Flying Qualification Course, module 3, Mountain Weather (see issue #247). */
+const WINDS_NEAR_NOTE =
+  "Near limit from 20 kt: CAP guidance says to proceed with caution when ridgeline winds are 20 kt or more. The app doesn't know ridge height, so every altitude counts.";

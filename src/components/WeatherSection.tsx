@@ -3,6 +3,8 @@
 
 import { useState } from "react";
 import AirportCard from "@/components/AirportCard";
+import { limitPointClass } from "@/components/LimitCheckCallout";
+import type { LimitState } from "@/utils/limitChecks";
 import { isApiPopulatedData } from "@/utils/weatherDataMapper";
 import { celciusToFarenheit, farenheitToCelcius } from "@/utils/formulas";
 import type { RunwayOption, WorksheetData } from "@/utils/types";
@@ -40,6 +42,8 @@ interface WeatherSectionProps {
   useFahrenheit?: boolean;
   /** All notifications in force; each is shown next to its Subject. */
   notifications?: readonly Notification[];
+  /** The Winds aloft check's state per column; styles the speeds it evaluates. */
+  windSpeedStates?: readonly (LimitState | undefined)[];
   /**
    * Entries the pilot typed that were not applied, held by the caller so
    * their Warnings are part of `notifications`. Without
@@ -59,6 +63,7 @@ export default function WeatherSection({
   runwayStatus = ["idle", "idle"],
   useFahrenheit = false,
   notifications = [],
+  windSpeedStates = [],
   rejectedEntries,
   onRejectedEntryChange,
 }: WeatherSectionProps) {
@@ -203,6 +208,7 @@ export default function WeatherSection({
         onChange={handleWindChange}
         rejectedText={rejectedWindText}
         notifications={allNotifications}
+        speedStates={windSpeedStates}
       />
 
       <div>
@@ -375,7 +381,10 @@ interface WindsAloftBlockProps {
   /** Text of a rejected entry still shown in a cell, if any. */
   rejectedText?: (row: number, col: number) => string | undefined;
   notifications: readonly Notification[];
+  /** The Winds aloft check's state for each column's speed, if it checked it. */
+  speedStates?: readonly (LimitState | undefined)[];
 }
+
 
 function WindsAloftBlock({
   wind,
@@ -385,6 +394,7 @@ function WindsAloftBlock({
   onChange,
   rejectedText = () => undefined,
   notifications,
+  speedStates = [],
 }: WindsAloftBlockProps) {
   const tableSubject = fieldSubject("wind");
   const cellA11y = (col: number) =>
@@ -469,7 +479,7 @@ function WindsAloftBlock({
                     value={rejectedText(1, idx) ?? wind[1][idx] ?? ""}
                     onChange={(e) => onChange(1, idx, e.target.value)}
                     {...cellA11y(idx)}
-                    className={cellClass(apiPopulatedWind)}
+                    className={`${cellClass(apiPopulatedWind)} ${limitPointClass(speedStates[idx])}`.trim()}
                   />
                 </td>
               ))}

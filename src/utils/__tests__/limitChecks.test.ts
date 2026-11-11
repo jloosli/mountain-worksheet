@@ -9,9 +9,11 @@ import {
   limitCheckSummary,
   bySeverity,
   worstState,
+  windSpeedStates,
   type LimitCheck,
 } from "../limitChecks";
-import { fieldSubject, type Notification } from "../notifications";
+import { fieldSubject, stepSubject, type Notification } from "../notifications";
+import { unverifiedWeatherNotifications } from "../unverifiedWeather";
 import type { WorksheetData } from "../types";
 
 const baseState = (): WorksheetData => ({
@@ -199,6 +201,172 @@ const check = (id: string, state: LimitCheck["state"]): LimitCheck => ({
   step: "sortie",
   state,
   points: [],
+});
+
+const windsCheck = (state: WorksheetData, extra: Notification[] = []) => {
+  const check = checksFor(state, extra).find((c) => c.id === "winds");
+  if (!check) throw new Error("no winds check");
+  return check;
+};
+
+/** `state` with the winds-aloft speeds (kt) set per column; null leaves a column blank. */
+const withSpeeds = (speeds: (number | null)[], state = baseState()): WorksheetData => ({
+  ...state,
+  wind: [
+    speeds.map((v) => (v === null ? null : 270)),
+    speeds,
+    speeds.map((v) => (v === null ? null : -5)),
+  ],
+});
+
+describe("Winds aloft limit check", () => {
+  it.each([
+    [19, "within"],
+    [20, "near"],
+    [29, "near"],
+    [30, "exceeded"],
+  ] as const)("is %s kt → %s", (speed, state) => {
+    const check = windsCheck(withSpeeds([speed, null, null, null, null]));
+    expect(check.state).toBe(state);
+    expect(check.points).toEqual([
+      expect.objectContaining({ label: "3,000'", state, value: `${speed} kt`, index: 0 }),
+    ]);
+  });
+
+  it("describes the worksheet limit, the fixed caveat, and belongs to Weather", () => {
+    const check = windsCheck(baseState());
+    expect(check).toMatchObject({
+      name: "Winds aloft",
+      step: "weather",
+      caveat: "Surface wind and gusts are not checked.",
+    });
+    expect(check.limit).toMatch(/30 kt/);
+  });
+
+  it("skips blank columns and lists only the altitudes it checked", () => {
+    const check = windsCheck(withSpeeds([10, null, 15, null, 5]));
+    expect(check.state).toBe("within");
+    expect(check.points.map((p) => p.label)).toEqual(["3,000'", "9,000'", "15,000'"]);
+  });
+
+  it("is Not checked when every column is blank, saying what it needs", () => {
+    const check = windsCheck(baseState());
+    expect(check.state).toBe("not-checked");
+    expect(check.points).toEqual([
+      expect.objectContaining({ state: "not-checked", waitingFor: "needs winds-aloft speeds" }),
+    ]);
+  });
+
+  it("counts a 0 kt speed as a checked value", () => {
+    const check = windsCheck(withSpeeds([0, null, null, null, null]));
+    expect(check.state).toBe("within");
+    expect(check.points).toEqual([
+      expect.objectContaining({ label: "3,000'", state: "within", value: "0 kt" }),
+    ]);
+  });
+
+  const columnWarning = (col: number, message = "Fetched for KABC at 2026-01-01 10:00; refetch weather."): Notification => ({
+    level: "warning",
+    subject: fieldSubject("wind", col),
+    message,
+  });
+
+  it("is Not checked when a column holds a Warning, even when the other columns pass", () => {
+    const check = windsCheck(withSpeeds([10, 12, 15, null, null]), [columnWarning(1)]);
+    expect(check.state).toBe("not-checked");
+    expect(check.points).toEqual([
+      expect.objectContaining({ label: "3,000'", state: "within", value: "10 kt" }),
+      expect.objectContaining({
+        label: "6,000'",
+        state: "not-checked",
+        waitingFor: "needs speed checked (Warning)",
+        index: 1,
+      }),
+      expect.objectContaining({ label: "9,000'", state: "within", value: "15 kt" }),
+    ]);
+    expect(check.points[1].value).toBeUndefined();
+  });
+
+  it("does not skip a blank column that holds a Warning", () => {
+    const check = windsCheck(withSpeeds([10, null, null, null, null]), [
+      columnWarning(3, "Winds aloft at 12,000' couldn't be fetched; enter them manually."),
+    ]);
+    expect(check.state).toBe("not-checked");
+    expect(check.points).toEqual([
+      expect.objectContaining({ label: "3,000'", state: "within" }),
+      expect.objectContaining({ label: "12,000'", state: "not-checked", waitingFor: "needs speed (Warning)" }),
+    ]);
+  });
+
+  it("treats a Warning on the whole winds table as a Warning on every column", () => {
+    const check = windsCheck(withSpeeds([10, 40, null, null, null]), [
+      { level: "warning", subject: fieldSubject("wind"), message: "The link's winds aloft table is malformed." },
+    ]);
+    expect(check.state).toBe("not-checked");
+    expect(check.points.every((p) => p.state === "not-checked")).toBe(true);
+    expect(check.points).toHaveLength(5);
+  });
+
+  it("is Exceeded at one column even when another is Not checked", () => {
+    const check = windsCheck(withSpeeds([35, 12, null, null, null]), [columnWarning(1)]);
+    expect(check.state).toBe("exceeded");
+    expect(check.points.map((p) => p.state)).toEqual(["exceeded", "not-checked"]);
+  });
+
+  it("ignores Cautions when deciding whether a column is checked", () => {
+    const check = windsCheck(withSpeeds([22, null, null, null, null]), [
+      { level: "caution", subject: fieldSubject("wind", 0), message: "Forecast time snapped." },
+    ]);
+    expect(check.state).toBe("near");
+  });
+
+  it("evaluates a substituted column normally and carries its Caution as a marker", () => {
+    const snapped: Notification = {
+      level: "caution",
+      subject: fieldSubject("wind", 2),
+      message: "Operating area forecast time snapped to 2026-01-01T11:00Z",
+    };
+    const check = windsCheck(withSpeeds([10, null, 31, null, null]), [snapped]);
+    expect(check.state).toBe("exceeded");
+    expect(check.points[0].substitutions).toEqual([]);
+    expect(check.points[1]).toMatchObject({ state: "exceeded", substitutions: [snapped] });
+  });
+
+  it("marks every checked column with Unverified weather, but not with other weather-step Cautions", () => {
+    const state = withSpeeds([10, 25, null, null, null]);
+    const unverified = unverifiedWeatherNotifications(state, null);
+    expect(unverified).toHaveLength(1);
+    const gairmet: Notification = {
+      level: "caution",
+      subject: stepSubject("weather"),
+      message: "G-AIRMET unavailable. Check AIRMETs manually.",
+    };
+    const check = windsCheck(state, [...unverified, gairmet]);
+    expect(check.state).toBe("near");
+    expect(check.points.map((p) => p.substitutions)).toEqual([unverified, unverified]);
+  });
+
+  it("cites the ridge-level guidance only when a column is Near limit", () => {
+    expect(windsCheck(withSpeeds([10, null, null, null, null])).note).toBeUndefined();
+    expect(windsCheck(withSpeeds([35, null, null, null, null])).note).toBeUndefined();
+    const note = windsCheck(withSpeeds([10, 20, 35, null, null])).note;
+    expect(note).toMatch(/20 kt/);
+    expect(note).toMatch(/ridge/);
+    expect(note).toMatch(/doesn't know ridge height/);
+  });
+
+  it("gives each column's state for the winds table, undefined where it wasn't checked", () => {
+    const checks = checksFor(withSpeeds([10, null, 22, 31, null]), [
+      { level: "warning", subject: fieldSubject("wind", 4), message: "Stale; refetch weather." },
+    ]);
+    expect(windSpeedStates(checks)).toEqual([
+      "within",
+      undefined,
+      "near",
+      "exceeded",
+      "not-checked",
+    ]);
+  });
 });
 
 describe("limitCheckSummary", () => {

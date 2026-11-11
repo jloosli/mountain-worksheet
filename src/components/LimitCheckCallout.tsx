@@ -43,8 +43,8 @@ const STYLE: Record<LimitState, { chip: string; dot: string; box: string; text: 
  * Exceeded and Near limit are styled; Within limit and Not checked are not.
  */
 export function limitPointClass(state: LimitState | undefined): string {
-  if (state === "exceeded") return "font-bold text-red-600 dark:text-red-400";
-  if (state === "near") return "font-bold text-amber-600 dark:text-amber-400";
+  if (state === "exceeded") return "font-bold text-red-700 dark:text-red-400";
+  if (state === "near") return "font-bold text-amber-800 dark:text-amber-400";
   return "";
 }
 
@@ -104,9 +104,14 @@ export default function LimitCheckCallout({ check }: { check: LimitCheck }) {
               <span className="italic text-slate-600 dark:text-slate-400">{p.waitingFor}</span>
             )}
             <CautionMarkers cautions={p.substitutions} />
+            {/* The dot and color are aria-hidden or visual only; name the state in text. */}
+            <span className="sr-only"> ({LIMIT_STATE_LABEL[p.state]})</span>
           </li>
         ))}
       </ul>
+      {check.note && (
+        <p className={`mt-1 text-xs ${style.text}`}>{check.note}</p>
+      )}
       {check.caveat && (
         <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{check.caveat}</p>
       )}

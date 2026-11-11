@@ -312,3 +312,33 @@ describe("WeatherSection — worksheet opened from a link", () => {
     ).toBeInTheDocument();
   });
 });
+
+describe("WeatherSection — winds aloft point styles (#267)", () => {
+  const state: WorksheetData = {
+    ...populated,
+    wind: [
+      [270, 270, 270, 270, null],
+      [10, 20, 30, 40, null],
+      [5, 0, -5, -10, null],
+    ],
+  };
+
+  it("styles each speed by its point state: Exceeded and Near limit only", () => {
+    render(
+      <WeatherSection
+        state={state}
+        onUpdate={() => {}}
+        airportRunways={[null, null]}
+        windSpeedStates={["within", "near", "exceeded", "not-checked", undefined]}
+      />
+    );
+    const speed = (alt: string) => screen.getByLabelText(`Wind velocity at ${alt} ft`);
+    expect(speed("9,000").className).toMatch(/text-red/);
+    expect(speed("6,000").className).toMatch(/text-amber/);
+    for (const alt of ["3,000", "12,000", "15,000"]) {
+      expect(speed(alt).className).not.toMatch(/text-red|text-amber/);
+    }
+    // Only speeds are styled, not direction or temperature.
+    expect(screen.getByLabelText("Wind direction at 9,000 ft").className).not.toMatch(/text-red/);
+  });
+});
