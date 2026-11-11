@@ -1,5 +1,32 @@
 import { renderHook, act } from "@testing-library/react";
-import { useUrlState } from "../useUrlState";
+import { useUrlReducer } from "../useUrlReducer";
+
+type Update<T> = T | ((prev: T) => T);
+interface Opened<T, R> {
+  value: T;
+  check: R | null;
+}
+const setValue = <T, R>(s: Opened<T, R>, update: Update<T>): Opened<T, R> => ({
+  ...s,
+  value: typeof update === "function" ? (update as (prev: T) => T)(s.value) : update,
+});
+const opened = <T, R>(value: T, check: R | null): Opened<T, R> => ({ value, check });
+const valueOf = <T, R>(s: Opened<T, R>): T => s.value;
+
+/** A plain value persisted to the URL: [value, set, check result]. */
+function useUrlValue<T, R extends { state: T } = { state: T }>(
+  initialState: T,
+  check?: (state: T, query: string) => R
+) {
+  const [s, dispatch] = useUrlReducer<Opened<T, R>, Update<T>, T, R>(
+    setValue,
+    initialState,
+    opened,
+    valueOf,
+    check
+  );
+  return [s.value, dispatch, s.check] as const;
+}
 import * as nextNavigation from "next/navigation";
 
 // Mock next/navigation
@@ -9,7 +36,7 @@ jest.mock("next/navigation", () => ({
   useSearchParams: jest.fn(),
 }));
 
-describe("useUrlState", () => {
+describe("useUrlReducer", () => {
   // Setup common mocks
   const mockRouter = { push: jest.fn() };
   const mockPathname = "/test";
@@ -31,7 +58,7 @@ describe("useUrlState", () => {
   it("should initialize with default state when no URL params exist", () => {
     const initialState = { count: 0, name: "test" };
 
-    const { result } = renderHook(() => useUrlState(initialState));
+    const { result } = renderHook(() => useUrlValue(initialState));
 
     expect(result.current[0]).toEqual(initialState);
   });
@@ -43,7 +70,7 @@ describe("useUrlState", () => {
       mockSearchParams
     );
 
-    const { result } = renderHook(() => useUrlState(initialState));
+    const { result } = renderHook(() => useUrlValue(initialState));
 
     expect(result.current[0]).toEqual({
       count: 42,
@@ -53,7 +80,7 @@ describe("useUrlState", () => {
 
   it("should update state and URL when setState is called", () => {
     const initialState = { count: 0, name: "test" };
-    const { result } = renderHook(() => useUrlState(initialState));
+    const { result } = renderHook(() => useUrlValue(initialState));
 
     act(() => {
       result.current[1]({ count: 42, name: "updated" });
@@ -73,7 +100,7 @@ describe("useUrlState", () => {
 
   it("should support functional updates", () => {
     const initialState = { count: 0, name: "test" };
-    const { result } = renderHook(() => useUrlState(initialState));
+    const { result } = renderHook(() => useUrlValue(initialState));
 
     act(() => {
       result.current[1]((prev) => ({
@@ -90,7 +117,7 @@ describe("useUrlState", () => {
 
   it("should not include empty query string when state is empty", () => {
     const initialState = { value: "" };
-    const { result } = renderHook(() => useUrlState(initialState));
+    const { result } = renderHook(() => useUrlValue(initialState));
 
     act(() => {
       result.current[1]({ value: "" });
@@ -102,7 +129,7 @@ describe("useUrlState", () => {
 
   it("should update URL on focus/blur events", async () => {
     const initialState = { count: 0 };
-    const { result } = renderHook(() => useUrlState(initialState));
+    const { result } = renderHook(() => useUrlValue(initialState));
 
     // Update state
     act(() => {
@@ -138,7 +165,7 @@ describe("useUrlState", () => {
 
   it("should cleanup focus/blur event listeners on unmount", () => {
     const removeEventListenerSpy = jest.spyOn(document, "removeEventListener");
-    const { unmount } = renderHook(() => useUrlState({ count: 0 }));
+    const { unmount } = renderHook(() => useUrlValue({ count: 0 }));
 
     unmount();
 
@@ -160,7 +187,7 @@ describe("useUrlState", () => {
         [0, 0],
       ],
     };
-    const { result } = renderHook(() => useUrlState(initialState));
+    const { result } = renderHook(() => useUrlValue(initialState));
 
     act(() => {
       result.current[1]({
@@ -189,12 +216,44 @@ describe("useUrlState", () => {
       problem: `${query} -> ${String(state.count)}`,
     }));
 
-    const { result } = renderHook(() => useUrlState(initialState, check));
+    const { result } = renderHook(() => useUrlValue(initialState, check));
 
     expect(result.current[0]).toEqual({ count: 0 });
     expect(result.current[2]).toEqual({
       state: { count: 0 },
       problem: "count=abc -> NaN",
+    });
+  });
+
+  describe("with its own reducer state", () => {
+    interface Counter {
+      value: { count: number };
+      events: number;
+    }
+    const reducer = (s: Counter, by: number): Counter => ({
+      value: { count: s.value.count + by },
+      events: s.events + 1,
+    });
+    const init = (value: { count: number }): Counter => ({ value, events: 0 });
+    const toUrl = (s: Counter) => s.value;
+
+    it("applies events dispatched before a render to the latest state, and writes only the URL value", () => {
+      (nextNavigation.useSearchParams as jest.Mock).mockReturnValue(
+        new URLSearchParams("count=2")
+      );
+      const { result } = renderHook(() =>
+        useUrlReducer(reducer, { count: 0 }, init, toUrl)
+      );
+      expect(result.current[0]).toEqual({ value: { count: 2 }, events: 0 });
+
+      act(() => {
+        result.current[1](1);
+        result.current[1](10);
+        document.dispatchEvent(new Event("focusin"));
+      });
+
+      expect(result.current[0]).toEqual({ value: { count: 13 }, events: 2 });
+      expect(mockRouter.push).toHaveBeenCalledWith("/test?count=13", { scroll: false });
     });
   });
 });

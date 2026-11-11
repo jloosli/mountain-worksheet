@@ -216,7 +216,7 @@ const QS_STRINGIFY_OPTIONS: qs.IStringifyOptions = {
   encoder: spaceEncoder, // Custom encoder: spaces -> '+', arrays stay unencoded
   skipNulls: true, // Skip null values automatically
   filter: filterEmpty, // Also skip undefined, empty strings, and empty arrays
-  addQueryPrefix: false, // Don't add ? prefix (we add it in useUrlState)
+  addQueryPrefix: false, // Don't add ? prefix (we add it in useUrlReducer)
   format: "RFC1738", // Use RFC1738 format (spaces as '+')
 };
 

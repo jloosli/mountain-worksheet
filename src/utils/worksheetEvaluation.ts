@@ -1,4 +1,3 @@
-import { opTempChangeNotifications, type OpTempChange } from "./areaOfOpsWeather";
 import {
   computeCanyonTurnEntryRanges,
   computeClimbViewModel,
@@ -14,44 +13,28 @@ import {
 } from "./derived";
 import { deriveLimitChecks, type LimitCheck } from "./limitChecks";
 import { calculateManeuveringSpeeds } from "./maneuveringCalculations";
-import {
-  deriveNotifications,
-  staleFetchNotifications,
-  type Notification,
-  type WeatherFetchResult,
-} from "./notifications";
-import { rejectedEntryNotifications, type RejectedEntries } from "./rejectedEntries";
+import type { Notification } from "./notifications";
 import { deriveStepStatuses, type StepStatusesResult } from "./stepStatuses";
 import type { ManeuveringSpeeds, WorksheetData } from "./types";
-import { unverifiedWeatherNotifications } from "./unverifiedWeather";
-import { deriveUrlNotifications, type UrlLoadResult } from "./worksheetUrlState";
+import { sessionNotifications, type WeatherSession } from "./weatherSession";
 
 /**
  * What the worksheet remembers about this session beyond the worksheet
- * itself: the events whose notifications are derived from it plus current
- * state, so each clears when its cause does (ADR 0001).
+ * itself: the weather session's memory (its reducer state, less the
+ * worksheet), whose notifications are derived from it plus current state so
+ * each clears when its cause does (ADR 0001).
  */
-export interface WorksheetSession {
-  /** The latest weather fetch this session. */
-  weatherFetch: WeatherFetchResult | null;
-  /** When weather was last fetched this session; null if never. */
-  weatherLastUpdated: Date | null;
-  /** The latest operating-temperature re-derivation (#117). */
-  opTempChange: OpTempChange | null;
-  /** The shared link's notifications still in force. */
-  linkLoad: UrlLoadResult | null;
-  /** Weather entries the pilot typed that were out of range and not applied. */
-  rejectedEntries: RejectedEntries;
+export interface WorksheetSession extends Omit<WeatherSession, "worksheet"> {
   /** Notifications from the runway lookup (an async hook, outside this module). */
   runwayNotifications: readonly Notification[];
 }
 
 export const EMPTY_SESSION: WorksheetSession = {
-  weatherFetch: null,
-  weatherLastUpdated: null,
+  lastFetch: null,
+  lastUpdated: null,
   opTempChange: null,
   linkLoad: null,
-  rejectedEntries: {},
+  rejected: {},
   runwayNotifications: [],
 };
 
@@ -98,14 +81,9 @@ export function evaluateWorksheet(
   const maneuveringWarnings = maneuveringNotifications(aircraft);
 
   const notifications = [
-    ...deriveNotifications(state, session.weatherFetch),
-    ...staleFetchNotifications(state, session.weatherFetch),
+    ...sessionNotifications({ ...session, worksheet: state }),
     ...session.runwayNotifications,
-    ...opTempChangeNotifications(state, session.opTempChange),
-    ...deriveUrlNotifications(state, session.linkLoad),
-    ...unverifiedWeatherNotifications(state, session.weatherLastUpdated),
     ...derivePerformanceNotifications(state),
-    ...rejectedEntryNotifications(state, session.rejectedEntries),
   ];
 
   const told = computeTOLDViewModel(state, pressure.PAs, notifications);
@@ -127,6 +105,6 @@ export function evaluateWorksheet(
       notifications: maneuveringWarnings,
     },
     limitChecks: deriveLimitChecks({ state, notifications, climb, told }),
-    stepStatuses: deriveStepStatuses(state, session.weatherLastUpdated, notifications),
+    stepStatuses: deriveStepStatuses(state, session.lastUpdated, notifications),
   };
 }

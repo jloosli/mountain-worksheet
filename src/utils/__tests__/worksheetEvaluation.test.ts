@@ -53,7 +53,7 @@ const sortie = (overrides: Partial<WorksheetData> = {}): WorksheetData => ({
 /** Weather fetched this session, so nothing is Unverified weather. */
 const fetchedSession = (overrides: Partial<WorksheetSession> = {}): WorksheetSession => ({
   ...EMPTY_SESSION,
-  weatherLastUpdated: new Date("2026-01-01T09:00:00Z"),
+  lastUpdated: new Date("2026-01-01T09:00:00Z"),
   ...overrides,
 });
 
@@ -159,7 +159,7 @@ describe("evaluateWorksheet — Winds aloft limit check", () => {
     const e = evaluateWorksheet(
       state,
       fetchedSession({
-        rejectedEntries: {
+        rejected: {
           [windEntryKey(1, 1)]: {
             raw: "500",
             storedValue: null,
@@ -261,7 +261,7 @@ describe("evaluateWorksheet — session", () => {
 
   it("withholds departure results and leaves the runway check Not checked once the departure airport changes after a fetch", () => {
     const fetchedState = sortie();
-    const session = fetchedSession({ weatherFetch: fetchFor(fetchedState) });
+    const session = fetchedSession({ lastFetch: fetchFor(fetchedState) });
     expect(evaluateWorksheet(fetchedState, session).told.departure.values.takeoffGroundRoll.status).toBe(
       "computed",
     );

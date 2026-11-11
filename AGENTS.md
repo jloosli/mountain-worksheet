@@ -17,12 +17,13 @@ A Next.js 16.x web application (App Router, TypeScript, Tailwind CSS v4, Vercel)
 ## Key Architecture
 
 - `src/app/` — App Router pages and layouts
-- `src/components/` — UI components; `AppContainer` owns all state and evaluates the worksheet once per render; `AppInputs`, `Calculations` and `PrintBriefing` render that evaluation
+- `src/components/` — UI components; `AppContainer` holds the weather session (`useUrlReducer`) and evaluates the worksheet once per render; `AppInputs`, `Calculations` and `PrintBriefing` render that evaluation
 - `src/utils/types.ts` — Core types: `WorksheetData`, `Aircraft`, `TOLDCalculationParams`
 - `src/data/aircraft.json` — POH performance tables indexed by weight × altitude × temperature
 - `src/utils/interpolation.ts` — Trilinear (takeoff: weight × altitude × temperature) and bilinear (landing, from a single-weight table, and climb: altitude × temperature) interpolation across POH tables
 - `src/utils/toldCalculations.ts`, `maneuveringCalculations.ts`, `formulas.ts` — Calculations
 - `src/utils/worksheetEvaluation.ts` — `evaluateWorksheet(state, session)`: the one pure function that assembles every notification, computed value, Limit check and step status. It owns the two-pass ordering (performance notifications first, then values withheld against every notification in force). Test cross-cutting behaviour here, not by rendering `AppContainer`
+- `src/utils/weatherSession.ts` — The weather session as a pure reducer: the worksheet plus this session's memory (last fetch, operating-temperature change, rejected entries, link load). Events `edit`/`fetchApplied`/`entryRejected`; selectors `sessionNotifications`/`weatherStatus`/`canFetch`. One `FETCHED_FIELDS` table maps each fetched field to the fetch inputs it depends on, for both staleness and fetch-Warning retirement. Its state (less the worksheet) is `evaluateWorksheet`'s `session`. Test session behaviour by replaying events on the reducer
 - `src/utils/derived.ts` — Per-calculation helpers (`computePressureColumns`, `computeTOLDViewModel`, `computeClimbViewModel`) that `evaluateWorksheet` composes; TOLD results are per airport, each value `computed`/`withheld`/`unavailable`, with notifications
 - `src/utils/provenance.ts` — `substitutionsFor(value, notifications)`: the one rule for which Cautions a value rests on (its inputs' Cautions, plus any Notification whose `covers` takes in an input). Screen markers, Briefing refs and Limit check points all use it
 - `src/utils/limitChecks.ts` — Limit checks (the worksheet's own limits, ADR 0002): derived by `evaluateWorksheet`, shown as callouts at the top of their owning step, summarized in the action bar, and listed in the Briefing's Worksheet limits table and the checklist slide-over; never notifications, never affect step status
@@ -30,7 +31,7 @@ A Next.js 16.x web application (App Router, TypeScript, Tailwind CSS v4, Vercel)
 
 ## URL State Management
 
-State is persisted to URL query strings via `src/utils/urlState.ts` + `src/utils/useUrlState.ts` using the `qs` library.
+State is persisted to URL query strings via `src/utils/urlState.ts` + `src/utils/useUrlReducer.ts` using the `qs` library.
 
 **Format rules (non-obvious):**
 - Arrays → comma-separated (`?numbers=1,2,3`)

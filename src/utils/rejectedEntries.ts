@@ -5,7 +5,7 @@
  * from when it was rejected and no weather fetch has filled the field since;
  * a retired entry never comes back (`retireRejectedEntries`).
  *
- * The entries are held where notifications are derived (AppContainer), so
+ * The entries are held in the weather session (`weatherSession.ts`), so
  * their Warnings reach step statuses, badges and the Briefing like any other.
  */
 import type { Notification } from "./notifications";
