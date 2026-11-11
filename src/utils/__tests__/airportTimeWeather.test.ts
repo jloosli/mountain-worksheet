@@ -467,4 +467,46 @@ describe("selectAirportWeather: routine TAF gaps (#301)", () => {
       ["warning", fieldSubject("altimeter", 0)],
     ]);
   });
+
+  it("prefers the model forecast over a TAF temperature sample hours from the requested time", () => {
+    // A TX group: a maximum valid 9 hr after the requested time.
+    const txTaf: TAFResponse = {
+      ...usTaf,
+      fcsts: [
+        {
+          ...usTaf.fcsts![0],
+          temp: [{ validTime: Math.floor(Date.parse("2026-05-13T09:00:00Z") / 1000), sfcTemp: 31 }],
+        },
+      ],
+    };
+    const requested = new Date("2026-05-13T00:00:00Z");
+    const result = selectAirportWeather(baseMetar, txTaf, requested, "KSLC", 0, {
+      fieldForecastTemp: 19,
+    });
+    expect(result.temp).toBe(19);
+    expect(on(result, "temp")).toEqual([
+      expect.objectContaining({
+        level: "advisory",
+        message: expect.stringMatching(/temperature is for another time; using the Open-Meteo/),
+      }),
+    ]);
+  });
+
+  it("still uses a TAF temperature sample within the hour over the model forecast", () => {
+    const txTaf: TAFResponse = {
+      ...usTaf,
+      fcsts: [
+        {
+          ...usTaf.fcsts![0],
+          temp: [{ validTime: Math.floor(Date.parse("2026-05-13T00:00:00Z") / 1000), sfcTemp: 22 }],
+        },
+      ],
+    };
+    const requested = new Date("2026-05-13T00:30:00Z");
+    const result = selectAirportWeather(baseMetar, txTaf, requested, "KSLC", 0, {
+      fieldForecastTemp: 19,
+    });
+    expect(result.temp).toBe(22);
+    expect(on(result, "temp")).toEqual([]);
+  });
 });

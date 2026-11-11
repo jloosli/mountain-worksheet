@@ -37,9 +37,19 @@ function metarAltimeterInHg(altim: number | null | undefined): number | null {
   return Math.round(altim * HPA_TO_INHG * 100) / 100;
 }
 
-function fcstTempValue(fcst: TAFForecast, requested: Date): number | undefined {
-  // TAF temp may be a number or an array of {validTime, sfcTemp}; handle both
-  if (typeof fcst.temp === "number") return fcst.temp;
+/** How close a TAF temperature sample must be to count for the requested time. */
+const TAF_TEMP_SAMPLE_MAX_OFFSET_MS = 60 * 60 * 1000;
+
+/**
+ * The TAF period's temperature for the requested time, and how far from that
+ * time it applies: 0 for a single value covering the period, or the offset of
+ * the closest `{validTime, sfcTemp}` sample (e.g. a TX/TN maximum or minimum).
+ */
+function fcstTempValue(
+  fcst: TAFForecast,
+  requested: Date,
+): { value: number; offsetMs: number } | undefined {
+  if (typeof fcst.temp === "number") return { value: fcst.temp, offsetMs: 0 };
   if (Array.isArray(fcst.temp) && fcst.temp.length > 0) {
     const reqEpoch = Math.floor(requested.getTime() / 1000);
     let closest = fcst.temp[0];
@@ -51,7 +61,9 @@ function fcstTempValue(fcst: TAFForecast, requested: Date): number | undefined {
         closest = candidate;
       }
     }
-    return closest.sfcTemp;
+    return closest.sfcTemp == null
+      ? undefined
+      : { value: closest.sfcTemp, offsetMs: minDiff * 1000 };
   }
   return undefined;
 }
@@ -162,13 +174,20 @@ export function selectAirportWeather(
   const fcsts = taf?.fcsts;
   const covering = findCoveringFcst(fcsts, requestedTime);
   if (covering) {
-    let temp = fcstTempValue(covering, requestedTime);
-    if (temp == null && modelTemp !== null) {
+    const tafTemp = fcstTempValue(covering, requestedTime);
+    let temp = tafTemp?.value;
+    // A TAF sample hours away (a TX/TN maximum or minimum) says less about
+    // the requested time than a model forecast for that hour.
+    const tafTempIsForAnotherTime =
+      tafTemp !== undefined && tafTemp.offsetMs > TAF_TEMP_SAMPLE_MAX_OFFSET_MS;
+    if ((temp == null || tafTempIsForAnotherTime) && modelTemp !== null) {
       temp = modelTemp;
       notifications.push({
         level: "advisory",
         subject: tempSubject,
-        message: `${airportId}: forecast period has no temperature; ${MODEL_SOURCE}`,
+        message: tafTempIsForAnotherTime
+          ? `${airportId}: forecast period's temperature is for another time; ${MODEL_SOURCE}`
+          : `${airportId}: forecast period has no temperature; ${MODEL_SOURCE}`,
       });
     } else if (temp == null && metar?.temp != null) {
       temp = metar.temp;
@@ -213,7 +232,7 @@ export function selectAirportWeather(
     const fromObservation = (what: string) =>
       `${airportId}: forecast unavailable for ${requestedIso} and the nearest TAF period has no ${what}; using the current observation (Δt = ${obsDelta})`;
 
-    const tafTemp = fcstTempValue(closest.fcst, requestedTime);
+    const tafTemp = fcstTempValue(closest.fcst, requestedTime)?.value;
     let roundedTemp: number | null;
     if (modelTemp !== null) {
       // A forecast for the requested hour beats a period for another time.

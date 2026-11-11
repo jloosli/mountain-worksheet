@@ -553,6 +553,9 @@ export function isApiPopulatedData(data: Partial<WorksheetData>): {
 /**
  * Merge API data with existing worksheet data, preserving user modifications
  */
+/** Only `undefined` keeps a temperature slot: -1 °C is a real temperature (#303). */
+const isTempKept = (val: number | null | undefined) => val === undefined;
+
 export function mergeWeatherData(
   existingData: Partial<WorksheetData>,
   apiData: Partial<WorksheetData>,
@@ -561,9 +564,16 @@ export function mergeWeatherData(
   const result = { ...existingData };
 
   if (!preserveUserData) {
-    // Overwrite everything, but still honour the -1 "don't update" marker in
-    // runway and elevation so it never lands in state (#227).
+    // Overwrite everything, but still honour the "don't update" markers so
+    // they never land in state: -1 in runway and elevation (#227), undefined
+    // in temperature and altimeter (#303).
     const overwritten = { ...result, ...apiData };
+    if (apiData.temp) {
+      overwritten.temp = mergeSlots(result.temp, apiData.temp, [null, null, null], isTempKept);
+    }
+    if (apiData.altimeter) {
+      overwritten.altimeter = mergeSlots(result.altimeter, apiData.altimeter, [null, null, null]);
+    }
     if (apiData.rwy) {
       overwritten.rwy = mergeSlots(result.rwy, apiData.rwy, [null, null]);
     }
@@ -579,32 +589,11 @@ export function mergeWeatherData(
   }
 
   if (apiData.temp) {
-    const next = (result.temp ? [...result.temp] : [null, null, null]) as [
-      number | null,
-      number | null,
-      number | null,
-    ];
-    apiData.temp.forEach((val, i) => {
-      // Only `undefined` means "don't update": -1 °C is a real temperature.
-      if (val !== undefined) {
-        next[i] = val;
-      }
-    });
-    result.temp = next;
+    result.temp = mergeSlots(result.temp, apiData.temp, [null, null, null], isTempKept);
   }
 
   if (apiData.altimeter) {
-    const next = (result.altimeter ? [...result.altimeter] : [null, null, null]) as [
-      number | null,
-      number | null,
-      number | null,
-    ];
-    apiData.altimeter.forEach((val, i) => {
-      if (val !== undefined && val !== -1) {
-        next[i] = val;
-      }
-    });
-    result.altimeter = next;
+    result.altimeter = mergeSlots(result.altimeter, apiData.altimeter, [null, null, null]);
   }
 
   // Runway and altitude merge per slot: -1 means "don't update" (an
@@ -640,10 +629,11 @@ function mergeSlots<T extends (number | null)[]>(
   existing: T | undefined,
   incoming: T,
   empty: T,
+  isKept: (val: number | null | undefined) => boolean = (val) => val === undefined || val === -1,
 ): T {
   const next = [...(existing ?? empty)] as T;
   incoming.forEach((val, i) => {
-    if (val !== undefined && val !== -1) {
+    if (!isKept(val)) {
       next[i] = val;
     }
   });
