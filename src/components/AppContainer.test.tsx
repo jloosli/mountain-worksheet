@@ -410,10 +410,80 @@ describe("AppContainer — performance notifications (#222)", () => {
 
     fireEvent.change(weight, { target: { value: "2976" } });
     expect(
-      onScreen().getByText(/Weight 2,976 lbs is 96% of the C182T maximum gross weight/)
-    ).toBeInTheDocument();
+      onScreen().queryByText(/exceeds the C182T maximum gross weight/)
+    ).not.toBeInTheDocument();
     expect(weight).not.toHaveAttribute("aria-invalid");
     expect(container.querySelector("#step-sortie header")).not.toHaveTextContent("warning");
+  });
+});
+
+describe("AppContainer — Weight limit check (#266)", () => {
+  const setUp = (weightLbs: string) => {
+    const utils = render(<AppContainer />);
+    fireEvent.change(screen.getByLabelText("Aircraft Model"), {
+      target: { value: "C182T" },
+    });
+    fireEvent.change(screen.getByLabelText("Aircraft Takeoff Weight (lbs)"), {
+      target: { value: weightLbs },
+    });
+    return utils;
+  };
+  const callout = () => screen.getByRole("region", { name: "Limit check: Weight" });
+  const percentCell = () =>
+    onScreen().getByText("Percent of MGW").closest("tr")!.querySelectorAll("td")[1];
+
+  it("shows the Weight callout first in Sortie Details, Not checked until there's a weight", () => {
+    const { container } = render(<AppContainer />);
+    const sortieBody = container.querySelector("#step-sortie article > header + *");
+    expect(sortieBody?.querySelector("section")).toBe(callout());
+    expect(within(callout()).getByText("Not checked")).toBeInTheDocument();
+    expect(callout()).toHaveTextContent("needs aircraft type and weight");
+  });
+
+  it("is Within limit at 89.9% and Exceeded at 90.0%, in the callout, summary and %MGW cell", () => {
+    setUp("2787");
+    expect(within(callout()).getByText("Within limit")).toBeInTheDocument();
+    expect(callout()).toHaveTextContent("2,787 / 3,100 lbs (89.9%)");
+    expect(screen.getByRole("link", { name: /1 within limit/ })).toBeInTheDocument();
+    // The cell shows the check's percentage, never "90%" for a weight under the limit.
+    expect(percentCell()).toHaveTextContent(/^89\.9%$/);
+    expect(percentCell().className).not.toMatch(/text-red|yellow/);
+
+    fireEvent.change(screen.getByLabelText("Aircraft Takeoff Weight (lbs)"), {
+      target: { value: "2790" },
+    });
+    expect(within(callout()).getByText("Exceeded")).toBeInTheDocument();
+    expect(callout()).toHaveTextContent("2,790 / 3,100 lbs (90%)");
+    const summary = screen.getByRole("link", { name: /1 of 1 worksheet limit exceeded/ });
+    expect(summary).toHaveAttribute("href", "#limit-check-weight");
+    expect(percentCell()).toHaveTextContent(/^90%$/);
+    expect(percentCell().className).toMatch(/text-red/);
+  });
+
+  it("is Exceeded above maximum gross while the Warning stays at the weight input", () => {
+    setUp("3255");
+    expect(within(callout()).getByText("Exceeded")).toBeInTheDocument();
+    expect(
+      onScreen().getByText(/Weight 3,255 lbs exceeds the C182T maximum gross weight/)
+    ).toBeInTheDocument();
+    expect(percentCell()).toHaveTextContent("needs valid weight");
+  });
+
+  it("doesn't change step status or badges", () => {
+    setUp("2789");
+    const nav = screen.getByRole("navigation", { name: /worksheet steps/i });
+    const steps = () =>
+      [...document.querySelectorAll("[id^='step-'] > article > header")].map(
+        (h) => h.outerHTML,
+      );
+    const before = { nav: nav.innerHTML, steps: steps() };
+
+    fireEvent.change(screen.getByLabelText("Aircraft Takeoff Weight (lbs)"), {
+      target: { value: "2790" },
+    });
+    expect(within(callout()).getByText("Exceeded")).toBeInTheDocument();
+    expect(nav.innerHTML).toBe(before.nav);
+    expect(steps()).toEqual(before.steps);
   });
 });
 

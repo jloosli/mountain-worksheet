@@ -176,21 +176,11 @@ describe("computeTOLDViewModel", () => {
     ]);
   });
 
-  it("shows an Advisory when weight is at 96% of max gross", () => {
+  // The 90% guideline is the Weight Limit check, not a notification (#243).
+  it("raises nothing about weight near but within max gross", () => {
     const vm = computeTOLDViewModel({ ...baseState(), weight: 2976 }, PAS_OK);
-    expect(vm.notifications).toEqual([
-      {
-        level: "advisory",
-        subject: fieldSubject("weight"),
-        message: "Weight 2,976 lbs is 96% of the C182T maximum gross weight (3,100 lbs).",
-      },
-    ]);
-    expect(vm.departure.values.takeoffGroundRoll.status).toBe("computed");
-  });
-
-  it("raises nothing about weight below 95% of max gross", () => {
-    const vm = computeTOLDViewModel({ ...baseState(), weight: 2900 }, PAS_OK);
     expect(vm.notifications).toEqual([]);
+    expect(vm.departure.values.takeoffGroundRoll.status).toBe("computed");
   });
 
   it("asks for weight without a notification when weight is blank", () => {

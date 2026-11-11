@@ -16,6 +16,7 @@ import {
   maneuveringNotifications,
 } from "@/utils/derived";
 import type { Notification } from "@/utils/notifications";
+import { formatPercentOfMax, type LimitCheck } from "@/utils/limitChecks";
 
 interface CalculationsProps {
   state: WorksheetData;
@@ -24,9 +25,15 @@ interface CalculationsProps {
    * are withheld; those whose inputs carry a Caution are marked.
    */
   notifications?: readonly Notification[];
+  /** Limit checks, whose point states style the values they evaluate. */
+  limitChecks?: readonly LimitCheck[];
 }
 
-export default function Calculations({ state, notifications = [] }: CalculationsProps) {
+export default function Calculations({
+  state,
+  notifications = [],
+  limitChecks = [],
+}: CalculationsProps) {
   const { PAs, DAs } = computePressureColumns(
     state.altitude,
     state.altimeter,
@@ -35,12 +42,18 @@ export default function Calculations({ state, notifications = [] }: Calculations
   // Values whose own inputs carry a Warning are withheld (#222).
   const told = computeTOLDViewModel(state, PAs, notifications);
   const climb = computeClimbViewModel(state, notifications);
-  const maneuveringWarnings = maneuveringNotifications(findAircraft(state.acType));
+  const aircraft = findAircraft(state.acType);
+  const maneuveringWarnings = maneuveringNotifications(aircraft);
   const maneuveringSpeeds =
     state.acType && maneuveringWarnings.length === 0
       ? calculateManeuveringSpeeds(state.acType)
       : null;
   const entryRanges = computeCanyonTurnEntryRanges(maneuveringSpeeds, climb.va);
+  const weightPoint = limitChecks.find((c) => c.id === "weight")?.points[0];
+  const percentMGWText =
+    aircraft && state.weight !== null && state.weight !== undefined
+      ? formatPercentOfMax(state.weight, aircraft.maxGrossWeight)
+      : undefined;
 
   return (
     <div className="w-full">
@@ -68,6 +81,8 @@ export default function Calculations({ state, notifications = [] }: Calculations
           OATs={state.temp}
           altimeters={state.altimeter}
           inputNotifications={notifications}
+          percentMGWState={weightPoint?.state}
+          percentMGWText={percentMGWText}
         />
         <TakeoffPerformance
           aircraftModel={state.acType}

@@ -4,6 +4,8 @@ import { type ReactNode } from "react";
 import InlineNotifications from "@/components/InlineNotifications";
 import SortieInfo from "@/components/SortieInfo";
 import StepShell from "@/components/StepShell";
+import { LimitCheckCallouts } from "@/components/LimitCheckCallout";
+import type { LimitCheck } from "@/utils/limitChecks";
 import WeatherSection from "@/components/WeatherSection";
 import { stepSubject, type Notification } from "@/utils/notifications";
 import {
@@ -27,6 +29,8 @@ interface WorksheetFormProps {
   useFahrenheit?: boolean;
   /** All notifications in force; each is shown next to its Subject. */
   notifications?: readonly Notification[];
+  /** Limit checks; each shows as a callout at the top of the step that owns it. */
+  limitChecks?: readonly LimitCheck[];
   /** Step statuses and counts; derived from `state` + `notifications` if omitted. */
   stepStatuses?: StepStatusesResult;
   /** Weather entries that were not applied; see WeatherSection. */
@@ -41,6 +45,7 @@ export default function AppInputs({
   runwayStatus,
   useFahrenheit,
   notifications = [],
+  limitChecks = [],
   stepStatuses,
   rejectedEntries,
   onRejectedEntryChange,
@@ -60,6 +65,7 @@ export default function AppInputs({
         title="Sortie Details"
         subtitle="Who's flying, when, and where"
       >
+        <LimitCheckCallouts checks={limitChecks} step="sortie" />
         <InlineNotifications
           notifications={notifications}
           subject={stepSubject("sortie")}

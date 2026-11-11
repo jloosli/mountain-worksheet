@@ -2,6 +2,8 @@ import type React from "react";
 import { pressureAltitudeToDensityAltitude } from "@/utils/formulas";
 import InlineNotifications from "@/components/InlineNotifications";
 import ValueMarkers from "@/components/ValueMarkers";
+import { limitPointClass } from "@/components/LimitCheckCallout";
+import type { LimitState } from "@/utils/limitChecks";
 import type { Notification, Subject } from "@/utils/notifications";
 import {
   COLUMNS,
@@ -17,6 +19,10 @@ interface ClimbPerformanceProps {
   altimeters?: [number | null, number | null, number | null];
   /** All notifications in force, for markers on values whose inputs carry a Caution. */
   inputNotifications?: readonly Notification[];
+  /** The Weight Limit check's point state, which styles the %MGW cell. */
+  percentMGWState?: LimitState;
+  /** The %MGW text the Weight check shows, so the cell and check agree. */
+  percentMGWText?: string;
 }
 
 const CELL = "py-2 px-4 text-right";
@@ -45,13 +51,6 @@ function Value({
       <ValueMarkers notifications={notes} value={value} />
     </td>
   );
-}
-
-function percentStyle(value: ComputedValue): string {
-  if (value.status !== "computed") return "";
-  if (value.value > 100) return "text-red-500 font-bold";
-  if (value.value >= 90) return "text-yellow-500 font-bold";
-  return "";
 }
 
 function CeilingCell({
@@ -109,6 +108,8 @@ export default function ClimbPerformance({
   OATs,
   altimeters,
   inputNotifications = [],
+  percentMGWState,
+  percentMGWText,
 }: ClimbPerformanceProps) {
   if (!aircraftModel) return null;
   const empty = <td className={CELL}></td>;
@@ -162,9 +163,11 @@ export default function ClimbPerformance({
               <Value
                 value={climb.percentMGW}
                 notes={inputNotifications}
-                className={percentStyle(climb.percentMGW)}
+                className={limitPointClass(percentMGWState)}
               >
-                {climb.percentMGW.status === "computed" ? `${climb.percentMGW.value}%` : null}
+                {climb.percentMGW.status === "computed"
+                  ? (percentMGWText ?? `${climb.percentMGW.value}%`)
+                  : null}
               </Value>
               {empty}
               {empty}
