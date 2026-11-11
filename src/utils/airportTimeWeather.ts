@@ -12,8 +12,12 @@ export const ALTIMETER_PERSISTENCE_ADVISORY_MS = 12 * 60 * 60 * 1000;
 
 export type AirportWeatherSource = "metar" | "taf-fcst" | "taf-nearest" | "metar-stale" | "none";
 
+/** Where an airport temperature came from; null when it was left blank. */
+export type AirportTempSource = "observation" | "taf" | "model" | null;
+
 export interface AirportWeatherAtTime {
   temp: number | null;
+  tempSource: AirportTempSource;
   altimeter: number | null;
   source: AirportWeatherSource;
   /** Subjects are `temp[slot]` / `altimeter[slot]`. */
@@ -154,8 +158,10 @@ export function selectAirportWeather(
   }
   if (metarFresh && metar) {
     let temp = metar.temp != null ? Math.round(metar.temp) : null;
+    let tempSource: AirportTempSource = temp !== null ? "observation" : null;
     if (temp === null && modelTemp !== null) {
       temp = Math.round(modelTemp);
+      tempSource = "model";
       notifications.push({
         level: "advisory",
         subject: tempSubject,
@@ -164,6 +170,7 @@ export function selectAirportWeather(
     }
     return {
       temp,
+      tempSource,
       altimeter: metarAltimeterInHg(metar.altim),
       source: "metar",
       notifications,
@@ -176,12 +183,14 @@ export function selectAirportWeather(
   if (covering) {
     const tafTemp = fcstTempValue(covering, requestedTime);
     let temp = tafTemp?.value;
+    let tempSource: AirportTempSource = temp != null ? "taf" : null;
     // A TAF sample hours away (a TX/TN maximum or minimum) says less about
     // the requested time than a model forecast for that hour.
     const tafTempIsForAnotherTime =
       tafTemp !== undefined && tafTemp.offsetMs > TAF_TEMP_SAMPLE_MAX_OFFSET_MS;
     if ((temp == null || tafTempIsForAnotherTime) && modelTemp !== null) {
       temp = modelTemp;
+      tempSource = "model";
       notifications.push({
         level: "advisory",
         subject: tempSubject,
@@ -191,6 +200,7 @@ export function selectAirportWeather(
       });
     } else if (temp == null && metar?.temp != null) {
       temp = metar.temp;
+      tempSource = "observation";
       notifications.push({
         level: "caution",
         subject: tempSubject,
@@ -215,6 +225,7 @@ export function selectAirportWeather(
     }
     return {
       temp: temp != null ? Math.round(temp) : null,
+      tempSource,
       altimeter,
       source: "taf-fcst",
       notifications,
@@ -234,7 +245,9 @@ export function selectAirportWeather(
 
     const tafTemp = fcstTempValue(closest.fcst, requestedTime)?.value;
     let roundedTemp: number | null;
+    let tempSource: AirportTempSource = null;
     if (modelTemp !== null) {
+      tempSource = "model";
       // A forecast for the requested hour beats a period for another time.
       roundedTemp = Math.round(modelTemp);
       notifications.push({
@@ -245,6 +258,7 @@ export function selectAirportWeather(
     } else {
       const temp = tafTemp ?? metar?.temp ?? undefined;
       roundedTemp = temp != null ? Math.round(temp) : null;
+      if (roundedTemp !== null) tempSource = tafTemp != null ? "taf" : "observation";
       if (roundedTemp !== null) {
         notifications.push({
           level: "caution",
@@ -267,6 +281,7 @@ export function selectAirportWeather(
     }
     return {
       temp: roundedTemp,
+      tempSource,
       altimeter,
       source: "taf-nearest",
       notifications,
@@ -303,7 +318,9 @@ export function selectAirportWeather(
         message: `${airportId}: ${reason}; using current observation (Δt = ${obsDelta})`,
       });
     }
-    return { temp, altimeter, source: "metar-stale", notifications };
+    const tempSource: AirportTempSource =
+      modelTemp !== null ? "model" : temp !== null ? "observation" : null;
+    return { temp, tempSource, altimeter, source: "metar-stale", notifications };
   }
 
   // 5) Nothing
@@ -317,11 +334,17 @@ export function selectAirportWeather(
       },
       { level: "warning", subject: altSubject, message },
     );
-    return { temp: Math.round(modelTemp), altimeter: null, source: "none", notifications };
+    return {
+      temp: Math.round(modelTemp),
+      tempSource: "model",
+      altimeter: null,
+      source: "none",
+      notifications,
+    };
   }
   notifications.push(
     { level: "warning", subject: tempSubject, message },
     { level: "warning", subject: altSubject, message },
   );
-  return { temp: null, altimeter: null, source: "none", notifications };
+  return { temp: null, tempSource: null, altimeter: null, source: "none", notifications };
 }

@@ -509,4 +509,18 @@ describe("selectAirportWeather: routine TAF gaps (#301)", () => {
     expect(result.temp).toBe(22);
     expect(on(result, "temp")).toEqual([]);
   });
+
+  it("reports where the temperature came from", () => {
+    const later = new Date("2026-05-13T00:06:00Z");
+    const fresh = new Date("2026-05-12T15:30:00Z");
+    const tempSource = (...args: Parameters<typeof selectAirportWeather>) =>
+      selectAirportWeather(...args).tempSource;
+    expect(tempSource(baseMetar, usTaf, later, "KSLC", 0, { fieldForecastTemp: 20 })).toBe("model");
+    expect(tempSource(baseMetar, usTaf, later, "KSLC")).toBe("observation");
+    expect(tempSource(baseMetar, usTaf, fresh, "KSLC", 0, { fieldForecastTemp: 20 })).toBe(
+      "observation",
+    );
+    expect(tempSource(baseMetar, baseTaf, new Date("2026-05-12T19:30:00Z"), "KSLC")).toBe("taf");
+    expect(tempSource(undefined, undefined, later, "KSLC")).toBeNull();
+  });
 });

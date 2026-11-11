@@ -1,4 +1,5 @@
 import {
+  fetchFieldForecast,
   fetchPointForecast,
   interpolateAtAltitude,
   pickClosestTimeIdx,
@@ -50,6 +51,48 @@ describe("openMeteoApi", () => {
           end: new Date(),
         }),
       ).rejects.toThrow(/Open-Meteo/);
+    });
+  });
+
+  describe("fetchFieldForecast (#301)", () => {
+    beforeEach(() => {
+      (fetch as jest.Mock).mockClear();
+    });
+
+    it("requests only 2 m temperature at the field's position and elevation, for the window's days", async () => {
+      (fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ hourly: { time: [], temperature_2m: [] } }),
+      });
+      await fetchFieldForecast(41.1959, -112.0122, 1362, {
+        start: new Date("2026-05-12T23:15:00Z"),
+        end: new Date("2026-05-13T00:15:00Z"),
+      });
+      const url = new URL((fetch as jest.Mock).mock.calls[0][0] as string);
+      expect(url.pathname).toBe("/api/open-meteo");
+      expect(Object.fromEntries(url.searchParams)).toEqual({
+        latitude: "41.1959",
+        longitude: "-112.0122",
+        elevation: "1362",
+        start_date: "2026-05-12",
+        end_date: "2026-05-13",
+        temperature_unit: "celsius",
+        hourly: "temperature_2m",
+      });
+    });
+
+    it("throws on non-OK response", async () => {
+      (fetch as jest.Mock).mockResolvedValueOnce({
+        ok: false,
+        status: 400,
+        statusText: "Bad Request",
+      });
+      await expect(
+        fetchFieldForecast(41.2, -112.0, 1362, {
+          start: new Date("2026-05-12T00:00:00Z"),
+          end: new Date("2026-05-12T00:00:00Z"),
+        }),
+      ).rejects.toThrow(/Open-Meteo request failed: 400 Bad Request/);
     });
   });
 
