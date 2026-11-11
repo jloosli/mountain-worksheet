@@ -43,6 +43,10 @@ The worksheet changing what the pilot entered, either silently (normalization th
 **Partial fetch**:
 A weather fetch where some parts succeed and others fail. The successful parts are applied. A field that unexpectedly could not be filled is left blank with a Warning, which clears once the pilot enters a value.
 
+**Session**:
+One opening of the worksheet in a browser tab. A session remembers what happened in it: the last weather fetch and when one last succeeded, entries rejected as out of range, operating-temperature re-derivations, and the shared link it opened from. Notifications about those events hold only within the session. A shared link carries the worksheet values but none of this, so reloading or opening a link starts a new session.
+_Avoid_: Weather session
+
 **Unverified weather**:
 Weather values on the worksheet that were not fetched during the current session, such as values opened from a shared link. They raise a Caution on the weather step until weather is fetched. The Caution covers every weather field, so values and Limit checks computed from weather carry its marker.
 
