@@ -89,7 +89,7 @@ function WorksheetLimits({ checks }: { checks: readonly LimitCheck[] }) {
   );
 }
 
-export default function ChecklistPanel({ checks = [] }: { checks?: readonly LimitCheck[] }) {
+export default function ChecklistPanel({ checks }: { checks: readonly LimitCheck[] }) {
   return (
     <div className="space-y-5 text-sm leading-relaxed text-slate-700 dark:text-slate-300">
       <WorksheetLimits checks={checks} />

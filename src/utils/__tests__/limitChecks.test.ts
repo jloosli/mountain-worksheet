@@ -16,6 +16,7 @@ import {
   bySeverity,
   worstState,
   windSpeedStates,
+  pointStates,
   type LimitCheck,
 } from "../limitChecks";
 import {
@@ -769,6 +770,14 @@ describe("Winds aloft limit check", () => {
       "exceeded",
       "not-checked",
     ]);
+  });
+});
+
+describe("pointStates", () => {
+  it("gives each point's state in order, and nothing for a missing check", () => {
+    const checks = checksFor({ ...baseState(), rwy: [3000, 600] });
+    expect(pointStates(checks, "runway")).toEqual(["within", "exceeded"]);
+    expect(pointStates([], "runway")).toEqual([]);
   });
 });
 

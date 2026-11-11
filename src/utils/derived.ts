@@ -461,7 +461,7 @@ function computeAirportTOLD(
 export function computeTOLDViewModel(
   state: WorksheetData,
   PAs: Triple,
-  inputNotifications: readonly Notification[] = [],
+  inputNotifications: readonly Notification[],
 ): TOLDViewModel {
   const vm = toldViewModel(state, PAs);
   const withhold = (airport: AirportTOLD): AirportTOLD => ({
@@ -592,7 +592,7 @@ function collect<T>(lookups: Lookup<T>[]): { values: Columns<T>; notifications: 
  */
 export function computeClimbViewModel(
   state: WorksheetData,
-  inputNotifications: readonly Notification[] = [],
+  inputNotifications: readonly Notification[],
 ): ClimbViewModel {
   const vm = climbViewModel(state);
   const one = <T extends ComputedValue | ServiceCeiling>(v: T) =>
@@ -924,14 +924,15 @@ export function describeCanyonTurnEntryRange(range: CanyonTurnEntryRange): strin
 
 /**
  * Every notification about performance inputs and computed values (TOLD,
- * climb, maneuvering), once each. Pure; AppContainer concatenates it with the
- * weather-fetch notifications so inputs and step badges show them.
+ * climb, maneuvering), once each, computed without withholding. Pure;
+ * `evaluateWorksheet` joins it with the other notifications in force before
+ * computing the values it shows.
  */
 export function derivePerformanceNotifications(state: WorksheetData): Notification[] {
   const { PAs } = computePressureColumns(state.altitude, state.altimeter, state.temp);
   const all = [
-    ...computeTOLDViewModel(state, PAs).notifications,
-    ...computeClimbViewModel(state).notifications,
+    ...computeTOLDViewModel(state, PAs, []).notifications,
+    ...computeClimbViewModel(state, []).notifications,
     ...maneuveringNotifications(findAircraft(state.acType)),
   ];
   const seen = new Set<string>();

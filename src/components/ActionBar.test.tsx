@@ -34,6 +34,7 @@ const empty: WorksheetData = {
 
 const baseProps = {
   worksheetData: empty,
+  limitChecks: [] as readonly LimitCheck[],
   onFetch: jest.fn(),
   fetchDisabled: false,
   isFetching: false,

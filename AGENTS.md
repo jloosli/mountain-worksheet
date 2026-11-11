@@ -17,13 +17,14 @@ A Next.js 16.x web application (App Router, TypeScript, Tailwind CSS v4, Vercel)
 ## Key Architecture
 
 - `src/app/` — App Router pages and layouts
-- `src/components/` — UI components; `AppContainer` owns all state, `AppInputs` owns user inputs, `Calculations` derives results during render
+- `src/components/` — UI components; `AppContainer` owns all state and evaluates the worksheet once per render; `AppInputs`, `Calculations` and `PrintBriefing` render that evaluation
 - `src/utils/types.ts` — Core types: `WorksheetData`, `Aircraft`, `TOLDCalculationParams`
 - `src/data/aircraft.json` — POH performance tables indexed by weight × altitude × temperature
 - `src/utils/interpolation.ts` — Trilinear (takeoff: weight × altitude × temperature) and bilinear (landing, from a single-weight table, and climb: altitude × temperature) interpolation across POH tables
 - `src/utils/toldCalculations.ts`, `maneuveringCalculations.ts`, `formulas.ts` — Calculations
-- `src/utils/derived.ts` — Pure helpers (`computePressureColumns`, `computeTOLDViewModel`) used by `<Calculations>` during render; TOLD results are per airport, each value `computed`/`withheld`/`unavailable`, with notifications
-- `src/utils/limitChecks.ts` — Limit checks (the worksheet's own limits, ADR 0002): derived during render in `AppContainer`, shown as callouts at the top of their owning step, summarized in the action bar, and listed in the Briefing's Worksheet limits table and the checklist slide-over; never notifications, never affect step status
+- `src/utils/worksheetEvaluation.ts` — `evaluateWorksheet(state, session)`: the one pure function that assembles every notification, computed value, Limit check and step status. It owns the two-pass ordering (performance notifications first, then values withheld against every notification in force). Test cross-cutting behaviour here, not by rendering `AppContainer`
+- `src/utils/derived.ts` — Per-calculation helpers (`computePressureColumns`, `computeTOLDViewModel`, `computeClimbViewModel`) that `evaluateWorksheet` composes; TOLD results are per airport, each value `computed`/`withheld`/`unavailable`, with notifications
+- `src/utils/limitChecks.ts` — Limit checks (the worksheet's own limits, ADR 0002): derived by `evaluateWorksheet`, shown as callouts at the top of their owning step, summarized in the action bar, and listed in the Briefing's Worksheet limits table and the checklist slide-over; never notifications, never affect step status
 - `src/app/api/aviation-weather/route.ts` — Proxy to `aviationweather.gov` (avoids CORS)
 
 ## URL State Management
@@ -52,7 +53,7 @@ State is persisted to URL query strings via `src/utils/urlState.ts` + `src/utils
 
 ## Derived State Pattern
 
-`<Calculations>`, `<Altitudes>`, `<ClimbPerformance>`, and `<TakeoffPerformance>` derive every display value during render via pure helpers (mostly from `src/utils/derived.ts`). Do not introduce `useState`/`useEffect` to cache derived values that can be recomputed from props — table lookups in this codebase are sub-millisecond, and the previous effect-driven chain caused issue #98 (stale calculations after weather fetch when array references were mutated in place). If you need to add a new derived value, add a pure function to `derived.ts` and call it from `<Calculations>`.
+Every display value is derived during render by `evaluateWorksheet` (`src/utils/worksheetEvaluation.ts`), and components only read from the evaluation they're given. Do not introduce `useState`/`useEffect` to cache derived values that can be recomputed from props — table lookups in this codebase are sub-millisecond, and the previous effect-driven chain caused issue #98 (stale calculations after weather fetch when array references were mutated in place). If you need to add a new derived value, add a pure function to `derived.ts`, call it from `evaluateWorksheet`, and add it to `WorksheetEvaluation`.
 
 Weather-data mappers in `src/utils/weatherDataMapper.ts` must also return new arrays, never mutate inputs — `setState` only triggers downstream recomputation when reference equality changes.
 

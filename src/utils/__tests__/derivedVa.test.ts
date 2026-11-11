@@ -58,7 +58,7 @@ const state: WorksheetData = {
 
 describe("Va lookup failure", () => {
   it("shows Va as unavailable with a Warning instead of throwing", () => {
-    const vm = computeClimbViewModel(state);
+    const vm = computeClimbViewModel(state, []);
     expect(vm.va).toEqual({ status: "unavailable" });
     expect(vm.notifications).toContainEqual({
       level: "warning",

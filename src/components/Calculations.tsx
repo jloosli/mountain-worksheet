@@ -6,53 +6,26 @@ import Altitudes from "@/components/Altitudes";
 import ClimbPerformance from "@/components/ClimbPerformance";
 import TakeoffPerformance from "@/components/TakeoffPerformance";
 import ManeuveringPerformance from "@/components/ManeuveringPerformance";
-import { calculateManeuveringSpeeds } from "@/utils/maneuveringCalculations";
-import {
-  computeCanyonTurnEntryRanges,
-  computeClimbViewModel,
-  computePressureColumns,
-  computeTOLDViewModel,
-  findAircraft,
-  maneuveringNotifications,
-} from "@/utils/derived";
-import type { Notification } from "@/utils/notifications";
-import { formatPercentOfMax, type LimitCheck } from "@/utils/limitChecks";
+import { findAircraft } from "@/utils/derived";
+import { formatPercentOfMax, pointStates } from "@/utils/limitChecks";
+import type { WorksheetEvaluation } from "@/utils/worksheetEvaluation";
 
 interface CalculationsProps {
   state: WorksheetData;
   /**
-   * All notifications in force. Computed values whose inputs carry a Warning
-   * are withheld; those whose inputs carry a Caution are marked.
+   * The worksheet evaluation: values (withheld when their inputs carry a
+   * Warning), the notifications that mark them, and the Limit checks whose
+   * point states style them.
    */
-  notifications?: readonly Notification[];
-  /** Limit checks, whose point states style the values they evaluate. */
-  limitChecks?: readonly LimitCheck[];
+  evaluation: WorksheetEvaluation;
 }
 
-export default function Calculations({
-  state,
-  notifications = [],
-  limitChecks = [],
-}: CalculationsProps) {
-  const { PAs, DAs } = computePressureColumns(
-    state.altitude,
-    state.altimeter,
-    state.temp,
-  );
-  // Values whose own inputs carry a Warning are withheld (#222).
-  const told = computeTOLDViewModel(state, PAs, notifications);
-  const climb = computeClimbViewModel(state, notifications);
+export default function Calculations({ state, evaluation }: CalculationsProps) {
+  const { notifications, limitChecks, told, climb, maneuvering } = evaluation;
+  const { PAs, DAs } = evaluation.pressure;
   const aircraft = findAircraft(state.acType);
-  const maneuveringWarnings = maneuveringNotifications(aircraft);
-  const maneuveringSpeeds =
-    state.acType && maneuveringWarnings.length === 0
-      ? calculateManeuveringSpeeds(state.acType)
-      : null;
-  const entryRanges = computeCanyonTurnEntryRanges(maneuveringSpeeds, climb.va);
-  const pointStates = (id: LimitCheck["id"]) =>
-    limitChecks.find((c) => c.id === id)?.points.map((p) => p.state) ?? [];
   const weightPoint = limitChecks.find((c) => c.id === "weight")?.points[0];
-  const [departureRunway, arrivalRunway] = pointStates("runway");
+  const [departureRunway, arrivalRunway] = pointStates(limitChecks, "runway");
   const percentMGWText =
     aircraft && state.weight !== null && state.weight !== undefined
       ? formatPercentOfMax(state.weight, aircraft.maxGrossWeight)
@@ -86,7 +59,7 @@ export default function Calculations({
           inputNotifications={notifications}
           percentMGWState={weightPoint?.state}
           percentMGWText={percentMGWText}
-          rateOfClimbStates={pointStates("climb")}
+          rateOfClimbStates={pointStates(limitChecks, "climb")}
         />
         <TakeoffPerformance
           aircraftModel={state.acType}
@@ -97,9 +70,9 @@ export default function Calculations({
         />
         <ManeuveringPerformance
           aircraftModel={state.acType}
-          maneuveringSpeeds={maneuveringSpeeds}
-          notifications={maneuveringWarnings}
-          entryRanges={entryRanges}
+          maneuveringSpeeds={maneuvering.speeds}
+          notifications={maneuvering.notifications}
+          entryRanges={maneuvering.entryRanges}
           inputNotifications={notifications}
         />
       </div>

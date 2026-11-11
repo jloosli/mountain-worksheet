@@ -244,6 +244,14 @@ export function windSpeedStates(checks: readonly LimitCheck[]): (LimitState | un
 }
 
 /**
+ * The state of each of a check's points, in order (empty when there's no such
+ * check), for styling the table cells the points evaluate.
+ */
+export function pointStates(checks: readonly LimitCheck[], id: LimitCheckId): LimitState[] {
+  return checks.find((c) => c.id === id)?.points.map((p) => p.state) ?? [];
+}
+
+/**
  * Winds aloft: each entered winds-aloft speed, Exceeded at 30 kt or more and
  * Near limit at 20 kt or more. Blank columns are skipped, but a column whose
  * values (or the whole table) hold a Warning is Not checked, blank or not.

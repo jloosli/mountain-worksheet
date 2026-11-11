@@ -122,7 +122,7 @@ function renderClimb(
   const ui = (s: WorksheetData) => (
     <ClimbPerformance
       aircraftModel={s.acType}
-      climb={computeClimbViewModel(s)}
+      climb={computeClimbViewModel(s, [])}
       OATs={s.temp}
       altimeters={s.altimeter}
       percentMGWState={percentMGWState}
@@ -337,7 +337,7 @@ describe("ClimbPerformance — Percent of MGW cell", () => {
     render(
       <ClimbPerformance
         aircraftModel="C182T"
-        climb={computeClimbViewModel({ ...baseState, weight: 2787 })}
+        climb={computeClimbViewModel({ ...baseState, weight: 2787 }, [])}
         percentMGWText="89.9%"
         percentMGWState="within"
       />,
@@ -359,7 +359,7 @@ describe("ClimbPerformance — Rate of climb limit check styles (#269)", () => {
     render(
       <ClimbPerformance
         aircraftModel="C182T"
-        climb={computeClimbViewModel(baseState)}
+        climb={computeClimbViewModel(baseState, [])}
         rateOfClimbStates={["within", "exceeded", "not-checked"]}
       />,
     );

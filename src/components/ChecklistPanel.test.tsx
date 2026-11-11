@@ -16,7 +16,7 @@ const check = (overrides: Partial<LimitCheck>): LimitCheck => ({
 
 describe("ChecklistPanel", () => {
   it("renders all seven section headings", () => {
-    render(<ChecklistPanel />);
+    render(<ChecklistPanel checks={[]} />);
     expect(screen.getByText("Basic Preflight")).toBeInTheDocument();
     expect(screen.getByText("Weather Preflight")).toBeInTheDocument();
     expect(screen.getByText("Weight and Balance Preflight")).toBeInTheDocument();
@@ -27,7 +27,7 @@ describe("ChecklistPanel", () => {
   });
 
   it("renders specific items under their sections", () => {
-    render(<ChecklistPanel />);
+    render(<ChecklistPanel checks={[]} />);
     expect(
       screen.getByText(/Define runway abort point/i)
     ).toBeInTheDocument();
@@ -63,7 +63,7 @@ describe("ChecklistPanel", () => {
     });
 
     it("shows no list when there are no checks", () => {
-      render(<ChecklistPanel />);
+      render(<ChecklistPanel checks={[]} />);
       expect(screen.queryByRole("list", { name: "Worksheet limits" })).not.toBeInTheDocument();
     });
   });
