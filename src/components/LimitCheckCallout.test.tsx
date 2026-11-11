@@ -95,3 +95,12 @@ describe("limitPointClass", () => {
     expect(limitPointClass(undefined)).toBe("");
   });
 });
+
+describe("LimitCheckCallout — anchor offset", () => {
+  it("scrolls below the sticky action bar's published bottom edge", () => {
+    render(<LimitCheckCallout check={weight()} />);
+    expect(screen.getByRole("region", { name: "Limit check: Weight" }).className).toContain(
+      "scroll-mt-[calc(var(--action-bar-bottom,13rem)+0.75rem)]",
+    );
+  });
+});

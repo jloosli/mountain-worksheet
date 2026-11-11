@@ -1,6 +1,7 @@
 // src/components/ActionBar.tsx
 "use client";
 
+import { useEffect, useRef } from "react";
 import {
   ArrowPathIcon,
   ArrowRightIcon,
@@ -35,6 +36,34 @@ interface ActionBarProps {
   onPrint: () => void;
 }
 
+/**
+ * Publishes the bar's bottom edge as `--action-bar-bottom` on the root, so
+ * jump targets can set their scroll margin below it. The bar's height varies
+ * with its state and the screen width (it stacks below `sm`), so it is
+ * measured rather than assumed.
+ */
+function usePublishedBottomEdge() {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const root = document.documentElement;
+    const publish = () => {
+      const top = parseFloat(getComputedStyle(el).top) || 0;
+      root.style.setProperty(
+        "--action-bar-bottom",
+        `${Math.ceil(top + el.getBoundingClientRect().height)}px`,
+      );
+    };
+    publish();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(publish);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+  return ref;
+}
+
 const formatHhMmZ = (time: string): string =>
   // time is "HH:MM" from the form; renders it as "18:00z"
   time ? `${time}z` : "—";
@@ -56,8 +85,12 @@ export default function ActionBar({
   onOpenChecklist,
   onPrint,
 }: ActionBarProps) {
+  const barRef = usePublishedBottomEdge();
   return (
-    <div className="sticky top-[44px] z-10 border-b border-slate-200 bg-white shadow-[0_1px_0_rgba(15,23,42,0.04),0_4px_8px_-6px_rgba(15,23,42,0.18)] dark:border-slate-700 dark:bg-slate-900 print:hidden">
+    <div
+      ref={barRef}
+      className="sticky top-[44px] z-10 border-b border-slate-200 bg-white shadow-[0_1px_0_rgba(15,23,42,0.04),0_4px_8px_-6px_rgba(15,23,42,0.18)] dark:border-slate-700 dark:bg-slate-900 print:hidden"
+    >
       <div className="mx-auto flex w-full max-w-5xl flex-col items-stretch gap-2 px-4 py-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4 md:px-6">
         {state === "incomplete" && (
           <div className="flex items-center gap-3 flex-1 min-w-0">

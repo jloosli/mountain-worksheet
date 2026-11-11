@@ -323,3 +323,17 @@ describe("ActionBar — worksheet limits summary", () => {
     expect(summary.className).not.toMatch(/red|emerald|green|amber/);
   });
 });
+
+describe("ActionBar — anchor offset", () => {
+  afterEach(() => document.documentElement.style.removeProperty("--action-bar-bottom"));
+
+  it("publishes its bottom edge so jump targets clear the sticky bar at any height", () => {
+    const rect = jest
+      .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+      .mockReturnValue({ height: 165 } as DOMRect);
+    render(<ActionBar {...baseProps} state="incomplete" />);
+    // top-[44px] isn't applied in jsdom, so only the height counts here.
+    expect(document.documentElement.style.getPropertyValue("--action-bar-bottom")).toBe("165px");
+    rect.mockRestore();
+  });
+});

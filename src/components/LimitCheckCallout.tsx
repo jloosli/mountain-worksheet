@@ -82,7 +82,7 @@ export default function LimitCheckCallout({ check }: { check: LimitCheck }) {
       id={limitCheckDomId(check.id)}
       aria-label={`Limit check: ${check.name}`}
       data-limit-state={check.state}
-      className={`scroll-mt-32 rounded-lg border px-3 py-2 ${style.box}`}
+      className={`scroll-mt-[calc(var(--action-bar-bottom,13rem)+0.75rem)] rounded-lg border px-3 py-2 ${style.box}`}
     >
       <div className="flex flex-wrap items-center gap-2">
         <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
