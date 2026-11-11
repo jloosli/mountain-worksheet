@@ -526,3 +526,22 @@ describe("PrintBriefing — Worksheet limits (#270)", () => {
     expect(screen.queryByRole("region", { name: "Worksheet limits" })).not.toBeInTheDocument();
   });
 });
+
+describe("PrintBriefing — Worksheet limits styling (#270)", () => {
+  it("gives Within limit no color, so the box reads as no all clear", () => {
+    const state: WorksheetData = { ...stateWithPerf, acType: "C182T", weight: 2700 };
+    const notifications = derivePerformanceNotifications(state);
+    const { PAs } = computePressureColumns(state.altitude, state.altimeter, state.temp);
+    const limitChecks = deriveLimitChecks({
+      state,
+      notifications,
+      climb: computeClimbViewModel(state, notifications),
+      told: computeTOLDViewModel(state, PAs, notifications),
+    });
+    render(<PrintBriefing state={state} notifications={notifications} limitChecks={limitChecks} />);
+    const cell = within(screen.getByRole("region", { name: "Worksheet limits" })).getByText(
+      "Within limit",
+    );
+    expect(cell.className).not.toMatch(/text-(emerald|green|red|amber)/);
+  });
+});

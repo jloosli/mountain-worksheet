@@ -179,7 +179,8 @@ const LIMIT_STATE_CLASS: Record<LimitState, string> = {
   exceeded: "print-keep-color text-red-700",
   "not-checked": "text-slate-600",
   near: "print-keep-color text-amber-700",
-  within: "print-keep-color text-emerald-700",
+  // No color for Within limit: the Briefing gives no "all clear".
+  within: "",
 };
 
 /**

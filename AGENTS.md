@@ -23,7 +23,7 @@ A Next.js 16.x web application (App Router, TypeScript, Tailwind CSS v4, Vercel)
 - `src/utils/interpolation.ts` — Trilinear (takeoff: weight × altitude × temperature) and bilinear (landing, from a single-weight table, and climb: altitude × temperature) interpolation across POH tables
 - `src/utils/toldCalculations.ts`, `maneuveringCalculations.ts`, `formulas.ts` — Calculations
 - `src/utils/derived.ts` — Pure helpers (`computePressureColumns`, `computeTOLDViewModel`) used by `<Calculations>` during render; TOLD results are per airport, each value `computed`/`withheld`/`unavailable`, with notifications
-- `src/utils/limitChecks.ts` — Limit checks (the worksheet's own limits, ADR 0002): derived during render in `AppContainer`, shown as callouts at the top of their owning step and summarized in the action bar; never notifications, never affect step status
+- `src/utils/limitChecks.ts` — Limit checks (the worksheet's own limits, ADR 0002): derived during render in `AppContainer`, shown as callouts at the top of their owning step, summarized in the action bar, and listed in the Briefing's Worksheet limits table and the checklist slide-over; never notifications, never affect step status
 - `src/app/api/aviation-weather/route.ts` — Proxy to `aviationweather.gov` (avoids CORS)
 
 ## URL State Management

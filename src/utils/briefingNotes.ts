@@ -98,12 +98,7 @@ export function briefingNotes(notifications: readonly Notification[]): BriefingN
       const keys = new Set(subjects.map(subjectKey));
       return notes.filter((n) => keys.has(subjectKey(n.subject))).map((n) => n.ref);
     },
-    markersOn: (value) => {
-      const refs = inputCautions(notifications, value)
-        .map((n) => refByKey.get(notificationKey(n)))
-        .filter((r): r is number => r !== undefined);
-      return [...new Set(refs)];
-    },
+    markersOn: (value) => refsFor(inputCautions(notifications, value)),
     refsFor,
   };
 }
