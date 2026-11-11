@@ -480,7 +480,7 @@ describe("Weather Data Mapper", () => {
         flightTime: "12:00",
       });
       expect(warnedSubjects(result.notifications)).not.toContain("field:temp.1");
-      expect(result.data.temp?.[1]).toBe(-1);
+      expect(result.data.temp?.[1]).toBeUndefined(); // "don't update"
     });
 
     it("fills one airport and blanks the other with Warnings when only one airport reports", () => {
@@ -983,6 +983,22 @@ describe("Weather Data Mapper", () => {
 
       expect(merged.rwy).toEqual([12000, 4200]);
       expect(merged.altitude).toEqual([5433, 10000, 2800]);
+    });
+
+    it("never erases a temperature or altimeter the fetch didn't update when preserveUserData is false, and applies -1 °C (#303)", () => {
+      const existing: Partial<WorksheetData> = {
+        temp: [12, 4, 9],
+        altimeter: [30.1, 30.0, 29.9],
+      };
+      const apiData = {
+        temp: [-1, undefined, 7],
+        altimeter: [30.2, undefined, undefined],
+      } as unknown as Partial<WorksheetData>;
+
+      const merged = mergeWeatherData(existing, apiData, false);
+
+      expect(merged.temp).toEqual([-1, 4, 7]);
+      expect(merged.altimeter).toEqual([30.2, 30.0, 29.9]);
     });
 
     it("keeps an unmatched arrival's runway and elevation, including manual entries (issue #227)", () => {

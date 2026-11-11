@@ -38,20 +38,9 @@ function getOrigin(): string {
   return "http://localhost";
 }
 
-export async function fetchPointForecast(
-  latitude: number,
-  longitude: number,
-  win: { start: Date; end: Date },
-): Promise<OpenMeteoPointForecast> {
+async function fetchOpenMeteo(params: Record<string, string>): Promise<OpenMeteoPointForecast> {
   const url = new URL("/api/open-meteo", getOrigin());
-  url.searchParams.set("latitude", String(latitude));
-  url.searchParams.set("longitude", String(longitude));
-  url.searchParams.set("start_date", dateOnly(win.start));
-  url.searchParams.set("end_date", dateOnly(win.end));
-  url.searchParams.set("wind_speed_unit", "kn");
-  url.searchParams.set("temperature_unit", "celsius");
-  url.searchParams.set("hourly", buildHourlyParams().join(","));
-
+  for (const [key, value] of Object.entries(params)) url.searchParams.set(key, value);
   const res = await fetch(url.toString(), {
     method: "GET",
     headers: { Accept: "application/json" },
@@ -60,6 +49,65 @@ export async function fetchPointForecast(
     throw new Error(`Open-Meteo request failed: ${res.status} ${res.statusText}`);
   }
   return (await res.json()) as OpenMeteoPointForecast;
+}
+
+export async function fetchPointForecast(
+  latitude: number,
+  longitude: number,
+  win: { start: Date; end: Date },
+): Promise<OpenMeteoPointForecast> {
+  return fetchOpenMeteo({
+    latitude: String(latitude),
+    longitude: String(longitude),
+    start_date: dateOnly(win.start),
+    end_date: dateOnly(win.end),
+    wind_speed_unit: "kn",
+    temperature_unit: "celsius",
+    hourly: buildHourlyParams().join(","),
+  });
+}
+
+/**
+ * Hourly 2 m temperature at an airport. Passing the field elevation (meters)
+ * makes the model downscale to the field rather than its smoothed grid cell
+ * (ADR 0003, #301).
+ */
+export async function fetchFieldForecast(
+  latitude: number,
+  longitude: number,
+  elevationM: number,
+  win: { start: Date; end: Date },
+): Promise<OpenMeteoPointForecast> {
+  return fetchOpenMeteo({
+    latitude: String(latitude),
+    longitude: String(longitude),
+    elevation: String(elevationM),
+    start_date: dateOnly(win.start),
+    end_date: dateOnly(win.end),
+    temperature_unit: "celsius",
+    hourly: "temperature_2m",
+  });
+}
+
+/**
+ * Hourly output is on the hour, so any time inside the series is within
+ * 30 min of a value; a time farther off is past the end of the forecast.
+ */
+export const FIELD_FORECAST_MAX_OFFSET_MS = 30 * 60 * 1000;
+
+/**
+ * The field forecast's 2 m temperature for the hour nearest `at`, or null
+ * when the forecast doesn't reach that time or has no value there.
+ */
+export function fieldTemperatureAt(
+  raw: OpenMeteoPointForecast | undefined,
+  at: Date,
+): number | null {
+  if (!raw) return null;
+  const { idx, deltaMs } = pickClosestTimeIdx(raw, at);
+  if (idx < 0 || deltaMs > FIELD_FORECAST_MAX_OFFSET_MS) return null;
+  const value = (raw.hourly.temperature_2m as number[] | undefined)?.[idx];
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
 export interface InterpolationSample {

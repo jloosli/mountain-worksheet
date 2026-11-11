@@ -3,11 +3,21 @@ import { fieldSubject, type Notification } from "./notifications";
 
 const HPA_TO_INHG = 0.0295299;
 const METAR_FRESHNESS_MS = 90 * 60 * 1000;
+/**
+ * No US civil TAF forecasts an altimeter, so carrying the airport's own
+ * observed setting forward is routine. Within this window it is an Advisory;
+ * beyond it a front could have moved the setting, so it stays a Caution (#301).
+ */
+export const ALTIMETER_PERSISTENCE_ADVISORY_MS = 12 * 60 * 60 * 1000;
 
 export type AirportWeatherSource = "metar" | "taf-fcst" | "taf-nearest" | "metar-stale" | "none";
 
+/** Where an airport temperature came from; null when it was left blank. */
+export type AirportTempSource = "observation" | "taf" | "model" | null;
+
 export interface AirportWeatherAtTime {
   temp: number | null;
+  tempSource: AirportTempSource;
   altimeter: number | null;
   source: AirportWeatherSource;
   /** Subjects are `temp[slot]` / `altimeter[slot]`. */
@@ -31,9 +41,19 @@ function metarAltimeterInHg(altim: number | null | undefined): number | null {
   return Math.round(altim * HPA_TO_INHG * 100) / 100;
 }
 
-function fcstTempValue(fcst: TAFForecast, requested: Date): number | undefined {
-  // TAF temp may be a number or an array of {validTime, sfcTemp}; handle both
-  if (typeof fcst.temp === "number") return fcst.temp;
+/** How close a TAF temperature sample must be to count for the requested time. */
+const TAF_TEMP_SAMPLE_MAX_OFFSET_MS = 60 * 60 * 1000;
+
+/**
+ * The TAF period's temperature for the requested time, and how far from that
+ * time it applies: 0 for a single value covering the period, or the offset of
+ * the closest `{validTime, sfcTemp}` sample (e.g. a TX/TN maximum or minimum).
+ */
+function fcstTempValue(
+  fcst: TAFForecast,
+  requested: Date,
+): { value: number; offsetMs: number } | undefined {
+  if (typeof fcst.temp === "number") return { value: fcst.temp, offsetMs: 0 };
   if (Array.isArray(fcst.temp) && fcst.temp.length > 0) {
     const reqEpoch = Math.floor(requested.getTime() / 1000);
     let closest = fcst.temp[0];
@@ -45,7 +65,9 @@ function fcstTempValue(fcst: TAFForecast, requested: Date): number | undefined {
         closest = candidate;
       }
     }
-    return closest.sfcTemp;
+    return closest.sfcTemp == null
+      ? undefined
+      : { value: closest.sfcTemp, offsetMs: minDiff * 1000 };
   }
   return undefined;
 }
@@ -85,26 +107,31 @@ function fmtDelta(ms: number): string {
   return `${Math.round(ms / 60000)} min`;
 }
 
+export interface AirportForecastInputs {
+  /**
+   * 2 m temperature (°C) from a model point forecast at the airport's own
+   * position and elevation, for the requested time. It is data for the
+   * requested airport, time and position, so it is not a Substitution: it
+   * replaces a stale observation and is announced with an Advisory (#301).
+   */
+  fieldForecastTemp?: number | null;
+}
+
+const MODEL_SOURCE = "using the Open-Meteo model forecast for the field";
+
 export function selectAirportWeather(
   metar: METARResponse | undefined,
   taf: TAFResponse | undefined,
   requestedTime: Date,
   airportId: string,
   slot: AirportSlot = 0,
+  forecast: AirportForecastInputs = {},
 ): AirportWeatherAtTime {
+  const modelTemp = forecast.fieldForecastTemp ?? null;
   const notifications: Notification[] = [];
   const tempSubject = fieldSubject("temp", slot);
   const altSubject = fieldSubject("altimeter", slot);
   const requestedIso = requestedTime.toISOString();
-  /** One Caution per field a substitution actually filled. */
-  const cautionOnFilledTempAndAltimeter = (
-    message: string,
-    temp: number | null,
-    altimeter: number | null,
-  ) => {
-    if (temp !== null) notifications.push({ level: "caution", subject: tempSubject, message });
-    if (altimeter !== null) notifications.push({ level: "caution", subject: altSubject, message });
-  };
 
   // 1) METAR if fresh
   const obsMs = parseObsTimeMs(metar?.obsTime);
@@ -112,6 +139,12 @@ export function selectAirportWeather(
   const obsDelta = Number.isFinite(obsMs)
     ? fmtDelta(Math.abs(requestedTime.getTime() - obsMs))
     : "unknown";
+  /** Level for an altimeter carried forward from the airport's own observation. */
+  const persistedAltimeterLevel: "advisory" | "caution" =
+    Number.isFinite(obsMs) &&
+    Math.abs(requestedTime.getTime() - obsMs) <= ALTIMETER_PERSISTENCE_ADVISORY_MS
+      ? "advisory"
+      : "caution";
   const metarFresh =
     metar != null &&
     Number.isFinite(obsMs) &&
@@ -124,8 +157,30 @@ export function selectAirportWeather(
     });
   }
   if (metarFresh && metar) {
+    let temp = metar.temp != null ? Math.round(metar.temp) : null;
+    let tempSource: AirportTempSource = temp !== null ? "observation" : null;
+    if (temp === null) {
+      // A TAF forecast for this time comes before the model, as it does
+      // when the METAR isn't current.
+      const covering = findCoveringFcst(taf?.fcsts, requestedTime);
+      const tafTemp = covering && fcstTempValue(covering, requestedTime);
+      if (tafTemp && tafTemp.offsetMs <= TAF_TEMP_SAMPLE_MAX_OFFSET_MS) {
+        temp = Math.round(tafTemp.value);
+        tempSource = "taf";
+      }
+    }
+    if (temp === null && modelTemp !== null) {
+      temp = Math.round(modelTemp);
+      tempSource = "model";
+      notifications.push({
+        level: "advisory",
+        subject: tempSubject,
+        message: `${airportId}: current observation has no temperature; ${MODEL_SOURCE}`,
+      });
+    }
     return {
-      temp: metar.temp != null ? Math.round(metar.temp) : null,
+      temp,
+      tempSource,
       altimeter: metarAltimeterInHg(metar.altim),
       source: "metar",
       notifications,
@@ -136,9 +191,26 @@ export function selectAirportWeather(
   const fcsts = taf?.fcsts;
   const covering = findCoveringFcst(fcsts, requestedTime);
   if (covering) {
-    let temp = fcstTempValue(covering, requestedTime);
-    if (temp == null && metar?.temp != null) {
+    const tafTemp = fcstTempValue(covering, requestedTime);
+    let temp = tafTemp?.value;
+    let tempSource: AirportTempSource = temp != null ? "taf" : null;
+    // A TAF sample hours away (a TX/TN maximum or minimum) says less about
+    // the requested time than a model forecast for that hour.
+    const tafTempIsForAnotherTime =
+      tafTemp !== undefined && tafTemp.offsetMs > TAF_TEMP_SAMPLE_MAX_OFFSET_MS;
+    if ((temp == null || tafTempIsForAnotherTime) && modelTemp !== null) {
+      temp = modelTemp;
+      tempSource = "model";
+      notifications.push({
+        level: "advisory",
+        subject: tempSubject,
+        message: tafTempIsForAnotherTime
+          ? `${airportId}: forecast period's temperature is for another time; ${MODEL_SOURCE}`
+          : `${airportId}: forecast period has no temperature; ${MODEL_SOURCE}`,
+      });
+    } else if (temp == null && metar?.temp != null) {
       temp = metar.temp;
+      tempSource = "observation";
       notifications.push({
         level: "caution",
         subject: tempSubject,
@@ -155,7 +227,7 @@ export function selectAirportWeather(
       altimeter = metarAltimeterInHg(metar?.altim);
       if (altimeter !== null) {
         notifications.push({
-          level: "caution",
+          level: persistedAltimeterLevel,
           subject: altSubject,
           message: `${airportId}: forecast period has no altimeter; using current observation (Δt = ${obsDelta})`,
         });
@@ -163,6 +235,7 @@ export function selectAirportWeather(
     }
     return {
       temp: temp != null ? Math.round(temp) : null,
+      tempSource,
       altimeter,
       source: "taf-fcst",
       notifications,
@@ -180,15 +253,29 @@ export function selectAirportWeather(
     const fromObservation = (what: string) =>
       `${airportId}: forecast unavailable for ${requestedIso} and the nearest TAF period has no ${what}; using the current observation (Δt = ${obsDelta})`;
 
-    const tafTemp = fcstTempValue(closest.fcst, requestedTime);
-    const temp = tafTemp ?? metar?.temp ?? undefined;
-    const roundedTemp = temp != null ? Math.round(temp) : null;
-    if (roundedTemp !== null) {
+    const tafTemp = fcstTempValue(closest.fcst, requestedTime)?.value;
+    let roundedTemp: number | null;
+    let tempSource: AirportTempSource = null;
+    if (modelTemp !== null) {
+      tempSource = "model";
+      // A forecast for the requested hour beats a period for another time.
+      roundedTemp = Math.round(modelTemp);
       notifications.push({
-        level: "caution",
+        level: "advisory",
         subject: tempSubject,
-        message: tafTemp != null ? nearest : fromObservation("temperature"),
+        message: `${airportId}: forecast unavailable for ${requestedIso}; ${MODEL_SOURCE}`,
       });
+    } else {
+      const temp = tafTemp ?? metar?.temp ?? undefined;
+      roundedTemp = temp != null ? Math.round(temp) : null;
+      if (roundedTemp !== null) tempSource = tafTemp != null ? "taf" : "observation";
+      if (roundedTemp !== null) {
+        notifications.push({
+          level: "caution",
+          subject: tempSubject,
+          message: tafTemp != null ? nearest : fromObservation("temperature"),
+        });
+      }
     }
     const tafAltimeter = closest.fcst.altim;
     const altimeter =
@@ -197,13 +284,14 @@ export function selectAirportWeather(
         : metarAltimeterInHg(metar?.altim);
     if (altimeter !== null) {
       notifications.push({
-        level: "caution",
+        level: tafAltimeter != null ? "caution" : persistedAltimeterLevel,
         subject: altSubject,
         message: tafAltimeter != null ? nearest : fromObservation("altimeter"),
       });
     }
     return {
       temp: roundedTemp,
+      tempSource,
       altimeter,
       source: "taf-nearest",
       notifications,
@@ -213,23 +301,60 @@ export function selectAirportWeather(
   // 4) Stale METAR as a last-resort substitution (better than nothing for airports
   //    without TAF service — small / uncontrolled fields).
   if (metar != null && (metar.temp != null || metar.altim != null)) {
-    const delta = obsDelta;
     const reason = taf == null ? "no TAF available" : "no usable TAF forecast period";
-    const temp = metar.temp != null ? Math.round(metar.temp) : null;
     const altimeter = metarAltimeterInHg(metar.altim);
-    cautionOnFilledTempAndAltimeter(
-      `${airportId}: ${reason}; substituting the current METAR observation (Δt = ${delta})`,
-      temp,
-      altimeter,
-    );
-    return { temp, altimeter, source: "metar-stale", notifications };
+    let temp: number | null;
+    if (modelTemp !== null) {
+      temp = Math.round(modelTemp);
+      notifications.push({
+        level: "advisory",
+        subject: tempSubject,
+        message: `${airportId}: ${reason}; ${MODEL_SOURCE}`,
+      });
+    } else {
+      temp = metar.temp != null ? Math.round(metar.temp) : null;
+      if (temp !== null) {
+        notifications.push({
+          level: "caution",
+          subject: tempSubject,
+          message: `${airportId}: ${reason}; substituting the current METAR observation (Δt = ${obsDelta})`,
+        });
+      }
+    }
+    if (altimeter !== null) {
+      notifications.push({
+        level: persistedAltimeterLevel,
+        subject: altSubject,
+        message: `${airportId}: ${reason}; using current observation (Δt = ${obsDelta})`,
+      });
+    }
+    const tempSource: AirportTempSource =
+      modelTemp !== null ? "model" : temp !== null ? "observation" : null;
+    return { temp, tempSource, altimeter, source: "metar-stale", notifications };
   }
 
   // 5) Nothing
   const message = `${airportId}: no METAR or TAF data available for requested time ${requestedIso}`;
+  if (modelTemp !== null) {
+    notifications.push(
+      {
+        level: "advisory",
+        subject: tempSubject,
+        message: `${airportId}: no METAR or TAF data available; ${MODEL_SOURCE}`,
+      },
+      { level: "warning", subject: altSubject, message },
+    );
+    return {
+      temp: Math.round(modelTemp),
+      tempSource: "model",
+      altimeter: null,
+      source: "none",
+      notifications,
+    };
+  }
   notifications.push(
     { level: "warning", subject: tempSubject, message },
     { level: "warning", subject: altSubject, message },
   );
-  return { temp: null, altimeter: null, source: "none", notifications };
+  return { temp: null, tempSource: null, altimeter: null, source: "none", notifications };
 }

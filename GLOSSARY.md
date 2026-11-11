@@ -34,7 +34,7 @@ A computed value that is not shown because one of its own inputs has a Warning o
 ### Data provenance
 
 **Substitution**:
-Any displayed value that comes from something other than the pilot's own input or data for the requested airport, time, and position. Every substitution is announced with a Caution; there are no silent substitutions. Values and Limit checks computed from a substitution carry a marker pointing back to it, and a Limit check's state counts the same as one from the pilot's own data.
+Any displayed value that comes from something other than the pilot's own input or data for the requested airport, time, and position. A model point forecast at the airport's own position and elevation, for the requested time, is data for that airport and time, so it is not a Substitution; it is announced with an Advisory. An altimeter setting persisted from the airport's own observation within 12 hours, when no forecast provides one, is also announced with an Advisory instead of a Caution. Every substitution is announced with a Caution; there are no silent substitutions. Values and Limit checks computed from a substitution carry a marker pointing back to it, and a Limit check's state counts the same as one from the pilot's own data.
 _Avoid_: Fallback (as a user-facing term)
 
 **Auto-correction**:

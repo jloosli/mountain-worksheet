@@ -56,6 +56,20 @@ describe("GET /api/open-meteo", () => {
     expect(res.status).toBe(503);
   });
 
+  it("forwards the field elevation so 2 m temperature is downscaled to the airport (#301)", async () => {
+    (fetch as jest.Mock).mockResolvedValueOnce({
+      ok: true,
+      headers: { get: () => "application/json" },
+      json: async () => ({}),
+    });
+    const req = new NextRequest(
+      "http://localhost/api/open-meteo?latitude=41.2&longitude=-112.0&elevation=1362&hourly=temperature_2m",
+    );
+    await GET(req);
+    const calledUrl = (fetch as jest.Mock).mock.calls[0][0] as string;
+    expect(calledUrl).toContain("elevation=1362");
+  });
+
   it("drops params not in the allowlist", async () => {
     (fetch as jest.Mock).mockResolvedValueOnce({
       ok: true,

@@ -278,6 +278,28 @@ describe("evaluateWorksheet — session", () => {
     expect(e.stepStatuses.weather).toBe("warning");
   });
 
+  it("marks departure results with a persisted altimeter's Caution but not a model temperature's Advisory (#301)", () => {
+    const state = sortie();
+    const modelTemp: Notification = {
+      level: "advisory",
+      subject: fieldSubject("temp", 0),
+      message:
+        "KABC: forecast period has no temperature; using the Open-Meteo model forecast for the field",
+    };
+    const oldAltimeter: Notification = {
+      level: "caution",
+      subject: fieldSubject("altimeter", 0),
+      message: "KABC: forecast period has no altimeter; using current observation (Δt = 13.0 hr)",
+    };
+    const fetch = { ...fetchFor(state), notifications: [modelTemp, oldAltimeter] };
+    const e = evaluateWorksheet(state, fetchedSession({ lastFetch: fetch, lastApplied: fetch }));
+
+    const departure = check(e.limitChecks, "runway").points[0];
+    expect(departure.substitutions.map((n) => n.message)).toEqual([oldAltimeter.message]);
+    const printed = briefingNotes(e.notifications).inSection("environment");
+    expect(printed.map((n) => n.message)).toEqual([oldAltimeter.message]);
+  });
+
   it("counts runway-lookup notifications on the weather step", () => {
     const e = evaluateWorksheet(
       sortie(),

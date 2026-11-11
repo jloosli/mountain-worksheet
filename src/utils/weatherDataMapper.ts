@@ -11,6 +11,7 @@ import { selectAirportWeather } from "./airportTimeWeather";
 import type { AreaOfOpsWeather } from "./areaOfOpsWeather";
 import { TARGET_ALTITUDES_FT } from "./areaOfOpsWeather";
 import type { AirmetClassification } from "./gairmetApi";
+import { fieldTemperatureAt, type OpenMeteoPointForecast } from "./openMeteoApi";
 import { fieldSubject, subjectKey, type Notification, type Subject } from "./notifications";
 
 // Validation ranges
@@ -28,7 +29,9 @@ export interface WeatherMappingResult {
   /**
    * Values to merge into the worksheet. A weather field the fetch was
    * expected to fill but couldn't is `null` (blank) — never left holding an
-   * earlier fetch's value. `-1` in an array slot means "don't update": runway
+   * earlier fetch's value. In a temperature or altimeter slot, `undefined`
+   * means "don't update" (never -1: -1 °C is a real temperature). In a runway
+   * or elevation slot, `-1` means "don't update": runway
    * and field elevation use it for an airport the lookup didn't match, so
    * the worksheet keeps whatever it held (#227). Either way the field gets a
    * Warning, which only shows while the field is blank.
@@ -58,6 +61,8 @@ export interface WeatherMappingOptions {
     arrival?: AirportCondition;
   };
   position?: [number | null, number | null];
+  /** Model point forecasts at each airport, keyed by upper-case airport ID (#301). */
+  fieldForecasts?: Record<string, OpenMeteoPointForecast>;
   opAltitudeFt?: number | null;
   validateData?: boolean;
 }
@@ -99,7 +104,7 @@ export function mapAirportSpecificWeatherData(
   const arrTime = new Date(depTime.getTime() + durationHours * 3600 * 1000);
 
   const setSlot = (key: "temp" | "altimeter", index: 0 | 2, value: number | null) => {
-    const next = (result[key] ? [...result[key]!] : [-1, -1, -1]) as [
+    const next = (result[key] ? [...result[key]!] : keptTriple()) as [
       number | null,
       number | null,
       number | null,
@@ -122,7 +127,9 @@ export function mapAirportSpecificWeatherData(
     const code = airportCode.toUpperCase();
     const metar = safeMetar.find((m) => m.icaoId?.toUpperCase() === code);
     const taf = safeTaf.find((t) => t.icaoId?.toUpperCase() === code);
-    const sel = selectAirportWeather(metar, taf, requestedTime, code, index);
+    const sel = selectAirportWeather(metar, taf, requestedTime, code, index, {
+      fieldForecastTemp: fieldTemperatureAt(options.fieldForecasts?.[code], requestedTime),
+    });
     notifications.push(...sel.notifications);
     const label = index === 0 ? "Departure" : "Arrival";
 
@@ -215,6 +222,13 @@ export function mapAirportElevationData(
 }
 
 type Triple = [number | null, number | null, number | null];
+
+/**
+ * "Don't update" for a temperature or altimeter slot. `undefined`, not -1,
+ * because -1 °C is a real temperature (#303); mergeWeatherData skips it.
+ */
+const KEEP_SLOT = undefined as unknown as null;
+const keptTriple = (): Triple => [KEEP_SLOT, KEEP_SLOT, KEEP_SLOT];
 type WindTable = [(number | null)[], (number | null)[], (number | null)[]];
 
 const ALOFT_LABELS = TARGET_ALTITUDES_FT.map((ft) => `${ft.toLocaleString("en-US")} ft`);
@@ -259,8 +273,8 @@ export function mapWeatherDataToWorksheet(
     data.altitude = elevation.altitude ?? [-1, -1, -1];
 
     // Area-of-ops weather (Open-Meteo): winds aloft and operating conditions
-    const temp = (data.temp ? [...data.temp] : [-1, -1, -1]) as Triple;
-    const altimeter = (data.altimeter ? [...data.altimeter] : [-1, -1, -1]) as Triple;
+    const temp = (data.temp ? [...data.temp] : keptTriple()) as Triple;
+    const altimeter = (data.altimeter ? [...data.altimeter] : keptTriple()) as Triple;
     let wind: WindTable = [Array(5).fill(null), Array(5).fill(null), Array(5).fill(null)];
     if (areaOfOps) {
       notifications.push(...areaOfOps.notifications);
@@ -276,11 +290,11 @@ export function mapWeatherDataToWorksheet(
     }
     if (typeof options.opAltitudeFt === "number" && options.opAltitudeFt > 0) {
       // An operating temperature is expected only once there's an altitude.
-      if (temp[1] === -1) temp[1] = null;
+      if (temp[1] === KEEP_SLOT) temp[1] = null;
     }
 
     if (options.validateData) {
-      if (temp[1] !== null && temp[1] !== -1 && !isValidTemperature(temp[1])) {
+      if (temp[1] != null && !isValidTemperature(temp[1])) {
         notifications.push({
           level: "warning",
           subject: fieldSubject("temp", 1),
@@ -288,7 +302,7 @@ export function mapWeatherDataToWorksheet(
         });
         temp[1] = null;
       }
-      if (altimeter[1] !== null && altimeter[1] !== -1 && !isValidAltimeter(altimeter[1])) {
+      if (altimeter[1] != null && !isValidAltimeter(altimeter[1])) {
         notifications.push({
           level: "warning",
           subject: fieldSubject("altimeter", 1),
@@ -539,6 +553,9 @@ export function isApiPopulatedData(data: Partial<WorksheetData>): {
 /**
  * Merge API data with existing worksheet data, preserving user modifications
  */
+/** Only `undefined` keeps a temperature slot: -1 °C is a real temperature (#303). */
+const isTempKept = (val: number | null | undefined) => val === undefined;
+
 export function mergeWeatherData(
   existingData: Partial<WorksheetData>,
   apiData: Partial<WorksheetData>,
@@ -547,9 +564,16 @@ export function mergeWeatherData(
   const result = { ...existingData };
 
   if (!preserveUserData) {
-    // Overwrite everything, but still honour the -1 "don't update" marker in
-    // runway and elevation so it never lands in state (#227).
+    // Overwrite everything, but still honour the "don't update" markers so
+    // they never land in state: -1 in runway and elevation (#227), undefined
+    // in temperature and altimeter (#303).
     const overwritten = { ...result, ...apiData };
+    if (apiData.temp) {
+      overwritten.temp = mergeSlots(result.temp, apiData.temp, [null, null, null], isTempKept);
+    }
+    if (apiData.altimeter) {
+      overwritten.altimeter = mergeSlots(result.altimeter, apiData.altimeter, [null, null, null]);
+    }
     if (apiData.rwy) {
       overwritten.rwy = mergeSlots(result.rwy, apiData.rwy, [null, null]);
     }
@@ -565,31 +589,11 @@ export function mergeWeatherData(
   }
 
   if (apiData.temp) {
-    const next = (result.temp ? [...result.temp] : [null, null, null]) as [
-      number | null,
-      number | null,
-      number | null,
-    ];
-    apiData.temp.forEach((val, i) => {
-      if (val !== undefined && val !== -1) {
-        next[i] = val;
-      }
-    });
-    result.temp = next;
+    result.temp = mergeSlots(result.temp, apiData.temp, [null, null, null], isTempKept);
   }
 
   if (apiData.altimeter) {
-    const next = (result.altimeter ? [...result.altimeter] : [null, null, null]) as [
-      number | null,
-      number | null,
-      number | null,
-    ];
-    apiData.altimeter.forEach((val, i) => {
-      if (val !== undefined && val !== -1) {
-        next[i] = val;
-      }
-    });
-    result.altimeter = next;
+    result.altimeter = mergeSlots(result.altimeter, apiData.altimeter, [null, null, null]);
   }
 
   // Runway and altitude merge per slot: -1 means "don't update" (an
@@ -625,10 +629,11 @@ function mergeSlots<T extends (number | null)[]>(
   existing: T | undefined,
   incoming: T,
   empty: T,
+  isKept: (val: number | null | undefined) => boolean = (val) => val === undefined || val === -1,
 ): T {
   const next = [...(existing ?? empty)] as T;
   incoming.forEach((val, i) => {
-    if (val !== undefined && val !== -1) {
+    if (!isKept(val)) {
       next[i] = val;
     }
   });

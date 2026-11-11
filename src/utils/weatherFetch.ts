@@ -6,7 +6,11 @@
  * Never throws and never blocks: a Partial fetch applies what succeeded, and
  * a total failure is a Warning on the weather step with nothing applied.
  */
-import { getWeatherDataBatch, type WeatherDataBatch } from "./aviationWeatherApi";
+import {
+  getWeatherDataBatch,
+  type AirportResponse,
+  type WeatherDataBatch,
+} from "./aviationWeatherApi";
 import {
   airportIdentityNotification,
   classifyAirport,
@@ -32,7 +36,12 @@ import {
 } from "./gairmetApi";
 import { normalizeAirportCode } from "./airportCode";
 import { stepSubject, type Notification, type WeatherFetchResult } from "./notifications";
-import { fetchPointForecast } from "./openMeteoApi";
+import {
+  FIELD_FORECAST_MAX_OFFSET_MS,
+  fetchFieldForecast,
+  fetchPointForecast,
+  type OpenMeteoPointForecast,
+} from "./openMeteoApi";
 import type { WorksheetData } from "./types";
 import {
   mapWeatherDataToWorksheet,
@@ -162,6 +171,38 @@ function classifyGAirmetResult(
   };
 }
 
+/**
+ * The model point forecast at each reporting airport's own position and
+ * elevation, keyed by airport ID (#301). An airport whose request fails is
+ * left out: its temperature falls back to the observation, whose Caution
+ * already tells the pilot.
+ */
+async function fetchFieldForecasts(
+  airports: Array<[code: string, airport: AirportResponse | undefined]>,
+  win: { start: Date; end: Date },
+): Promise<Record<string, OpenMeteoPointForecast>> {
+  const unique = new Map(airports);
+  const entries = await Promise.all(
+    [...unique].map(async ([code, a]) => {
+      if (
+        !a ||
+        typeof a.lat !== "number" ||
+        typeof a.lon !== "number" ||
+        typeof a.elev !== "number" ||
+        !Number.isFinite(a.elev)
+      ) {
+        return null;
+      }
+      try {
+        return [code, await fetchFieldForecast(a.lat, a.lon, a.elev, win)] as const;
+      } catch {
+        return null;
+      }
+    }),
+  );
+  return Object.fromEntries(entries.filter((e) => e !== null));
+}
+
 export async function fetchWorksheetWeather(
   worksheet: WorksheetData,
 ): Promise<WorksheetWeatherFetch> {
@@ -204,10 +245,35 @@ export async function fetchWorksheetWeather(
 
     const depTime = new Date(`${worksheet.date}T${worksheet.time}:00Z`);
     const midTime = new Date(depTime.getTime() + ((worksheet.duration ?? 0) / 2) * 3600 * 1000);
+    const airportOf = (code: string): AirportResponse | undefined =>
+      (apiData.airport ?? []).find((x) => x.icaoId?.toUpperCase() === code);
     const latLonOf = (code: string): [number, number] | null => {
-      const a = (apiData.airport ?? []).find((x) => x.icaoId?.toUpperCase() === code);
+      const a = airportOf(code);
       return a && typeof a.lat === "number" && typeof a.lon === "number" ? [a.lat, a.lon] : null;
     };
+    // Same rule as the mapper's arrival time: no valid duration means 0.
+    const durationHours =
+      typeof worksheet.duration === "number" &&
+      Number.isFinite(worksheet.duration) &&
+      worksheet.duration > 0
+        ? worksheet.duration
+        : 0;
+    const fieldForecastsPromise = fetchFieldForecasts(
+      ([0, 1] as const).flatMap((slot) => {
+        const code = fetchedFor.airport[slot];
+        return code && !conditions[slot]
+          ? [[code, airportOf(code)] as [string, AirportResponse | undefined]]
+          : [];
+      }),
+      // Padded by the nearest-hour allowance: Open-Meteo windows are whole
+      // days, so a 23:45Z slot needs the next day's 00:00Z hour.
+      {
+        start: new Date(depTime.getTime() - FIELD_FORECAST_MAX_OFFSET_MS),
+        end: new Date(
+          depTime.getTime() + durationHours * 3600 * 1000 + FIELD_FORECAST_MAX_OFFSET_MS,
+        ),
+      },
+    );
     const depLatLon = latLonOf(departure);
     const arrLatLon = latLonOf(arrival);
 
@@ -246,7 +312,9 @@ export async function fetchWorksheetWeather(
       airmets = classifyGAirmetResult(gairmet, opPos, midTime);
     }
 
+    const fieldForecasts = await fieldForecastsPromise;
     const mapping = mapWeatherDataToWorksheet(apiData, areaOfOps, airmets, {
+      fieldForecasts,
       flightDate: worksheet.date,
       flightTime: worksheet.time,
       durationHours: worksheet.duration,

@@ -411,9 +411,12 @@ export function staleFetchNotifications(
   return FETCHED_FIELDS.filter(({ subject, dependsOn, filled }) => {
     if (filled === false || !dependsOn.some((i) => changed.has(i))) return false;
     const fetchedValue = readField(applied, subject);
+    // -1 is the mapper's "don't update" marker for runway and elevation only;
+    // -1 °C is a real fetched temperature (#303).
+    const isTemp = subject.kind === "field" && subject.field === "temp";
     return (
       fetchedValue !== undefined &&
-      fetchedValue !== -1 &&
+      (isTemp || fetchedValue !== -1) &&
       !isBlank(fetchedValue) &&
       sameValue(readField(state, subject), fetchedValue)
     );
