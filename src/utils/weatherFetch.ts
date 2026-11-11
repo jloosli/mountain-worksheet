@@ -75,7 +75,6 @@ const BATCH_OPTIONS = {
   includeTAF: true,
   includeAirport: true,
   metarHours: 1,
-  tafHours: 6,
 };
 
 const failedIn = (batch: WeatherDataBatch, kind: "metar" | "taf" | "airport") =>

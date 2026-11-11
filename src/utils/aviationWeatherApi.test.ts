@@ -120,7 +120,7 @@ describe("Aviation Weather API", () => {
         json: async () => mockTAFResponse,
       });
 
-      const result = await getTAF(["KORD"], 24);
+      const result = await getTAF(["KORD"]);
 
       expect(fetch).toHaveBeenCalledWith(
         expect.stringContaining("/api/aviation-weather?endpoint=taf"),
@@ -136,6 +136,20 @@ describe("Aviation Weather API", () => {
       expect(result).toEqual(mockTAFResponse);
     });
 
+    it("does not send `hours`, which the TAF endpoint rejects with 400", async () => {
+      (fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockTAFResponse,
+      });
+
+      await getTAF(["KOGD"]);
+
+      const url = new URL((fetch as jest.Mock).mock.calls[0][0], "http://localhost");
+      expect(url.searchParams.get("endpoint")).toBe("taf");
+      expect(url.searchParams.get("ids")).toBe("KOGD");
+      expect(url.searchParams.has("hours")).toBe(false);
+    });
+
     it("should handle TAF API errors", async () => {
       (fetch as jest.Mock).mockResolvedValueOnce({
         ok: false,
@@ -143,7 +157,7 @@ describe("Aviation Weather API", () => {
         text: async () => "Bad request",
       });
 
-      await expect(getTAF(["KORD"], 24, 0)).rejects.toThrow(
+      await expect(getTAF(["KORD"], 0)).rejects.toThrow(
         "Bad Request - Invalid parameters"
       );
     });

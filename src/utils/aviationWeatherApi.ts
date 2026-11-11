@@ -303,17 +303,16 @@ export async function getMETAR(
 }
 
 /**
- * Get TAF data for specified airports
+ * Get the current TAF for each of the specified airports. Unlike METAR, the
+ * TAF endpoint takes no `hours` parameter: it rejects it with 400 Bad Request.
  */
 export async function getTAF(
   airports: string[],
-  hoursBeforeNow: number = 24,
   retries: number = 3
 ): Promise<TAFResponse[]> {
   const params = {
     ids: airports.join(","),
     format: "json",
-    hours: hoursBeforeNow.toString(),
   };
 
   return makeApiRequest<TAFResponse[]>("taf", params, retries);
@@ -376,7 +375,6 @@ export async function getWeatherDataBatch(
     includeTAF?: boolean;
     includeAirport?: boolean;
     metarHours?: number;
-    tafHours?: number;
   } = {}
 ): Promise<WeatherDataBatch> {
   const {
@@ -384,7 +382,6 @@ export async function getWeatherDataBatch(
     includeTAF = true,
     includeAirport = true,
     metarHours = 1,
-    tafHours = 24,
   } = options;
 
   const response: WeatherDataBatch = { notifications: [] };
@@ -413,7 +410,7 @@ export async function getWeatherDataBatch(
   if (includeMETAR)
     requests.push(settle(0, "metar", "METAR", () => getMETAR(airports, metarHours)));
   if (includeTAF)
-    requests.push(settle(1, "taf", "TAF", () => getTAF(airports, tafHours)));
+    requests.push(settle(1, "taf", "TAF", () => getTAF(airports)));
   if (includeAirport)
     requests.push(settle(2, "airport", "Airport", () => getAirportInfo(airports)));
   await Promise.all(requests);
