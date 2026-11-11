@@ -826,6 +826,22 @@ describe("AppContainer — unverified weather (#224)", () => {
     render(<AppContainer />);
     expect(onScreen().queryByText(unverified)).not.toBeInTheDocument();
   });
+
+  it("shows the Caution for a link that carries only a ticked Ceil/Vis box, and marks the check (#277)", () => {
+    openSharedLink("airport=KORD,KBOI&date=2026-01-01&time=10:00&cielVis=1");
+    const { container } = render(<AppContainer />);
+
+    const caution = onScreen().getByText(unverified);
+    expect(container.querySelector("#step-weather")).toContainElement(caution);
+    const ceilVis = screen.getByRole("region", { name: "Limit check: Ceiling/visibility" });
+    expect(within(ceilVis).getByText("Exceeded")).toBeInTheDocument();
+    expect(ceilVis.querySelector('[data-marker="caution"]')?.getAttribute("title")).toMatch(
+      unverified
+    );
+    // A box alone isn't fetched weather: the action bar still offers a first fetch.
+    expect(screen.getByRole("button", { name: "Fetch weather" })).toBeEnabled();
+    expect(screen.queryByRole("button", { name: /Re-fetch/i })).not.toBeInTheDocument();
+  });
 });
 
 describe("AppContainer — markers from a Substitution (#223)", () => {

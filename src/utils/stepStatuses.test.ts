@@ -6,6 +6,7 @@ import {
   type Notification,
 } from "@/utils/notifications";
 import type { WorksheetData } from "@/utils/types";
+import { unverifiedWeatherNotifications } from "@/utils/unverifiedWeather";
 
 const empty: WorksheetData = {
   pilot: "",
@@ -119,6 +120,14 @@ describe("deriveStepStatuses", () => {
       weather: "complete",
       decision: "active",
     });
+  });
+
+  it("doesn't treat a ticked advisory box alone as fetched weather, though it raises the Unverified weather Caution (#277)", () => {
+    const boxOnly = { ...readyForWeather, cielVis: true };
+    const result = deriveStepStatuses(boxOnly, null, unverifiedWeatherNotifications(boxOnly, null));
+    expect(result.weather).toBe("active");
+    expect(result.decision).toBe("pending");
+    expect(result.counts.weather.caution).toBe(1);
   });
 
   it("counts no notifications on any step by default", () => {
