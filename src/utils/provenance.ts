@@ -18,7 +18,7 @@ export type MarkableValue =
  * Whether `cover` takes in `subject`: the same Subject, or a whole field
  * (no index) taking in each of its slots.
  */
-function covers(cover: Subject, subject: Subject): boolean {
+function takesIn(cover: Subject, subject: Subject): boolean {
   if (cover.kind === "field" && cover.index === undefined && subject.kind === "field") {
     return cover.field === subject.field;
   }
@@ -42,13 +42,11 @@ export function substitutionsFor(
 ): Notification[] {
   if (!("dependsOn" in value)) return [];
   const inputs = value.dependsOn;
-  const ownKeys = new Set(own.map(subjectKey));
-  const inputKeys = new Set(inputs.map(subjectKey));
+  const onValue = new Set([...inputs, ...own].map(subjectKey));
   return notifications.filter(
     (n) =>
       n.level === "caution" &&
-      (ownKeys.has(subjectKey(n.subject)) ||
-        inputKeys.has(subjectKey(n.subject)) ||
-        (n.covers ?? []).some((c) => inputs.some((s) => covers(c, s)))),
+      (onValue.has(subjectKey(n.subject)) ||
+        (n.covers ?? []).some((cover) => inputs.some((input) => takesIn(cover, input)))),
   );
 }
