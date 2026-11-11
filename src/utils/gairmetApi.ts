@@ -8,7 +8,11 @@ export interface GAirmetCoord {
 }
 
 export interface GAirmetFeature {
-  hazard: "TURB" | "IFR" | "MTN OBSC" | "ICE" | "LLWS" | "SFC_WND" | string;
+  /**
+   * As aviationweather.gov names them, e.g. "TURB-LO", "TURB-HI", "IFR",
+   * "MT_OBSC", "ICE", "FZLVL", "LLWS", "SFC_WND".
+   */
+  hazard: string;
   validTime: string;
   forecastHour: number;
   geom: "AREA" | string;
@@ -37,17 +41,30 @@ export function airmetFlagsUnavailable(reason: string): Notification {
 
 const VALID_TIME_THRESHOLD_MS = 3 * 60 * 60 * 1000;
 
+/**
+ * The G-AIRMET hazards that set a worksheet flag. Turbulence is TURB-LO only
+ * (below FL180): TURB-HI is above anything a mountain sortie flies.
+ */
 const HAZARD_FLAG: Record<
   string,
   { field: "turb" | "cielVis" | "mtnObsc"; label: string } | undefined
 > = {
-  TURB: { field: "turb", label: "turbulence" },
+  "TURB-LO": { field: "turb", label: "turbulence" },
   IFR: { field: "cielVis", label: "IFR" },
-  "MTN OBSC": { field: "mtnObsc", label: "mountain obscuration" },
+  MT_OBSC: { field: "mtnObsc", label: "mountain obscuration" },
 };
 
-export async function fetchGAirmets(): Promise<GAirmetFeature[]> {
-  const url = `${BASE_URL}?endpoint=gairmet&format=json`;
+/**
+ * The G-AIRMET snapshot nearest `at`. Without a `date` the endpoint returns a
+ * single snapshot near now, so a later sortie would never find its own.
+ * Resolves to `null` (204 No Content) when no snapshot of the current
+ * issuance covers `at`, e.g. beyond the 12-hour forecast.
+ */
+export async function fetchGAirmets(
+  at: Date
+): Promise<GAirmetFeature[] | null> {
+  const date = at.toISOString().replace(/\.\d{3}Z$/, "Z");
+  const url = `${BASE_URL}?endpoint=gairmet&format=json&date=${encodeURIComponent(date)}`;
   const res = await fetch(url, {
     method: "GET",
     headers: { Accept: "application/json" },
@@ -55,6 +72,7 @@ export async function fetchGAirmets(): Promise<GAirmetFeature[]> {
   if (!res.ok) {
     throw new Error(`G-AIRMET fetch failed: ${res.status} ${res.statusText}`);
   }
+  if (res.status === 204) return null;
   const json = await res.json();
   return Array.isArray(json) ? (json as GAirmetFeature[]) : [];
 }
@@ -87,10 +105,8 @@ export function classifyAirmets(
 ): AirmetClassification {
   const notifications: Notification[] = [];
   const targetMs = midTime.getTime();
-  const eligible = features.filter((f) =>
-    ["TURB", "IFR", "MTN OBSC"].includes(f.hazard)
-  );
-  // Fetch succeeded but the response carries no TURB/IFR/MTN OBSC features at
+  const eligible = features.filter((f) => HAZARD_FLAG[f.hazard]);
+  // Fetch succeeded but the response carries no TURB-LO/IFR/MT_OBSC features at
   // all → no relevant hazards. Clear the flags rather than leaving stale state.
   // (Genuine unavailability — fetch failure or no features in the time window
   // — is signaled with null sentinels below.)
@@ -142,9 +158,8 @@ export function classifyAirmets(
     const hit = atBestTime.some((f) =>
       pointInPolygon(position, airmetCoords(f))
     );
-    if (hazard === "TURB") result.turb = hit;
-    if (hazard === "MTN OBSC") result.mtnObsc = hit;
-    if (hazard === "IFR") result.cielVis = hit;
+    const flag = HAZARD_FLAG[hazard];
+    if (flag) result[flag.field] = hit;
   }
 
   if (ifrWithinThreshold) {

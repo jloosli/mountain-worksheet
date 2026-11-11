@@ -52,6 +52,12 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // No data for the request (e.g. a G-AIRMET time beyond the forecast).
+    // Pass it through: wrapping it as 200 would read as an empty result.
+    if (response.status === 204) {
+      return new NextResponse(null, { status: 204 });
+    }
+
     // Check content type and handle accordingly
     const contentType = response.headers.get("content-type");
     let data;
