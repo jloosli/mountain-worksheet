@@ -30,6 +30,13 @@ import {
   type BriefingNotes,
   type BriefingSection,
 } from "@/utils/briefingNotes";
+import {
+  LIMIT_STATE_LABEL,
+  limitCheckDetail,
+  limitCheckSummary,
+  type LimitCheck,
+  type LimitState,
+} from "@/utils/limitChecks";
 
 interface PrintBriefingProps {
   state: WorksheetData;
@@ -39,6 +46,8 @@ interface PrintBriefingProps {
    * Advisories are left off.
    */
   notifications?: readonly Notification[];
+  /** Every Limit check, printed in the Worksheet limits box at the top. */
+  limitChecks?: readonly LimitCheck[];
 }
 
 const WIND_LABELS = ["3,000", "6,000", "9,000", "12,000", "15,000"] as const;
@@ -166,6 +175,65 @@ function EntryCell({
   );
 }
 
+const LIMIT_STATE_CLASS: Record<LimitState, string> = {
+  exceeded: "print-keep-color text-red-700",
+  "not-checked": "text-slate-600",
+  near: "print-keep-color text-amber-700",
+  within: "print-keep-color text-emerald-700",
+};
+
+/**
+ * The boxed Worksheet limits table: one row per Limit check with its
+ * worksheet limit, state, worst point (or what it's waiting for) and the
+ * references of the Cautions its values rest on; then the summary sentence.
+ */
+function WorksheetLimits({
+  checks,
+  briefing,
+}: {
+  checks: readonly LimitCheck[];
+  briefing: BriefingNotes;
+}) {
+  if (checks.length === 0) return null;
+  return (
+    <section
+      aria-label="Worksheet limits"
+      className="mb-2 border border-slate-500 px-2 py-1 break-inside-avoid"
+    >
+      <div className="font-semibold mb-0.5">Worksheet limits</div>
+      <table className="w-full border-collapse text-[8pt]">
+        <thead>
+          <tr className="border-b border-slate-400">
+            <th className="text-left pr-2 font-medium">Check</th>
+            <th className="text-left pr-2 font-medium">Worksheet limit</th>
+            <th className="text-left pr-2 font-medium">State</th>
+            <th className="text-left font-medium">Worst point / waiting for</th>
+          </tr>
+        </thead>
+        <tbody>
+          {checks.map((c) => (
+            <tr key={c.id} data-limit-state={c.state} className="border-b border-slate-200 align-top">
+              <td className="py-0.5 pr-2 font-semibold">{c.name}</td>
+              <td className="py-0.5 pr-2">{c.limit}</td>
+              <td className={`py-0.5 pr-2 font-semibold ${LIMIT_STATE_CLASS[c.state]}`}>
+                {LIMIT_STATE_LABEL[c.state]}
+              </td>
+              <td className={c.state === "not-checked" ? "py-0.5 italic" : "py-0.5"}>
+                {limitCheckDetail(c)}
+                <Refs refs={briefing.refsFor(c.points.flatMap((p) => p.substitutions))} />
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p className="mt-1 text-[8pt]">{limitCheckSummary(checks)}</p>
+      <p className="text-[7.5pt] italic">
+        Limit checks inform the Go/No-Go decision, which belongs to the PIC and FRO.
+      </p>
+    </section>
+  );
+}
+
 const ENV_ROWS: ReadonlyArray<{
   label: string;
   field: "altitude" | "temp" | "altimeter";
@@ -194,7 +262,11 @@ const TOLD_ROWS: ReadonlyArray<{
   { label: "Runway remaining (50' obstacle)", key: "runwayRemaining50ft", colorNegative: true },
 ];
 
-export default function PrintBriefing({ state, notifications = [] }: PrintBriefingProps) {
+export default function PrintBriefing({
+  state,
+  notifications = [],
+  limitChecks = [],
+}: PrintBriefingProps) {
   const [dep, arr] = state.airport;
   const entered = enteredPosition(state.position);
   const position = entered
@@ -276,6 +348,8 @@ export default function PrintBriefing({ state, notifications = [] }: PrintBriefi
           CAP Mountain Flying Worksheet — Briefing
         </h2>
       </header>
+
+      <WorksheetLimits checks={limitChecks} briefing={b} />
 
       <div className="mb-1.5">
         <span className="font-semibold">Pilot:</span>{" "}

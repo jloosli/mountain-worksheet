@@ -381,9 +381,9 @@ export default function AppContainer() {
         onClose={handleCloseOverlay}
         title="Mountain Flying Checklist"
       >
-        <ChecklistPanel />
+        <ChecklistPanel checks={limitChecks} />
       </SlideOver>
-      <PrintBriefing state={state} notifications={notifications} />
+      <PrintBriefing state={state} notifications={notifications} limitChecks={limitChecks} />
       <footer className="w-full py-4 px-2 md:px-8 text-center text-sm text-gray-600 dark:text-gray-400 border-t border-gray-200 dark:border-gray-800 print:hidden">
         Found an issue or bug?{" "}
         <a

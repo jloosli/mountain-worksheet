@@ -1,4 +1,7 @@
 // src/components/ChecklistPanel.tsx
+import { LimitStateChip } from "@/components/LimitCheckCallout";
+import type { LimitCheck } from "@/utils/limitChecks";
+
 const sections = [
   {
     title: "Basic Preflight",
@@ -60,9 +63,36 @@ const sections = [
   },
 ];
 
-export default function ChecklistPanel() {
+/** Every Limit check with its state, ahead of the pilot-judgement items. */
+function WorksheetLimits({ checks }: { checks: readonly LimitCheck[] }) {
+  if (checks.length === 0) return null;
+  return (
+    <section>
+      <h3
+        id="checklist-worksheet-limits"
+        className="text-base font-semibold text-slate-900 dark:text-slate-100 mb-1.5"
+      >
+        Worksheet limits
+      </h3>
+      <ul aria-labelledby="checklist-worksheet-limits" className="space-y-1.5">
+        {checks.map((c) => (
+          <li key={c.id} data-limit-state={c.state} className="flex items-start gap-2">
+            <LimitStateChip state={c.state} />
+            <span>
+              <span className="font-medium text-slate-900 dark:text-slate-100">{c.name}</span>
+              <span className="text-slate-500 dark:text-slate-400"> · {c.limit}</span>
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+export default function ChecklistPanel({ checks = [] }: { checks?: readonly LimitCheck[] }) {
   return (
     <div className="space-y-5 text-sm leading-relaxed text-slate-700 dark:text-slate-300">
+      <WorksheetLimits checks={checks} />
       {sections.map((section) => (
         <section key={section.title}>
           <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100 mb-1.5">

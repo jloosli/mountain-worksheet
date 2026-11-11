@@ -78,7 +78,7 @@ The state of a Limit check that has no known failure but can't be fully evaluate
 ### Outputs
 
 **Briefing**:
-The printed record of the worksheet that the pilot takes on the sortie. It carries every Warning and Caution next to the value it concerns; Advisories are left off.
+The printed record of the worksheet that the pilot takes on the sortie. It opens with a Worksheet limits table, one row per Limit check, and carries every Warning and Caution next to the value it concerns; Advisories are left off.
 _Avoid_: Printout, report
 
 **Go/No-Go decision**:

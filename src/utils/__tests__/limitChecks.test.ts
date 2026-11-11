@@ -6,6 +6,7 @@ import {
 } from "../derived";
 import {
   deriveLimitChecks,
+  limitCheckDetail,
   limitCheckSummary,
   bySeverity,
   worstState,
@@ -521,5 +522,53 @@ describe("bySeverity", () => {
       check("e", "exceeded"),
     ];
     expect(bySeverity(checks).map((c) => c.id)).toEqual(["c", "e", "b", "d", "a"]);
+  });
+});
+
+describe("limitCheckDetail", () => {
+  const pt = (label: string, state: LimitCheck["state"], text: string) =>
+    state === "not-checked"
+      ? { label, state, waitingFor: text, substitutions: [] }
+      : { label, state, value: text, substitutions: [] };
+  const winds = (points: ReturnType<typeof pt>[]): LimitCheck => ({
+    id: "winds",
+    name: "Winds aloft",
+    limit: "under 30 kt at every altitude",
+    caveat: null,
+    step: "weather",
+    state: worstState(points.map((p) => p.state)),
+    points,
+  });
+
+  it("gives just the value when the only point is the check itself", () => {
+    const check = weightCheck({ ...baseState(), weight: 2790 });
+    expect(limitCheckDetail(check)).toBe("2,790 / 3,100 lbs (90%)");
+  });
+
+  it("gives what a Not checked check is waiting for", () => {
+    const check = weightCheck({ ...baseState(), weight: null });
+    expect(limitCheckDetail(check)).toBe("needs weight");
+  });
+
+  it("names every point that fails, with its label", () => {
+    const check = winds([
+      pt("3,000'", "within", "12 kt"),
+      pt("9,000'", "exceeded", "35 kt"),
+      pt("12,000'", "exceeded", "40 kt"),
+    ]);
+    expect(limitCheckDetail(check)).toBe("9,000' 35 kt · 12,000' 40 kt");
+  });
+
+  it("names what each Not checked point is waiting for", () => {
+    const check = winds([
+      pt("3,000'", "within", "12 kt"),
+      pt("15,000'", "not-checked", "needs wind"),
+    ]);
+    expect(limitCheckDetail(check)).toBe("15,000' needs wind");
+  });
+
+  it("gives the first point when every point is within limit", () => {
+    const check = winds([pt("3,000'", "within", "12 kt"), pt("6,000'", "within", "18 kt")]);
+    expect(limitCheckDetail(check)).toBe("3,000' 12 kt");
   });
 });
