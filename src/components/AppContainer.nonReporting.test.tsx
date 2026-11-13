@@ -100,6 +100,11 @@ describe("AppContainer — Non-reporting airport (#226)", () => {
     expect(
       onScreen().getByText(/KXNR doesn't report weather; altimeter from Substitute station/),
     ).toBeInTheDocument();
+    expect(
+      onScreen().getByText(
+        "KXNR: no METAR or TAF; using the Open-Meteo model forecast at field elevation",
+      ),
+    ).toBeInTheDocument();
 
     const pressureAltitude = Array.from(container.querySelectorAll("tr")).find(
       (tr) => tr.querySelector("td")?.textContent?.trim() === "Pressure Altitude (feet)",

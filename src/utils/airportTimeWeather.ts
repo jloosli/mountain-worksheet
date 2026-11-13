@@ -124,7 +124,7 @@ export interface AirportForecastInputs {
   fieldForecastTemp?: number | null;
 }
 
-export const MODEL_SOURCE = "using the Open-Meteo model forecast for the field";
+const MODEL_SOURCE = "using the Open-Meteo model forecast for the field";
 
 export function selectAirportWeather(
   metar: METARResponse | undefined,

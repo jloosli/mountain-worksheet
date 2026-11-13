@@ -668,7 +668,7 @@ describe("fetchWorksheetWeather", () => {
       expect(result.notifications).toContainEqual({
         level: "advisory",
         subject: fieldSubject("temp", 0),
-        message: "KXNR: no METAR or TAF; using the Open-Meteo model forecast for the field",
+        message: "KXNR: no METAR or TAF; using the Open-Meteo model forecast at field elevation",
       });
       expect(subjectsAt(result.notifications, "warning")).toEqual([]);
     });
@@ -679,7 +679,7 @@ describe("fetchWorksheetWeather", () => {
         level: "advisory",
         subject: fieldSubject("airport", 0),
         message:
-          "KXNR doesn't report weather; altimeter from Substitute station KNEA, 16 nm NE, and temperature from the Open-Meteo model forecast for the field",
+          "KXNR doesn't report weather; altimeter from Substitute station KNEA, 16 nm NE, and temperature from the Open-Meteo model forecast at field elevation",
       });
     });
 

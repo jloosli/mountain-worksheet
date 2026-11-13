@@ -74,7 +74,6 @@ export function airportIdentityNotification(
   }
 }
 
-/** Advisory for an airport that exists but publishes no METAR or TAF. */
 /**
  * The Non-reporting airport's Advisory. `detail` says what the fetch filled
  * instead (#226); without it, both fields are left for the pilot.

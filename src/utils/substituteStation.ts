@@ -6,11 +6,7 @@
  */
 import { getWeatherInBox, type METARResponse, type TAFResponse } from "./aviationWeatherApi";
 import { nonReportingAdvisory } from "./airportIdentity";
-import {
-  MODEL_SOURCE,
-  selectAirportWeather,
-  type AirportWeatherAtTime,
-} from "./airportTimeWeather";
+import { selectAirportWeather, type AirportWeatherAtTime } from "./airportTimeWeather";
 import { fieldSubject, subjectKey, type Notification } from "./notifications";
 import { compassPoint, greatCircleDistanceNm, initialBearingDeg } from "./positionMath";
 
@@ -104,7 +100,8 @@ export async function findSubstituteStation(field: {
   }
 }
 
-const MODEL_TEMP = "temperature from the Open-Meteo model forecast for the field";
+/** A model forecast at the field's own position and elevation (ADR 0003). */
+const MODEL_TEMP_SOURCE = "using the Open-Meteo model forecast at field elevation";
 
 /**
  * A Non-reporting airport's temperature and altimeter for the requested time
@@ -129,7 +126,8 @@ export function selectNonReportingWeather(
   const notifications: Notification[] = [];
   const tempSubject = fieldSubject("temp", slot);
   const altSubject = fieldSubject("altimeter", slot);
-  const parts: string[] = [];
+  /** What the Non-reporting Advisory says was filled, or why not. */
+  const advisoryParts: string[] = [];
 
   let altimeter: number | null = null;
   if (search.kind === "found") {
@@ -149,17 +147,17 @@ export function selectNonReportingWeather(
           ...timeNotes,
         ].join("; "),
       });
-      parts.push(`altimeter from Substitute station ${station.location}`);
+      advisoryParts.push(`altimeter from Substitute station ${station.location}`);
     } else {
       notifications.push({
         level: "warning",
         subject: altSubject,
         message: `${airportId}: Substitute station ${station.location} has no altimeter for ${requestedTime.toISOString()}; enter the altimeter manually`,
       });
-      parts.push("enter the altimeter manually");
+      advisoryParts.push("enter the altimeter manually");
     }
   } else if (search.kind === "none") {
-    parts.push(
+    advisoryParts.push(
       `no Substitute station within ${SUBSTITUTE_STATION_MAX_NM} nm, so enter the altimeter manually`,
     );
   } else {
@@ -168,7 +166,9 @@ export function selectNonReportingWeather(
       subject: altSubject,
       message: `${airportId}: no METAR or TAF, and the search for a Substitute station failed (${search.reason}); enter the altimeter manually`,
     });
-    parts.push("the search for a Substitute station failed, so enter the altimeter manually");
+    advisoryParts.push(
+      "the search for a Substitute station failed, so enter the altimeter manually",
+    );
   }
 
   const temp = fieldForecastTemp === null ? null : Math.round(fieldForecastTemp);
@@ -176,23 +176,27 @@ export function selectNonReportingWeather(
     notifications.push({
       level: "advisory",
       subject: tempSubject,
-      message: `${airportId}: no METAR or TAF; ${MODEL_SOURCE}`,
+      message: `${airportId}: no METAR or TAF; ${MODEL_TEMP_SOURCE}`,
     });
-    parts.push(MODEL_TEMP);
+    advisoryParts.push("temperature from the Open-Meteo model forecast at field elevation");
   } else {
     notifications.push({
       level: "warning",
       subject: tempSubject,
       message: `${airportId}: no METAR or TAF, and the model forecast for the field is unavailable; enter the temperature manually`,
     });
-    parts.push(
+    advisoryParts.push(
       "the model forecast for the field is unavailable, so enter the temperature manually",
     );
   }
 
   const bothFilled = altimeter !== null && temp !== null;
   notifications.push(
-    nonReportingAdvisory(airportId, slot === 0 ? 0 : 1, parts.join(bothFilled ? ", and " : "; ")),
+    nonReportingAdvisory(
+      airportId,
+      slot === 0 ? 0 : 1,
+      advisoryParts.join(bothFilled ? ", and " : "; "),
+    ),
   );
   return {
     temp,

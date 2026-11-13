@@ -146,7 +146,7 @@ export function mapAirportSpecificWeatherData(
         code,
         requestedTime,
         index,
-        options.substituteStations?.[code] ?? { kind: "failed", reason: "not searched" },
+        options.substituteStations?.[code] ?? { kind: "failed", reason: "no search was made" },
         fieldForecastTemp,
       );
     } else {

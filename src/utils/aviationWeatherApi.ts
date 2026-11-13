@@ -327,14 +327,14 @@ export async function getTAF(airports: string[], retries: number = 3): Promise<T
  */
 export async function getWeatherInBox(
   bbox: [number, number, number, number],
-  hoursBeforeNow: number = 2,
 ): Promise<{ metar: METARResponse[]; taf: TAFResponse[] }> {
   const box = bbox.map((v) => v.toFixed(3)).join(",");
   const [metar, taf] = await Promise.allSettled([
     makeApiRequest<METARResponse[]>("metar", {
       bbox: box,
       format: "json",
-      hours: hoursBeforeNow.toString(),
+      // Two hours, so an hourly station's latest report is never just missed.
+      hours: "2",
     }),
     makeApiRequest<TAFResponse[]>("taf", { bbox: box, format: "json" }),
   ]);
