@@ -787,6 +787,30 @@ describe("fetchWorksheetWeather", () => {
       expect(mockBox).toHaveBeenCalledTimes(1);
     });
 
+    it("searches both sides of ±180° and finds a station across it", async () => {
+      const pxnr = { ...kxnrAirport, icaoId: "PXNR", lat: 52, lon: 179.8 };
+      mockBatch.mockImplementation(async (ids: string[]) => ({
+        metar: ids.includes("KORD") ? [kordMetar] : [],
+        taf: [],
+        airport: [kordAirport, pxnr].filter((a) => ids.includes(a.icaoId)),
+        notifications: [],
+      }));
+      mockBox.mockImplementation(async ([, minLon]: number[]) => ({
+        metar: minLon < 0 ? [{ ...kneaMetar, icaoId: "PEAS", lat: 52, lon: -179.9 }] : [],
+        taf: [],
+      }));
+      const { data, result } = await fetchWorksheetWeather({
+        ...worksheet,
+        airport: ["PXNR", "KORD"],
+      });
+
+      expect(mockBox).toHaveBeenCalledTimes(2);
+      expect(data?.altimeter?.[0]).toBe(30.03);
+      expect(altimeterNotes(result.notifications, 0)[0].message).toMatch(
+        /Substitute station PEAS, 11 nm E/,
+      );
+    });
+
     it("never searches for a station for a reporting airport", async () => {
       await fetchWorksheetWeather({ ...worksheet, airport: ["KORD", "KORD"] });
       expect(mockBox).not.toHaveBeenCalled();

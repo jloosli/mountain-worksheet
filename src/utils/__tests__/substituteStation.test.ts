@@ -1,4 +1,8 @@
-import { pickSubstituteStation, substituteSearchBox } from "@/utils/substituteStation";
+import {
+  pickSubstituteStation,
+  selectNonReportingWeather,
+  substituteSearchBoxes,
+} from "@/utils/substituteStation";
 import type { METARResponse } from "@/utils/aviationWeatherApi";
 import { geodesicDestination } from "@/utils/positionMath";
 
@@ -80,9 +84,11 @@ describe("pickSubstituteStation", () => {
   });
 });
 
-describe("substituteSearchBox", () => {
+describe("substituteSearchBoxes", () => {
   it("covers every point within 100 nm of the field, and not much more", () => {
-    const [minLat, minLon, maxLat, maxLon] = substituteSearchBox(44, -115);
+    const boxes = substituteSearchBoxes(44, -115);
+    expect(boxes).toHaveLength(1);
+    const [minLat, minLon, maxLat, maxLon] = boxes[0];
     for (let bearing = 0; bearing < 360; bearing += 15) {
       const p = geodesicDestination(44, -115, bearing, 100);
       expect(p.lat).toBeGreaterThanOrEqual(minLat);
@@ -93,5 +99,82 @@ describe("substituteSearchBox", () => {
     // 100 nm is about 1.67° of latitude, and 2.3° of longitude at 44° N
     expect(maxLat - minLat).toBeLessThan(2 * 1.75);
     expect(maxLon - minLon).toBeLessThan(2 * 2.45);
+  });
+});
+
+describe("substituteSearchBoxes across the antimeridian", () => {
+  const inSome = (boxes: [number, number, number, number][], lat: number, lon: number) =>
+    boxes.some(([a, b, c, d]) => lat >= a && lat <= c && lon >= b && lon <= d);
+
+  it.each([179.8, -179.8])(
+    "splits a box at ±180° so every box is valid and stations on both sides are covered (%s)",
+    (lon) => {
+      const boxes = substituteSearchBoxes(52, lon);
+      expect(boxes).toHaveLength(2);
+      for (const [, minLon, , maxLon] of boxes) {
+        expect(minLon).toBeGreaterThanOrEqual(-180);
+        expect(maxLon).toBeLessThanOrEqual(180);
+      }
+      expect(inSome(boxes, 52, 179.9)).toBe(true);
+      expect(inSome(boxes, 52, -179.9)).toBe(true);
+    },
+  );
+
+  it("picks a station across the antimeridian by its true distance", () => {
+    const station = pickSubstituteStation({ id: "PXNR", lat: 52, lon: 179.8 }, [
+      metar("PEAS", 52, -179.9), // ~11 nm E across the line
+      metar("PWES", 52, 179.0), // ~30 nm W
+    ]);
+    expect(station?.location).toBe("PEAS, 11 nm E");
+  });
+});
+
+describe("selectNonReportingWeather with range checks", () => {
+  const found = {
+    kind: "found" as const,
+    station: pickSubstituteStation(field, [metar("KNEA", 44.2, -114.75, { altim: 1016.9 })])!,
+  };
+  const at = new Date("2026-05-12T16:00:00Z");
+
+  it("names a rejected model temperature as needing input, not as filled", () => {
+    const sel = selectNonReportingWeather("KXNR", at, 0, found, 51, {
+      temp: (t) => t <= 50,
+      altimeter: () => true,
+    });
+    expect(sel.temp).toBeNull();
+    expect(sel.altimeter).toBe(30.03);
+    const messages = sel.notifications.map((n) => `${n.level} ${n.message}`);
+    expect(messages).toContainEqual(
+      expect.stringMatching(/^warning KXNR: .*51°C.*out of valid range/),
+    );
+    expect(messages.join("\n")).not.toMatch(/temperature from the Open-Meteo/);
+    expect(messages).toContainEqual(
+      expect.stringMatching(
+        /^advisory KXNR doesn't report weather; .*enter the temperature manually/,
+      ),
+    );
+  });
+
+  it("raises no Caution for a station altimeter the range check rejects", () => {
+    const sel = selectNonReportingWeather("KXNR", at, 0, found, 8, {
+      temp: () => true,
+      altimeter: () => false,
+    });
+    expect(sel.altimeter).toBeNull();
+    expect(sel.notifications.filter((n) => n.level === "caution")).toEqual([]);
+    expect(sel.notifications).toContainEqual(
+      expect.objectContaining({
+        level: "warning",
+        message: expect.stringMatching(
+          /30\.03 inHg from Substitute station KNEA.*out of valid range/,
+        ),
+      }),
+    );
+    expect(sel.notifications).toContainEqual(
+      expect.objectContaining({
+        level: "advisory",
+        message: expect.stringMatching(/enter the altimeter manually/),
+      }),
+    );
   });
 });

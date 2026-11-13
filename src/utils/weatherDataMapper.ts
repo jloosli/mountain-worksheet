@@ -148,6 +148,11 @@ export function mapAirportSpecificWeatherData(
         index,
         options.substituteStations?.[code] ?? { kind: "failed", reason: "no search was made" },
         fieldForecastTemp,
+        // Range-checked here, so its notifications never call a rejected
+        // value filled.
+        options.validateData
+          ? { temp: isValidTemperature, altimeter: isValidAltimeter }
+          : undefined,
       );
     } else {
       const metar = safeMetar.find((m) => m.icaoId?.toUpperCase() === code);
