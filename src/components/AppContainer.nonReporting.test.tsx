@@ -98,7 +98,7 @@ describe("AppContainer — Non-reporting airport (#226)", () => {
     expect(onScreen().getAllByLabelText("Temperature")[0]).toHaveValue(8);
     expect(onScreen().getAllByLabelText(/Altimeter/)[0]).toHaveValue(30.03);
     expect(
-      onScreen().getByText(/KXNR doesn't report weather; altimeter from Substitute station/),
+      onScreen().getByText("KXNR doesn't report weather; see its temperature and altimeter"),
     ).toBeInTheDocument();
     expect(
       onScreen().getByText(

@@ -139,20 +139,22 @@ const ACCEPT_ALL: RangeChecks = { temp: () => true, altimeter: () => true };
 
 /**
  * A Non-reporting airport's temperature and altimeter for the requested time
- * (ADR 0003, #226), and its Non-reporting Advisory saying what was filled.
+ * (ADR 0003, #226). Each field's own notification says where its value
+ * came from or why it is blank, so the session retires it when the pilot
+ * enters a value; the Non-reporting Advisory on the airport points to them.
  *
  * - Altimeter: the Substitute station's, through the same time selection a
  *   reporting airport gets. One Caution names the station, its distance and
  *   direction, plus any time substitution. No station within 100 nm leaves it
- *   blank with no Caution; a failed search leaves it blank with a Warning.
+ *   blank with an Advisory, not a Caution, since nothing was substituted; a
+ *   failed search leaves it blank with a Warning.
  * - Temperature: the model forecast at the field's own position and
  *   elevation. That is data for the field, not a Substitution (GLOSSARY.md),
  *   so it is an Advisory, as for a reporting airport (#301). No forecast
  *   leaves it blank with a Warning (Partial fetch).
  *
  * `accept` is the fetch's range check. A value it rejects is left blank with
- * a Warning, and the notifications describe it as needing input, never as
- * filled.
+ * a Warning saying to enter it, never a notification calling it filled.
  */
 export function selectNonReportingWeather(
   airportId: string,
@@ -165,8 +167,6 @@ export function selectNonReportingWeather(
   const notifications: Notification[] = [];
   const tempSubject = fieldSubject("temp", slot);
   const altSubject = fieldSubject("altimeter", slot);
-  /** What the Non-reporting Advisory says was filled, or why not. */
-  const advisoryParts: string[] = [];
   const needsInput = (field: "altimeter" | "temperature", why: string) => {
     notifications.push({
       level: "warning",
@@ -185,13 +185,11 @@ export function selectNonReportingWeather(
         "altimeter",
         `Substitute station ${station.location} has no altimeter for ${requestedTime.toISOString()}`,
       );
-      advisoryParts.push("enter the altimeter manually");
     } else if (!accept.altimeter(sel.altimeter)) {
       needsInput(
         "altimeter",
         `altimeter ${sel.altimeter} inHg from Substitute station ${station.location} is out of valid range`,
       );
-      advisoryParts.push("enter the altimeter manually");
     } else {
       altimeter = sel.altimeter;
       const timeNotes = sel.notifications
@@ -205,19 +203,17 @@ export function selectNonReportingWeather(
           ...timeNotes,
         ].join("; "),
       });
-      advisoryParts.push(`altimeter from Substitute station ${station.location}`);
     }
   } else if (search.kind === "none") {
-    advisoryParts.push(
-      `no Substitute station within ${SUBSTITUTE_STATION_MAX_NM} nm, so enter the altimeter manually`,
-    );
+    notifications.push({
+      level: "advisory",
+      subject: altSubject,
+      message: `${airportId}: no METAR or TAF, and no Substitute station within ${SUBSTITUTE_STATION_MAX_NM} nm; enter the altimeter manually`,
+    });
   } else {
     needsInput(
       "altimeter",
       `no METAR or TAF, and the search for a Substitute station failed (${search.reason})`,
-    );
-    advisoryParts.push(
-      "the search for a Substitute station failed, so enter the altimeter manually",
     );
   }
 
@@ -228,15 +224,11 @@ export function selectNonReportingWeather(
       "temperature",
       "no METAR or TAF, and the model forecast for the field is unavailable",
     );
-    advisoryParts.push(
-      "the model forecast for the field is unavailable, so enter the temperature manually",
-    );
   } else if (!accept.temp(forecastTemp)) {
     needsInput(
       "temperature",
       `model forecast temperature ${forecastTemp}°C for the field is out of valid range`,
     );
-    advisoryParts.push("enter the temperature manually");
   } else {
     temp = forecastTemp;
     notifications.push({
@@ -244,16 +236,13 @@ export function selectNonReportingWeather(
       subject: tempSubject,
       message: `${airportId}: no METAR or TAF; ${MODEL_TEMP_SOURCE}`,
     });
-    advisoryParts.push("temperature from the Open-Meteo model forecast at field elevation");
   }
 
-  const bothFilled = altimeter !== null && temp !== null;
+  // Each outcome is on its own weather field, where the session retires it
+  // once the pilot enters a value; the airport's Advisory states only the
+  // lasting fact, so it never goes stale.
   notifications.push(
-    nonReportingAdvisory(
-      airportId,
-      slot === 0 ? 0 : 1,
-      advisoryParts.join(bothFilled ? ", and " : "; "),
-    ),
+    nonReportingAdvisory(airportId, slot === 0 ? 0 : 1, "see its temperature and altimeter"),
   );
   return {
     temp,

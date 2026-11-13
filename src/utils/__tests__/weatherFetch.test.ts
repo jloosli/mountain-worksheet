@@ -673,17 +673,46 @@ describe("fetchWorksheetWeather", () => {
       expect(subjectsAt(result.notifications, "warning")).toEqual([]);
     });
 
-    it("says in the Non-reporting Advisory what was filled", async () => {
+    it("keeps the Non-reporting Advisory on the airport, pointing to each field's own notification", async () => {
       const { result } = await fetchWorksheetWeather(atKxnr(0));
       expect(result.notifications).toContainEqual({
         level: "advisory",
         subject: fieldSubject("airport", 0),
-        message:
-          "KXNR doesn't report weather; altimeter from Substitute station KNEA, 16 nm NE, and temperature from the Open-Meteo model forecast at field elevation",
+        message: "KXNR doesn't report weather; see its temperature and altimeter",
       });
     });
 
-    it("leaves the altimeter blank without a Caution when no station is within 100 nm", async () => {
+    it("retires each field's outcome once the pilot enters their own value, keeping the airport Advisory (regression)", async () => {
+      mockField.mockRejectedValue(new Error("network down"));
+      mockBox.mockResolvedValue({ metar: [], taf: [] }); // no station within 100 nm
+      const ws = atKxnr(0);
+      const { data, result } = await fetchWorksheetWeather(ws);
+      const fetched = { ...ws, ...data } as WorksheetData;
+      const blank = fetchNotifications(fetched, result);
+      expect(subjectsAt(blank, "warning")).toEqual([subjectKey(fieldSubject("temp", 0))]);
+      expect(subjectsAt(blank, "advisory")).toEqual(
+        expect.arrayContaining([
+          subjectKey(fieldSubject("altimeter", 0)),
+          subjectKey(fieldSubject("airport", 0)),
+        ]),
+      );
+
+      const entered: WorksheetData = {
+        ...fetched,
+        temp: [14, fetched.temp[1], fetched.temp[2]],
+        altimeter: [30.1, fetched.altimeter[1], fetched.altimeter[2]],
+      };
+      const kept = fetchNotifications(entered, result).filter((n) => /KXNR/.test(n.message));
+      expect(kept).toEqual([
+        {
+          level: "advisory",
+          subject: fieldSubject("airport", 0),
+          message: "KXNR doesn't report weather; see its temperature and altimeter",
+        },
+      ]);
+    });
+
+    it("leaves the altimeter blank with an Advisory, not a Caution, when no station is within 100 nm", async () => {
       mockBox.mockResolvedValue({
         metar: [{ ...kneaMetar, lat: 45.75, lon: -115 }], // 105 nm N
         taf: [],
@@ -691,17 +720,16 @@ describe("fetchWorksheetWeather", () => {
       const { data, result } = await fetchWorksheetWeather(atKxnr(0));
 
       expect(data?.altimeter?.[0]).toBeNull();
-      expect(altimeterNotes(result.notifications, 0)).toEqual([]);
-      expect(data?.temp?.[0]).toBe(8);
-      expect(result.notifications).toContainEqual(
-        expect.objectContaining({
+      expect(altimeterNotes(result.notifications, 0)).toEqual([
+        {
           level: "advisory",
-          subject: fieldSubject("airport", 0),
-          message: expect.stringMatching(
-            /KXNR doesn't report weather; no Substitute station within 100 nm, so enter the altimeter manually/,
-          ),
-        }),
-      );
+          subject: fieldSubject("altimeter", 0),
+          message:
+            "KXNR: no METAR or TAF, and no Substitute station within 100 nm; enter the altimeter manually",
+        },
+      ]);
+      expect(data?.temp?.[0]).toBe(8);
+      expect(subjectsAt(result.notifications, "warning")).toEqual([]);
     });
 
     it("carries the station's own time substitution into the same Caution", async () => {
@@ -742,9 +770,11 @@ describe("fetchWorksheetWeather", () => {
       ]);
       expect(result.notifications).toContainEqual(
         expect.objectContaining({
-          level: "advisory",
-          subject: fieldSubject("airport", 0),
-          message: expect.stringMatching(/so enter the temperature manually/),
+          level: "warning",
+          subject: fieldSubject("temp", 0),
+          message: expect.stringMatching(
+            /model forecast .* unavailable; enter the temperature manually/,
+          ),
         }),
       );
     });

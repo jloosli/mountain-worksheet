@@ -147,12 +147,7 @@ describe("selectNonReportingWeather with range checks", () => {
     expect(messages).toContainEqual(
       expect.stringMatching(/^warning KXNR: .*51°C.*out of valid range/),
     );
-    expect(messages.join("\n")).not.toMatch(/temperature from the Open-Meteo/);
-    expect(messages).toContainEqual(
-      expect.stringMatching(
-        /^advisory KXNR doesn't report weather; .*enter the temperature manually/,
-      ),
-    );
+    expect(messages.join("\n")).not.toMatch(/using the Open-Meteo/);
   });
 
   it("raises no Caution for a station altimeter the range check rejects", () => {
@@ -170,11 +165,8 @@ describe("selectNonReportingWeather with range checks", () => {
         ),
       }),
     );
-    expect(sel.notifications).toContainEqual(
-      expect.objectContaining({
-        level: "advisory",
-        message: expect.stringMatching(/enter the altimeter manually/),
-      }),
+    expect(sel.notifications.map((n) => n.message).join("\n")).not.toMatch(
+      /altimeter from Substitute station/,
     );
   });
 });
