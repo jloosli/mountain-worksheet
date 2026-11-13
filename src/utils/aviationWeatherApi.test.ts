@@ -8,6 +8,7 @@ import {
   getAirportInfo,
   getNavaidInfo,
   getWeatherDataBatch,
+  getWeatherInBox,
   debouncedRequest,
   APIError,
   type METARResponse,
@@ -97,6 +98,52 @@ describe("Aviation Weather API", () => {
       await expect(getMETAR(["INVALID"], 1, 0)).rejects.toThrow(
         "Not Found - Resource or data not available",
       );
+    });
+  });
+
+  describe("getWeatherInBox (#226)", () => {
+    const urlFor = (endpoint: string) =>
+      (fetch as jest.Mock).mock.calls
+        .map(([url]) => new URL(url))
+        .find((u) => u.searchParams.get("endpoint") === endpoint)!;
+
+    it("asks for METARs and TAFs in the box", async () => {
+      (fetch as jest.Mock).mockImplementation(async (url: string) => ({
+        ok: true,
+        status: 200,
+        json: async () =>
+          new URL(url).searchParams.get("endpoint") === "metar"
+            ? [{ icaoId: "KNEA" }]
+            : [{ icaoId: "KNEA", fcsts: [] }],
+      }));
+      const result = await getWeatherInBox([42.3, -117.4, 45.7, -112.6]);
+
+      expect(result.metar).toEqual([{ icaoId: "KNEA" }]);
+      expect(result.taf).toEqual([{ icaoId: "KNEA", fcsts: [] }]);
+      expect(urlFor("metar").searchParams.get("bbox")).toBe("42.300,-117.400,45.700,-112.600");
+      expect(urlFor("taf").searchParams.get("bbox")).toBe("42.300,-117.400,45.700,-112.600");
+      expect(urlFor("taf").searchParams.has("hours")).toBe(false);
+    });
+
+    it("returns the METARs without TAFs when only the TAF request fails", async () => {
+      (fetch as jest.Mock).mockImplementation(async (url: string) =>
+        new URL(url).searchParams.get("endpoint") === "metar"
+          ? { ok: true, status: 200, json: async () => [{ icaoId: "KNEA" }] }
+          : { ok: false, status: 400, text: async () => "bad" },
+      );
+      await expect(getWeatherInBox([42, -117, 46, -112])).resolves.toEqual({
+        metar: [{ icaoId: "KNEA" }],
+        taf: [],
+      });
+    });
+
+    it("fails when the METAR request fails", async () => {
+      (fetch as jest.Mock).mockImplementation(async () => ({
+        ok: false,
+        status: 404,
+        text: async () => "nope",
+      }));
+      await expect(getWeatherInBox([42, -117, 46, -112])).rejects.toThrow(/Not Found/);
     });
   });
 

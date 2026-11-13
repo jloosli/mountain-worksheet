@@ -16,7 +16,6 @@ import {
   classifyAirport,
   correctionCandidate,
   matchCount,
-  nonReportingAdvisory,
   type AirportIdentity,
 } from "./airportIdentity";
 import {
@@ -42,6 +41,7 @@ import {
   fetchPointForecast,
   type OpenMeteoPointForecast,
 } from "./openMeteoApi";
+import { findSubstituteStation, type SubstituteSearch } from "./substituteStation";
 import type { WorksheetData } from "./types";
 import {
   mapWeatherDataToWorksheet,
@@ -172,10 +172,11 @@ function classifyGAirmetResult(
 }
 
 /**
- * The model point forecast at each reporting airport's own position and
- * elevation, keyed by airport ID (#301). An airport whose request fails is
- * left out: its temperature falls back to the observation, whose Caution
- * already tells the pilot.
+ * The model point forecast at each airport's own position and elevation,
+ * keyed by airport ID (#301, #226). An airport whose request fails is left
+ * out: a reporting airport's temperature falls back to the observation,
+ * whose Caution already tells the pilot; a Non-reporting airport's is left
+ * blank with a Warning.
  */
 async function fetchFieldForecasts(
   airports: Array<[code: string, airport: AirportResponse | undefined]>,
@@ -201,6 +202,28 @@ async function fetchFieldForecasts(
     }),
   );
   return Object.fromEntries(entries.filter((e) => e !== null));
+}
+
+/**
+ * The Substitute station search around each Non-reporting airport, keyed by
+ * airport ID (#226). One search per airport, even when it fills both slots.
+ */
+async function findSubstituteStations(
+  airports: ReadonlyArray<readonly [code: string, latLon: [number, number] | null]>,
+): Promise<Record<string, SubstituteSearch>> {
+  const unique = new Map(airports);
+  const entries = await Promise.all(
+    [...unique].map(
+      async ([code, latLon]) =>
+        [
+          code,
+          latLon
+            ? await findSubstituteStation({ id: code, lat: latLon[0], lon: latLon[1] })
+            : ({ kind: "failed", reason: "the airport has no position on record" } as const),
+        ] as const,
+    ),
+  );
+  return Object.fromEntries(entries);
 }
 
 export async function fetchWorksheetWeather(
@@ -236,11 +259,9 @@ export async function fetchWorksheetWeather(
       const identity = identities[slot];
       const note = airportIdentityNotification(identity, slot);
       if (note) identityNotifications.push(note);
-      const condition = airportCondition(identity, apiData);
-      if (condition === "non-reporting") {
-        identityNotifications.push(nonReportingAdvisory(identity.id, slot));
-      }
-      return condition;
+      // A Non-reporting airport's Advisory comes from the mapper, which
+      // knows what its weather was filled from (#226).
+      return airportCondition(identity, apiData);
     });
 
     const depTime = new Date(`${worksheet.date}T${worksheet.time}:00Z`);
@@ -261,7 +282,7 @@ export async function fetchWorksheetWeather(
     const fieldForecastsPromise = fetchFieldForecasts(
       ([0, 1] as const).flatMap((slot) => {
         const code = fetchedFor.airport[slot];
-        return code && !conditions[slot]
+        return code && conditions[slot] !== "unknown"
           ? [[code, airportOf(code)] as [string, AirportResponse | undefined]]
           : [];
       }),
@@ -273,6 +294,14 @@ export async function fetchWorksheetWeather(
           depTime.getTime() + durationHours * 3600 * 1000 + FIELD_FORECAST_MAX_OFFSET_MS,
         ),
       },
+    );
+    const substituteStationsPromise = findSubstituteStations(
+      ([0, 1] as const).flatMap((slot) => {
+        const code = fetchedFor.airport[slot];
+        return code && conditions[slot] === "non-reporting"
+          ? [[code, latLonOf(code)] as const]
+          : [];
+      }),
     );
     const depLatLon = latLonOf(departure);
     const arrLatLon = latLonOf(arrival);
@@ -313,8 +342,10 @@ export async function fetchWorksheetWeather(
     }
 
     const fieldForecasts = await fieldForecastsPromise;
+    const substituteStations = await substituteStationsPromise;
     const mapping = mapWeatherDataToWorksheet(apiData, areaOfOps, airmets, {
       fieldForecasts,
+      substituteStations,
       flightDate: worksheet.date,
       flightTime: worksheet.time,
       durationHours: worksheet.duration,

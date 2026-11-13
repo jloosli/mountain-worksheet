@@ -10,7 +10,14 @@ const METAR_FRESHNESS_MS = 90 * 60 * 1000;
  */
 export const ALTIMETER_PERSISTENCE_ADVISORY_MS = 12 * 60 * 60 * 1000;
 
-export type AirportWeatherSource = "metar" | "taf-fcst" | "taf-nearest" | "metar-stale" | "none";
+export type AirportWeatherSource =
+  | "metar"
+  | "taf-fcst"
+  | "taf-nearest"
+  | "metar-stale"
+  /** A Non-reporting airport's altimeter from its Substitute station (#226). */
+  | "substitute-station"
+  | "none";
 
 /** Where an airport temperature came from; null when it was left blank. */
 export type AirportTempSource = "observation" | "taf" | "model" | null;

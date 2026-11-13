@@ -13,6 +13,8 @@ import { TARGET_ALTITUDES_FT } from "./areaOfOpsWeather";
 import type { AirmetClassification } from "./gairmetApi";
 import { fieldTemperatureAt, type OpenMeteoPointForecast } from "./openMeteoApi";
 import { fieldSubject, subjectKey, type Notification, type Subject } from "./notifications";
+import { nonReportingAdvisory } from "./airportIdentity";
+import { selectNonReportingWeather, type SubstituteSearch } from "./substituteStation";
 
 // Validation ranges
 export const VALIDATION_RANGES = {
@@ -44,9 +46,11 @@ export interface WeatherMappingResult {
 /**
  * What an airport's identity means for the fields it fills (#216):
  * - `unknown`: matches nothing; elevation, runway and weather need input.
- * - `non-reporting`: exists but publishes no METAR/TAF; weather needs input.
- * Either way those fields are left blank without a Warning, since the
- * airport's own notification already says why.
+ *   Those fields are left blank without a Warning, since the airport's own
+ *   notification already says why.
+ * - `non-reporting`: exists but publishes no METAR/TAF; its weather comes
+ *   from a Substitute station and a model forecast (#226), and its
+ *   Non-reporting Advisory says what was filled.
  */
 export type AirportCondition = "unknown" | "non-reporting";
 
@@ -63,6 +67,8 @@ export interface WeatherMappingOptions {
   position?: [number | null, number | null];
   /** Model point forecasts at each airport, keyed by upper-case airport ID (#301). */
   fieldForecasts?: Record<string, OpenMeteoPointForecast>;
+  /** Each Non-reporting airport's Substitute station search, keyed by upper-case ID (#226). */
+  substituteStations?: Record<string, SubstituteSearch>;
   opAltitudeFt?: number | null;
   validateData?: boolean;
 }
@@ -87,14 +93,21 @@ export function mapAirportSpecificWeatherData(
   const safeMetar = Array.isArray(metarData) ? metarData : [];
   const safeTaf = Array.isArray(tafData) ? tafData : [];
 
-  if (!options.flightDate || !options.flightTime) {
+  // With no time to fetch for, a Non-reporting airport's weather is left
+  // to the pilot, and its Advisory says so.
+  const unfilled = () => {
+    ([0, 2] as const).forEach((index) => {
+      const code = index === 0 ? options.departureAirport : options.arrivalAirport;
+      if (code && conditionOf(options, index) === "non-reporting") {
+        notifications.push(nonReportingAdvisory(code.toUpperCase(), index === 0 ? 0 : 1));
+      }
+    });
     return { data: result, notifications };
-  }
+  };
+  if (!options.flightDate || !options.flightTime) return unfilled();
 
   const depTime = new Date(`${options.flightDate}T${options.flightTime}:00Z`);
-  if (Number.isNaN(depTime.getTime())) {
-    return { data: result, notifications };
-  }
+  if (Number.isNaN(depTime.getTime())) return unfilled();
   const durationHours =
     typeof options.durationHours === "number" &&
     Number.isFinite(options.durationHours) &&
@@ -119,17 +132,33 @@ export function mapAirportSpecificWeatherData(
     index: 0 | 2,
   ): void => {
     if (!airportCode) return;
-    if (conditionOf(options, index)) {
+    const condition = conditionOf(options, index);
+    if (condition === "unknown") {
       setSlot("temp", index, null);
       setSlot("altimeter", index, null);
       return;
     }
     const code = airportCode.toUpperCase();
-    const metar = safeMetar.find((m) => m.icaoId?.toUpperCase() === code);
-    const taf = safeTaf.find((t) => t.icaoId?.toUpperCase() === code);
-    const sel = selectAirportWeather(metar, taf, requestedTime, code, index, {
-      fieldForecastTemp: fieldTemperatureAt(options.fieldForecasts?.[code], requestedTime),
-    });
+    const fieldForecastTemp = fieldTemperatureAt(options.fieldForecasts?.[code], requestedTime);
+    let sel;
+    if (condition === "non-reporting") {
+      sel = selectNonReportingWeather(
+        code,
+        requestedTime,
+        index,
+        options.substituteStations?.[code] ?? { kind: "failed", reason: "no search was made" },
+        fieldForecastTemp,
+        // Range-checked here, so its notifications never call a rejected
+        // value filled.
+        options.validateData
+          ? { temp: isValidTemperature, altimeter: isValidAltimeter }
+          : undefined,
+      );
+    } else {
+      const metar = safeMetar.find((m) => m.icaoId?.toUpperCase() === code);
+      const taf = safeTaf.find((t) => t.icaoId?.toUpperCase() === code);
+      sel = selectAirportWeather(metar, taf, requestedTime, code, index, { fieldForecastTemp });
+    }
     notifications.push(...sel.notifications);
     const label = index === 0 ? "Departure" : "Arrival";
 
@@ -412,8 +441,8 @@ function blankFieldWarnings(
     const where = ["Departure", "Operating", "Arrival"][i];
     const code = i === 0 ? dep : i === 2 ? arr : undefined;
     if (i !== 1 && !code) return;
-    // An Unknown or Non-reporting airport's fields need input; its own
-    // notification explains why, so no generic Warning.
+    // An Unknown airport's fields need input, and a Non-reporting airport's
+    // weather raised its own notifications; either way, no generic Warning.
     const condition = i === 1 ? undefined : conditionOf(options, i);
     if (condition === "unknown") return;
     if (condition !== "non-reporting") {

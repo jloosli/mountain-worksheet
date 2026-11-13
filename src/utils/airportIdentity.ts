@@ -74,11 +74,18 @@ export function airportIdentityNotification(
   }
 }
 
-/** Advisory for an airport that exists but publishes no METAR or TAF. */
-export function nonReportingAdvisory(id: string, slot: 0 | 1): Notification {
+/**
+ * The Non-reporting airport's Advisory. `detail` says what the fetch filled
+ * instead (#226); without it, both fields are left for the pilot.
+ */
+export function nonReportingAdvisory(
+  id: string,
+  slot: 0 | 1,
+  detail = "enter temperature and altimeter manually",
+): Notification {
   return {
     level: "advisory",
     subject: fieldSubject("airport", slot),
-    message: `${id} doesn't report weather; enter temperature and altimeter manually`,
+    message: `${id} doesn't report weather; ${detail}`,
   };
 }

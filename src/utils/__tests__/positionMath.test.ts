@@ -1,4 +1,9 @@
-import { geodesicDestination } from "../positionMath";
+import {
+  compassPoint,
+  geodesicDestination,
+  greatCircleDistanceNm,
+  initialBearingDeg,
+} from "../positionMath";
 
 describe("geodesicDestination", () => {
   it("travels east 60nm from (0, 0) ≈ (0, 1°)", () => {
@@ -43,5 +48,40 @@ describe("geodesicDestination", () => {
     expect(Number.isFinite(lon)).toBe(true);
     expect(lat).toBeLessThanOrEqual(90);
     expect(lat).toBeGreaterThanOrEqual(-90);
+  });
+});
+
+describe("greatCircleDistanceNm / initialBearingDeg / compassPoint", () => {
+  it("measures one degree of latitude as about 60 nm, due north", () => {
+    expect(greatCircleDistanceNm([44, -115], [45, -115])).toBeCloseTo(60.04, 1);
+    expect(initialBearingDeg([44, -115], [45, -115])).toBeCloseTo(0, 6);
+  });
+
+  it("gives KSLC to KOGD as about 24.5 nm, a little west of north", () => {
+    // KSLC 40.7884, -111.9778; KOGD 41.1961, -112.0122
+    const from: [number, number] = [40.7884, -111.9778];
+    const to: [number, number] = [41.1961, -112.0122];
+    expect(greatCircleDistanceNm(from, to)).toBeCloseTo(24.5, 0);
+    expect(initialBearingDeg(from, to)).toBeCloseTo(356, 0);
+    expect(compassPoint(initialBearingDeg(from, to))).toBe("N");
+  });
+
+  it("measures zero between the same point", () => {
+    expect(greatCircleDistanceNm([44, -115], [44, -115])).toBe(0);
+  });
+
+  it("rounds bearings to the nearest of eight compass points", () => {
+    expect([0, 22, 23, 90, 157, 203, 270, 337, 338, 359].map(compassPoint)).toEqual([
+      "N",
+      "N",
+      "NE",
+      "E",
+      "SE",
+      "SW",
+      "W",
+      "NW",
+      "N",
+      "N",
+    ]);
   });
 });
