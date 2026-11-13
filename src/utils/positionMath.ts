@@ -35,3 +35,30 @@ export function geodesicDestination(
 
   return { lat: toDeg(lat2), lon: lon2Norm };
 }
+
+/** Great-circle distance in nautical miles between two lat/lon points. */
+export function greatCircleDistanceNm(from: [number, number], to: [number, number]): number {
+  const [lat1, lon1] = from.map(toRad);
+  const [lat2, lon2] = to.map(toRad);
+  const h =
+    Math.sin((lat2 - lat1) / 2) ** 2 +
+    Math.cos(lat1) * Math.cos(lat2) * Math.sin((lon2 - lon1) / 2) ** 2;
+  return 2 * EARTH_RADIUS_NM * Math.asin(Math.min(1, Math.sqrt(h)));
+}
+
+/** Initial TRUE bearing (degrees, 0–360) from one lat/lon point to another. */
+export function initialBearingDeg(from: [number, number], to: [number, number]): number {
+  const [lat1, lon1] = from.map(toRad);
+  const [lat2, lon2] = to.map(toRad);
+  const y = Math.sin(lon2 - lon1) * Math.cos(lat2);
+  const x =
+    Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(lon2 - lon1);
+  return (toDeg(Math.atan2(y, x)) + 360) % 360;
+}
+
+const COMPASS_POINTS = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"] as const;
+
+/** The nearest of the eight compass points to a TRUE bearing. */
+export function compassPoint(bearingDeg: number): (typeof COMPASS_POINTS)[number] {
+  return COMPASS_POINTS[Math.round((((bearingDeg % 360) + 360) % 360) / 45) % 8];
+}

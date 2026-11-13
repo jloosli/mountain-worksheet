@@ -1,5 +1,5 @@
 import { fetchWorksheetWeather } from "@/utils/weatherFetch";
-import { getWeatherDataBatch } from "@/utils/aviationWeatherApi";
+import { getWeatherDataBatch, getWeatherInBox } from "@/utils/aviationWeatherApi";
 import { fetchFieldForecast, fetchPointForecast } from "@/utils/openMeteoApi";
 import { fetchGAirmets } from "@/utils/gairmetApi";
 import { fieldSubject, subjectKey, type Notification } from "@/utils/notifications";
@@ -9,6 +9,7 @@ import type { WorksheetData } from "@/utils/types";
 jest.mock("@/utils/aviationWeatherApi", () => ({
   ...jest.requireActual("@/utils/aviationWeatherApi"),
   getWeatherDataBatch: jest.fn(),
+  getWeatherInBox: jest.fn(),
 }));
 jest.mock("@/utils/openMeteoApi", () => ({
   ...jest.requireActual("@/utils/openMeteoApi"),
@@ -21,6 +22,7 @@ jest.mock("@/utils/gairmetApi", () => ({
 }));
 
 const mockBatch = getWeatherDataBatch as jest.Mock;
+const mockBox = getWeatherInBox as jest.Mock;
 const mockPoint = fetchPointForecast as jest.Mock;
 const mockField = fetchFieldForecast as jest.Mock;
 const mockGairmets = fetchGAirmets as jest.Mock;
@@ -123,6 +125,7 @@ beforeEach(() => {
   mockPoint.mockResolvedValue(pointForecast);
   mockField.mockRejectedValue(new Error("not stubbed"));
   mockGairmets.mockResolvedValue([]);
+  mockBox.mockRejectedValue(new Error("not stubbed"));
 });
 
 describe("fetchWorksheetWeather", () => {
@@ -390,35 +393,6 @@ describe("fetchWorksheetWeather", () => {
       );
     });
 
-    it("treats an airport with no METAR or TAF as Non-reporting: Advisory, weather needs input, elevation and runway filled", async () => {
-      directory.KXNR = {
-        airport: {
-          icaoId: "KXNR",
-          lat: 44,
-          lon: -115,
-          elev: 1500,
-          runway: [{ id: "16/34", length: 4200, alignment: 160 }],
-        },
-      };
-      const { data, result } = await fetchWorksheetWeather({
-        ...worksheet,
-        airport: ["KORD", "KXNR"],
-      });
-      delete directory.KXNR;
-
-      expect(result.notifications).toContainEqual({
-        level: "advisory",
-        subject: fieldSubject("airport", 1),
-        message: "KXNR doesn't report weather; enter temperature and altimeter manually",
-      });
-      expect(data?.temp?.[2]).toBeNull();
-      expect(data?.altimeter?.[2]).toBeNull();
-      expect(data?.altitude?.[2]).toBe(Math.round(1500 * 3.28084));
-      expect(data?.rwy?.[1]).toBe(4200);
-      expect(subjectsAt(result.notifications, "warning")).toEqual([]);
-      expect(subjectsAt(result.notifications, "caution")).toEqual([]);
-    });
-
     it.each(["KORD", "PAJN", "PHNL"])(
       "never modifies %s, an ID that already resolves",
       async (id) => {
@@ -620,6 +594,202 @@ describe("fetchWorksheetWeather", () => {
       );
       // The operating-area forecast is unaffected.
       expect(data?.wind?.[0][0]).not.toBeNull();
+    });
+  });
+
+  describe("Non-reporting airports (#226)", () => {
+    // KXNR is in the airport database but publishes no METAR or TAF.
+    const kxnrAirport = {
+      icaoId: "KXNR",
+      lat: 44,
+      lon: -115,
+      elev: 1500,
+      runway: [{ id: "16/34", length: 4200, alignment: 160 }],
+    };
+    // ~16 nm NE of KXNR; 1016.9 hPa is 30.03 inHg.
+    const kneaMetar = {
+      icaoId: "KNEA",
+      lat: 44.2,
+      lon: -114.75,
+      obsTime: "2026-05-12T16:00:00Z",
+      temp: 12,
+      altim: 1016.9,
+    };
+    // 6 nm N, but its METAR has no altimeter.
+    const knoaMetar = { ...kneaMetar, icaoId: "KNOA", lat: 44.1, lon: -115, altim: null };
+    const fieldForecast = {
+      hourly: {
+        time: ["2026-05-12T16:00", "2026-05-12T17:00", "2026-05-12T18:00", "2026-05-13T01:00"],
+        temperature_2m: [8.4, 9.6, 11.2, 3.1],
+      },
+    };
+    const atKxnr = (slot: 0 | 1): WorksheetData => ({
+      ...worksheet,
+      airport: slot === 0 ? ["KXNR", "KORD"] : ["KORD", "KXNR"],
+      duration: 2,
+    });
+    const altimeterNotes = (list: Notification[], index: number) =>
+      list.filter((n) => subjectKey(n.subject) === subjectKey(fieldSubject("altimeter", index)));
+
+    beforeEach(() => {
+      mockBatch.mockImplementation(async (ids: string[]) => ({
+        metar: ids.includes("KORD") ? [kordMetar] : [],
+        taf: [],
+        airport: [kordAirport, kxnrAirport].filter((a) => ids.includes(a.icaoId)),
+        notifications: [],
+      }));
+      mockBox.mockResolvedValue({ metar: [knoaMetar, kneaMetar], taf: [] });
+      mockField.mockImplementation(async (lat: number) => {
+        if (lat === 44) return fieldForecast;
+        throw new Error("not this field");
+      });
+    });
+
+    it("fills the departure altimeter from the nearest station that reports one, with one Caution naming it", async () => {
+      const { data, result } = await fetchWorksheetWeather(atKxnr(0));
+
+      // Searched around KXNR, then skipped KNOA (no altimeter) for KNEA.
+      const [box] = mockBox.mock.calls[0];
+      expect(box[0]).toBeLessThan(44);
+      expect(box[2]).toBeGreaterThan(44);
+      expect(data?.altimeter?.[0]).toBe(30.03);
+      const notes = altimeterNotes(result.notifications, 0);
+      expect(notes).toHaveLength(1);
+      expect(notes[0].level).toBe("caution");
+      expect(notes[0].message).toMatch(/KXNR/);
+      expect(notes[0].message).toMatch(/Substitute station KNEA, 16 nm NE/);
+    });
+
+    it("fills the temperature from the model forecast at the field's position and elevation, as an Advisory", async () => {
+      const { data, result } = await fetchWorksheetWeather(atKxnr(0));
+
+      expect(mockField).toHaveBeenCalledWith(44, -115, 1500, expect.anything());
+      expect(data?.temp?.[0]).toBe(8); // the 16:00Z hour, not the station's 12
+      expect(result.notifications).toContainEqual({
+        level: "advisory",
+        subject: fieldSubject("temp", 0),
+        message: "KXNR: no METAR or TAF; using the Open-Meteo model forecast for the field",
+      });
+      expect(subjectsAt(result.notifications, "warning")).toEqual([]);
+    });
+
+    it("says in the Non-reporting Advisory what was filled", async () => {
+      const { result } = await fetchWorksheetWeather(atKxnr(0));
+      expect(result.notifications).toContainEqual({
+        level: "advisory",
+        subject: fieldSubject("airport", 0),
+        message:
+          "KXNR doesn't report weather; altimeter from Substitute station KNEA, 16 nm NE, and temperature from the Open-Meteo model forecast for the field",
+      });
+    });
+
+    it("leaves the altimeter blank without a Caution when no station is within 100 nm", async () => {
+      mockBox.mockResolvedValue({
+        metar: [{ ...kneaMetar, lat: 45.75, lon: -115 }], // 105 nm N
+        taf: [],
+      });
+      const { data, result } = await fetchWorksheetWeather(atKxnr(0));
+
+      expect(data?.altimeter?.[0]).toBeNull();
+      expect(altimeterNotes(result.notifications, 0)).toEqual([]);
+      expect(data?.temp?.[0]).toBe(8);
+      expect(result.notifications).toContainEqual(
+        expect.objectContaining({
+          level: "advisory",
+          subject: fieldSubject("airport", 0),
+          message: expect.stringMatching(
+            /KXNR doesn't report weather; no Substitute station within 100 nm, so enter the altimeter manually/,
+          ),
+        }),
+      );
+    });
+
+    it("carries the station's own time substitution into the same Caution", async () => {
+      const kneaTaf = {
+        icaoId: "KNEA",
+        fcsts: [
+          {
+            timeFrom: Math.floor(Date.parse("2026-05-12T18:00:00Z") / 1000),
+            timeTo: Math.floor(Date.parse("2026-05-13T18:00:00Z") / 1000),
+            altim: null,
+          },
+        ],
+      };
+      mockBox.mockResolvedValue({ metar: [kneaMetar], taf: [kneaTaf] });
+      const { data, result } = await fetchWorksheetWeather({
+        ...atKxnr(0),
+        date: "2026-05-13",
+        time: "01:00",
+      });
+
+      expect(data?.altimeter?.[0]).toBe(30.03);
+      expect(data?.temp?.[0]).toBe(3);
+      const notes = altimeterNotes(result.notifications, 0);
+      expect(notes).toHaveLength(1);
+      expect(notes[0].level).toBe("caution");
+      expect(notes[0].message).toMatch(/Substitute station KNEA, 16 nm NE/);
+      expect(notes[0].message).toMatch(/current observation \(Δt = 9\.0 hr\)/);
+    });
+
+    it("leaves the temperature blank with a Warning when the forecast fails, and still fills the altimeter", async () => {
+      mockField.mockRejectedValue(new Error("network down"));
+      const { data, result } = await fetchWorksheetWeather(atKxnr(0));
+
+      expect(data?.temp?.[0]).toBeNull();
+      expect(data?.altimeter?.[0]).toBe(30.03);
+      expect(subjectsAt(result.notifications, "warning")).toEqual([
+        subjectKey(fieldSubject("temp", 0)),
+      ]);
+      expect(result.notifications).toContainEqual(
+        expect.objectContaining({
+          level: "advisory",
+          subject: fieldSubject("airport", 0),
+          message: expect.stringMatching(/so enter the temperature manually/),
+        }),
+      );
+    });
+
+    it("leaves the altimeter blank with a Warning when the station search fails", async () => {
+      mockBox.mockRejectedValue(new Error("503"));
+      const { data, result } = await fetchWorksheetWeather(atKxnr(0));
+
+      expect(data?.altimeter?.[0]).toBeNull();
+      expect(data?.temp?.[0]).toBe(8);
+      expect(subjectsAt(result.notifications, "warning")).toEqual([
+        subjectKey(fieldSubject("altimeter", 0)),
+      ]);
+    });
+
+    it("does the same for the arrival slot at the arrival time", async () => {
+      const { data, result } = await fetchWorksheetWeather(atKxnr(1));
+
+      expect(data?.temp?.[2]).toBe(11); // 18:00Z = 16:00Z + 2 hr
+      expect(data?.altimeter?.[2]).toBe(30.03);
+      expect(altimeterNotes(result.notifications, 2)).toEqual([
+        expect.objectContaining({
+          level: "caution",
+          message: expect.stringMatching(/Substitute station KNEA, 16 nm NE/),
+        }),
+      ]);
+      expect(result.notifications).toContainEqual(
+        expect.objectContaining({ level: "advisory", subject: fieldSubject("airport", 1) }),
+      );
+      // The reporting departure is untouched.
+      expect(data?.temp?.[0]).toBe(21);
+      expect(data?.altimeter?.[0]).toBe(29.92); // KORD's own 1013.2 hPa
+      // Elevation and runway still come from the airport database.
+      expect(data?.altitude?.[2]).toBe(Math.round(1500 * 3.28084));
+      expect(data?.rwy?.[1]).toBe(4200);
+    });
+
+    it("searches once when both airports are the same Non-reporting field", async () => {
+      await fetchWorksheetWeather({ ...worksheet, airport: ["KXNR", "KXNR"] });
+      expect(mockBox).toHaveBeenCalledTimes(1);
+    });
+
+    it("never searches for a station for a reporting airport", async () => {
+      await fetchWorksheetWeather({ ...worksheet, airport: ["KORD", "KORD"] });
+      expect(mockBox).not.toHaveBeenCalled();
     });
   });
 });

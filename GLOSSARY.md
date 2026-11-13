@@ -56,7 +56,7 @@ Weather values on the worksheet that were not fetched during the current session
 An airport ID that matches nothing in the airport database, even after auto-correction. It may be a typo or a private strip, so it raises a Caution and the pilot enters its data manually.
 
 **Non-reporting airport**:
-An airport that exists in the airport database but publishes no METAR or TAF. It raises an Advisory. Its weather is filled by Substitution: altimeter from a Substitute station, temperature from a model forecast at the field's own position and elevation.
+An airport that exists in the airport database but publishes no METAR or TAF. It raises an Advisory saying what was filled. Its altimeter comes from a Substitute station (a Substitution, with a Caution); its temperature comes from a model forecast at the field's own position and elevation (data for the field, with an Advisory).
 _Avoid_: Missing airport, airport not found
 
 **Substitute station**:

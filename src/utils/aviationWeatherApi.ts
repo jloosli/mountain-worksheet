@@ -26,6 +26,9 @@ let windowStart = Date.now();
 
 export interface METARResponse {
   icaoId: string;
+  /** Station position; the live API includes it, used to find a Substitute station (#226). */
+  lat?: number;
+  lon?: number;
   /**
    * Observation time. Live API returns Unix epoch seconds (number); some
    * legacy fixtures use an ISO 8601 string. Consumers should accept both.
@@ -314,6 +317,29 @@ export async function getTAF(airports: string[], retries: number = 3): Promise<T
   };
 
   return makeApiRequest<TAFResponse[]>("taf", params, retries);
+}
+
+/**
+ * METARs and TAFs for every station in a `[minLat, minLon, maxLat, maxLon]`
+ * box, for finding a Substitute station (#226). A failed METAR request
+ * throws; a failed TAF request returns no TAFs, since the station's
+ * observation alone still gives an altimeter.
+ */
+export async function getWeatherInBox(
+  bbox: [number, number, number, number],
+  hoursBeforeNow: number = 2,
+): Promise<{ metar: METARResponse[]; taf: TAFResponse[] }> {
+  const box = bbox.map((v) => v.toFixed(3)).join(",");
+  const [metar, taf] = await Promise.allSettled([
+    makeApiRequest<METARResponse[]>("metar", {
+      bbox: box,
+      format: "json",
+      hours: hoursBeforeNow.toString(),
+    }),
+    makeApiRequest<TAFResponse[]>("taf", { bbox: box, format: "json" }),
+  ]);
+  if (metar.status === "rejected") throw metar.reason;
+  return { metar: metar.value, taf: taf.status === "fulfilled" ? taf.value : [] };
 }
 
 /**
