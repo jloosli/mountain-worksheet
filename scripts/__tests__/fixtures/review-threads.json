@@ -10,12 +10,23 @@
               "path": "src/utils/resolved.ts",
               "line": 10,
               "originalLine": 10,
-              "comments": {
+              "first": {
                 "nodes": [
                   {
                     "databaseId": 1001,
-                    "author": { "login": "copilot-pull-request-reviewer" },
+                    "author": {
+                      "login": "copilot-pull-request-reviewer"
+                    },
                     "body": "Already handled."
+                  }
+                ]
+              },
+              "latest": {
+                "nodes": [
+                  {
+                    "author": {
+                      "login": "copilot-pull-request-reviewer"
+                    }
                   }
                 ]
               }
@@ -26,12 +37,23 @@
               "path": "src/utils/gairmetApi.ts",
               "line": 52,
               "originalLine": 52,
-              "comments": {
+              "first": {
                 "nodes": [
                   {
                     "databaseId": 4534380993,
-                    "author": { "login": "copilot-pull-request-reviewer" },
+                    "author": {
+                      "login": "copilot-pull-request-reviewer"
+                    },
                     "body": "`TURB-HI` is discarded even for a 20,000-ft sortie.\nSecond line of detail."
+                  }
+                ]
+              },
+              "latest": {
+                "nodes": [
+                  {
+                    "author": {
+                      "login": "copilot-pull-request-reviewer"
+                    }
                   }
                 ]
               }
@@ -42,17 +64,23 @@
               "path": "src/app/api/aviation-weather/route.ts",
               "line": null,
               "originalLine": 59,
-              "comments": {
+              "first": {
                 "nodes": [
                   {
                     "databaseId": 4534346204,
-                    "author": { "login": "copilot-pull-request-reviewer" },
+                    "author": {
+                      "login": "copilot-pull-request-reviewer"
+                    },
                     "body": "This proxy also serves METAR requests.\nMore detail that a replied thread hides."
-                  },
+                  }
+                ]
+              },
+              "latest": {
+                "nodes": [
                   {
-                    "databaseId": 4534354218,
-                    "author": { "login": "jloosli" },
-                    "body": "Fixed in abc1234."
+                    "author": {
+                      "login": "jloosli"
+                    }
                   }
                 ]
               }

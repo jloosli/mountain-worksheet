@@ -157,7 +157,7 @@ describe("review-threads.jq", () => {
                   path,
                   line: 1,
                   originalLine: 1,
-                  comments: {
+                  first: {
                     nodes: [
                       {
                         databaseId: id,
@@ -165,6 +165,9 @@ describe("review-threads.jq", () => {
                         body: "Finding.",
                       },
                     ],
+                  },
+                  latest: {
+                    nodes: [{ author: { login: "copilot-pull-request-reviewer" } }],
                   },
                 },
               ],

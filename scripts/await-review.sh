@@ -97,7 +97,8 @@ threads() {
             pageInfo { hasNextPage endCursor }
             nodes {
               isResolved isOutdated path line originalLine
-              comments(first: 50) { nodes { databaseId author { login } body } }
+              first: comments(first: 1) { nodes { databaseId author { login } body } }
+              latest: comments(last: 1) { nodes { author { login } } }
             }
           }
         }

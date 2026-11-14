@@ -8,6 +8,8 @@
 #
 # The comment id is the thread's first comment's REST id: reply with
 #   gh api repos/{o}/{r}/pulls/{n}/comments/<id>/replies -f body=...
+# The query fetches each thread's first and latest comment by alias, so a
+# long thread's newest reply is never cut off by a page limit.
 # A thread whose last comment is not by the thread's author has been replied
 # to; its body is cut to one line so the threads still awaiting a reply stand
 # out.
@@ -19,9 +21,8 @@ def indent: split("\n") | map("    " + .) | join("\n");
   | select(.isResolved | not) ] as $open
 | "Unresolved review threads: \($open | length)",
   ( $open[]
-    | .comments.nodes as $c
-    | ($c[0]) as $first
-    | ($c[-1].author.login) as $last
+    | (.first.nodes[0]) as $first
+    | (.latest.nodes[0].author.login) as $last
     | ($last != $first.author.login) as $replied
     | "[\($first.databaseId)] \(.path):\(.line // .originalLine // "?")"
       + (if .isOutdated then " (outdated)" else "" end)
