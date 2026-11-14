@@ -127,6 +127,45 @@ describe("copilot-pending.jq", () => {
 describe("review-threads.jq", () => {
   const out = jq("review-threads.jq", fixture("review-threads.json"));
 
+  it("combines the threads of every page that --paginate --slurp returns", () => {
+    const page = (path: string, isResolved: boolean, id: number) => ({
+      data: {
+        repository: {
+          pullRequest: {
+            reviewThreads: {
+              nodes: [
+                {
+                  isResolved,
+                  isOutdated: false,
+                  path,
+                  line: 1,
+                  originalLine: 1,
+                  comments: {
+                    nodes: [
+                      {
+                        databaseId: id,
+                        author: { login: "copilot-pull-request-reviewer" },
+                        body: "Finding.",
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        },
+      },
+    });
+    const pages = jq("review-threads.jq", [
+      page("a.ts", false, 1),
+      page("b.ts", true, 2),
+      page("c.ts", false, 3),
+    ]);
+    expect(pages).toMatch(/^Unresolved review threads: 2\n/);
+    expect(pages).toContain("[1] a.ts:1");
+    expect(pages).toContain("[3] c.ts:1");
+  });
+
   it("counts and lists only unresolved threads", () => {
     expect(out).toMatch(/^Unresolved review threads: 2\n/);
     expect(out).not.toContain("resolved.ts");

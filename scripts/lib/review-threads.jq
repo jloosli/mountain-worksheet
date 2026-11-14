@@ -1,5 +1,6 @@
-# Input: the GraphQL response for pullRequest.reviewThreads (see
-# await-review.sh for the query).
+# Input: the GraphQL responses for pullRequest.reviewThreads, one per page, as
+# `gh api graphql --paginate --slurp` gives them (see await-review.sh for the
+# query). A single response object works too.
 # Output: every unresolved thread, one block each:
 #
 #   [<comment id>] <path>:<line> [(outdated)] [(replied by <login>)]
@@ -13,7 +14,8 @@
 
 def indent: split("\n") | map("    " + .) | join("\n");
 
-[ .data.repository.pullRequest.reviewThreads.nodes[]
+[ (if type == "array" then .[] else . end)
+  | .data.repository.pullRequest.reviewThreads.nodes[]
   | select(.isResolved | not) ] as $open
 | "Unresolved review threads: \($open | length)",
   ( $open[]
@@ -27,5 +29,5 @@ def indent: split("\n") | map("    " + .) | join("\n");
       + "\n"
       + (if $replied
          then ($first.body | split("\n")[0] | .[0:160]) | indent
-         else $first.body | gsub("​"; "") | rtrimstr("\n") | indent
+         else $first.body | gsub("\u200b"; "") | rtrimstr("\n") | indent
          end) )

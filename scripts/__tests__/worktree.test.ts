@@ -111,6 +111,16 @@ describe("worktree.sh", () => {
     expect(worktreeSh(main, "rm", "gone").status).toBe(0);
   });
 
+  it("leaves a colliding worktree that has another branch checked out", () => {
+    // feature/a and feature-a both map to app-feature-a.
+    const wt = worktreeSh(main, "new", "feature/a").stdout;
+    const { status, stderr } = worktreeSh(main, "rm", "feature-a");
+    expect(status).toBe(1);
+    expect(stderr).toContain("feature/a checked out");
+    expect(existsSync(wt)).toBe(true);
+    expect(git(main, "branch", "--list", "feature/a")).not.toBe("");
+  });
+
   it("keeps a worktree with uncommitted work", () => {
     const wt = worktreeSh(main, "new", "wip").stdout;
     writeFileSync(path.join(wt, "stray.txt"), "x");

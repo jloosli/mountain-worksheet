@@ -1,6 +1,10 @@
 ---
 name: land-pr
-description: Take a pushed branch to a merged, cleaned-up PR in this repo: open it, watch for Copilot comments, address the valid ones, merge when Copilot is happy and CI is green, remove the worktree. Use when asked to land or merge a PR, "merge when Copilot is happy", or to watch for and address Copilot comments.
+description: >-
+  Take a pushed branch to a merged, cleaned-up PR in this repo: open it, watch
+  for Copilot comments, address the valid ones, merge when Copilot is happy and
+  CI is green, remove the worktree. Use when asked to land or merge a PR,
+  "merge when Copilot is happy", or to watch for and address Copilot comments.
 ---
 
 # Land a PR

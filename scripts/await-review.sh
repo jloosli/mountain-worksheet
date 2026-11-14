@@ -84,12 +84,14 @@ checks_json() {
 }
 
 threads() {
+  # --paginate follows pageInfo via $endCursor; --slurp hands jq every page.
   # shellcheck disable=SC2016 # $owner etc. are GraphQL variables
-  gh api graphql -F owner="$owner" -F name="$name" -F number="$pr" -f query='
-    query($owner: String!, $name: String!, $number: Int!) {
+  gh api graphql --paginate --slurp -F owner="$owner" -F name="$name" -F number="$pr" -f query='
+    query($owner: String!, $name: String!, $number: Int!, $endCursor: String) {
       repository(owner: $owner, name: $name) {
         pullRequest(number: $number) {
-          reviewThreads(first: 100) {
+          reviewThreads(first: 100, after: $endCursor) {
+            pageInfo { hasNextPage endCursor }
             nodes {
               isResolved isOutdated path line originalLine
               comments(first: 50) { nodes { databaseId author { login } body } }
@@ -162,8 +164,14 @@ while true; do
   done
   log "CI finished: $state."
 
-  # 3. A push during the wait makes both answers stale: go round again.
-  [ "$(head_sha || echo "$head")" = "$head" ] && break
+  # 3. A push during the wait makes both answers stale: go round again. A
+  # failed lookup proves nothing about the head, so retry it.
+  until now_head="$(head_sha)"; do
+    log "gh call failed; will retry."
+    timed_out && give_up "the head commit"
+    sleep "$POLL_SEC"
+  done
+  [ "$now_head" = "$head" ] && break
   log "Head moved during the wait; waiting on the new head."
 done
 

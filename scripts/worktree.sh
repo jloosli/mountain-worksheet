@@ -80,8 +80,22 @@ new() {
   echo "$wt"
 }
 
+# feature/a and feature-a share a worktree path; only remove the one that has
+# our branch checked out.
+worktree_branch() {
+  git -C "$main" worktree list --porcelain |
+    awk -v wt="worktree $1" '$0 == wt { found = 1; next }
+      found && /^branch / { sub("^branch refs/heads/", ""); print; exit }
+      found && /^$/ { exit }'
+}
+
 rm_worktree() {
   if is_worktree "$wt"; then
+    on="$(worktree_branch "$wt")"
+    if [ "$on" != "$branch" ]; then
+      log "Not removed: $wt has ${on:-a detached HEAD} checked out, not $branch."
+      exit 1
+    fi
     # Refuses on uncommitted or untracked changes rather than discarding work.
     if ! git -C "$main" worktree remove "$wt"; then
       log "Not removed: $wt has changes:"
