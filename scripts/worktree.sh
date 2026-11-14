@@ -5,8 +5,8 @@
 #   scripts/worktree.sh new <branch>   worktree off a fresh origin/main, npm ci,
 #                                      print its path (the only stdout line)
 #   scripts/worktree.sh rm <branch>    remove the worktree and local branch,
-#                                      then switch the main checkout to an
-#                                      up-to-date main
+#                                      then switch a clean main checkout to
+#                                      an up-to-date main
 #
 # The worktree lives at <main checkout parent>/<main checkout name>-<branch>,
 # with any "/" in the branch name turned into "-". Works from the main
@@ -118,6 +118,12 @@ rm_worktree() {
     log "No local branch $branch."
   fi
 
+  # The main checkout may hold another session's in-progress work; a switch
+  # or pull would carry it along or move files around it.
+  if [ -n "$(git -C "$main" status --porcelain)" ]; then
+    log "Left the main checkout alone: $main has uncommitted changes."
+    return 0
+  fi
   if git -C "$main" switch --quiet main && git -C "$main" pull --quiet --ff-only; then
     log "Main checkout on main at $(git -C "$main" log --oneline -1)."
   else

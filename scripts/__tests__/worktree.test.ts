@@ -2,7 +2,7 @@
  * @jest-environment node
  */
 // scripts/worktree.sh against a throwaway origin + clone in a temp directory.
-import { execFileSync } from "child_process";
+import { execFileSync, spawnSync } from "child_process";
 import {
   existsSync,
   mkdirSync,
@@ -33,18 +33,8 @@ const git = (cwd: string, ...args: string[]) =>
   execFileSync("git", args, { cwd, env: ENV, encoding: "utf8" }).trim();
 
 function worktreeSh(cwd: string, ...args: string[]) {
-  try {
-    const stdout = execFileSync(SCRIPT, args, {
-      cwd,
-      env: ENV,
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-    return { status: 0, stdout: stdout.trim() };
-  } catch (e) {
-    const err = e as { status: number; stdout: string; stderr: string };
-    return { status: err.status, stdout: err.stdout.trim(), stderr: err.stderr };
-  }
+  const r = spawnSync(SCRIPT, args, { cwd, env: ENV, encoding: "utf8" });
+  return { status: r.status, stdout: r.stdout.trim(), stderr: r.stderr };
 }
 
 beforeEach(() => {
@@ -128,6 +118,21 @@ describe("worktree.sh", () => {
     expect(status).toBe(1);
     expect(stderr).toContain("stray.txt");
     expect(existsSync(path.join(wt, "stray.txt"))).toBe(true);
+  });
+
+  it("leaves a dirty main checkout's branch, files and commit alone", () => {
+    git(main, "switch", "-q", "-c", "in-progress");
+    writeFileSync(path.join(main, "README"), "someone's edit\n");
+    const before = git(main, "rev-parse", "HEAD");
+
+    worktreeSh(main, "new", "c");
+    const { status, stderr } = worktreeSh(main, "rm", "c");
+    expect(status).toBe(0);
+    expect(stderr).toContain("uncommitted changes");
+    expect(git(main, "rev-parse", "--abbrev-ref", "HEAD")).toBe("in-progress");
+    expect(git(main, "rev-parse", "HEAD")).toBe(before);
+    expect(readFileSync(path.join(main, "README"), "utf8")).toBe("someone's edit\n");
+    expect(git(main, "branch", "--list", "c")).toBe("");
   });
 
   it("brings the main checkout back to an up-to-date main", () => {

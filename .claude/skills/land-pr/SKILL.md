@@ -84,10 +84,9 @@ From the main checkout (`cd "$(dirname "$(git rev-parse --path-format=absolute -
 
 ```bash
 gh pr merge <pr> --squash --delete-branch
-git pull --ff-only
 scripts/worktree.sh rm <branch>
 ```
 
-Squash only; the user's history is one commit per PR. `gh` often removes the worktree and local branch itself; `worktree.sh rm` is safe either way. If it refuses because the worktree has changes, show them to the user rather than forcing.
+Squash only; the user's history is one commit per PR. `gh` often removes the worktree and local branch itself; `worktree.sh rm` is safe either way, and it updates main itself. If it refuses because the worktree has changes, show them to the user rather than forcing. If it leaves the main checkout alone because that checkout has uncommitted changes (another session's work), say so in the report.
 
-Done when: the PR shows MERGED, the remote and local branch and the worktree are gone, and the main checkout is on an up-to-date main. Report the merge commit.
+Done when: the PR shows MERGED, the remote and local branch and the worktree are gone, and the main checkout is on an up-to-date main (or was left alone with uncommitted changes). Report the merge commit.
