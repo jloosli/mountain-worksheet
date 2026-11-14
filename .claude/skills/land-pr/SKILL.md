@@ -18,7 +18,7 @@ Two scripts carry the mechanics; this skill carries the judgement between them.
 
 ## 1. Open
 
-Push with `git push -u origin <branch>`. Write the body with the `mattpocock-skills:pr` skill, then `gh pr create --base main --body-file <file>`. Skip creation when a PR for the branch exists.
+Push with `git push -u origin <branch>`. Write the body with the `mattpocock-skills:pr` skill, then `gh pr create --base main --title "<title>" --body-file <file>` (agent shells are non-interactive, so `gh` fails without `--title`). Skip creation when a PR for the branch exists.
 
 Done when: you hold the PR number.
 
