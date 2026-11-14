@@ -23,11 +23,11 @@ The required shape (`src/components/PositionInput.tsx` is the reference):
 
 ## Wind values
 
-In the wind field `0` is a real direction or velocity and `null` means no data for that altitude. Every read of a wind value preserves that distinction: fall back with `??`, compare with `=== null`. A falsy test (`||`, `!value`, `value ? … : …`) turns calm or north into "no data" and is a hard violation. Where a lint rule already flags one of these forms, leave that form to the linter and check the rest.
+In the wind field `0` is a real direction or velocity and `null` means no data for that altitude. ESLint's `prefer-nullish-coalescing` rule already rejects `||` fallbacks, so the review checks what it cannot see: a truthiness test (`!value`, `value ? … : …`, `if (value)`) on a wind value turns calm or north into "no data" and is a hard violation; compare with `=== null` instead. Where code writes out an explicit check so that `0` or `""` falls back on purpose, judge whether that fallback is right for the field.
 
 ## POH table gaps
 
-Some aircraft tables hold `null` at extreme altitudes and temperatures. `trilinearInterpolate` absorbs a null corner by averaging the others (and `trilinearTableGaps` reports it so the caller can announce the Substitution). `bilinearInterpolate` and `bilinearInterpolateDetailed` throw instead, on a null corner or on out-of-range input with extrapolation disabled. Every bilinear caller either checks its inputs against the table bounds first or catches the throw and degrades to a missing result (an `unavailable` value, or `null`); an uncaught throw takes down the render.
+Some aircraft tables hold `null` at extreme altitudes and temperatures. `trilinearInterpolate` absorbs a null corner by averaging the others (and `trilinearTableGaps` reports it so the caller can announce the Substitution). `bilinearInterpolate` and `bilinearInterpolateDetailed` throw instead, on a null corner or on out-of-range input with extrapolation disabled. A bounds check alone does not make a call safe: an in-range lookup still throws when one of its four corners is null. Every bilinear caller wraps the call in `try`/`catch` and degrades to a missing result (an `unavailable` value, or `null`), or validates both the bounds and the selected corners first; an uncaught throw takes down the render.
 
 ## Tests
 
