@@ -148,6 +148,13 @@ describe("await-review.sh", () => {
     expect(stdout).toContain("== PR #307");
   });
 
+  it("exits 2 when --ci-only never learns the head before the timeout", () => {
+    put("fail_all", "");
+    const { status, stderr } = run({ AWAIT_REVIEW_TIMEOUT_SEC: "0" }, ["--ci-only"]);
+    expect(status).toBe(2);
+    expect(stderr).toContain("Timed out");
+  });
+
   it("requests Copilot once while its request may still be propagating", () => {
     const { status, requests } = run({ AWAIT_REVIEW_TIMEOUT_SEC: "3" });
     expect(status).toBe(2);

@@ -139,6 +139,7 @@ current_head() {
   done
 }
 
+head=""
 requested_for=""
 requested_at=0
 while true; do
