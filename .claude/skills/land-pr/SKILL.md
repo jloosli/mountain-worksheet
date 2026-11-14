@@ -83,9 +83,12 @@ Done when: the list is empty.
 From the main checkout (`cd "$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")"`):
 
 ```bash
-gh pr merge <pr> --squash --delete-branch
-scripts/worktree.sh rm <branch>
+gh pr merge <pr> --squash --delete-branch &&
+  [ "$(gh pr view <pr> --json state -q .state)" = MERGED ] &&
+  scripts/worktree.sh rm <branch>
 ```
+
+Cleanup runs only once the PR shows MERGED. A failed merge (a required check, a branch that fell behind) keeps the branch and worktree: go back to step 5.
 
 Squash only; the user's history is one commit per PR. `gh` often removes the worktree and local branch itself; `worktree.sh rm` is safe either way, and it updates main itself. If it refuses because the worktree has changes, show them to the user rather than forcing. If it leaves the main checkout alone because that checkout has uncommitted changes (another session's work), say so in the report.
 
