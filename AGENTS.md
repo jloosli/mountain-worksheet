@@ -29,64 +29,17 @@ A Next.js 16.x web application (App Router, TypeScript, Tailwind CSS v4, Vercel)
 - `src/utils/limitChecks.ts` — Limit checks (the worksheet's own limits, ADR 0002): derived by `evaluateWorksheet`, shown as callouts at the top of their owning step, summarized in the action bar, and listed in the Briefing's Worksheet limits table and the checklist slide-over; never notifications, never affect step status
 - `src/app/api/aviation-weather/route.ts` — Proxy to `aviationweather.gov` (avoids CORS)
 
-## URL State Management
-
-State is persisted to URL query strings via `src/utils/urlState.ts` + `src/utils/useUrlReducer.ts` using the `qs` library.
-
-**Format rules (non-obvious):**
-- Arrays → comma-separated (`?numbers=1,2,3`)
-- Booleans → `"1"` / `"0"`
-- 2D arrays → `||` row separator (`?wind=,90,180||5,10,15`)
-- Null elements within arrays → preserved as empty slots (`,90,180` means `[null, 90, 180]`); omitted only for top-level null values
-- Spaces → `+` (not `%20`)
-- `initialState` is used as type hints during deserialization to restore correct types
-
-**Wind null semantics:** `null` ≠ `0` in the wind field. `0` is a valid direction/velocity; `null` means no data for that altitude. Use `??` not `||` when reading for display.
-
-## Input Component State Pattern
-
-`AircraftPerformance` receives both `initialData` (its owned fields) and `worksheetData` (full state) — both recreated on every `onUpdate`. A `useEffect` watching either prop will fire on every keystroke, not just external changes, causing feedback loops that clear fields mid-entry.
-
-**Correct pattern:**
-- Keep a local string state for the raw input display value
-- Track last-pushed value in a `useRef`
-- In prop-watching `useEffect`s, only sync local state when incoming value differs from the last-pushed value
-- `min`/`max` on `<input type="number">` do not block state — validate in `onChange` before calling `onUpdate`
-
-## Derived State Pattern
-
-Every display value is derived during render by `evaluateWorksheet` (`src/utils/worksheetEvaluation.ts`), and components only read from the evaluation they're given. Do not introduce `useState`/`useEffect` to cache derived values that can be recomputed from props — table lookups in this codebase are sub-millisecond, and the previous effect-driven chain caused issue #98 (stale calculations after weather fetch when array references were mutated in place). If you need to add a new derived value, add a pure function to `derived.ts`, call it from `evaluateWorksheet`, and add it to `WorksheetEvaluation`.
-
-Weather-data mappers in `src/utils/weatherDataMapper.ts` must also return new arrays, never mutate inputs — `setState` only triggers downstream recomputation when reference equality changes.
-
 ## Planning Docs Are Historical
 
 `tasks/` (early PRDs and task lists) and `docs/superpowers/` (dated specs and implementation plans) record work that has already shipped. Do not treat them as current requirements: file paths, component names, and behavior in them may be out of date. `docs/ux-assessment.md` and the `docs/*-mockup.html` files are the design rationale behind the step-based layout that has since been built. For how things work now, trust the code, `GLOSSARY.md`, and `docs/adr/`; for open work, check GitHub issues.
 
 ## Development
 
-**Always create a new git worktree before making changes.** Never edit files directly in the main checkout. Branch off an up-to-date `main` into its own worktree (e.g. `git worktree add ../mountain-worksheet-<branch> -b <branch> main`), do all work there, and remove the worktree once the PR is merged. The main checkout may hold someone else's in-progress, uncommitted work. Run `npm install` in the new worktree before running tests or the build.
+Work in your own worktree, never the main checkout: it may hold someone else's uncommitted work. `scripts/worktree.sh new <branch>` creates one off an up-to-date `main` and installs dependencies; `scripts/worktree.sh rm <branch>` removes it after merge.
 
-```bash
-npm run dev          # Dev server (Turbopack)
-npm run build        # Production build
-npm run lint         # ESLint
-npm run format       # Prettier: run before committing; CI fails on unformatted code
-npm test             # Run all tests
-npx jest src/path/to/file.test.ts  # Single test file
-```
+A pre-commit hook formats staged files. Run `npm run typecheck`, `npm run lint` and `npm test` before pushing. To land a PR (Copilot review loop, merge, cleanup), use the `land-pr` skill.
 
-## Testing (Required)
-
-**Every code change must include new or updated tests.** No exceptions.
-
-- New utilities → unit tests in `src/utils/__tests__/`
-- New/modified components → tests co-located as `ComponentName.test.tsx`
-- Bug fixes → regression test that would have caught the bug
-
-Jest + React Testing Library. Next.js navigation hooks are mocked in `jest.setup.ts`. Custom render wrapper in `src/test-utils/test-utils.ts`. CI runs tests, lint, and build on every push/PR to `main`.
-
-**POH null values:** Some aircraft have `null` entries at extreme altitudes/temperatures. `trilinearInterpolate` handles nulls via fallback average; callers of `bilinearInterpolate` variants should validate inputs are within table bounds or wrap in `try/catch`.
+Every derived value goes through `evaluateWorksheet`; the review rules (derived state, input components, wind nulls, POH gaps, required tests) are in `CODING_STANDARDS.md`. Read `docs/url-state.md` before touching `urlState.ts`/`useUrlReducer.ts` or adding a URL field.
 
 ## Agent skills
 
