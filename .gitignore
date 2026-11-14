@@ -24,7 +24,9 @@
 
 # misc
 .DS_Store
-.claude/
+# Local Claude Code state; project skills are shared.
+.claude/*
+!.claude/skills/
 *.pem
 poh/
 

@@ -1,0 +1,47 @@
+[
+  {
+    "user": {
+      "login": "copilot-pull-request-reviewer[bot]"
+    },
+    "commit_id": "f9fe848e28688ea4006c18fe94c1248caaa35dd1",
+    "state": "COMMENTED",
+    "submitted_at": "2026-11-13T02:45:31Z",
+    "body": "<!-- ccr-overview-v2 -->\n\n### 🟡 Changes recommended\n\nDateline-crossing searches can miss eligible substitute stations, and notifications can claim values were filled even when later validation rejects them.\n\n<details open>\n<summary><strong>2 open issues</strong></summary>\n\n- <picture><source media=\"(prefers-color-scheme: dark)\" srcset=\"https://github.githubassets.com/static/images/icons/copilot-code-review/medium-v2-dark.svg\"><source media=\"(prefers-color-scheme: light)\" srcset=\"https://github.githubassets.com/static/images/icons/copilot-code-review/medium-v2-light.svg\"><img src=\"https://github.githubassets.com/static/images/icons/copilot-code-review/medium-v2-light.png\" alt=\"Medium severity\" width=\"62\" height=\"18\" align=\"texttop\"></picture> [Dateline-crossing search bounds miss stations across ±180°](https://github.com/jloosli/mountain-worksheet/pull/304#discussion_r4559072692) · New\n- <picture><source media=\"(prefers-color-scheme: dark)\" srcset=\"https://github.githubassets.com/static/images/icons/copilot-code-review/medium-v2-dark.svg\"><source media=\"(prefers-color-scheme: light)\" srcset=\"https://github.githubassets.com/static/images/icons/copilot-code-review/medium-v2-light.svg\"><img src=\"https://github.githubassets.com/static/images/icons/copilot-code-review/medium-v2-light.png\" alt=\"Medium severity\" width=\"62\" height=\"18\" align=\"texttop\"></picture> [Notifications report substitutions that range validation rejects](https://github.com/jloosli/mountain-worksheet/pull/304#discussion_r4559072723) · New\n</details>\n\n<details>\n<summary><strong>What changed in this PR</strong></summary>\n\nAdds automatic weather filling for Non-reporting departure and arrival airports, extending the worksheet’s existing weather-fetch and notification flow.\n\n**Changes:**\n- Uses the nearest eligible station within 100 nm for altimeter settings, with a source Caution.\n- Uses field-specific model temperature forecasts, with Advisories and failure Warnings.\n- Adds geometry, fetch, and UI tests and updates the notification documentation.\n\n| File | Description |\r\n| ---- | ----------- |\r\n| `src/​utils/​weatherFetch.ts` | Fetches field forecasts and Substitute stations for Non-reporting airports. |\r\n| `src/​utils/​weatherDataMapper.ts` | Maps substitute weather into departure and arrival slots. |\r\n| `src/​utils/​substituteStation.ts` | Selects nearby stations and builds weather notifications. |\r\n| `src/​utils/​positionMath.ts` | Adds distance, bearing, and compass-direction helpers. |\r\n| `src/​utils/​aviationWeatherApi.ts` | Adds bounding-box METAR and TAF requests. |\r\n| `src/​utils/​aviationWeatherApi.test.ts` | Tests bounding-box requests and failure handling. |\r\n| `src/​utils/​airportTimeWeather.ts` | Adds the Substitute-station source type. |\r\n| `src/​utils/​airportIdentity.ts` | Supports outcome-specific Non-reporting Advisories. |\r\n| `src/​utils/​__tests__/​weatherFetch.test.ts` | Tests Non-reporting weather filling and fallback cases. |\r\n| `src/​utils/​__tests__/​substituteStation.test.ts` | Tests station selection and search bounds. |\r\n| `src/​utils/​__tests__/​positionMath.test.ts` | Tests distance, bearing, and compass calculations. |\r\n| `src/​components/​AppContainer.nonReporting.test.tsx` | Tests filled values and Caution provenance in the UI. |\r\n| `GLOSSARY.md` | Clarifies altimeter Cautions and model-temperature Advisories. |\r\n| `docs/​adr/​0003-weather-for-non-reporting-airports.md` | Records the implemented weather-source and notification decisions. |\n</details>\n\n<sub>Review effort: Balanced</sub>"
+  },
+  {
+    "user": {
+      "login": "jloosli"
+    },
+    "commit_id": "b011a64b8886792136e97b21585167fb58c98fba",
+    "state": "COMMENTED",
+    "submitted_at": "2026-11-13T02:47:25Z",
+    "body": ""
+  },
+  {
+    "user": {
+      "login": "jloosli"
+    },
+    "commit_id": "b011a64b8886792136e97b21585167fb58c98fba",
+    "state": "COMMENTED",
+    "submitted_at": "2026-11-13T02:47:27Z",
+    "body": ""
+  },
+  {
+    "user": {
+      "login": "copilot-pull-request-reviewer[bot]"
+    },
+    "commit_id": "b011a64b8886792136e97b21585167fb58c98fba",
+    "state": "COMMENTED",
+    "submitted_at": "2026-11-13T02:52:09Z",
+    "body": "<!-- ccr-overview-v2 -->\n\n### 🔵 Needs a closer look\n\nThe outcome Advisory remains after manual weather entry, leaving stale instructions or source claims that should be updated or retired and covered by a regression test.\n\n**No open issues** 🎉\n\n<details>\n<summary><strong>1 previously missed issue</strong></summary>\n\nIn code that hasn't changed since last review\n\n<details>\n<summary><picture><source media=\"(prefers-color-scheme: dark)\" srcset=\"https://github.githubassets.com/static/images/icons/copilot-code-review/medium-v2-dark.svg\"><source media=\"(prefers-color-scheme: light)\" srcset=\"https://github.githubassets.com/static/images/icons/copilot-code-review/medium-v2-light.svg\"><img src=\"https://github.githubassets.com/static/images/icons/copilot-code-review/medium-v2-light.png\" alt=\"Medium severity\" width=\"62\" height=\"18\" align=\"texttop\"></picture> Retire stale forecast advisory details after manual weather entry</summary>\n\n`src/​utils/​substituteStation.ts:255`\n\nAfter a failed model forecast, manually entering the temperature clears its Warning but leaves this Advisory saying to enter it manually. The outcome detail is attached to `airport[slot]`, so `fetchNotifications` in `weatherSession.ts` retains it while the airport is unchanged—even when temperature or altimeter edits invalidate its instructions or source claims. Keep the Non-reporting identity Advisory, but derive or retire its outcome details against the corresponding weather values, and add a regression test for manual entry.\n</details>\n</details>\n\n<details>\n<summary><strong>2 resolved since last review</strong></summary>\n\n- <picture><source media=\"(prefers-color-scheme: dark)\" srcset=\"https://github.githubassets.com/static/images/icons/copilot-code-review/medium-v2-dark.svg\"><source media=\"(prefers-color-scheme: light)\" srcset=\"https://github.githubassets.com/static/images/icons/copilot-code-review/medium-v2-light.svg\"><img src=\"https://github.githubassets.com/static/images/icons/copilot-code-review/medium-v2-light.png\" alt=\"Medium severity\" width=\"62\" height=\"18\" align=\"texttop\"></picture> [Notifications report substitutions that range validation rejects](https://github.com/jloosli/mountain-worksheet/pull/304#discussion_r4559072723)\n- <picture><source media=\"(prefers-color-scheme: dark)\" srcset=\"https://github.githubassets.com/static/images/icons/copilot-code-review/medium-v2-dark.svg\"><source media=\"(prefers-color-scheme: light)\" srcset=\"https://github.githubassets.com/static/images/icons/copilot-code-review/medium-v2-light.svg\"><img src=\"https://github.githubassets.com/static/images/icons/copilot-code-review/medium-v2-light.png\" alt=\"Medium severity\" width=\"62\" height=\"18\" align=\"texttop\"></picture> [Dateline-crossing search bounds miss stations across ±180°](https://github.com/jloosli/mountain-worksheet/pull/304#discussion_r4559072692)\n</details>\n\n<sub>Review effort: Balanced</sub>"
+  },
+  {
+    "user": {
+      "login": "copilot-pull-request-reviewer[bot]"
+    },
+    "commit_id": "d3414ea4004ae9c5fe8555d32138840fd347904c",
+    "state": "COMMENTED",
+    "submitted_at": "2026-11-13T02:57:25Z",
+    "body": "<!-- ccr-overview-v2 -->\n\n### 🟢 Approval recommended\n\nNo active review issues are identified for the non-reporting airport weather changes.\n\n**No open issues** 🎉\n\n<sub>Review effort: Balanced</sub>"
+  }
+]
