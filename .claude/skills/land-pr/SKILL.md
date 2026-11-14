@@ -90,7 +90,7 @@ gh pr merge <pr> --squash --delete-branch --match-head-commit <sha> &&
   scripts/worktree.sh rm <branch>
 ```
 
-`<sha>` is the full head SHA in the header of the last `await-review.sh` output, so a push that lands after review and CI makes the merge fail instead of merging unreviewed code. Cleanup runs only once the PR shows MERGED. A failed merge (a required check, a branch that fell behind) keeps the branch and worktree: `cd` back into the worktree, then go back to step 5; never rebase in the main checkout.
+`<sha>` is the full head SHA in the header of the last `await-review.sh` output, so a push that lands after review and CI makes the merge fail instead of merging unreviewed code. Cleanup runs only once the PR shows MERGED. A failed merge (a required check, a branch that fell behind) keeps the branch and worktree: `cd` back into the worktree, then go back to step 5; never rebase in the main checkout. If the head moved (someone else pushed), go back to step 2 instead: the new head needs its own review and a fresh `<sha>`.
 
 Squash only; the user's history is one commit per PR. `gh` often removes the worktree and local branch itself; `worktree.sh rm` is safe either way, and it updates main itself. If it refuses because the worktree has changes, show them to the user rather than forcing. If it leaves the main checkout alone because that checkout has uncommitted changes (another session's work), say so in the report.
 
