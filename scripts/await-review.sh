@@ -22,6 +22,9 @@ set -euo pipefail
 LIB="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib"
 POLL_SEC="${AWAIT_REVIEW_POLL_SEC:-30}"
 GRACE_SEC="${AWAIT_REVIEW_GRACE_SEC:-30}"
+# A request we made that the timeline still shows idle after this long was
+# removed or dropped: request again.
+REARM_SEC="${AWAIT_REVIEW_REARM_SEC:-120}"
 
 usage() { sed -n '2,18p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; }
 
@@ -58,7 +61,7 @@ repo="$(gh repo view --json nameWithOwner -q .nameWithOwner)"
 owner="${repo%%/*}"
 name="${repo#*/}"
 start="$(date +%s)"
-deadline=$((start + timeout_min * 60))
+deadline=$((start + ${AWAIT_REVIEW_TIMEOUT_SEC:-$((timeout_min * 60))}))
 
 log() { echo "[$(date +%H:%M:%S)] $*" >&2; }
 
@@ -119,11 +122,14 @@ timed_out() { [ "$(date +%s)" -ge "$deadline" ]; }
 
 give_up() {
   log "Timed out after $timeout_min min waiting for $1."
-  report
+  # Best effort: the outage behind a timeout can fail the report's own gh
+  # calls, and that must not turn exit 2 into exit 1.
+  report || log "Report incomplete: a gh call failed."
   exit 2
 }
 
 requested_for=""
+requested_at=0
 while true; do
   # 1. Copilot's review of the current head.
   if [ -n "$ci_only" ]; then
@@ -142,10 +148,12 @@ while true; do
     fi
     if [ "$(copilot_pending)" = "pending" ]; then
       log "Copilot review pending for ${head:0:7}."
-    elif [ "$requested_for" != "$head" ] && [ $(($(date +%s) - start)) -ge "$GRACE_SEC" ]; then
+    elif [ $(($(date +%s) - start)) -ge "$GRACE_SEC" ] &&
+      { [ "$requested_for" != "$head" ] || [ $(($(date +%s) - requested_at)) -ge "$REARM_SEC" ]; }; then
       log "No Copilot review pending for ${head:0:7}; requesting one."
       if gh pr edit "$pr" --add-reviewer @copilot >/dev/null; then
         requested_for="$head"
+        requested_at="$(date +%s)"
       else
         log "Requesting Copilot failed; will retry."
       fi

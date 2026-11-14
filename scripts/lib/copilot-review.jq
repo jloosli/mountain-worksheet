@@ -7,7 +7,7 @@
 # file paths carry zero-width spaces, and a "What changed in this PR" table
 # repeats the diff. Badges become their alt text ("[Medium severity]"), links
 # to review threads become the thread's comment id, and everything else that
-# is markup is dropped.
+# is wrapper markup is dropped.
 
 def clean_body:
   gsub("<details>\\s*<summary><strong>What changed in this PR</strong></summary>[\\s\\S]*?</details>"; "")
@@ -15,8 +15,10 @@ def clean_body:
   | gsub("<picture>[\\s\\S]*?alt=\"(?<alt>[^\"]*)\"[\\s\\S]*?</picture>"; "[\(.alt)]")
   | gsub("\\[(?<t>[^\\]]*)\\]\\(https://github\\.com/[^)]*#discussion_r(?<id>\\d+)\\)"; "\(.t) [\(.id)]")
   | gsub("<sub>Review effort[^<]*</sub>"; "")
-  | gsub("<[^>]+>"; "")
-  | gsub("​"; "")
+  # Only the wrapper tags Copilot emits: a blanket <[^>]+> would also eat
+  # code such as `Readonly<Aircraft>` or `a < 0 || a > max`.
+  | gsub("</?(details|summary|strong|sub|sup|picture|source|img|br|p|em|b|i|code|div|span)(\\s[^>]*)?/?>"; "")
+  | gsub("\u200b"; "")
   | gsub("[ \t]+\n"; "\n")
   | gsub("\n{3,}"; "\n\n")
   | ltrimstr("\n") | rtrimstr("\n")

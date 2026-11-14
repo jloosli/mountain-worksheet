@@ -60,6 +60,23 @@ describe("copilot-review.jq", () => {
     expect(out).not.toContain("Review effort");
   });
 
+  it("keeps code that looks like markup: generics and comparisons", () => {
+    const review = [
+      {
+        user: { login: "copilot-pull-request-reviewer[bot]" },
+        commit_id: "abc",
+        state: "COMMENTED",
+        submitted_at: "2026-11-14T00:00:00Z",
+        body:
+          "<details open>\n<summary><strong>1 issue</strong></summary>\n" +
+          "Use `Readonly<Aircraft>` and check `weight < 0 || weight > max`.<br/>\n</details>",
+      },
+    ];
+    const out = jq("copilot-review.jq", review, { head: "abc" });
+    expect(out).toContain("Use `Readonly<Aircraft>` and check `weight < 0 || weight > max`.");
+    expect(out).not.toMatch(/<\/?(details|summary|strong|br)/);
+  });
+
   it("keeps body-only findings and strips zero-width spaces from paths", () => {
     const out = jq("copilot-review.jq", reviews, { head: SECOND });
     expect(out).toContain("1 previously missed issue");
