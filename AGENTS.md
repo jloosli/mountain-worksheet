@@ -39,7 +39,7 @@ Work in your own worktree, never the main checkout: it may hold someone else's u
 
 A pre-commit hook formats staged files. Run `npm run typecheck`, `npm run lint` and `npm test` before pushing. To land a PR (Copilot review loop, merge, cleanup), use the `land-pr` skill.
 
-Every derived value goes through `evaluateWorksheet`; the review rules (derived state, input components, wind nulls, POH gaps, required tests) are in `CODING_STANDARDS.md`. Read `docs/url-state.md` before touching `urlState.ts`/`useUrlReducer.ts` or adding a URL field.
+Every derived value goes through `evaluateWorksheet`; the review rules (derived state, input components, wind nulls, POH gaps, required tests) are in `CODING_STANDARDS.md`, a symlink to `.github/copilot-instructions.md` so Copilot's review applies them too; edit the real file and keep it within the 4,000 characters Copilot reads. Read `docs/url-state.md` before touching `urlState.ts`/`useUrlReducer.ts` or adding a URL field.
 
 ## Agent skills
 
