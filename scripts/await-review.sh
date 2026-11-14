@@ -129,12 +129,23 @@ give_up() {
   exit 2
 }
 
+# Set $now_head, retrying failed lookups until the deadline. It sets a
+# variable rather than printing so give_up's report isn't captured by $(...).
+current_head() {
+  until now_head="$(head_sha)"; do
+    log "gh call failed; will retry."
+    timed_out && give_up "the head commit"
+    sleep "$POLL_SEC"
+  done
+}
+
 requested_for=""
 requested_at=0
 while true; do
   # 1. Copilot's review of the current head.
   if [ -n "$ci_only" ]; then
-    head="$(head_sha)"
+    current_head
+    head="$now_head"
     review="$(copilot_review "$head" || true)"
   fi
   while [ -z "$ci_only" ]; do
@@ -174,12 +185,8 @@ while true; do
   log "CI finished: $state."
 
   # 3. A push during the wait makes both answers stale: go round again. A
-  # failed lookup proves nothing about the head, so retry it.
-  until now_head="$(head_sha)"; do
-    log "gh call failed; will retry."
-    timed_out && give_up "the head commit"
-    sleep "$POLL_SEC"
-  done
+  # failed lookup proves nothing about the head, so it is retried.
+  current_head
   [ "$now_head" = "$head" ] && break
   log "Head moved during the wait; waiting on the new head."
 done
