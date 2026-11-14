@@ -53,7 +53,12 @@ function run(env: Record<string, string>) {
   const requests = readFileSync(ghLog, "utf8")
     .split("\n")
     .filter((call) => call.startsWith("pr edit 307 --add-reviewer @copilot"));
-  return { status: result.status, stderr: result.stderr, requests };
+  return {
+    status: result.status,
+    stdout: result.stdout,
+    stderr: result.stderr,
+    requests,
+  };
 }
 
 describe("await-review.sh", () => {
@@ -67,8 +72,10 @@ describe("await-review.sh", () => {
   });
 
   it("requests Copilot once while its request may still be propagating", () => {
-    const { status, requests } = run({ AWAIT_REVIEW_TIMEOUT_SEC: "3" });
+    const { status, stdout, requests } = run({ AWAIT_REVIEW_TIMEOUT_SEC: "3" });
     expect(status).toBe(2);
+    // The full head SHA, for gh pr merge --match-head-commit.
+    expect(stdout).toContain("== PR #307 (owner/repo) head headsha ==");
     expect(requests).toHaveLength(1);
   });
 

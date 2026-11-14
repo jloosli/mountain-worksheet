@@ -106,7 +106,8 @@ threads() {
 }
 
 report() {
-  echo "== PR #$pr ($repo) head ${head:0:7} =="
+  # The full SHA: land-pr merges with --match-head-commit <it>.
+  echo "== PR #$pr ($repo) head $head =="
   echo
   echo "== Checks: $(checks_json | jq -r --arg mode state -f "$LIB/checks.jq") =="
   checks_json | jq -r --arg mode render -f "$LIB/checks.jq"
