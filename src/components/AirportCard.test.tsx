@@ -76,6 +76,33 @@ describe("AirportCard — departure variant", () => {
     expect(screen.getByText(text)).toBeInTheDocument();
   });
 
+  // An empty airport code means no airport, the same as a missing one: these
+  // fallbacks must not become `??`, which would let "" through.
+  it.each([undefined, ""])("shows a dash in the header when the airport code is %p", (code) => {
+    const { container } = render(
+      <AirportCard {...baseProps} variant="departure" airportCode={code} />,
+    );
+    expect(container.querySelector("header")).toHaveTextContent(/^Departure—$/);
+  });
+
+  it.each([undefined, ""])(
+    "names no airport in the no-runways message when the airport code is %p",
+    (code) => {
+      render(
+        <AirportCard
+          {...baseProps}
+          variant="departure"
+          airportCode={code}
+          runways={null}
+          runwayStatus="no-runways"
+          selectedRunwayLength={null}
+          onRunwaySelect={noOp}
+        />,
+      );
+      expect(screen.getByText("No runway data for this airport")).toBeInTheDocument();
+    },
+  );
+
   it("calls onRunwaySelect with the chosen runway length", () => {
     const onRunwaySelect = jest.fn();
     const runways: RunwayOption[] = [

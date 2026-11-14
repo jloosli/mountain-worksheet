@@ -65,7 +65,7 @@ export default function ManeuveringPerformance({
   };
 
   // Get flap settings from maneuvering speeds or fallback to default
-  const flapSettings = maneuveringSpeeds?.flapSettings || [0, 30];
+  const flapSettings = maneuveringSpeeds?.flapSettings ?? [0, 30];
   const bankAngles = [0, 45, 60];
 
   return (
@@ -115,7 +115,7 @@ export default function ManeuveringPerformance({
                     key={bankAngle}
                     className="border border-gray-300 dark:border-gray-700 p-2 text-right"
                   >
-                    {speed !== null ? speed : "TBD"}
+                    {speed ?? "TBD"}
                   </td>
                 );
               })}

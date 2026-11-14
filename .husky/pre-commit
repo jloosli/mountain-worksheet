@@ -1,0 +1,10 @@
+# Format and lint the staged files. Kept fast: no tests or typecheck here.
+
+# Shells that lazy-load nvm leave node off the PATH git hands to hooks.
+if ! command -v npx >/dev/null 2>&1; then
+  nvm_sh="${NVM_DIR:-$HOME/.nvm}/nvm.sh"
+  # shellcheck disable=SC1090
+  [ -s "$nvm_sh" ] && . "$nvm_sh"
+fi
+
+npx lint-staged
