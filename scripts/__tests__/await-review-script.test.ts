@@ -133,6 +133,25 @@ describe("await-review.sh", () => {
     expect(stdout).toContain(`Reviewed ${SHA2}`);
   });
 
+  it("requires a review of a head pushed during a --ci-only wait", () => {
+    put("checks", GREEN);
+    put("push_on_checks", SHA2);
+    const { status, stdout, requests } = run({ AWAIT_REVIEW_TIMEOUT_SEC: "3" }, ["--ci-only"]);
+    expect(status).toBe(2);
+    expect(stdout).toContain("No Copilot review of 2222222 yet.");
+    expect(requests).toHaveLength(1);
+  });
+
+  it("reads a zero-padded --timeout-min as decimal", () => {
+    put("reviewed", `${SHA1}\n`);
+    put("checks", GREEN);
+    // 08 is invalid octal, so bash arithmetic would fail on it.
+    // bash prints the error and carries on with no deadline.
+    const { status, stderr } = run({}, ["--timeout-min", "08"]);
+    expect(status).toBe(0);
+    expect(stderr).not.toContain("value too great for base");
+  });
+
   it("retries a failed head lookup in --ci-only mode", () => {
     put("checks", GREEN);
     put("fail_pr_view", "1");

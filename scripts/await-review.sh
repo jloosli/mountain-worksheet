@@ -61,7 +61,8 @@ repo="$(gh repo view --json nameWithOwner -q .nameWithOwner)"
 owner="${repo%%/*}"
 name="${repo#*/}"
 start="$(date +%s)"
-deadline=$((start + ${AWAIT_REVIEW_TIMEOUT_SEC:-$((timeout_min * 60))}))
+# 10#: a zero-padded value like 08 is decimal, not octal.
+deadline=$((start + ${AWAIT_REVIEW_TIMEOUT_SEC:-$((10#$timeout_min * 60))}))
 
 log() { echo "[$(date +%H:%M:%S)] $*" >&2; }
 
@@ -194,6 +195,8 @@ while true; do
   current_head
   [ "$now_head" = "$head" ] && break
   log "Head moved during the wait; waiting on the new head."
+  # --ci-only exempted the rebased head from review, not whatever came next.
+  ci_only=""
 done
 
 report

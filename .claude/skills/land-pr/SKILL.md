@@ -76,7 +76,7 @@ gh pr list --base <branch> --json number -q '.[].number'
 
 Retarget each with `gh pr edit <n> --base main` **before** merging. Deleting a base branch auto-closes the PRs on it, and they cannot be reopened.
 
-Retargeting keeps the child PR open but does not fix its ancestry. After the squash merge, the child still carries this branch's original commits, so its diff shows them again. Its repair is `git rebase --onto origin/main <sha> <child branch>`, where `<sha>` is the last commit of this branch that the child is built on (this PR's merged head, unless this branch was rewritten after the child branched off; then find it in `git log <child branch>`), followed by a force push and CI. That rewrites another branch, so do it only if the user asked; otherwise list the command for each child in your report.
+Retargeting keeps the child PR open but does not fix its ancestry. After the squash merge, the child still carries this branch's original commits, so its diff shows them again. Its repair is `git fetch origin` (so origin/main holds the squash commit) and then `git rebase --onto origin/main <sha> <child branch>`, where `<sha>` is the last commit of this branch that the child is built on (this PR's merged head, unless this branch was rewritten after the child branched off; then find it in `git log <child branch>`), followed by a force push and CI. That rewrites another branch, so do it only if the user asked; otherwise list the command for each child in your report.
 
 Done when: the list is empty, and each retargeted child has been rebased or is named in the report with its repair command.
 
