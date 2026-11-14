@@ -160,7 +160,10 @@ while true; do
       sleep "$POLL_SEC"
       continue
     fi
-    if [ "$(copilot_pending)" = "pending" ]; then
+    # An unknown request state is never a reason to request: wait a poll.
+    if ! pending="$(copilot_pending)"; then
+      log "gh call failed; will retry."
+    elif [ "$pending" = "pending" ]; then
       log "Copilot review pending for ${head:0:7}."
     elif [ $(($(date +%s) - start)) -ge "$GRACE_SEC" ] &&
       { [ "$requested_for" != "$head" ] || [ $(($(date +%s) - requested_at)) -ge "$REARM_SEC" ]; }; then

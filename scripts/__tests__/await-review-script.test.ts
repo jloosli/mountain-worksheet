@@ -8,6 +8,7 @@
 //   checks          the `gh pr checks --json` answer
 //   fail_pr_view    if present, the next N `gh pr view` calls fail
 //   push_on_checks  if present, the first `gh pr checks` moves head to it
+//   fail_timeline   if present, timeline lookups fail
 //   fail_all        if present, every call but `repo view` fails
 import { spawnSync } from "child_process";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "fs";
@@ -41,7 +42,7 @@ case "$*" in
       sep=","
     done < "$S/reviewed"
     echo ']]' ;;
-  *"/timeline") echo '[[]]' ;;
+  *"/timeline") [ -e "$S/fail_timeline" ] && exit 1; echo '[[]]' ;;
   "api graphql"*) echo '[]' ;;
   *) exit 1 ;;
 esac
@@ -153,6 +154,13 @@ describe("await-review.sh", () => {
     const { status, stderr } = run({ AWAIT_REVIEW_TIMEOUT_SEC: "0" }, ["--ci-only"]);
     expect(status).toBe(2);
     expect(stderr).toContain("Timed out");
+  });
+
+  it("never requests Copilot while the timeline can't be read", () => {
+    put("fail_timeline", "");
+    const { status, requests } = run({ AWAIT_REVIEW_TIMEOUT_SEC: "3" });
+    expect(status).toBe(2);
+    expect(requests).toHaveLength(0);
   });
 
   it("requests Copilot once while its request may still be propagating", () => {
