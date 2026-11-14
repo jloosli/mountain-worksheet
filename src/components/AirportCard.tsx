@@ -123,7 +123,8 @@ export default function AirportCard(props: AirportCardProps) {
           <span className="text-xs text-slate-500">Cruise · area of ops</span>
         ) : (
           <span className="num-mono text-sm font-semibold text-slate-900 dark:text-slate-100">
-            {props.airportCode || "—"}
+            {/* An empty code is as good as none. */}
+            {props.airportCode !== undefined && props.airportCode !== "" ? props.airportCode : "—"}
           </span>
         )}
       </header>
@@ -246,7 +247,7 @@ const runwayPlaceholder = (status: RunwayLookupStatus, airportCode: string | und
       return "Runway lookup failed";
     case "found":
     case "no-runways":
-      return `No runway data for ${airportCode || "this airport"}`;
+      return `No runway data for ${airportCode !== undefined && airportCode !== "" ? airportCode : "this airport"}`;
   }
 };
 

@@ -286,7 +286,7 @@ async function makeApiRequest<T extends unknown[]>(
     }
   }
 
-  throw lastError || new Error("Request failed after all retries");
+  throw lastError ?? new Error("Request failed after all retries");
 }
 
 /**

@@ -94,7 +94,7 @@ export async function GET(request: NextRequest) {
                     closed: false, // Default to false
                   };
                 },
-              ) || [],
+              ) ?? [],
           }),
         );
       }
