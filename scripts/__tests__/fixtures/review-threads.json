@@ -1,0 +1,65 @@
+{
+  "data": {
+    "repository": {
+      "pullRequest": {
+        "reviewThreads": {
+          "nodes": [
+            {
+              "isResolved": true,
+              "isOutdated": false,
+              "path": "src/utils/resolved.ts",
+              "line": 10,
+              "originalLine": 10,
+              "comments": {
+                "nodes": [
+                  {
+                    "databaseId": 1001,
+                    "author": { "login": "copilot-pull-request-reviewer" },
+                    "body": "Already handled."
+                  }
+                ]
+              }
+            },
+            {
+              "isResolved": false,
+              "isOutdated": false,
+              "path": "src/utils/gairmetApi.ts",
+              "line": 52,
+              "originalLine": 52,
+              "comments": {
+                "nodes": [
+                  {
+                    "databaseId": 4534380993,
+                    "author": { "login": "copilot-pull-request-reviewer" },
+                    "body": "`TURB-HI` is discarded even for a 20,000-ft sortie.\nSecond line of detail."
+                  }
+                ]
+              }
+            },
+            {
+              "isResolved": false,
+              "isOutdated": true,
+              "path": "src/app/api/aviation-weather/route.ts",
+              "line": null,
+              "originalLine": 59,
+              "comments": {
+                "nodes": [
+                  {
+                    "databaseId": 4534346204,
+                    "author": { "login": "copilot-pull-request-reviewer" },
+                    "body": "This proxy also serves METAR requests.\nMore detail that a replied thread hides."
+                  },
+                  {
+                    "databaseId": 4534354218,
+                    "author": { "login": "jloosli" },
+                    "body": "Fixed in abc1234."
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}
